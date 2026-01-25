@@ -1,10 +1,8 @@
 <!-- pages/registro_club.php -->
 <?php
-session_start();
 require_once __DIR__ . '/../includes/config.php';
 $error = $_GET['error'] ?? '';
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>

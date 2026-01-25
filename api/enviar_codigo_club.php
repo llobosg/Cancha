@@ -1,6 +1,7 @@
 <?php
 // api/enviar_codigo_club.php
 header('Content-Type: application/json; charset=utf-8');
+
 require_once __DIR__ . '/../includes/config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
