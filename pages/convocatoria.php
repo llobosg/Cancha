@@ -1,5 +1,6 @@
-<!-- pages/convocatoria.php -->
 <?php
+//-- pages/convocatoria.php --
+
 require_once __DIR__ . '/../includes/config.php';
 
 $id_evento = $_GET['id'] ?? null;

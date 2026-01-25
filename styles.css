@@ -19,10 +19,19 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--light-bg);
-  color: var(--text-color);
-  line-height: 1.6;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: 
+        linear-gradient(180deg, rgba(244,246,248,0.95) 0%, rgba(232,235,238,0.95) 100%), 
+        url('assets/cancha_pasto1.png') center center no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.5;
+    width: 100%;
+    overflow-x: auto;
 }
 
 /* Formularios */
