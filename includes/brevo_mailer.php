@@ -11,9 +11,9 @@ class BrevoMailer {
     private $htmlBody;
 
     public function __construct() {
-        // Usa variables de entorno de Railway
-        $this->apiKey = $_ENV['BREVO_API_KEY'] ?? 'tu_clave_smtp_brevo';
-        $this->fromEmail = $_ENV['MAILER_FROM_EMAIL'] ?? 'no-reply@cancha.app';
+        // Usa tu correo real como remitente
+        $this->apiKey = getenv('BREVO_API_KEY') ?: $_SERVER['BREVO_API_KEY'] ?? 'clave_no_definida';
+        $this->fromEmail = 'llobos@gltcomex.com'; // ✅ Tu correo verificado
         $this->fromName = 'Cancha';
     }
 
@@ -31,6 +31,12 @@ class BrevoMailer {
     }
 
     public function send() {
+        // Validación crítica
+        if ($this->apiKey === 'clave_no_definida') {
+            error_log("❌ BREVO_API_KEY no configurada");
+            return false;
+        }
+
         $url = 'https://api.brevo.com/v3/smtp/email';
         $data = [
             'sender' => ['email' => $this->fromEmail, 'name' => $this->fromName],
@@ -53,8 +59,17 @@ class BrevoMailer {
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
         curl_close($ch);
 
-        return $httpCode >= 200 && $httpCode < 300;
+        // Logging detallado
+        if ($httpCode >= 200 && $httpCode < 300) {
+            error_log("✅ Correo enviado a {$this->toEmail}");
+            return true;
+        } else {
+            error_log("❌ Brevo error [$httpCode]: " . substr($response, 0, 500));
+            error_log("❌ Datos enviados: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+            return false;
+        }
     }
 }
