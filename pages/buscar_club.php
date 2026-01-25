@@ -16,7 +16,7 @@
     body {
       background: 
         linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
-        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
