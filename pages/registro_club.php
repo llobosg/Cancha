@@ -171,9 +171,33 @@ $error = $_GET['error'] ?? '';
       <div class="form-grid">
         <!-- Fila 1 -->
         <div class="form-group"><label for="nombre">Nombre Club</label></div>
-        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
+        <div class="form-group col-span-2"><input type="text" id="nombre" name="nombre" required></div>
         <div class="form-group"><label for="fecha_fundacion">Fecha Fundación</label></div>
         <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
+        <div class="form-group"><label for="pais">País</label></div>
+        <div class="form-group"><input type="text" id="pais" name="pais" value="Chile" required></div>
+
+        <!-- Fila 2 -->
+        <div class="form-group"><label for="region">Región</label></div>
+        <div class="form-group">
+          <select id="region" name="region" required>
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="ciudad">Ciudad</label></div>
+        <div class="form-group">
+          <select id="ciudad" name="ciudad" required disabled>
+            <option value="">Seleccione región</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="comuna">Comuna</label></div>
+        <div class="form-group">
+          <select id="comuna" name="comuna" required disabled>
+            <option value="">Seleccione ciudad</option>
+          </select>
+        </div>
+
+        <!-- Fila 3 -->
         <div class="form-group"><label for="deporte">Deporte</label></div>
         <div class="form-group">
           <select id="deporte" name="deporte" required>
@@ -187,51 +211,26 @@ $error = $_GET['error'] ?? '';
             <option value="otro">Otro</option>
           </select>
         </div>
-
-        <!-- Fila 2 -->
-        <div class="form-group"><label for="pais">País</label></div>
-        <div class="form-group"><input type="text" id="pais" name="pais" value="Chile" required></div>
-        <div class="form-group"><label for="region">Región</label></div>
-        <div class="form-group">
-          <select id="region" name="region" required>
-            <option value="">Seleccionar</option>
-          </select>
-        </div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-
-        <!-- Fila 3 -->
-        <div class="form-group"><label for="ciudad">Ciudad</label></div>
-        <div class="form-group">
-          <select id="ciudad" name="ciudad" required disabled>
-            <option value="">Seleccione región</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="comuna">Comuna</label></div>
-        <div class="form-group">
-          <select id="comuna" name="comuna" required disabled>
-            <option value="">Seleccione ciudad</option>
-          </select>
-        </div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+        <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
+        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required></div>
+        <div class="form-group"><label for="logo">Logo del club</label></div>
+        <div class="form-group"><input type="file" id="logo" name="logo" accept="image/*"></div>
 
         <!-- Fila 4 -->
         <div class="form-group"><label for="responsable">Responsable</label></div>
         <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
+        <div class="form-group"><label for="telefono">Teléfono</label></div>
+        <div class="form-group"><input type="tel" id="telefono" name="telefono" required></div>
         <div class="form-group"><label for="email_responsable">Correo</label></div>
-        <div class="form-group col-span-2"><input type="email" id="email_responsable" name="email_responsable" required></div>
-        <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
-        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required></div>
+        <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
 
         <!-- Fila 6: Logo del club -->
         <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group"><input type="file" id="logo" name="logo" accept="image/*"></div>
+        <div class="form-group"></div> 
         <div class="form-group"></div>
         <div class="form-group"></div>
-
+        <div class="form-group"></div>
+        <div class="form-group"></div>
         <!-- Botón -->
         <div class="submit-section">
           <button type="submit" class="btn-submit">Enviar código de verificación</button>
