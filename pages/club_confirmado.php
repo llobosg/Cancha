@@ -15,6 +15,11 @@ if (!$slug) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>¡Club registrado! - Cancha</title>
   <link rel="stylesheet" href="../assets/css/styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#003366">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
     body {
       background: #e8f5e9;
@@ -92,5 +97,15 @@ if (!$slug) {
       });
     }
   </script>
+  <script>
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registrado:', reg.scope))
+          .catch(err => console.log('Error SW:', err));
+      });
+    }
+    </script>
 </body>
 </html>
