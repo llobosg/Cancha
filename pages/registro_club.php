@@ -15,12 +15,19 @@ $error = $_GET['error'] ?? '';
   <style>
     /* Centrar el formulario en pantalla */
     body {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      padding-top: 2rem;
-      background: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: 
+          linear-gradient(180deg, rgba(244,246,248,0.95) 0%, rgba(232,235,238,0.95) 100%), 
+          url('assets/cancha_pasto1.png') center center no-repeat;
+      background-size: cover;
+      background-attachment: fixed;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.5;
+      width: 100%;
+      overflow-x: auto;
     }
     .form-container {
       width: 95%;
