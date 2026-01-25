@@ -16,6 +16,7 @@ try {
     $ciudad = trim($_POST['ciudad'] ?? '');
     $comuna = trim($_POST['comuna'] ?? '');
     $responsable = trim($_POST['responsable'] ?? '');
+    $telefono = trim($_POST['telefono'] ?? '');
     $email = trim($_POST['email_responsable'] ?? '');
 
     // Validaciones
@@ -51,11 +52,13 @@ try {
     // Aquí usamos base de datos para persistencia
     $stmt = $pdo->prepare("
         INSERT INTO clubs (
-            nombre, pais, ciudad, comuna, responsable, email_responsable,
+            nombre, pais, ciudad, comuna, responsable, telefono, email_responsable,
             deporte, verification_code, email_verified
-        ) VALUES (?, 'Chile', ?, ?, ?, ?, ?, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     ");
-    $stmt->execute([$nombre, $ciudad, $comuna, $responsable, $email, $deporte, $codigo]);
+    $stmt->execute([
+        $nombre, $pais, $ciudad, $comuna, $responsable, $telefono, $email, $deporte, $codigo
+    ]);
 
     $id_club = $pdo->lastInsertId();
 

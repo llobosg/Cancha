@@ -12,7 +12,7 @@ $error = $_GET['error'] ?? '';
   <title>Registrar Club - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-    /* Fondo de estadio vibrante - menos oscuro */
+    /* Fondo de estadio vibrante */
     body {
       background: 
         linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
@@ -38,7 +38,6 @@ $error = $_GET['error'] ?? '';
       position: relative;
     }
 
-    /* Logos ⚽ en esquinas */
     .form-container::before,
     .form-container::after {
       content: "⚽";
@@ -171,7 +170,7 @@ $error = $_GET['error'] ?? '';
       <div class="form-grid">
         <!-- Fila 1 -->
         <div class="form-group"><label for="nombre">Nombre Club</label></div>
-        <div class="form-group col-span-2"><input type="text" id="nombre" name="nombre" required></div>
+        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
         <div class="form-group"><label for="fecha_fundacion">Fecha Fundación</label></div>
         <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
         <div class="form-group"><label for="pais">País</label></div>
@@ -179,22 +178,38 @@ $error = $_GET['error'] ?? '';
 
         <!-- Fila 2 -->
         <div class="form-group"><label for="region">Región</label></div>
-        <div class="form-group">
-          <select id="region" name="region" required>
-            <option value="">Seleccionar</option>
-          </select>
+          <div class="form-group">
+            <select id="region" name="region" required>
+              <option value="">Seleccionar</option>
+              <option value="Arica y Parinacota">Arica y Parinacota</option>
+              <option value="Tarapacá">Tarapacá</option>
+              <option value="Antofagasta">Antofagasta</option>
+              <option value="Atacama">Atacama</option>
+              <option value="Coquimbo">Coquimbo</option>
+              <option value="Valparaíso">Valparaíso</option>
+              <option value="Metropolitana">Metropolitana</option>
+              <option value="O'Higgins">O'Higgins</option>
+              <option value="Maule">Maule</option>
+              <option value="Ñuble">Ñuble</option>
+              <option value="Biobío">Biobío</option>
+              <option value="Araucanía">Araucanía</option>
+              <option value="Los Ríos">Los Ríos</option>
+              <option value="Los Lagos">Los Lagos</option>
+              <option value="Aysén">Aysén</option>
+              <option value="Magallanes">Magallanes</option>
+            </select>
         </div>
         <div class="form-group"><label for="ciudad">Ciudad</label></div>
         <div class="form-group">
-          <select id="ciudad" name="ciudad" required disabled>
-            <option value="">Seleccione región</option>
-          </select>
+            <select id="ciudad" name="ciudad" required disabled>
+              <option value="">Seleccione región</option>
+            </select>
         </div>
         <div class="form-group"><label for="comuna">Comuna</label></div>
         <div class="form-group">
-          <select id="comuna" name="comuna" required disabled>
-            <option value="">Seleccione ciudad</option>
-          </select>
+            <select id="comuna" name="comuna" required disabled>
+              <option value="">Seleccione ciudad</option>
+            </select>
         </div>
 
         <!-- Fila 3 -->
@@ -214,23 +229,29 @@ $error = $_GET['error'] ?? '';
         <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
         <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required></div>
         <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group"><input type="file" id="logo" name="logo" accept="image/*"></div>
-
-        <!-- Fila 4 -->
+        <div class="form-group"><input type="file" id="logo" name="logo" accept="image/*"></div> 
+          
+        <!-- Fila 4 -->  
         <div class="form-group"><label for="responsable">Responsable</label></div>
         <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
         <div class="form-group"><label for="telefono">Teléfono</label></div>
         <div class="form-group"><input type="tel" id="telefono" name="telefono" required></div>
         <div class="form-group"><label for="email_responsable">Correo</label></div>
-        <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
+        <div class="form-group col-span-2"><input type="email" id="email_responsable" name="email_responsable" required></div>
+
+        <!-- Fila 5 -->  
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
 
         <!-- Fila 6: Logo del club -->
         <div class="form-group"></div>
-        <div class="form-group"></div> 
+        <div class="form-group"></div>
+          
         <div class="form-group"></div>
         <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+
         <!-- Botón -->
         <div class="submit-section">
           <button type="submit" class="btn-submit">Enviar código de verificación</button>
@@ -274,79 +295,71 @@ $error = $_GET['error'] ?? '';
 
     function exito(msg) { mostrarNotificacion(msg, 'exito'); }
     function error(msg) { mostrarNotificacion(msg, 'error'); }
+    function advertencia(msg) { mostrarNotificacion(msg, 'warning'); } // ← ¡Definida!
 
-    // === CARGAR REGIONES AL INICIAR ===
-    document.addEventListener('DOMContentLoaded', () => {
-      fetch('https://apis.gob.cl/regiones')
-        .then(r => r.json())
-        .then(regiones => {
-          const regionSelect = document.getElementById('region');
-          regiones.forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.nombre;
-            opt.textContent = r.nombre;
-            regionSelect.appendChild(opt);
-          });
-        })
-        .catch(() => {
-          advertencia('No se pudieron cargar las regiones. Usa valores manuales.');
-        });
-    });
+    // === DATOS LOCALES DE CHILE ===
+    const regionesComunas = {
+      "Valparaíso": {
+        "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana", "Concón", "Limache", "Olmué", "Casablanca", "Juan Fernández"],
+        "Isla de Pascua": ["Isla de Pascua"]
+      },
+      "Metropolitana": {
+        "Santiago": ["Santiago", "Providencia", "Las Condes", "Ñuñoa", "La Florida", "Maipú", "Puente Alto", "San Bernardo", "Quilicura", "Pudahuel", "Recoleta", "Independencia", "Renca", "Lo Prado", "Cerro Navia", "Estación Central", "Conchalí", "Huechuraba", "Vitacura", "Lo Barnechea", "Peñalolén", "La Reina", "Macul", "San Joaquín", "La Granja", "San Ramón", "La Pintana", "El Bosque", "San Miguel", "Lo Espejo", "Pedro Aguirre Cerda", "Cerrillos", "Buin", "Calera de Tango", "Paine", "San José de Maipo", "Alhué", "Curacaví", "María Pinto", "Melipilla", "San Pedro", "Isla de Maipo", "El Monte", "Padre Hurtado", "Peñaflor", "Talagante", "Tiltil"],
+        "Cordillera": ["Puente Alto", "San José de Maipo", "Pirque"]
+      },
+      "Biobío": {
+        "Concepción": ["Concepción", "Talcahuano", "Hualpén", "San Pedro de la Paz", "Chiguayante", "Coronel", "Lota", "Santa Juana", "Tomé", "Penco", "Florida", "Hualqui", "Cabrero", "Yumbel", "San Rosendo", "Laja", "Nacimiento", "Los Ángeles", "Mulchén", "Negrete", "Quilaco", "Quilleco", "San Pablo", "Tucapel", "Antuco", "Coihueco", "Ñiquén", "San Fabián", "San Nicolás"]
+      }
+      // Agrega más regiones si lo deseas
+    };
 
-    // === AL CAMBIAR REGIÓN → CIUDADES ===
+    // === CARGAR CIUDADES AL CAMBIAR REGIÓN ===
     document.getElementById('region').addEventListener('change', function() {
       const ciudadSelect = document.getElementById('ciudad');
       const comunaSelect = document.getElementById('comuna');
-      ciudadSelect.innerHTML = '<option value="">Cargando...</option>';
+      ciudadSelect.innerHTML = '<option value="">Seleccione ciudad</option>';
       comunaSelect.innerHTML = '<option value="">Seleccione ciudad</option>';
       ciudadSelect.disabled = true;
       comunaSelect.disabled = true;
 
       if (!this.value) return;
 
-      fetch(`https://apis.gob.cl/regiones/${encodeURIComponent(this.value)}/provincias`)
-        .then(r => r.json())
-        .then(provincias => {
-          ciudadSelect.innerHTML = '<option value="">Seleccionar</option>';
-          provincias.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.nombre;
-            opt.textContent = p.nombre;
-            ciudadSelect.appendChild(opt);
-          });
-          ciudadSelect.disabled = false;
-        })
-        .catch(() => {
-          error('Error al cargar ciudades');
-          ciudadSelect.innerHTML = '<option value="">Error de conexión</option>';
+      const ciudades = Object.keys(regionesComunas[this.value] || {});
+      if (ciudades.length > 0) {
+        ciudades.forEach(ciudad => {
+          const opt = document.createElement('option');
+          opt.value = ciudad;
+          opt.textContent = ciudad;
+          ciudadSelect.appendChild(opt);
         });
+        ciudadSelect.disabled = false;
+      } else {
+        ciudadSelect.innerHTML = '<option value="">Sin ciudades</option>';
+      }
     });
 
-    // === AL CAMBIAR CIUDAD → COMUNAS ===
+    // === CARGAR COMUNAS AL CAMBIAR CIUDAD ===
     document.getElementById('ciudad').addEventListener('change', function() {
       const comunaSelect = document.getElementById('comuna');
       comunaSelect.innerHTML = '<option value="">Cargando...</option>';
       comunaSelect.disabled = true;
 
-      if (!this.value) return;
-
       const region = document.getElementById('region').value;
-      fetch(`https://apis.gob.cl/regiones/${encodeURIComponent(region)}/provincias/${encodeURIComponent(this.value)}/comunas`)
-        .then(r => r.json())
-        .then(comunas => {
-          comunaSelect.innerHTML = '<option value="">Seleccionar</option>';
-          comunas.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.nombre;
-            opt.textContent = c.nombre;
-            comunaSelect.appendChild(opt);
-          });
-          comunaSelect.disabled = false;
-        })
-        .catch(() => {
-          error('Error al cargar comunas');
-          comunaSelect.innerHTML = '<option value="">Error de conexión</option>';
+      if (!region || !this.value) return;
+
+      const comunas = regionesComunas[region]?.[this.value] || [];
+      if (comunas.length > 0) {
+        comunaSelect.innerHTML = '<option value="">Seleccionar</option>';
+        comunas.forEach(comuna => {
+          const opt = document.createElement('option');
+          opt.value = comuna;
+          opt.textContent = comuna;
+          comunaSelect.appendChild(opt);
         });
+        comunaSelect.disabled = false;
+      } else {
+        comunaSelect.innerHTML = '<option value="">Sin comunas</option>';
+      }
     });
 
     // === MANEJO DEL FORMULARIO ===
