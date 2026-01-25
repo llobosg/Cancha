@@ -1,12 +1,12 @@
-<!-- pages/registro_socio.php -->
 <?php
+//-- pages/registro_socio.php --
+
 require_once __DIR__ . '/../includes/config.php';
 $slug = $_GET['club'] ?? '';
 if (!$slug) {
     header('Location: buscar_club.php');
     exit;
 }
-// Validar slug (opcional: puedes hacer una consulta a la DB)
 ?>
 
 <!DOCTYPE html>
@@ -63,6 +63,13 @@ if (!$slug) {
       font-weight: bold;
       cursor: pointer;
     }
+    .btn-submit:hover {
+      background: #007a52;
+    }
+    .btn-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
     .error {
       background: #ffebee;
       color: #c62828;
@@ -70,47 +77,16 @@ if (!$slug) {
       border-radius: 6px;
       margin-bottom: 1.2rem;
     }
-    .success {
-      background: #e8f5e9;
-      color: #2e7d32;
-      padding: 0.8rem;
-      border-radius: 6px;
-      margin-bottom: 1.2rem;
-    }
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      max-width: 350px;
-      padding: 1rem 1.5rem;
-      border-radius: 8px;
-      color: white;
-      font-size: 0.95rem;
-      font-weight: bold;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-      z-index: 32000;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.4s ease;
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .toast.success { background: linear-gradient(135deg, #009966, #006644); }
-    .toast.error { background: linear-gradient(135deg, #cc0000, #990000); }
   </style>
 </head>
 <body>
   <div class="form-container">
     <h2>👤 Inscríbete al club</h2>
-    <div id="mensaje"></div>
-    <form id="registroForm">
+
+    <!-- Formulario SIN action ni method → manejado por JS -->
+    <form id="registroForm" enctype="multipart/form-data">
       <input type="hidden" name="club_slug" value="<?= htmlspecialchars($slug) ?>">
+      <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
 
       <div class="form-group">
         <label for="nombre">Nombre completo *</label>
@@ -129,7 +105,7 @@ if (!$slug) {
 
       <div class="form-group">
         <label for="celular">Celular</label>
-        <input type="tel" id="celular" name="celular">
+        <input type="tel" id="celular" name="celular" placeholder="+56 9 1234 5678">
       </div>
 
       <div class="form-group">
@@ -161,48 +137,38 @@ if (!$slug) {
     </form>
   </div>
 
-  <!-- Toast -->
-  <div id="toast" class="toast" style="display:none;">
-    <span id="toast-message">Mensaje</span>
-  </div>
-
   <script>
-    function mostrarToast(mensaje, tipo = 'info') {
-      const toast = document.getElementById('toast');
-      const msg = document.getElementById('toast-message');
-      msg.textContent = mensaje;
-      toast.className = `toast ${tipo}`;
-      toast.style.display = 'flex';
-      void toast.offsetWidth;
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.style.display = 'none', 400);
-      }, 4000);
-    }
-
+    // Manejo del formulario con AJAX
     document.getElementById('registroForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData(e.target);
       
+      const formData = new FormData(e.target);
+      const btn = e.submitter;
+      const originalText = btn.innerHTML;
+      
+      btn.innerHTML = 'Enviando...';
+      btn.disabled = true;
+
       try {
         const response = await fetch('../api/enviar_codigo_socio.php', {
           method: 'POST',
           body: formData
         });
+        
         const data = await response.json();
         
         if (data.success) {
-          mostrarToast('Código enviado a tu correo', 'success');
-          // Redirigir a verificación
-          setTimeout(() => {
-            window.location.href = `verificar_socio.php?id=${data.id_socio}`;
-          }, 2000);
+          // Redirigir a verificación con ID del socio
+          window.location.href = `verificar_socio.php?id=${data.id_socio}`;
         } else {
-          mostrarToast(data.message || 'Error al enviar código', 'error');
+          alert('Error: ' + (data.message || 'No se pudo enviar el código'));
         }
       } catch (err) {
-        mostrarToast('Error de conexión', 'error');
+        console.error('Error:', err);
+        alert('Error de conexión. Revisa la consola.');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
       }
     });
   </script>

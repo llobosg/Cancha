@@ -1,5 +1,5 @@
-<!-- pages/verificar_socio.php -->
 <?php
+//-- pages/verificar_socio.php --
 require_once __DIR__ . '/../includes/config.php';
 
 $id_socio = $_GET['id'] ?? null;

@@ -1,6 +1,4 @@
-<!-- pages/verificar_club.php -->
 <?php
-session_start();
 require_once __DIR__ . '/../includes/config.php';
 
 $id_club = $_GET['id'] ?? null;
@@ -13,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$codigo || !$id_club) {
         $error = 'Datos incompletos';
     } else {
-        // Verificar código y que no haya expirado (10 min)
         $stmt = $pdo->prepare("
             SELECT * FROM clubs 
             WHERE id_club = ? 
@@ -24,19 +21,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $club = $stmt->fetch();
 
         if ($club) {
-            // Confirmar registro
             $pdo->prepare("
                 UPDATE clubs 
                 SET email_verified = 1, verification_code = NULL 
                 WHERE id_club = ?
             ")->execute([$id_club]);
 
-            // Crear slug único
             $slug = substr(md5($club['id_club'] . $club['email_responsable']), 0, 8);
-
-            // Guardar slug en la base de datos (opcional, o generarlo dinámicamente)
-            // Por ahora lo generamos on-the-fly
-
             header("Location: club_confirmado.php?slug=$slug");
             exit;
         } else {
@@ -45,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -141,7 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <script>
-    // Solo números
     document.getElementById('codigo').addEventListener('input', function(e) {
       this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);
     });
