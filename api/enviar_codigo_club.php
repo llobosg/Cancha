@@ -2,33 +2,51 @@
 // api/enviar_codigo_club.php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/../includes/config.php';
+// 1. Silenciar errores visibles (solo logs)
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
-    exit;
-}
+// 2. Capturar cualquier error fatal
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error interno del servidor. Revisa las variables de entorno.'
+        ]);
+    }
+});
 
 try {
-    $nombre = trim($_POST['nombre'] ?? '');
-    $deporte = $_POST['deporte'] ?? '';
-    $ciudad = trim($_POST['ciudad'] ?? '');
-    $comuna = trim($_POST['comuna'] ?? '');
-    $responsable = trim($_POST['responsable'] ?? '');
-    $telefono = trim($_POST['telefono'] ?? '');
-    $email = trim($_POST['email_responsable'] ?? '');
-
-    // Validaciones
-    if (!$nombre || !$deporte || !$ciudad || !$comuna || !$responsable || !$email) {
-        throw new Exception('Todos los campos son obligatorios');
+    require_once __DIR__ . '/../includes/config.php';
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception('Método no permitido', 405);
     }
+
+    // Validar campos
+    $required = ['nombre', 'deporte', 'pais', 'region', 'ciudad', 'comuna', 'responsable', 'telefono', 'email_responsable'];
+    foreach ($required as $field) {
+        if (empty($_POST[$field])) {
+            throw new Exception("El campo '$field' es obligatorio");
+        }
+    }
+
+    $nombre = trim($_POST['nombre']);
+    $deporte = $_POST['deporte'];
+    $pais = trim($_POST['pais']);
+    $ciudad = trim($_POST['ciudad']);
+    $comuna = trim($_POST['comuna']);
+    $responsable = trim($_POST['responsable']);
+    $telefono = trim($_POST['telefono']);
+    $email = trim($_POST['email_responsable']);
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         throw new Exception('Correo electrónico inválido');
     }
 
-    // Verificar si ya existe un club con mismo nombre + comuna + responsable
+    // Verificar duplicados
     $stmt = $pdo->prepare("
         SELECT id_club FROM clubs 
         WHERE nombre = ? AND comuna = ? AND responsable = ?
@@ -38,31 +56,21 @@ try {
         throw new Exception('Ya existe un club con estos datos');
     }
 
-    // Verificar si el responsable ya tiene 2 clubes
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM clubs WHERE email_responsable = ?");
-    $stmt->execute([$email]);
-    if ($stmt->fetchColumn() >= 2) {
-        throw new Exception('El responsable ya administra 2 clubes');
-    }
-
-    // Generar código de 4 dígitos
+    // Generar código
     $codigo = rand(1000, 9999);
 
-    // Guardar temporalmente en sesión o base de datos
-    // Aquí usamos base de datos para persistencia
+    // Insertar
     $stmt = $pdo->prepare("
         INSERT INTO clubs (
             nombre, pais, ciudad, comuna, responsable, telefono, email_responsable,
             deporte, verification_code, email_verified
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     ");
-    $stmt->execute([
-        $nombre, $pais, $ciudad, $comuna, $responsable, $telefono, $email, $deporte, $codigo
-    ]);
+    $stmt->execute([$nombre, $pais, $ciudad, $comuna, $responsable, $telefono, $email, $deporte, $codigo]);
 
     $id_club = $pdo->lastInsertId();
 
-    // === Enviar correo con Brevo ===
+    // Enviar correo
     require_once __DIR__ . '/../includes/brevo_mailer.php';
     $mail = new BrevoMailer();
     $mail->setTo($email, $responsable);
@@ -72,14 +80,11 @@ try {
         <p>Tu código de verificación es:</p>
         <h1 style='color:#009966;'>$codigo</h1>
         <p>Ingresa este código en los próximos 10 minutos para confirmar tu club.</p>
-        <hr>
-        <p><small>Este código expira en 10 minutos.</small></p>
     ");
 
     if (!$mail->send()) {
-        // Si falla el correo, eliminamos el registro
         $pdo->prepare("DELETE FROM clubs WHERE id_club = ?")->execute([$id_club]);
-        throw new Exception('Error al enviar el correo. Inténtalo nuevamente.');
+        throw new Exception('Error al enviar el correo. Verifica tu conexión.');
     }
 
     echo json_encode([
@@ -89,6 +94,8 @@ try {
     ]);
 
 } catch (Exception $e) {
-    http_response_code(400);
+    $code = $e->getCode() ?: 400;
+    http_response_code($code);
+    error_log("Registro club error [$code]: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
