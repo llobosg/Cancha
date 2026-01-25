@@ -1,29 +1,7 @@
-# Dependencias de Composer
-/vendor/
-composer.lock
-
-# Archivos del sistema
-.DS_Store
-Thumbs.db
-
-# Entornos locales
+# .gitignore
+vendor/
 .env
-.env.local
-
-# Logs y caches
-/storage/
-/logs/
-/cache/
-
-# Uploads (opcional: si no quieres subir archivos de prueba)
-# /uploads/
-
-# IDE / editores
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Sistema macOS
-._*
-node_modules
+.DS_Store
+*.log
+/uploads/*
+!/uploads/.gitkeep
