@@ -6,12 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Buscar Club - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#003366">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
     /* Fondo corporativo de Cancha */
     body {
       background: 
         linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
@@ -192,8 +197,8 @@
 
   <!-- Toast de notificaciones -->
   <div id="toast" class="toast" style="display:none;">
-    <span>ℹ️</span>
-    <span id="toast-message">Mensaje</span>
+      <i class="fas fa-info-circle"></i> 
+      <span id="toast-message">Mensaje</span>
   </div>
 
   <script>
