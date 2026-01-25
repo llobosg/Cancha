@@ -1,8 +1,0 @@
-{
-  "build": {
-    "builder": "none"
-  },
-  "deploy": {
-    "startCommand": "apache2-foreground"
-  }
-}
