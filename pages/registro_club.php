@@ -1,8 +1,10 @@
 <!-- pages/registro_club.php -->
 <?php
+session_start();
 require_once __DIR__ . '/../includes/config.php';
 $error = $_GET['error'] ?? '';
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -60,6 +62,10 @@ $error = $_GET['error'] ?? '';
     .btn-submit:hover {
       background: #007a52;
     }
+    .btn-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
     .error {
       background: #ffebee;
       color: #c62828;
@@ -77,7 +83,10 @@ $error = $_GET['error'] ?? '';
       <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="POST" action="../api/enviar_codigo_club.php" enctype="multipart/form-data">
+    <!-- Formulario SIN action ni method → manejado por JS -->
+    <form id="registroForm" enctype="multipart/form-data">
+      <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
+
       <div class="form-group">
         <label for="nombre">Nombre del club *</label>
         <input type="text" id="nombre" name="nombre" required>
@@ -140,6 +149,39 @@ $error = $_GET['error'] ?? '';
       };
       const img = deportes[this.value] || 'fondo-futbol.jpg';
       document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../assets/img/${img}')`;
+    });
+
+    // Manejo del formulario con AJAX
+    document.getElementById('registroForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      const btn = e.submitter;
+      const originalText = btn.innerHTML;
+      
+      btn.innerHTML = 'Enviando...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('../api/enviar_codigo_club.php', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          window.location.href = data.redirect;
+        } else {
+          alert('Error: ' + (data.message || 'No se pudo enviar el código'));
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error de conexión. Revisa la consola.');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
     });
   </script>
 </body>
