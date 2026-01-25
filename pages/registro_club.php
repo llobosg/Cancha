@@ -16,7 +16,7 @@ $error = $_GET['error'] ?? '';
     body {
       background: 
         linear-gradient(rgba(0, 10, 20, 0.78), rgba(0, 15, 30, 0.88)),
-        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       display: flex;
       justify-content: center;
@@ -165,7 +165,7 @@ $error = $_GET['error'] ?? '';
 </head>
 <body>
   <div class="form-container">
-    <h2>Registra tu Club</h2>
+    <h2 style="color: #096d18ff;">REGISTRA TU CLUB</h2>
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
@@ -207,10 +207,11 @@ $error = $_GET['error'] ?? '';
         <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
         <div class="form-group"><label for="email_responsable">Correo</label></div>
         <div class="form-group col-span-2"><input type="email" id="email_responsable" name="email_responsable" required></div>
-        <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
-        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required></div>
+        <div></div>
 
-        <!-- Logo -->
+        <!-- Fila 4 -->
+        <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
+        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
         <div class="form-group logo-section">
           <label for="logo">Logo del club</label>
           <input type="file" id="logo" name="logo" accept="image/*">
