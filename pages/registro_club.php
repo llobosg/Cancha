@@ -228,24 +228,26 @@ $error = $_GET['error'] ?? '';
         </div>
         <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
         <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required></div>
+        
+       <!-- Fila 5 --> 
         <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group"><input type="file" id="logo" name="logo" accept="image/*"></div> 
+        <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div> 
           
-        <!-- Fila 4 -->  
+        <!-- Fila 6 -->  
         <div class="form-group"><label for="responsable">Responsable</label></div>
         <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
         <div class="form-group"><label for="telefono">Teléfono</label></div>
         <div class="form-group"><input type="tel" id="telefono" name="telefono" required></div>
         <div class="form-group"><label for="email_responsable">Correo</label></div>
-        <div class="form-group col-span-2"><input type="email" id="email_responsable" name="email_responsable" required></div>
+        <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
 
-        <!-- Fila 5 -->  
+        <!-- Fila 7 -->  
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
 
-        <!-- Fila 6: Logo del club -->
+        <!-- Fila 8: Logo del club -->
         <div class="form-group"></div>
         <div class="form-group"></div>
           
