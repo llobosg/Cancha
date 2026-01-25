@@ -22,16 +22,19 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    background: 
-        linear-gradient(180deg, rgba(244,246,248,0.95) 0%, rgba(232,235,238,0.95) 100%), 
-        url('assets/cancha_pasto2.jpg') center center no-repeat;
-    background-size: cover;
-    background-attachment: fixed;
     color: #333;
     font-size: 14px;
     line-height: 1.5;
     width: 100%;
     overflow-x: auto;
+}
+
+/* Para páginas con fondo de estadio */
+.stadium-bg {
+  background: 
+    linear-gradient(rgba(0, 10, 20, 0.75), rgba(0, 15, 30, 0.85)), /* overlay más oscuro */
+    url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+  background-blend-mode: multiply; /* mejora los colores vívidos */
 }
 
 /* Formularios */
@@ -180,6 +183,63 @@ h2 {
   .form-full {
     grid-column: span 1;
   }
+}
+
+/* TOAST NOTIFICACIONES */
+/* === TOAST NOTIFICATIONS (nivel más alto) === */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 350px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: bold;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    z-index: 32000; /* ← Debe ser mayor que cualquier modal */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.4s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+/* === MODAL DE CONFIRMACIÓN PERSONALIZADO (nivel alto) === */
+#modal-confirm {
+    z-index: 31000 !important; /* ← Mayor que submodal (11000), menor que toast (32000) */
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.success { background: linear-gradient(135deg, #009966, #006644); }
+.toast.error { background: linear-gradient(135deg, #cc0000, #990000); }
+.toast.warning { background: linear-gradient(135deg, #ff9900, #cc6600); }
+.toast.info { background: linear-gradient(135deg, #0066cc, #004080); }
+
+/* Colores por tipo */
+.toast.success {
+    background: linear-gradient(135deg, #009966, #006644);
+}
+.toast.error {
+    background: linear-gradient(135deg, #cc0000, #990000);
+}
+.toast.warning {
+    background: linear-gradient(135deg, #ff9900, #cc6600);
+}
+.toast.info {
+    background: linear-gradient(135deg, #0066cc, #004080);
+}
+
+/* Iconos */
+.toast i {
+    font-size: 1.2rem;
+    min-width: 20px;
 }
 
 /* Limitar ancho de resultados de búsqueda inteligente */
