@@ -74,7 +74,7 @@ if (!$slug) {
     <p>Comparte este enlace con tus compañeros para que se inscriban:</p>
 
     <div class="url-box" id="urlBox">
-      https://cancha.up.railway.app/pages/registro_socio.php?club=<?= htmlspecialchars($slug) ?>
+      https://cancha-web.up.railway.app/pages/registro_socio.php?club=<?= htmlspecialchars($slug) ?>
     </div>
 
     <button class="btn-copy" onclick="copiarEnlace()">Copiar enlace</button>
