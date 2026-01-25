@@ -12,10 +12,10 @@ $error = $_GET['error'] ?? '';
   <title>Registrar Club - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-    /* Fondo de estadio vibrante */
+    /* Fondo de estadio vibrante - menos oscuro */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.78), rgba(0, 15, 30, 0.88)),
+        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       display: flex;
@@ -29,7 +29,7 @@ $error = $_GET['error'] ?? '';
 
     .form-container {
       width: 90%;
-      max-width: 1100px; /* ← ANCHO AMPLIADO (ajustable) */
+      max-width: 1100px;
       margin: 0 auto;
       background: white;
       padding: 2.2rem;
@@ -82,11 +82,11 @@ $error = $_GET['error'] ?? '';
     .form-group input,
     .form-group select {
       width: 100%;
-      padding: 0.5rem; /* ← padding reducido */
+      padding: 0.5rem;
       border: 1px solid #ccc;
       border-radius: 5px;
-      font-size: 0.85rem; /* ← letras más pequeñas */
-      color: #071289; /* ← azul marino en campos */
+      font-size: 0.85rem;
+      color: #071289;
       background: #fafcff;
     }
 
@@ -99,11 +99,6 @@ $error = $_GET['error'] ?? '';
 
     .col-span-2 {
       grid-column: span 2;
-    }
-
-    .logo-section {
-      grid-column: 1 / -1;
-      margin-top: 0.8rem;
     }
 
     .submit-section {
@@ -149,7 +144,6 @@ $error = $_GET['error'] ?? '';
         text-align: left;
         padding-right: 0;
       }
-      .logo-section,
       .submit-section {
         grid-column: 1 / -1;
       }
@@ -165,7 +159,7 @@ $error = $_GET['error'] ?? '';
 </head>
 <body>
   <div class="form-container">
-    <h2 style="color: #096d18ff;">REGISTRA TU CLUB</h2>
+    <h2>Registra tu Club</h2>
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
@@ -197,25 +191,46 @@ $error = $_GET['error'] ?? '';
         <!-- Fila 2 -->
         <div class="form-group"><label for="pais">País</label></div>
         <div class="form-group"><input type="text" id="pais" name="pais" value="Chile" required></div>
-        <div class="form-group"><label for="ciudad">Ciudad</label></div>
-        <div class="form-group"><input type="text" id="ciudad" name="ciudad" required></div>
-        <div class="form-group"><label for="comuna">Comuna</label></div>
-        <div class="form-group"><input type="text" id="comuna" name="comuna" required></div>
+        <div class="form-group"><label for="region">Región</label></div>
+        <div class="form-group">
+          <select id="region" name="region" required>
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
 
         <!-- Fila 3 -->
+        <div class="form-group"><label for="ciudad">Ciudad</label></div>
+        <div class="form-group">
+          <select id="ciudad" name="ciudad" required disabled>
+            <option value="">Seleccione región</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="comuna">Comuna</label></div>
+        <div class="form-group">
+          <select id="comuna" name="comuna" required disabled>
+            <option value="">Seleccione ciudad</option>
+          </select>
+        </div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+
+        <!-- Fila 4 -->
         <div class="form-group"><label for="responsable">Responsable</label></div>
         <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
         <div class="form-group"><label for="email_responsable">Correo</label></div>
         <div class="form-group col-span-2"><input type="email" id="email_responsable" name="email_responsable" required></div>
-        <div></div>
-
-        <!-- Fila 4 -->
         <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
-        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
-        <div class="form-group logo-section">
-          <label for="logo">Logo del club</label>
-          <input type="file" id="logo" name="logo" accept="image/*">
-        </div>
+        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required></div>
+
+        <!-- Fila 6: Logo del club -->
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"><label for="logo">Logo del club</label></div>
+        <div class="form-group"><input type="file" id="logo" name="logo" accept="image/*"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
 
         <!-- Botón -->
         <div class="submit-section">
@@ -260,9 +275,82 @@ $error = $_GET['error'] ?? '';
 
     function exito(msg) { mostrarNotificacion(msg, 'exito'); }
     function error(msg) { mostrarNotificacion(msg, 'error'); }
-    function advertencia(msg) { mostrarNotificacion(msg, 'advertencia'); }
 
-    // Manejo del formulario
+    // === CARGAR REGIONES AL INICIAR ===
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('https://apis.gob.cl/regiones')
+        .then(r => r.json())
+        .then(regiones => {
+          const regionSelect = document.getElementById('region');
+          regiones.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.nombre;
+            opt.textContent = r.nombre;
+            regionSelect.appendChild(opt);
+          });
+        })
+        .catch(() => {
+          advertencia('No se pudieron cargar las regiones. Usa valores manuales.');
+        });
+    });
+
+    // === AL CAMBIAR REGIÓN → CIUDADES ===
+    document.getElementById('region').addEventListener('change', function() {
+      const ciudadSelect = document.getElementById('ciudad');
+      const comunaSelect = document.getElementById('comuna');
+      ciudadSelect.innerHTML = '<option value="">Cargando...</option>';
+      comunaSelect.innerHTML = '<option value="">Seleccione ciudad</option>';
+      ciudadSelect.disabled = true;
+      comunaSelect.disabled = true;
+
+      if (!this.value) return;
+
+      fetch(`https://apis.gob.cl/regiones/${encodeURIComponent(this.value)}/provincias`)
+        .then(r => r.json())
+        .then(provincias => {
+          ciudadSelect.innerHTML = '<option value="">Seleccionar</option>';
+          provincias.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.nombre;
+            opt.textContent = p.nombre;
+            ciudadSelect.appendChild(opt);
+          });
+          ciudadSelect.disabled = false;
+        })
+        .catch(() => {
+          error('Error al cargar ciudades');
+          ciudadSelect.innerHTML = '<option value="">Error de conexión</option>';
+        });
+    });
+
+    // === AL CAMBIAR CIUDAD → COMUNAS ===
+    document.getElementById('ciudad').addEventListener('change', function() {
+      const comunaSelect = document.getElementById('comuna');
+      comunaSelect.innerHTML = '<option value="">Cargando...</option>';
+      comunaSelect.disabled = true;
+
+      if (!this.value) return;
+
+      const region = document.getElementById('region').value;
+      fetch(`https://apis.gob.cl/regiones/${encodeURIComponent(region)}/provincias/${encodeURIComponent(this.value)}/comunas`)
+        .then(r => r.json())
+        .then(comunas => {
+          comunaSelect.innerHTML = '<option value="">Seleccionar</option>';
+          comunas.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.nombre;
+            opt.textContent = c.nombre;
+            comunaSelect.appendChild(opt);
+          });
+          comunaSelect.disabled = false;
+        })
+        .catch(() => {
+          error('Error al cargar comunas');
+          comunaSelect.innerHTML = '<option value="">Error de conexión</option>';
+        });
+    });
+
+    // === MANEJO DEL FORMULARIO ===
     document.getElementById('registroForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
