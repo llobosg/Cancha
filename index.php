@@ -65,11 +65,11 @@
 </head>
 <body>
   <div class="hero">
-    <h1>⚽ Cancha</h1>
-    <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
+    <h1>Cancha ⚽</h1>
+    <p class="subtitle">Tu club a un click, deja el WhatsApp para memes y familia</p>
     <div class="cta-buttons">
-      <a href="registro_club.php" class="btn btn-primary">Registra tu club</a>
-      <a href="buscar_club.php" class="btn btn-secondary">Inscríbete en un club</a>
+      <a href="pages/registro_club.php">Registra tu club</a>
+      <a href="pages/buscar_club.php">Inscríbete en un club</a>
     </div>
   </div>
 </body>
