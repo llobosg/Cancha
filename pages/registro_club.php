@@ -12,90 +12,6 @@ $error = $_GET['error'] ?? '';
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Registrar Club - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
-  <style>
-    /* Centrar el formulario en pantalla */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: 
-          linear-gradient(180deg, rgba(244,246,248,0.95) 0%, rgba(232,235,238,0.95) 100%), 
-          url('assets/cancha_pasto1.png') center center no-repeat;
-      background-size: cover;
-      background-attachment: fixed;
-      color: #333;
-      font-size: 14px;
-      line-height: 1.5;
-      width: 100%;
-      overflow-x: auto;
-    }
-    .form-container {
-      width: 95%;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-
-    /* Grid 6 columnas específico para registro_club */
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 0.8rem 1.2rem;
-      margin-bottom: 1.8rem;
-    }
-
-    .form-group {
-      margin: 0;
-    }
-
-    .form-group label {
-      text-align: right;
-      padding-right: 0.5rem;
-      display: block;
-    }
-
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 0.65rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.95rem;
-    }
-
-    /* Clases para spans */
-    .col-span-2 {
-      grid-column: span 2;
-    }
-
-    .logo-section {
-      grid-column: 1 / -1;
-      margin-top: 1rem;
-    }
-
-    .submit-section {
-      grid-column: 1 / -1;
-      text-align: center;
-      margin-top: 1.5rem;
-    }
-
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.8rem;
-      }
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-      }
-      .logo-section,
-      .submit-section {
-        grid-column: 1 / -1;
-      }
-      .col-span-2 {
-        grid-column: span 2;
-      }
-    }
-  </style>
 </head>
 <body>
   <div class="form-container">
@@ -114,19 +30,19 @@ $error = $_GET['error'] ?? '';
           <label for="nombre">Nombre Club</label>
         </div>
         <div class="form-group">
-          <input type="text" id="nombre" name="nombre" required>
+          <input type="text" id="nombre" name="nombre" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
         <div class="form-group">
           <label for="fecha_fundacion">Fecha Fundación</label>
         </div>
         <div class="form-group">
-          <input type="date" id="fecha_fundacion" name="fecha_fundacion">
+          <input type="date" id="fecha_fundacion" name="fecha_fundacion" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
         <div class="form-group">
           <label for="deporte">Deporte</label>
         </div>
         <div class="form-group">
-          <select id="deporte" name="deporte" required>
+          <select id="deporte" name="deporte" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
             <option value="">Seleccionar</option>
             <option value="futbol">Fútbol</option>
             <option value="futbolito">Futbolito</option>
@@ -143,19 +59,19 @@ $error = $_GET['error'] ?? '';
           <label for="pais">País</label>
         </div>
         <div class="form-group">
-          <input type="text" id="pais" name="pais" value="Chile" required>
+          <input type="text" id="pais" name="pais" value="Chile" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
         <div class="form-group">
           <label for="ciudad">Ciudad</label>
         </div>
         <div class="form-group">
-          <input type="text" id="ciudad" name="ciudad" required>
+          <input type="text" id="ciudad" name="ciudad" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
         <div class="form-group">
           <label for="comuna">Comuna</label>
         </div>
         <div class="form-group">
-          <input type="text" id="comuna" name="comuna" required>
+          <input type="text" id="comuna" name="comuna" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
 
         <!-- Fila 3 -->
@@ -163,19 +79,19 @@ $error = $_GET['error'] ?? '';
           <label for="responsable">Responsable</label>
         </div>
         <div class="form-group">
-          <input type="text" id="responsable" name="responsable" required>
+          <input type="text" id="responsable" name="responsable" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
         <div class="form-group">
           <label for="email_responsable">Correo</label>
         </div>
         <div class="form-group col-span-2">
-          <input type="email" id="email_responsable" name="email_responsable" required>
+          <input type="email" id="email_responsable" name="email_responsable" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
         <div class="form-group">
           <label for="jugadores_por_lado">Jugadores por lado</label>
         </div>
         <div class="form-group">
-          <input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required>
+          <input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="5" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
         </div>
 
         <!-- Logo -->
