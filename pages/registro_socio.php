@@ -15,7 +15,7 @@ if (!$slug) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inscríbete - Cancha</title>
-  <link rel="stylesheet" href="../assets/css/styles.css">
+  <link rel="stylesheet" href="styles.css">
   <style>
     body {
       background: linear-gradient(135deg, #e3f2fd, #bbdefb);
