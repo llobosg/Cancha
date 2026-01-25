@@ -74,7 +74,7 @@ h2 {
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 0.7rem;
+  padding: 0.5rem;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 1rem;
@@ -87,6 +87,10 @@ h2 {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
+}
+
+.valor-ficha {
+    color: #071289; /* azul marino */
 }
 
 /* Botón principal */
