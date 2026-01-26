@@ -15,7 +15,7 @@
     /* Fondo nuevo */
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        linear-gradient(rgba(0, 20, 10, 0.50), rgba(0, 30, 15, 0.60)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -226,8 +226,8 @@
 </head>
 <body>
   <div class="hero">
-    <h1>🏟️ Cancha</h1>
-    <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
+    <h1>🏟️ <s>solid #58c20cff;</s>Cancha</h1>
+    <p class="subtitle">Gestiona tu club a un click.</p>
 
     <div class="cards-container">
       <div class="card" onclick="window.location.href='registro_club.php'">

@@ -32,8 +32,8 @@ body {
 /* Para páginas con fondo de estadio */
 .stadium-bg {
   background: 
-    linear-gradient(rgba(0, 10, 20, 0.75), rgba(0, 15, 30, 0.85)), /* overlay más oscuro */
-    url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+    linear-gradient(rgba(0, 10, 20, 0.50), rgba(0, 15, 30, 0.60)), /* overlay más oscuro */
+    url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
   background-blend-mode: multiply; /* mejora los colores vívidos */
 }
 
