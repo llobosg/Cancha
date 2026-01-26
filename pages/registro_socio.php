@@ -40,7 +40,7 @@ if (!$club) {
     /* Fondo corporativo */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
+        linear-gradient(rgba(0, 10, 20, 0.50), rgba(0, 15, 30, 0.60)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -462,7 +462,7 @@ if (!$club) {
       
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
-      <div class="form-group col-span-3"><input type="file" id="foto" name="foto" accept="image/*"></div>
+      <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
     </div>
 
         <!-- Botón -->
