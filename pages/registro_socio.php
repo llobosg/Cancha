@@ -360,8 +360,7 @@ if (!$club) {
 
       <!-- Fila 3 -->
       <div class="form-group"><label for="email">Correo</label></div>
-      <div class="form-group col-span-2"><input type="email" id="email" name="email" required></div>
-      <div class="form-group"></div>
+      <div class="form-group"><input type="email" id="email" name="email" required></div>
       <div class="form-group"><label for="id_puesto">Puesto</label></div>
       <div class="form-group">
         <select id="id_puesto" name="id_puesto">
@@ -369,11 +368,6 @@ if (!$club) {
           <!-- Los valores se cargarán dinámicamente -->
         </select>
       </div>
-
-      <!-- Fila 4 -->
-      <div class="form-group"><label for="direccion">Dirección</label></div>
-      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
-      <div class="form-group"></div>
       <div class="form-group"><label for="habilidad">Habilidad</label></div>
       <div class="form-group">
         <select id="habilidad" name="habilidad">
@@ -383,6 +377,12 @@ if (!$club) {
           <option value="Avanzada">Avanzada</option>
         </select>
       </div>
+
+      <!-- Fila 4 -->
+      <div class="form-group"><label for="direccion">Dirección</label></div>
+      <div class="form-group"><input type="text" id="direccion" name="direccion"></div>
+      <div class="form-group"></div>
+      
 
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
