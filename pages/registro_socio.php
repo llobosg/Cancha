@@ -291,6 +291,20 @@ if (!$club) {
         grid-column: span 4;
       }
     }
+
+    /* Ajuste para Género en móviles */
+    @media (max-width: 768px) {
+      #genero {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* Asegurar que el contenedor no se expanda */
+      .form-group:nth-child(6) {
+        overflow: hidden;
+      }
+    }
   </style>
 </head>
 <body>
@@ -380,11 +394,8 @@ if (!$club) {
 
       <!-- Fila 4 -->
       <div class="form-group"><label for="direccion">Dirección</label></div>
-      <div class="form-group"><input type="text" id="direccion" name="direccion"></div>
-      <div class="form-group"></div>
-      <div class="form-group"></div>
-      <div class="form-group"></div>
-      <div class="form-group"></div>
+      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
+  
       
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
