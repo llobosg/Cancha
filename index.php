@@ -214,17 +214,20 @@
     <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
 
     <div class="cards-container">
+      <!-- Ficha 1: Registrar club -->
       <div class="card" onclick="window.location.href='registro_club.php'">
         <h3>Registra tu club</h3>
         <p>Crea tu espacio único para gestionar socios, eventos y finanzas de tu club deportivo.</p>
       </div>
 
+      <!-- Ficha 2: Inscribirse -->
       <div class="card" onclick="window.location.href='buscar_club.php'">
         <h3>Inscripción socio</h3>
         <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
 
-      <div class="card" id="enterClubCard">
+      <!-- Ficha 3: Entrar a tu cancha -->
+      <div class="card" onclick="abrirEntrarACancha()">
         <h3>Entra a tu cancha</h3>
         <p>Accede directamente al dashboard de tu club si ya estás registrado como administrador o socio.</p>
       </div>
@@ -265,18 +268,19 @@
         };
       }
 
-      document.getElementById('enterClubCard').onclick = () => {
+      function abrirEntrarACancha() {
         const clubId = prompt("Ingresa el ID o slug de tu club:");
         if (clubId) {
           const url = `https://cancha-web.up.railway.app/pages/registro_socio.php?club=${clubId}`;
           mostrarQR(url);
           
+          const rememberCheck = document.getElementById('rememberClub');
           const remember = rememberCheck.checked;
           if (remember) {
             localStorage.setItem('cancha_club', clubId);
           }
         }
-      };
+      }
 
       rememberCheck.addEventListener('change', () => {
         if (rememberCheck.checked && !localStorage.getItem('cancha_club')) {
