@@ -271,7 +271,7 @@ if (!$club) {
 <body>
   <div class="form-container">
     <!-- Botón de cierre -->
-    <a href="../pages/index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <h2>
       <span style="text-align: center;">Inscríbete a</span>
