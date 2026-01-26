@@ -261,7 +261,6 @@ if (!$club) {
       .form-group:nth-child(8) { grid-column: span 2; }
       .form-group:nth-child(9),
       .form-group:nth-child(10) { grid-column: span 2; }
-      .form-group:nth-child(11) { grid-column: span 4; }
       .form-group:nth-child(12) { grid-column: span 4; }
       .submit-section {
         grid-column: span 4;
@@ -303,8 +302,21 @@ if (!$club) {
         <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
         <div class="form-group"><label for="alias">Alias</label></div>
         <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+        <div class="form-group"><label for="rol">Rol</label></div>
+        <div class="form-group">
+          <select id="rol" name="rol" required>
+            <option value="">Seleccionar</option>
+            <option value="Jugador">Jugador</option>
+            <option value="Capitán">Capitán</option>
+            <option value="Tesorero">Tesorero</option>
+            <option value="Director">Director</option>
+            <option value="Delegado">Delegado</option>
+            <option value="Profe">Profe</option>
+            <option value="Kine">Kine</option>
+            <option value="Preparador Físico">Preparador Físico</option>
+            <option value="Utilero">Utilero</option>
+          </select>
+        </div>
 
         <!-- Fila 2 -->
         <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
@@ -325,21 +337,6 @@ if (!$club) {
         <div class="form-group"><label for="email">Correo</label></div>
         <div class="form-group col-span-2"><input type="email" id="email" name="email" required></div>
         <div class="form-group"></div>
-        <div class="form-group"><label for="rol">Rol</label></div>
-        <div class="form-group">
-          <select id="rol" name="rol" required>
-            <option value="">Seleccionar</option>
-            <option value="Jugador">Jugador</option>
-            <option value="Capitán">Capitán</option>
-            <option value="Tesorero">Tesorero</option>
-            <option value="Director">Director</option>
-            <option value="Delegado">Delegado</option>
-            <option value="Profe">Profe</option>
-            <option value="Kine">Kine</option>
-            <option value="Preparador Físico">Preparador Físico</option>
-            <option value="Utilero">Utilero</option>
-          </select>
-        </div>
         <div class="form-group"></div>
         <div class="form-group"></div>
 
