@@ -65,33 +65,42 @@ if (!$club) {
       margin: 0 auto;
     }
 
-    /* Mobile layout: 2 columnas por fila */
+    /* Submodal en web */
+    .form-container {
+      width: 95%;
+      max-width: 900px;
+      background: white;
+      padding: 2rem;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      position: relative;
+      margin: 0 auto;
+    }
+
+    /* En móvil: pantalla completa sin submodal */
     @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.8rem;
+      body {
+        background: white !important; /* Fondo blanco en móvil */
+        color: #333 !important;
       }
       
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-        font-size: 0.8rem;
-      }
-      
-      .form-group input,
-      .form-group select {
-        font-size: 0.85rem;
-        padding: 0.45rem;
-      }
-      
-      /* Campos que ocupan 2 columnas */
-      .col-span-2 {
-        grid-column: span 2;
-      }
-      
-      /* Asegurar que todos los campos tengan el mismo ancho */
-      .form-group {
+      .form-container {
+        width: 100%;
+        max-width: none;
+        height: auto;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
         margin: 0;
+        padding: 1.5rem;
+        background: white !important;
+        position: relative;
+      }
+      
+      /* Ocultar fondo corporativo en móvil */
+      .form-container::before,
+      .form-container::after {
+        display: none;
       }
     }
 
