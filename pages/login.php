@@ -110,6 +110,6 @@
             .catch(err => console.log('Error SW:', err));
         });
         }
-        </script>
+    </script>
 </body>
 </html>
