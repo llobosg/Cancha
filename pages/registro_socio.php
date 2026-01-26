@@ -292,17 +292,9 @@ if (!$club) {
       }
     }
 
-    /* Ajuste para Género en móviles */
     @media (max-width: 768px) {
-      #genero {
-        width: 100% !important;
-        min-width: 0 !important;
-        box-sizing: border-box !important;
-      }
-      
-      /* Asegurar que el contenedor no se expanda */
-      .form-group:nth-child(6) {
-        overflow: hidden;
+      .mobile-full {
+        grid-column: span 2 !important;
       }
     }
   </style>
@@ -362,8 +354,12 @@ if (!$club) {
       <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
       <div class="form-group"><label for="celular">Celular</label></div>
       <div class="form-group"><input type="tel" id="celular" name="celular"></div>
-      <div class="form-group"><label for="genero">Género</label></div>
-      <div class="form-group">
+
+      <!-- Género en su propia fila en móviles -->
+      <div class="form-group mobile-full">
+        <label for="genero">Género</label>
+      </div>
+      <div class="form-group mobile-full">
         <select id="genero" name="genero" required>
           <option value="">Seleccionar</option>
           <option value="Femenino">Femenino</option>
