@@ -239,26 +239,40 @@
       }
 
       fetch(`../api/buscar_club.php?q=${encodeURIComponent(term)}`)
-        .then(r => r.json())
-        .then(data => {
-          const cont = document.getElementById('resultados');
-          if (data.length === 0) {
-            cont.innerHTML = '<div class="no-results">No se encontraron clubes.</div>';
-            return;
-          }
-          cont.innerHTML = data.map(club => `
-            <div class="club-card" onclick="seleccionarClub('${club.slug}')">
-              <div class="club-logo">
-                ${club.logo ? `<img src="../uploads/logos/${club.logo}" alt="Logo" style="width:100%;height:100%;border-radius:8px;">` : '⚽'}
-              </div>
-              <div class="club-info">
-                <h3>${club.nombre}</h3>
-                <p>${club.deporte} • ${club.ciudad}, ${club.comuna}</p>
-              </div>
-            </div>
-          `).join('');
+        .then(response => {
+          console.log('Status:', response.status);
+          return response.text(); // ← Obtener texto crudo
         })
-        .catch(() => error('Error al buscar clubes'));
+        .then(text => {
+          console.log('Respuesta API:', text); // ← ¡Esto es clave!
+          
+          try {
+            const data = JSON.parse(text);
+            const cont = document.getElementById('resultados');
+            if (data.length === 0) {
+              cont.innerHTML = '<div class="no-results">No se encontraron clubes.</div>';
+              return;
+            }
+            cont.innerHTML = data.map(club => `
+              <div class="club-card" onclick="seleccionarClub('${club.slug}')">
+                <div class="club-logo">
+                  ${club.logo ? `<img src="../uploads/logos/${club.logo}" alt="Logo" style="width:100%;height:100%;border-radius:8px;">` : '⚽'}
+                </div>
+                <div class="club-info">
+                  <h3>${club.nombre}</h3>
+                  <p>${club.deporte} • ${club.ciudad}, ${club.comuna}</p>
+                </div>
+              </div>
+            `).join('');
+          } catch (e) {
+            console.error('Error parseando JSON:', e);
+            error('Error al procesar la respuesta del servidor');
+          }
+        })
+        .catch(err => {
+          console.error('Error de red:', err);
+          error('Error de conexión');
+        });
     }
 
     function seleccionarClub(slug) {
