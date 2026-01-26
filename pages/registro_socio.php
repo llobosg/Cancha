@@ -65,17 +65,33 @@ if (!$club) {
       margin: 0 auto;
     }
 
-    /* En móvil: pantalla completa */
+    /* Mobile layout: 2 columnas por fila */
     @media (max-width: 768px) {
-      .form-container {
-        width: 100%;
-        max-width: none;
-        height: 100vh;
-        border-radius: 0;
-        box-shadow: none;
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8rem;
+      }
+      
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-size: 0.8rem;
+      }
+      
+      .form-group input,
+      .form-group select {
+        font-size: 0.85rem;
+        padding: 0.45rem;
+      }
+      
+      /* Campos que ocupan 2 columnas */
+      .col-span-2 {
+        grid-column: span 2;
+      }
+      
+      /* Asegurar que todos los campos tengan el mismo ancho */
+      .form-group {
         margin: 0;
-        padding: 1.5rem;
-        overflow-y: auto;
       }
     }
 
