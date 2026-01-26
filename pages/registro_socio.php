@@ -297,6 +297,72 @@ if (!$club) {
         grid-column: span 2 !important;
       }
     }
+
+    /* Encabezado centrado */
+    .header-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.8rem;
+      position: relative;
+    }
+
+    .header-container h2 {
+      text-align: center;
+      color: #003366;
+      font-weight: 700;
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .club-header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: rgba(0, 51, 102, 0.05);
+      padding: 0.6rem 1.2rem;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 51, 102, 0.1);
+    }
+
+    .club-logo {
+      width: 45px;
+      height: 45px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #666;
+      font-size: 1.1rem;
+    }
+
+    .club-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #003366;
+      white-space: nowrap;
+    }
+
+    /* En móviles */
+    @media (max-width: 768px) {
+      .header-container h2 {
+        font-size: 1.3rem;
+      }
+      
+      .club-name {
+        font-size: 1.1rem;
+      }
+      
+      .club-logo {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
