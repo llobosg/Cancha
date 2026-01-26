@@ -50,24 +50,16 @@
       animation: fadeIn 1s ease;
     }
 
-    /* Grid de fichas con animación */
+    /* Grid de fichas - 3 en fila */
     .cards-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.8rem;
+      grid-template-columns: repeat(3, minmax(250px, 1fr));
+      gap: 2rem;
       margin-bottom: 2rem;
+      width: 100%;
+      justify-items: center;
     }
-
-    .card {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 16px;
-      padding: 1.8rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
+    …  overflow: hidden;
       opacity: 0;
       transform: translateY(20px);
       animation: slideUp 0.6s forwards;
