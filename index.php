@@ -227,7 +227,19 @@
       </div>
 
       <!-- Ficha 3: Entrar a tu cancha -->
-      <div class="card" onclick="abrirEntrarACancha()">
+      <div class="card" onclick="(function() {
+        const clubId = prompt('Ingresa el ID o slug de tu club:');
+        if (clubId) {
+          const url = `https://cancha-web.up.railway.app/pages/registro_socio.php?club=${clubId}`;
+          mostrarQR(url);
+          
+          const rememberCheck = document.getElementById('rememberClub');
+          const remember = rememberCheck?.checked;
+          if (remember) {
+            localStorage.setItem('cancha_club', clubId);
+          }
+        }
+      })()">
         <h3>Entra a tu cancha</h3>
         <p>Accede directamente al dashboard de tu club si ya estás registrado como administrador o socio.</p>
       </div>
