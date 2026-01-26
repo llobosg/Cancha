@@ -226,7 +226,7 @@
 </head>
 <body>
   <div class="hero">
-    <h1>🏟️ <s>solid #58c20cff;</s>Cancha</h1>
+    <h1>🏟️ <span style="color: #58c20cff;">Cancha</span></h1>
     <p class="subtitle">Gestiona tu club a un click.</p>
 
     <div class="cards-container">
@@ -237,7 +237,7 @@
 
       <div class="card" onclick="window.location.href='buscar_club.php'">
         <h3>Inscripción socio</h3>
-        <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
+        <p>Únete a un club existente, confirma tu inscripción y comienza a participar de partidos y 3er tiempo.</p>
       </div>
 
       <div class="card" id="enterClubCard">
