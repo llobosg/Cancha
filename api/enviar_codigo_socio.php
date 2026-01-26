@@ -14,6 +14,7 @@ try {
     $alias = trim($_POST['alias'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $genero = $_POST['genero'] ?? '';
+    $rol = $_POST['rol'] ?? 'Jugador';
 
     if (!$club_slug || !$nombre || !$alias || !$email || !$genero) {
         throw new Exception('Todos los campos son obligatorios');
@@ -43,13 +44,25 @@ try {
 
     $codigo = rand(1000, 9999);
 
+    // Guardar socio temporal - En api/enviar_codigo_socio.php
+    $fecha_nac = $_POST['fecha_nac'] ?? null;
+    $celular = trim($_POST['celular'] ?? '');
+    $direccion = trim($_POST['direccion'] ?? '');
+    $id_puesto = $_POST['id_puesto'] ?? null;
+    $habilidad = $_POST['habilidad'] ?? null;
+
     // Guardar socio temporal
     $stmt = $pdo->prepare("
         INSERT INTO socios (
-            id_club, nombre, alias, email, genero, verification_code, email_verified
-        ) VALUES (?, ?, ?, ?, ?, ?, 0)
+            id_club, nombre, alias, fecha_nac, celular, email, genero, 
+            rol, direccion, foto_url, id_puesto, habilidad,
+            verification_code, email_verified
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, 0)
     ");
-    $stmt->execute([$id_club, $nombre, $alias, $email, $genero, $codigo]);
+    $stmt->execute([
+        $id_club, $nombre, $alias, $fecha_nac, $celular, $email, $genero,
+        $rol, $direccion, $id_puesto, $habilidad, $codigo
+    ]);
 
     $id_socio = $pdo->lastInsertId();
 

@@ -297,69 +297,75 @@ if (!$club) {
       <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
 
       <div class="form-grid">
-        <!-- Fila 1 -->
-        <div class="form-group"><label for="nombre">Nombre</label></div>
-        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
-        <div class="form-group"><label for="alias">Alias</label></div>
-        <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-        <div class="form-group"><label for="rol">Rol</label></div>
-        <div class="form-group">
-          <select id="rol" name="rol" required>
-            <option value="">Seleccionar</option>
-            <option value="Jugador">Jugador</option>
-            <option value="Capitán">Capitán</option>
-            <option value="Tesorero">Tesorero</option>
-            <option value="Director">Director</option>
-            <option value="Delegado">Delegado</option>
-            <option value="Profe">Profe</option>
-            <option value="Kine">Kine</option>
-            <option value="Preparador Físico">Preparador Físico</option>
-            <option value="Utilero">Utilero</option>
-          </select>
-        </div>
+      <!-- Fila 1 -->
+      <div class="form-group"><label for="nombre">Nombre</label></div>
+      <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
+      <div class="form-group"><label for="alias">Alias</label></div>
+      <div class="form-group"><input type="text" id="alias" name="alias" required></div>
+      <div class="form-group"><label for="rol">Rol</label></div>
+      <div class="form-group">
+        <select id="rol" name="rol" required>
+          <option value="">Seleccionar</option>
+          <option value="Jugador">Jugador</option>
+          <option value="Capitán">Capitán</option>
+          <option value="Tesorero">Tesorero</option>
+          <option value="Director">Director</option>
+          <option value="Delegado">Delegado</option>
+          <option value="Profe">Profe</option>
+          <option value="Kine">Kine</option>
+          <option value="Preparador Físico">Preparador Físico</option>
+          <option value="Utilero">Utilero</option>
+        </select>
+      </div>
 
-        <!-- Fila 2 -->
-        <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
-        <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
-        <div class="form-group"><label for="celular">Celular</label></div>
-        <div class="form-group"><input type="tel" id="celular" name="celular"></div>
-        <div class="form-group"><label for="genero">Género</label></div>
-        <div class="form-group">
-          <select id="genero" name="genero" required>
-            <option value="">Seleccionar</option>
-            <option value="Femenino">Femenino</option>
-            <option value="Masculino">Masculino</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
+      <!-- Fila 2 -->
+      <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
+      <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
+      <div class="form-group"><label for="celular">Celular</label></div>
+      <div class="form-group"><input type="tel" id="celular" name="celular"></div>
+      <div class="form-group"><label for="genero">Género</label></div>
+      <div class="form-group">
+        <select id="genero" name="genero" required>
+          <option value="">Seleccionar</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
 
-        <!-- Fila 3 -->
-        <div class="form-group"><label for="email">Correo</label></div>
-        <div class="form-group col-span-2"><input type="email" id="email" name="email" required></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+      <!-- Fila 3 -->
+      <div class="form-group"><label for="email">Correo</label></div>
+      <div class="form-group col-span-2"><input type="email" id="email" name="email" required></div>
+      <div class="form-group"></div>
+      <div class="form-group"><label for="id_puesto">Puesto</label></div>
+      <div class="form-group">
+        <select id="id_puesto" name="id_puesto">
+          <option value="">Seleccionar</option>
+          <!-- Los valores se cargarán dinámicamente -->
+        </select>
+      </div>
 
-        <!-- Fila 4 -->
-        <div class="form-group"><label for="direccion">Dirección</label></div>
-        <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
-        <div class="form-group"></div>
-        <div class="form-group"><label for="habilidad">Habilidad</label></div>
-        <div class="form-group">
-          <select id="habilidad" name="habilidad">
-            <option value="">Seleccionar</option>
-            <option value="Básica">Básica</option>
-            <option value="Intermedia">Intermedia</option>
-            <option value="Avanzada">Avanzada</option>
-          </select>
-        </div>
+      <!-- Fila 4 -->
+      <div class="form-group"><label for="direccion">Dirección</label></div>
+      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
+      <div class="form-group"></div>
+      <div class="form-group"><label for="habilidad">Habilidad</label></div>
+      <div class="form-group">
+        <select id="habilidad" name="habilidad">
+          <option value="">Seleccionar</option>
+          <option value="Básica">Básica</option>
+          <option value="Intermedia">Intermedia</option>
+          <option value="Avanzada">Avanzada</option>
+        </select>
+      </div>
 
-        <!-- Fila 5 -->
-        <div class="form-group"><label for="foto">Foto</label></div>
-        <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+      <!-- Fila 5 -->
+      <div class="form-group"><label for="foto">Foto</label></div>
+      <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
+      <div class="form-group"></div>
+      <div class="form-group"></div>
+      <div class="form-group"></div>
+    </div>
 
         <!-- Botón -->
         <div class="submit-section">
@@ -447,6 +453,24 @@ if (!$club) {
           .catch(err => console.log('Error SW:', err));
       });
     }
+
+    // Cargar puestos al iniciar
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('../api/get_puestos.php')
+        .then(r => r.json())
+        .then(puestos => {
+          const select = document.getElementById('id_puesto');
+          puestos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id_puesto;
+            opt.textContent = p.puesto;
+            select.appendChild(opt);
+          });
+        })
+        .catch(() => {
+          console.warn('No se pudieron cargar los puestos');
+        });
+    });
   </script>
 </body>
 </html>
