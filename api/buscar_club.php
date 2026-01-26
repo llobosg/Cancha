@@ -17,7 +17,8 @@ try {
             deporte,
             ciudad,
             comuna,
-            logo
+            logo,
+            email_responsable
         FROM clubs 
         WHERE email_verified = 1 
         AND (nombre LIKE ? OR ciudad LIKE ? OR comuna LIKE ?)
