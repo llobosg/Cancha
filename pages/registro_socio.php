@@ -304,10 +304,9 @@ if (!$club) {
     <!-- Botón de cierre -->
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
-    <h2>
-      <span style="text-align: center;">Inscríbete a</span>
-      <div class="club-header" style="text-align: center;">
-        <div class="club-name"><?= htmlspecialchars($club['nombre']) ?></div>
+    <div class="header-container">
+      <h2>Inscríbete a:</h2>
+      <div class="club-header">
         <div class="club-logo">
           <?php if ($club['logo']): ?>
             <img src="../uploads/logos/<?= htmlspecialchars($club['logo']) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
@@ -315,9 +314,9 @@ if (!$club) {
             ⚽
           <?php endif; ?>
         </div>
-        
+        <div class="club-name"><?= htmlspecialchars($club['nombre']) ?></div>
       </div>
-    </h2>
+    </div>
 
     <?php if ($_GET['error'] ?? ''): ?>
       <div class="error"><?= htmlspecialchars($_GET['error']) ?></div>
@@ -397,7 +396,7 @@ if (!$club) {
       
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
-      <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
+      <div class="form-group col-span-3"><input type="file" id="foto" name="foto" accept="image/*"></div>
     </div>
 
         <!-- Botón -->
