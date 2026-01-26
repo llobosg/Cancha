@@ -44,6 +44,23 @@ try {
 
     $codigo = rand(1000, 9999);
 
+    // Manejar subida de foto
+    $foto_url = null;
+    if (!empty($_FILES['foto']['name'])) {
+        $upload_dir = __DIR__ . '/../uploads/socios/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        
+        $ext = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
+        $filename = 'socio_' . $id_socio . '.' . strtolower($ext);
+        $filepath = $upload_dir . $filename;
+        
+        if (move_uploaded_file($_FILES['foto']['tmp_name'], $filepath)) {
+            $foto_url = $filename;
+        }
+    }
+
     // Guardar socio temporal - En api/enviar_codigo_socio.php
     $fecha_nac = $_POST['fecha_nac'] ?? null;
     $celular = trim($_POST['celular'] ?? '');
@@ -57,11 +74,11 @@ try {
             id_club, nombre, alias, fecha_nac, celular, email, genero, 
             rol, direccion, foto_url, id_puesto, habilidad,
             verification_code, email_verified
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     ");
     $stmt->execute([
         $id_club, $nombre, $alias, $fecha_nac, $celular, $email, $genero,
-        $rol, $direccion, $id_puesto, $habilidad, $codigo
+        $rol, $direccion, $foto_url, $id_puesto, $habilidad, $codigo
     ]);
 
     $id_socio = $pdo->lastInsertId();
@@ -70,7 +87,7 @@ try {
     require_once __DIR__ . '/../includes/brevo_mailer.php';
     $mail = new BrevoMailer();
     $mail->setTo($email, $nombre);
-    $mail->setSubject('🔐 Código de inscripción - Cancha');
+    $mail->setSubject('Cancha - 🔐 Código de inscripción a club ' . $club_nombre);
 
     // Obtener nombre del club para personalizar el correo
     $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
