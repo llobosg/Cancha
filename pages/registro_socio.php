@@ -391,7 +391,9 @@ if (!$club) {
       <!-- Fila 4 -->
       <div class="form-group"><label for="direccion">Dirección</label></div>
       <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
-  
+      <div></div>
+      <div></div>
+      <div></div>
       
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
