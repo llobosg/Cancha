@@ -41,7 +41,7 @@ if (!$club) {
     body {
       background: 
         linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
-        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
@@ -275,8 +275,9 @@ if (!$club) {
     <a href="../pages/index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <h2>
-      <span>👤 Inscríbete a</span>
-      <div class="club-header">
+      <span style="text-align: center;">Inscríbete a</span>
+      <div class="club-header" style="text-align: center;">
+        <div class="club-name"><?= htmlspecialchars($club['nombre']) ?></div>
         <div class="club-logo">
           <?php if ($club['logo']): ?>
             <img src="../uploads/logos/<?= htmlspecialchars($club['logo']) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
@@ -284,7 +285,7 @@ if (!$club) {
             ⚽
           <?php endif; ?>
         </div>
-        <div class="club-name"><?= htmlspecialchars($club['nombre']) ?></div>
+        
       </div>
     </h2>
 
@@ -323,6 +324,7 @@ if (!$club) {
         <!-- Fila 3 -->
         <div class="form-group"><label for="email">Correo</label></div>
         <div class="form-group col-span-2"><input type="email" id="email" name="email" required></div>
+        <div class="form-group"></div>
         <div class="form-group"><label for="rol">Rol</label></div>
         <div class="form-group">
           <select id="rol" name="rol" required>
@@ -344,6 +346,7 @@ if (!$club) {
         <!-- Fila 4 -->
         <div class="form-group"><label for="direccion">Dirección</label></div>
         <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
+        <div class="form-group"></div>
         <div class="form-group"><label for="habilidad">Habilidad</label></div>
         <div class="form-group">
           <select id="habilidad" name="habilidad">
@@ -353,13 +356,10 @@ if (!$club) {
             <option value="Avanzada">Avanzada</option>
           </select>
         </div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
 
         <!-- Fila 5 -->
         <div class="form-group"><label for="foto">Foto</label></div>
         <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
-        <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
