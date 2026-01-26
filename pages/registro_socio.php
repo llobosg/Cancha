@@ -8,7 +8,15 @@ if (!$slug) {
 }
 
 // Obtener datos del club
-$stmt = $pdo->prepare("SELECT id_club, nombre, logo FROM clubs WHERE email_verified = 1 AND (SUBSTRING(MD5(id_club || email_responsable), 1, 8) = ? OR id_club = ?)");
+$stmt = $pdo->prepare("
+    SELECT id_club, nombre, logo, email_responsable 
+    FROM clubs 
+    WHERE email_verified = 1 
+    AND (
+        SUBSTRING(MD5(CONCAT(id_club, email_responsable)), 1, 8) = ? 
+        OR id_club = ?
+    )
+");
 $stmt->execute([$slug, $slug]);
 $club = $stmt->fetch();
 if (!$club) {
