@@ -159,11 +159,30 @@ $error = $_GET['error'] ?? '';
         margin: 1rem;
       }
     }
+
+    /* Botón de cierre */
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 2.2rem;
+      color: #003366;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      z-index: 10;
+    }
+
+    .close-btn:hover {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
   <div class="form-container">
     <h2>Registra tu Club</h2>
+    <!-- Botón de cierre -->
+    <a href="../pages/index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>

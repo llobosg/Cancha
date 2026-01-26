@@ -15,7 +15,7 @@
     /* Fondo nuevo */
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.50), rgba(0, 30, 15, 0.60)),
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -39,7 +39,6 @@
       margin-bottom: 1.5rem;
       text-shadow: 0 2px 4px rgba(0,0,0,0.5);
       color: white;
-      animation: fadeInDown 0.8s ease;
     }
 
     .subtitle {
@@ -47,31 +46,32 @@
       margin-bottom: 2.5rem;
       opacity: 0.95;
       text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-      animation: fadeIn 1s ease;
     }
 
-    /* Grid de fichas - 3 en fila */
+    /* Grid de fichas - 3 en fila (web) / 1 en móvil */
     .cards-container {
       display: grid;
-      grid-template-columns: repeat(3, minmax(250px, 1fr));
-      gap: 2rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.8rem;
+      margin-bottom: 2.5rem;
       width: 100%;
-      justify-items: center;
-    }
-    …  overflow: hidden;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: slideUp 0.6s forwards;
     }
 
-    /* Animación escalonada */
-    .card:nth-child(1) { animation-delay: 0.2s; }
-    .card:nth-child(2) { animation-delay: 0.4s; }
-    .card:nth-child(3) { animation-delay: 0.6s; }
+    .card {
+      background: rgba(255, 255, 255, 0.1); /* ← 90% transparencia */
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
+      padding: 1.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
 
     .card:hover {
-      background: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.2);
       transform: translateY(-5px);
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
@@ -97,12 +97,12 @@
       line-height: 1.5;
     }
 
-    /* Recordar club */
+    /* Recordar club - sin borde gris y más abajo */
     .remember-section {
-      background: rgba(0, 30, 60, 0.4);
-      padding: 1.5rem;
-      border-radius: 12px;
-      margin-top: 1.5rem;
+      background: transparent; /* ← sin fondo gris */
+      padding: 0.5rem 0;
+      margin-top: 2.5rem; /* ← más abajo */
+      border: none; /* ← sin borde */
     }
 
     .remember-section label {
@@ -111,6 +111,8 @@
       gap: 0.8rem;
       cursor: pointer;
       font-size: 0.95rem;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
 
     .remember-section input[type="checkbox"] {
@@ -194,32 +196,22 @@
       margin-top: 1rem;
     }
 
-    /* Animaciones */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes slideUp {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
+    /* Responsive: en móviles, una columna */
     @media (max-width: 768px) {
+      .cards-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      
       h1 { font-size: 2.5rem; }
       .subtitle { font-size: 1.1rem; }
-      .cards-container { gap: 1.2rem; }
     }
   </style>
 </head>
 <body>
   <div class="hero">
-    <h1>🏟️ <span style="color: #58c20cff;">Cancha</span></h1>
-    <p class="subtitle">Gestiona tu club a un click.</p>
+    <h1>🏟️ Cancha</h1>
+    <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
 
     <div class="cards-container">
       <div class="card" onclick="window.location.href='registro_club.php'">
@@ -229,7 +221,7 @@
 
       <div class="card" onclick="window.location.href='buscar_club.php'">
         <h3>Inscripción socio</h3>
-        <p>Únete a un club existente, confirma tu inscripción y comienza a participar de partidos y 3er tiempo.</p>
+        <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
 
       <div class="card" id="enterClubCard">
@@ -273,7 +265,6 @@
         };
       }
 
-      // Entrar a club y mostrar QR
       document.getElementById('enterClubCard').onclick = () => {
         const clubId = prompt("Ingresa el ID o slug de tu club:");
         if (clubId) {
@@ -295,16 +286,12 @@
       });
     });
 
-    // Mostrar QR
     function mostrarQR(url) {
       const qrModal = document.getElementById('qrModal');
       const qrCode = document.getElementById('qrCode');
       const qrUrl = document.getElementById('qrUrl');
       
-      // Limpiar QR anterior
       qrCode.innerHTML = '';
-      
-      // Generar nuevo QR
       new QRCode(qrCode, {
         text: url,
         width: 180,
@@ -322,12 +309,10 @@
       document.getElementById('qrModal').style.display = 'none';
     }
 
-    // Cerrar QR con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') cerrarQR();
     });
 
-    // Registrar Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
