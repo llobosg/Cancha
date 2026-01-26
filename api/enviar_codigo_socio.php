@@ -58,11 +58,18 @@ try {
     $mail = new BrevoMailer();
     $mail->setTo($email, $nombre);
     $mail->setSubject('🔐 Código de inscripción - Cancha');
+
+    // Obtener nombre del club para personalizar el correo
+    $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
+    $stmt->execute([$id_club]);
+    $club_nombre = $stmt->fetchColumn() ?: 'tu club';
+
     $mail->setHtmlBody("
         <h2>¡Bienvenido a Cancha!</h2>
-        <p>Tu código de inscripción es:</p>
+        <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
         <h1 style='color:#009966;'>$codigo</h1>
         <p>Ingresa este código para confirmar tu inscripción.</p>
+        <p>La validez del código es medio tiempo sin alargue</p>
     ");
 
     if (!$mail->send()) {
