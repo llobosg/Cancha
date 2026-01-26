@@ -382,14 +382,13 @@ if (!$club) {
       <div class="form-group"><label for="direccion">Dirección</label></div>
       <div class="form-group"><input type="text" id="direccion" name="direccion"></div>
       <div class="form-group"></div>
+      <div class="form-group"></div>
+      <div class="form-group"></div>
+      <div class="form-group"></div>
       
-
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
-      <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
-      <div class="form-group"></div>
-      <div class="form-group"></div>
-      <div class="form-group"></div>
+      <div class="form-group"><input type="file" id="foto" name="foto" accept="image/*"></div>
     </div>
 
         <!-- Botón -->
