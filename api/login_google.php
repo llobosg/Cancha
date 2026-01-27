@@ -1,6 +1,9 @@
 <?php
 // api/login_google.php
 header('Content-Type: application/json; charset=utf-8');
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../includes/config.php';
 
 try {
@@ -43,11 +46,11 @@ try {
     $socio = $stmt->fetch();
 
     if (!$socio) {
-        // Socio no existe → redirigir a landing con mensaje
+        // Socio no existe → redirigir al landing con mensaje
         echo json_encode([
             'success' => false,
             'message' => 'Primero debes inscribirte en un club',
-            'redirect' => '../pages/index.php?error=not_registered'
+            'redirect' => 'https://cancha-web.up.railway.app/pages/index.php?error=not_registered'
         ]);
         exit;
     }
