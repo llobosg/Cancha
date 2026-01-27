@@ -198,7 +198,7 @@ $error = $_GET['error'] ?? '';
       <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="POST" enctype="multipart/form-data">
+    <form id="registroForm" method="POST" enctype="multipart/form-data">
       <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
 
       <div class="form-grid">
@@ -431,6 +431,7 @@ $error = $_GET['error'] ?? '';
         btn.disabled = false;
       }
     });
+
     // Registrar Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
