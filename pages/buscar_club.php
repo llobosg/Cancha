@@ -53,6 +53,23 @@
     .submodal::before { top: 20px; left: 20px; }
     .submodal::after { bottom: 20px; right: 20px; }
 
+    /* Botón de cierre */
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 2.2rem;
+      color: #003366;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      z-index: 10;
+    }
+
+    .close-btn:hover {
+      opacity: 1;
+    }
+
     h2 {
       text-align: center;
       color: #003366;
@@ -187,7 +204,7 @@
   <div class="submodal">
     <!-- Botón de cierre -->
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
-    
+
     <h2>🔍 Buscar club</h2>
     
     <div class="search-box">
