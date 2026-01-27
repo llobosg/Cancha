@@ -2,7 +2,7 @@
   "name": "Cancha - El partido a un click",
   "short_name": "Cancha",
   "description": "Plataforma para clubes deportivos",
-  "start_url": "/pages/index.php",
+  "start_url": "/index.php",
   "display": "standalone",
   "background_color": "#003366",
   "theme_color": "#003366",
