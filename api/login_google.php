@@ -33,7 +33,6 @@ try {
 
     $email = $payload['email'];
     $name = $payload['name'] ?? '';
-    $picture = $payload['picture'] ?? '';
 
     // Buscar socio por email
     $stmt = $pdo->prepare("

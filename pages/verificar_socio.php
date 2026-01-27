@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($club_data) {
                 $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
-                header("Location: dashboard.php?id_club=" . $club_slug);
+                header("Location: pages/dashboard.php?id_club=" . $club_slug);
                 exit;
             }
         }

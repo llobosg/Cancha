@@ -327,7 +327,7 @@
           localStorage.setItem('cancha_session', 'active');
           localStorage.setItem('cancha_club', data.club_slug);
           
-          window.location.href = `dashboard.php?id_club=${data.club_slug}`;
+          window.location.href = `pages/dashboard.php?id_club=${data.club_slug}`;
         } else {
           alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
           if (data.redirect) {
@@ -347,7 +347,7 @@
       const hasSession = localStorage.getItem('cancha_session') === 'active';
       
       if (savedClub && hasSession) {
-        window.location.href = `dashboard.php?id_club=${savedClub}`;
+        window.location.href = `pages/dashboard.php?id_club=${savedClub}`;
       } else {
         const clubId = prompt("Ingresa el ID o slug de tu club:");
         if (clubId) {
@@ -361,6 +361,28 @@
         }
       }
     }
+
+    // === INICIALIZAR BOTÓN DIRECTO ===
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedClub = localStorage.getItem('cancha_club');
+      const btnDirect = document.getElementById('btnDirect');
+      const accesoDirecto = document.getElementById('accesoDirecto');
+      const rememberCheck = document.getElementById('rememberClub');
+      
+      if (savedClub) {
+        accesoDirecto.style.display = 'block';
+        btnDirect.onclick = () => {
+          window.location.href = `pages/dashboard.php?id_club=${savedClub}`;
+        };
+      }
+
+      rememberCheck?.addEventListener('change', () => {
+        if (rememberCheck.checked && !localStorage.getItem('cancha_club')) {
+          alert('Primero entra a tu cancha para guardar la preferencia');
+          rememberCheck.checked = false;
+        }
+      });
+    });
 
     // === QR ===
     function mostrarQR(url) {
@@ -385,27 +407,6 @@
     function cerrarQR() {
       document.getElementById('qrModal').style.display = 'none';
     }
-
-    // === INICIALIZAR BOTÓN DIRECTO ===
-    document.addEventListener('DOMContentLoaded', () => {
-      const savedClub = localStorage.getItem('cancha_club');
-      const btnDirect = document.getElementById('btnDirect');
-      const rememberCheck = document.getElementById('rememberClub');
-      
-      if (savedClub) {
-        btnDirect.style.display = 'inline-block';
-        btnDirect.onclick = () => {
-          window.location.href = `dashboard.php?id_club=${savedClub}`;
-        };
-      }
-
-      rememberCheck.addEventListener('change', () => {
-        if (rememberCheck.checked && !localStorage.getItem('cancha_club')) {
-          alert('Primero entra a tu cancha para guardar la preferencia');
-          rememberCheck.checked = false;
-        }
-      });
-    });
 
     // Cerrar QR con ESC
     document.addEventListener('keydown', (e) => {
