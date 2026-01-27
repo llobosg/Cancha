@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cancha - Gestión para clubes deportivos</title>
   <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     /* Fondo nuevo */
     body {
@@ -21,6 +22,19 @@
       justify-content: center;
       align-items: center;
       color: white;
+    }
+
+    .title-cancha {
+      font-family: 'Dancing Script', cursive;
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      margin-bottom: 1.5rem;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif; /* Para el resto del texto */
     }
 
     .hero {
@@ -133,8 +147,8 @@
 </head>
 <body>
   <div class="hero">
-    <h1>🏟️ Cancha</h1>
-    <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
+    <h1 class="title-cancha">CANCHA ⚽</h1>
+    <p class="subtitle">Tu club a un click..</p>
 
     <!-- Botón acceso directo (aparece solo si hay club guardado) -->
     <div id="accesoDirecto" style="text-align: center; margin-bottom: 2.5rem; display: none;">
