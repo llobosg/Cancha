@@ -10,7 +10,7 @@
     /* Fondo nuevo */
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        linear-gradient(rgba(0, 20, 10, 0.50), rgba(0, 30, 15, 0.60)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -143,13 +143,13 @@
 
     <div class="cards-container">
       <!-- Ficha 1: Registrar club -->
-      <div class="card" onclick="window.location.href='registro_club.php'">
+      <div class="card" onclick="window.location.href='../pages/registro_club.php'">
         <h3>Registra tu club</h3>
         <p>Crea tu espacio único para gestionar socios, eventos y finanzas de tu club deportivo.</p>
       </div>
 
       <!-- Ficha 2: Inscribirse -->
-      <div class="card" onclick="window.location.href='buscar_club.php'">
+      <div class="card" onclick="window.location.href='../api/buscar_club.php'">
         <h3>Inscríbete a un club</h3>
         <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
