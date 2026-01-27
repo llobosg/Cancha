@@ -1,13 +1,58 @@
-<!-- pages/index.php -->
+<?php
+require_once __DIR__ . '/../includes/config.php';
+
+// Obtener slug del club desde la URL
+$club_slug = $_GET['id_club'] ?? '';
+if (!$club_slug) {
+    header('Location: index.php?error=no_club');
+    exit;
+}
+
+// Buscar club por slug (usando email_responsable para generar el mismo hash)
+$stmt = $pdo->prepare("
+    SELECT id_club, nombre, logo, email_responsable 
+    FROM clubs 
+    WHERE email_verified = 1
+");
+$stmt->execute();
+$clubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$club_id = null;
+$club_nombre = '';
+$club_logo = '';
+
+foreach ($clubs as $c) {
+    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+    if ($generated_slug === $club_slug) {
+        $club_id = (int)$c['id_club'];
+        $club_nombre = $c['nombre'];
+        $club_logo = $c['logo'];
+        break;
+    }
+}
+
+if (!$club_id) {
+    header('Location: index.php?error=invalid_club');
+    exit;
+}
+
+// Contar socios del club
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM socios WHERE id_club = ? AND email_verified = 1");
+$stmt->execute([$club_id]);
+$total_socios = (int)$stmt->fetchColumn();
+
+// Contar eventos (simulado, ajusta según tu tabla real)
+$total_eventos = 0;
+$proximo_partido = 'No programado';
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cancha - Gestión para clubes deportivos</title>
+  <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-    /* Fondo nuevo */
     body {
       background: 
         linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
@@ -17,310 +62,194 @@
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       color: white;
     }
-
-    .hero {
-      text-align: center;
-      max-width: 900px;
+    
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
       padding: 2rem;
     }
-
-    h1 {
-      font-size: 3.2rem;
-      margin-bottom: 1.5rem;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      color: white;
-    }
-
-    .subtitle {
-      font-size: 1.3rem;
+    
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
       margin-bottom: 2.5rem;
-      opacity: 0.95;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      padding-bottom: 1rem;
+      border-bottom: 2px solid rgba(255,255,255,0.3);
     }
-
-    /* Botón acceso directo */
-    .btn-direct {
+    
+    .club-logo {
+      width: 70px;
+      height: 70px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    
+    .club-info h1 {
+      margin: 0;
+      font-size: 2rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    
+    .stat-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .stat-card h3 {
+      margin-bottom: 0.5rem;
+      opacity: 0.9;
+    }
+    
+    .stat-card .number {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    
+    .actions {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 2rem;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .actions h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .btn-action {
+      padding: 0.8rem 1.5rem;
       background: #00cc66;
       color: white;
       border: none;
-      padding: 0.8rem 2rem;
-      border-radius: 50px;
-      font-size: 1.1rem;
+      border-radius: 8px;
+      font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 1.2rem;
       transition: all 0.2s;
-      display: none;
     }
-
-    .btn-direct:hover {
+    
+    .btn-action:hover {
       background: #00aa55;
       transform: translateY(-2px);
     }
-
-    /* Grid de fichas - 2x2 en web / 1 columna en móvil */
-    .cards-container {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1.8rem;
-      margin-bottom: 2.5rem;
-      width: 100%;
+    
+    .logout {
+      text-align: center;
+      margin-top: 2.5rem;
+    }
+    
+    .logout a {
+      color: #ffcc00;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    
+    .logout a:hover {
+      text-decoration: underline;
     }
 
-    .card {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 16px;
-      padding: 1.8rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-    }
-
-    .card:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    }
-
-    .card::before {
+    /* Logo ⚽ en esquinas */
+    .dashboard-container::before,
+    .dashboard-container::after {
       content: "⚽";
       position: absolute;
-      top: 15px;
-      right: 15px;
-      font-size: 2rem;
-      opacity: 0.3;
+      font-size: 2.2rem;
+      opacity: 0.4;
+      z-index: 1;
     }
-
-    .card h3 {
-      font-size: 1.3rem;
-      margin-bottom: 1rem;
-      color: white;
-    }
-
-    .card p {
-      font-size: 0.95rem;
-      opacity: 0.9;
-      line-height: 1.5;
-    }
-
-    /* Google Login en ficha */
-    .google-login-section {
-      margin-top: 1.2rem;
-      padding-top: 1.2rem;
-      border-top: 1px solid rgba(255,255,255,0.2);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .cards-container {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-      
-      h1 { font-size: 2.5rem; }
-      .subtitle { font-size: 1.1rem; }
-    }
+    .dashboard-container::before { top: 30px; left: 30px; }
+    .dashboard-container::after { bottom: 30px; right: 30px; }
   </style>
 </head>
 <body>
-  <div class="hero">
-    <h1>🏟️ Cancha</h1>
-    <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
-
-    <!-- Botón acceso directo (aparece solo si hay club guardado) -->
-    <div id="accesoDirecto" style="text-align: center; margin-bottom: 2.5rem; display: none;">
-      <button id="btnDirect" class="btn-direct">Entrar a mi cancha</button>
+  <div class="dashboard-container">
+    <div class="header">
+      <div class="club-logo">
+        <?php if ($club_logo): ?>
+          <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+        <?php else: ?>
+          ⚽
+        <?php endif; ?>
+      </div>
+      <div class="club-info">
+        <h1><?= htmlspecialchars($club_nombre) ?></h1>
+        <p>Tu cancha está lista</p>
+      </div>
     </div>
 
-    <div class="cards-container">
-      <!-- Ficha 1: Registrar club -->
-      <div class="card" onclick="window.location.href='registro_club.php'">
-        <h3>Registra tu club</h3>
-        <p>Crea tu espacio único para gestionar socios, eventos y finanzas de tu club deportivo.</p>
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Socios activos</h3>
+        <div class="number"><?= $total_socios ?></div>
       </div>
+      <div class="stat-card">
+        <h3>Eventos</h3>
+        <div class="number"><?= $total_eventos ?></div>
+      </div>
+      <div class="stat-card">
+        <h3>Próximo partido</h3>
+        <div class="number"><?= htmlspecialchars($proximo_partido) ?></div>
+      </div>
+    </div>
 
-      <!-- Ficha 2: Inscribirse -->
-      <div class="card" onclick="window.location.href='buscar_club.php'">
-        <h3>Inscríbete a un club</h3>
-        <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
+    <!-- Acciones -->
+    <div class="actions">
+      <h2>Acciones rápidas</h2>
+      <div class="action-buttons">
+        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_id ?>'">Crear convocatoria</button>
+        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_id ?>'">Gestionar socios</button>
+        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_id ?>'">Eventos</button>
       </div>
+    </div>
 
-      <!-- Ficha 3: Primera vez -->
-      <div class="card">
-        <h3>Primera vez en Cancha</h3>
-        <p>¿Ya te inscribiste pero es tu primera vez aquí? Autentica tu identidad con Google para registrar este dispositivo y acceder a tu cancha.</p>
-        
-        <div class="google-login-section">
-          <div id="g_id_onload"
-               data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
-               data-callback="handleCredentialResponse"
-               data-auto_select="false"
-               data-cancel_on_tap_outside="true">
-          </div>
-          <div class="g_id_signin" 
-               data-type="standard"
-               data-size="medium"
-               data-theme="outline"
-               data-text="continue_with"
-               data-shape="rectangular"
-               data-logo_alignment="left"
-               style="display: inline-block;">
-          </div>
-        </div>
-      </div>
-
-      <!-- Ficha 4: Acceso rápido -->
-      <div class="card">
-        <h3>Acceso rápido</h3>
-        <p>¿Ya has estado en Cancha desde este dispositivo? Usa el botón verde de arriba para entrar directamente a tu dashboard.</p>
-      </div>
+    <!-- Cerrar sesión -->
+    <div class="logout">
+      <a href="index.php" onclick="limpiarSesion()">Cerrar sesión</a>
     </div>
   </div>
 
-  <!-- Modal QR -->
-  <div id="qrModal" class="qr-modal" style="display:none;">
-    <div class="qr-content">
-      <h3>📲 Comparte tu club</h3>
-      <p>Escanea este código para que otros se inscriban fácilmente</p>
-      <div class="qr-code" id="qrCode"></div>
-      <div class="qr-url" id="qrUrl"></div>
-      <button class="close-qr" onclick="cerrarQR()">Cerrar</button>
-    </div>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
-    // === FUNCIONES DE NOTIFICACIÓN ===
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-      const tipoMap = {
-        'exito': 'success',
-        'error': 'error',
-        'advertencia': 'warning',
-        'info': 'info'
-      };
-      const claseTipo = tipoMap[tipo] || 'info';
+    // Guardar sesión en dispositivo
+    const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+    localStorage.setItem('cancha_device', deviceId);
+    localStorage.setItem('cancha_session', 'active');
+    localStorage.setItem('cancha_club', '<?= htmlspecialchars($club_slug) ?>');
 
-      const toast = document.getElementById('toast');
-      const msg = document.getElementById('toast-message');
-      if (!toast || !msg) return;
-
-      msg.textContent = mensaje;
-      toast.className = 'toast ' + claseTipo;
-      toast.style.display = 'flex';
-      void toast.offsetWidth;
-      toast.classList.add('show');
-
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.style.display = 'none', 400);
-      }, 5000);
+    function limpiarSesion() {
+      localStorage.removeItem('cancha_session');
+      localStorage.removeItem('cancha_club');
     }
-
-    function error(msg) { mostrarNotificacion(msg, 'error'); }
-
-    // === GOOGLE LOGIN ===
-    function handleCredentialResponse(response) {
-      fetch('../api/login_google.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({token: response.credential})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
-          localStorage.setItem('cancha_device', deviceId);
-          localStorage.setItem('cancha_session', 'active');
-          localStorage.setItem('cancha_club', data.club_slug);
-          
-          window.location.href = `pages/dashboard.php?id_club=${data.club_slug}`;
-        } else {
-          alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
-          if (data.redirect) {
-            window.location.href = data.redirect;
-          }
-        }
-      })
-      .catch(err => {
-        console.error('Login error:', err);
-        alert('Error de conexión');
-      });
-    }
-
-    // === ACCESO MANUAL (para QR) ===
-    function accesoManual() {
-      const clubId = prompt("Ingresa el ID o slug de tu club:");
-      if (clubId) {
-        const url = `https://cancha-web.up.railway.app/pages/registro_socio.php?club=${clubId}`;
-        mostrarQR(url);
-        
-        const rememberCheck = document.getElementById('rememberClub');
-        if (rememberCheck?.checked) {
-          localStorage.setItem('cancha_club', clubId);
-        }
-      }
-    }
-
-    // === QR ===
-    function mostrarQR(url) {
-      const qrModal = document.getElementById('qrModal');
-      const qrCode = document.getElementById('qrCode');
-      const qrUrl = document.getElementById('qrUrl');
-      
-      qrCode.innerHTML = '';
-      new QRCode(qrCode, {
-        text: url,
-        width: 180,
-        height: 180,
-        colorDark: "#003366",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-      
-      qrUrl.textContent = url;
-      qrModal.style.display = 'flex';
-    }
-
-    function cerrarQR() {
-      document.getElementById('qrModal').style.display = 'none';
-    }
-
-    // === INICIALIZAR BOTÓN DIRECTO ===
-    document.addEventListener('DOMContentLoaded', () => {
-      const savedClub = localStorage.getItem('cancha_club');
-      const btnDirect = document.getElementById('btnDirect');
-      const accesoDirecto = document.getElementById('accesoDirecto');
-      
-      if (savedClub) {
-        accesoDirecto.style.display = 'block';
-        btnDirect.onclick = () => {
-          window.location.href = `pages/dashboard.php?id_club=${savedClub}`;
-        };
-      }
-    });
-
-    // Cerrar QR con ESC
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') cerrarQR();
-    });
   </script>
-
-  <!-- Toast de notificaciones -->
-  <div id="toast" class="toast" style="display:none;">
-    <span>ℹ️</span>
-    <span id="toast-message">Mensaje</span>
-  </div>
-
-  <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
