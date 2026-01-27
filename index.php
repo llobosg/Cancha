@@ -219,37 +219,46 @@
   <div class="hero">
     <h1>🏟️ Cancha</h1>
     <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
-
-    <!-- Google Login -->
-    <div id="g_id_onload"
-         data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
-         data-callback="handleCredentialResponse"
-         data-auto_select="false"
-         data-cancel_on_tap_outside="true">
-    </div>
-    <div class="g_id_signin" 
-         data-type="standard"
-         data-size="large"
-         data-theme="outline"
-         data-text="continue_with"
-         data-shape="rectangular"
-         data-logo_alignment="left">
-    </div>
-
     <div class="cards-container">
+
+      <!-- Ficha 1 -->
       <div class="card" onclick="window.location.href='registro_club.php'">
         <h3>Registra tu club</h3>
         <p>Crea tu espacio único para gestionar socios, eventos y finanzas de tu club deportivo.</p>
       </div>
 
+      <!-- Ficha 2 -->
       <div class="card" onclick="window.location.href='buscar_club.php'">
         <h3>Inscripción socio</h3>
         <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
 
-      <div class="card" onclick="accesoRapido()">
+      <!-- Ficha 3 -->
+      <div class="card">
         <h3>Entra a tu cancha</h3>
         <p>Accede directamente al dashboard de tu club si ya estás registrado como administrador o socio.</p>
+        <!-- Google Login integrado -->
+        <div style="margin-top: 1.2rem; padding-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.2);">
+          <div id="g_id_onload"
+              data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
+              data-callback="handleCredentialResponse"
+              data-auto_select="false"
+              data-cancel_on_tap_outside="true">
+          </div>
+          <div class="g_id_signin" 
+              data-type="standard"
+              data-size="medium"
+              data-theme="outline"
+              data-text="continue_with"
+              data-shape="rectangular"
+              data-logo_alignment="left"
+              style="display: inline-block;">
+          </div>
+        </div>
+      
+        <div style="margin-top: 0.8rem; font-size: 0.85rem; opacity: 0.9;">
+          ¿No usas Google? <a href="#" onclick="accesoManual(); return false;" style="color: #ffcc00; text-decoration: underline;">Ingresa manualmente</a>
+        </div>
       </div>
     </div>
 
@@ -410,6 +419,19 @@
             .then(reg => console.log('SW registrado:', reg.scope))
             .catch(err => console.log('Error SW:', err));
         });
+      }
+
+      function accesoManual() {
+        const clubId = prompt("Ingresa el ID o slug de tu club:");
+        if (clubId) {
+          const url = `https://cancha-web.up.railway.app/pages/registro_socio.php?club=${clubId}`;
+          mostrarQR(url);
+          
+          const rememberCheck = document.getElementById('rememberClub');
+          if (rememberCheck?.checked) {
+            localStorage.setItem('cancha_club', clubId);
+          }
+        }
       }
   </script>
 
