@@ -46,11 +46,10 @@ try {
     $socio = $stmt->fetch();
 
     if (!$socio) {
-        // Socio no existe → redirigir al landing con mensaje
         echo json_encode([
             'success' => false,
-            'message' => 'ups !!! Parece que no estás registrado aún.. 😊',
-            'redirect' => 'https://cancha-web.up.railway.app/index.php?error=not_registered'
+            'message' => 'Primero debes inscribirte en un club',
+            'redirect' => 'https://cancha-web.up.railway.app/pages/index.php?error=not_registered'
         ]);
         exit;
     }
@@ -61,7 +60,7 @@ try {
     echo json_encode([
         'success' => true,
         'club_slug' => $club_slug,
-        'alias' => $socio['alias'] ?: $name
+        'redirect' => 'https://cancha-web.up.railway.app/pages/dashboard.php?id_club=' . $club_slug
     ]);
 
 } catch (Exception $e) {
