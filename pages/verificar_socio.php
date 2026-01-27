@@ -1,5 +1,5 @@
+<!-- pages/verificar_socio.php -->
 <?php
-//-- pages/verificar_socio.php --
 require_once __DIR__ . '/../includes/config.php';
 
 $id_socio = $_GET['id'] ?? null;
@@ -12,10 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$codigo || !$id_socio) {
         $error = 'Datos incompletos';
     } else {
+        // Verificar código válido y no expirado
         $stmt = $pdo->prepare("
-            SELECT s.id_socio, s.id_club, c.nombre AS club_nombre 
+            SELECT s.id_socio, s.id_club, s.email_verified
             FROM socios s
-            JOIN clubs c ON s.id_club = c.id_club
             WHERE s.id_socio = ? 
             AND s.verification_code = ? 
             AND s.created_at > NOW() - INTERVAL 10 MINUTE
@@ -23,20 +23,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$id_socio, $codigo]);
         $socio = $stmt->fetch();
 
-        if ($socio) {
-            // Confirmar inscripción
+        if ($socio && !$socio['email_verified']) {
+            // Marcar como verificado
             $pdo->prepare("
                 UPDATE socios 
                 SET email_verified = 1, verification_code = NULL 
                 WHERE id_socio = ?
             ")->execute([$id_socio]);
 
-            // Redirigir al dashboard del club
-            header("Location: dashboard.php?id_club=" . $socio['id_club']);
-            exit;
-        } else {
-            $error = 'Código incorrecto o ha expirado';
+            // Obtener slug del club para redirección
+            $stmt = $pdo->prepare("
+                SELECT c.id_club, c.email_responsable 
+                FROM clubs c 
+                JOIN socios s ON c.id_club = s.id_club 
+                WHERE s.id_socio = ?
+            ");
+            $stmt->execute([$id_socio]);
+            $club_data = $stmt->fetch();
+
+            if ($club_data) {
+                $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
+                header("Location: dashboard.php?id_club=" . $club_slug);
+                exit;
+            }
         }
+
+        $error = 'Código incorrecto o ha expirado';
     }
 }
 ?>
@@ -46,13 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verificar Inscripción - Cancha</title>
-  <link rel="stylesheet" href="../assets/css/styles.css">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#003366">
-  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Verificar Socio - Cancha</title>
+  <link rel="stylesheet" href="../styles.css">
   <style>
     body {
       background: #f5f7fa;
@@ -144,16 +151,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     document.getElementById('codigo').addEventListener('input', function(e) {
       this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);
     });
-  </script>
-  <script>
-    // Registrar Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registrado:', reg.scope))
-          .catch(err => console.log('Error SW:', err));
-      });
-    }
   </script>
 </body>
 </html>
