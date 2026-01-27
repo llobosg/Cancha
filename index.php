@@ -149,7 +149,7 @@
       </div>
 
       <!-- Ficha 2: Inscribirse -->
-      <div class="card" onclick="window.location.href='../api/buscar_club.php'">
+      <div class="card" onclick="window.location.href='../pages/buscar_club.php'">
         <h3>Inscríbete a un club</h3>
         <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
