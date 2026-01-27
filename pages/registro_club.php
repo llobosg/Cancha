@@ -260,7 +260,7 @@ $error = $_GET['error'] ?? '';
             <option value="otro">Otro</option>
           </select>
         </div>
-        <div class="form-group"><label for="jugadores_por_lado">Jugadores por lado</label></div>
+        <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
         <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
