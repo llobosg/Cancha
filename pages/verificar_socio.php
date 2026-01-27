@@ -1,4 +1,3 @@
-<!-- pages/verificar_socio.php -->
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
@@ -12,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$codigo || !$id_socio) {
         $error = 'Datos incompletos';
     } else {
-        // Verificar código válido y no expirado
         $stmt = $pdo->prepare("
             SELECT s.id_socio, s.id_club, s.email_verified
             FROM socios s
@@ -24,14 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $socio = $stmt->fetch();
 
         if ($socio && !$socio['email_verified']) {
-            // Marcar como verificado
             $pdo->prepare("
                 UPDATE socios 
                 SET email_verified = 1, verification_code = NULL 
                 WHERE id_socio = ?
             ")->execute([$id_socio]);
 
-            // Obtener slug del club para redirección
             $stmt = $pdo->prepare("
                 SELECT c.id_club, c.email_responsable 
                 FROM clubs c 
@@ -52,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
