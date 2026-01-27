@@ -433,6 +433,18 @@
           }
         }
       }
+
+    // Mostrar mensaje de error si existe
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      
+      if (error === 'not_registered') {
+        alert('⚠️ Primero debes inscribirte en un club antes de iniciar sesión.');
+        // Opcional: desplazar a la ficha de inscripción
+        document.querySelector('.cards-container').scrollIntoView({ behavior: 'smooth' });
+      }
+    });
   </script>
 
   <!-- Toast de notificaciones -->

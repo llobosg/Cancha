@@ -43,11 +43,11 @@ try {
     $socio = $stmt->fetch();
 
     if (!$socio) {
-        // Socio no existe → redirigir a registro
+        // Socio no existe → redirigir a landing con mensaje
         echo json_encode([
             'success' => false,
             'message' => 'Primero debes inscribirte en un club',
-            'redirect' => 'buscar_club.php'
+            'redirect' => '../pages/index.php?error=not_registered'
         ]);
         exit;
     }
