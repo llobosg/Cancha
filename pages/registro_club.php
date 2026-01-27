@@ -17,52 +17,91 @@ $error = $_GET['error'] ?? '';
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
-    /* Fondo de estadio vibrante */
+    /* Fondo corporativo */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.50), rgba(0, 15, 30, 0.60)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
+        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
     }
 
+    /* Submodal en web */
     .form-container {
-      width: 90%;
-      max-width: 1100px;
-      margin: 0 auto;
+      width: 95%;
+      max-width: 900px;
       background: white;
-      padding: 2.2rem;
+      padding: 2rem;
       border-radius: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
       position: relative;
+      margin: 0 auto;
     }
 
-    .form-container::before,
-    .form-container::after {
-      content: "⚽";
+    /* En móvil: pantalla completa */
+    @media (max-width: 768px) {
+      body {
+        background: white !important;
+        color: #333 !important;
+      }
+      
+      .form-container {
+        width: 100%;
+        max-width: none;
+        height: auto;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+        margin: 0;
+        padding: 1.5rem;
+        background: white !important;
+        position: relative;
+      }
+    }
+
+    /* Botón de cierre */
+    .close-btn {
       position: absolute;
+      top: 15px;
+      right: 15px;
       font-size: 2.2rem;
       color: #003366;
-      opacity: 0.65;
-      z-index: 2;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      z-index: 10;
     }
-    .form-container::before { top: 22px; left: 22px; }
-    .form-container::after { bottom: 22px; right: 22px; }
+
+    .close-btn:hover {
+      opacity: 1;
+    }
 
     h2 {
       text-align: center;
       color: #003366;
       margin-bottom: 1.8rem;
       font-weight: 700;
-      font-size: 1.8rem;
+      font-size: 1.6rem;
     }
 
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 0.7rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    /* Formulario */
     .form-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -84,7 +123,8 @@ $error = $_GET['error'] ?? '';
     }
 
     .form-group input,
-    .form-group select {
+    .form-group select,
+    .form-group textarea {
       width: 100%;
       padding: 0.5rem;
       border: 1px solid #ccc;
@@ -92,13 +132,6 @@ $error = $_GET['error'] ?? '';
       font-size: 0.85rem;
       color: #071289;
       background: #fafcff;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: #071289;
-      box-shadow: 0 0 0 2px rgba(7, 18, 137, 0.15);
     }
 
     .col-span-2 {
@@ -129,66 +162,43 @@ $error = $_GET['error'] ?? '';
       background: #050d66;
     }
 
-    .error {
-      background: #ffebee;
-      color: #c62828;
-      padding: 0.7rem;
-      border-radius: 6px;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      font-size: 0.85rem;
-    }
-
+    /* Mobile layout */
     @media (max-width: 768px) {
       .form-grid {
         grid-template-columns: 1fr 1fr;
         gap: 0.7rem;
       }
+      
       .form-group label {
         text-align: left;
         padding-right: 0;
+        font-size: 0.8rem;
       }
-      .submit-section {
-        grid-column: 1 / -1;
+      
+      .form-group input,
+      .form-group select {
+        font-size: 0.85rem;
+        padding: 0.45rem;
       }
+      
       .col-span-2 {
         grid-column: span 2;
       }
-      .form-container {
-        padding: 1.8rem;
-        margin: 1rem;
-      }
-    }
-
-    /* Botón de cierre */
-    .close-btn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      font-size: 2.2rem;
-      color: #003366;
-      text-decoration: none;
-      opacity: 0.7;
-      transition: opacity 0.2s;
-      z-index: 10;
-    }
-
-    .close-btn:hover {
-      opacity: 1;
     }
   </style>
 </head>
 <body>
   <div class="form-container">
-    <h2>Registra tu Club</h2>
     <!-- Botón de cierre -->
-    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="index.php" class="close-btn" title="Volver al inicio">×</a>
+
+    <h2>🏟️ Registra tu Club</h2>
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form id="registroForm" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data">
       <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
 
       <div class="form-grid">
@@ -254,15 +264,8 @@ $error = $_GET['error'] ?? '';
         <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
-        
-       <!-- Fila 5 --> 
-        <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
           
-        <!-- Fila 6 -->  
+        <!-- Fila 4 -->  
         <div class="form-group"><label for="responsable">Responsable</label></div>
         <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
         <div class="form-group"><label for="telefono">Teléfono</label></div>
@@ -270,16 +273,18 @@ $error = $_GET['error'] ?? '';
         <div class="form-group"><label for="email_responsable">Correo</label></div>
         <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
 
-        <!-- Fila 7 -->  
-        <div class="form-group"></div>
+        <!-- Fila 5 --> 
+        <div class="form-group"><label for="logo">Logo del club</label></div>
+        <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
 
-        <!-- Fila 8: Logo del club -->
+        <!-- Fila 6 -->  
         <div class="form-group"></div>
         <div class="form-group"></div>
-          
+        <div class="form-group"></div>
+        <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
 
