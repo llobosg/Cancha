@@ -20,8 +20,8 @@ $error = $_GET['error'] ?? '';
     /* Fondo corporativo */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
-        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+        linear-gradient(rgba(0, 10, 20, 0.45), rgba(0, 15, 30, 0.55)),
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
@@ -192,7 +192,7 @@ $error = $_GET['error'] ?? '';
     <!-- Botón de cierre -->
     <a href="index.php" class="close-btn" title="Volver al inicio">×</a>
 
-    <h2>🏟️ Registra tu Club</h2>
+    <h2>Registra tu Club ⚽</h2>
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
