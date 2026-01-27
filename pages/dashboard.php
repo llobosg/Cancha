@@ -1,5 +1,5 @@
-<!-- pages/dashboard.php -->
 <?php
+// pages/dashboard.php
 require_once __DIR__ . '/../includes/config.php';
 
 // Obtener club desde URL
@@ -9,8 +9,8 @@ if (!$club_slug) {
     exit;
 }
 
-// Buscar club válido
-$stmt = $pdo->prepare("SELECT id_club, nombre, logo FROM clubs WHERE email_verified = 1");
+// Buscar club válido - ¡INCLUIR email_responsable!
+$stmt = $pdo->prepare("SELECT id_club, nombre, logo, email_responsable FROM clubs WHERE email_verified = 1");
 $stmt->execute();
 $clubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $club_id = null;
@@ -30,6 +30,44 @@ if (!$club_id) {
     header('Location: index.php?error=invalid_club');
     exit;
 }
+
+// Total socios activos
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM socios WHERE id_club = ? AND activo = 'Si'");
+$stmt->execute([$id_club]);
+$total_socios = $stmt->fetchColumn();
+
+// Próximo evento
+$stmt = $pdo->prepare("
+    SELECT id_evento, fecha, hora, lugar, valor_cuota 
+    FROM eventos 
+    WHERE id_club = ? AND fecha >= CURDATE() 
+    ORDER BY fecha ASC, hora ASC 
+    LIMIT 1
+");
+$stmt->execute([$id_club]);
+$proximo_evento = $stmt->fetch();
+
+// Cuotas impagas (pendientes o en revisión)
+$stmt = $pdo->prepare("
+    SELECT SUM(c.monto) as total_impago
+    FROM cuotas c
+    JOIN eventos e ON c.id_evento = e.id_evento
+    WHERE e.id_club = ? AND c.estado IN ('pendiente', 'en_revision')
+");
+$stmt->execute([$id_club]);
+$total_impago = $stmt->fetchColumn() ?: 0;
+
+// Eventos del mes actual
+$mes_actual = date('Y-m');
+$stmt = $pdo->prepare("
+    SELECT id_evento, fecha, hora, lugar, valor_cuota,
+           (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = e.id_evento AND i.anotado = 1) as inscritos
+    FROM eventos e
+    WHERE id_club = ? AND DATE_FORMAT(fecha, '%Y-%m') = ?
+    ORDER BY fecha, hora
+");
+$stmt->execute([$id_club, $mes_actual]);
+$eventos_mes = $stmt->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -37,196 +75,218 @@ if (!$club_id) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | Cancha</title>
-  <link rel="stylesheet" href="../styles.css">
+  <title><?= htmlspecialchars($club['nombre']) ?> - Cancha</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#003366">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
-    body {
-      background: #f5f7fa;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    :root {
+      --primary: #009966;
+      --secondary: #3a4f63;
+      --light: #f5f7fa;
+      --card-bg: white;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    * {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
-    
-    .dashboard-container {
-      max-width: 1200px;
-      margin: 0 auto;
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--light);
+      color: #333;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary), #007a52);
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
       padding: 2rem;
     }
-    
-    .header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid #003366;
-    }
-    
-    .club-logo {
-      width: 60px;
-      height: 60px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #666;
-      font-size: 1.5rem;
-    }
-    
-    .club-info h1 {
-      color: #003366;
-      margin: 0;
-      font-size: 1.8rem;
-    }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
     .stat-card {
-      background: white;
-      padding: 1.5rem;
+      background: var(--card-bg);
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
     }
-    
     .stat-card h3 {
-      color: #003366;
+      font-size: 1rem;
+      color: #666;
       margin-bottom: 0.5rem;
     }
-    
-    .stat-card .number {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #071289;
+    .stat-card .value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--primary);
     }
-    
-    .actions {
-      background: white;
-      padding: 2rem;
+    .next-event {
+      background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+      border-left: 5px solid var(--primary);
+    }
+    .next-event .value {
+      color: #2e7d32;
+    }
+    .impago {
+      background: linear-gradient(135deg, #ffebee, #ffcdd2);
+      border-left: 5px solid #c62828;
+    }
+    .impago .value {
+      color: #c62828;
+    }
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 2rem;
+      padding: 0 2rem 2rem;
+    }
+    @media (max-width: 900px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+    .calendar {
+      background: var(--card-bg);
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
     }
-    
-    .actions h2 {
-      color: #003366;
-      margin-bottom: 1.5rem;
+    .calendar h2 {
+      margin-bottom: 1.2rem;
+      color: var(--secondary);
+      font-size: 1.4rem;
+    }
+    .event-item {
+      padding: 1rem;
+      border-bottom: 1px solid #eee;
+    }
+    .event-item:last-child {
+      border-bottom: none;
+    }
+    .event-date {
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 0.3rem;
+    }
+    .event-place {
+      font-size: 0.95rem;
+      color: #666;
+    }
+    .event-inscritos {
+      font-size: 0.9rem;
+      color: #888;
+      margin-top: 0.3rem;
+    }
+    .no-events {
       text-align: center;
+      color: #888;
+      padding: 2rem;
     }
-    
-    .action-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    
     .btn-action {
-      padding: 0.8rem 1.5rem;
-      background: #071289;
+      display: inline-block;
+      background: var(--primary);
       color: white;
-      border: none;
+      padding: 0.6rem 1.2rem;
       border-radius: 6px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    .btn-action:hover {
-      background: #050d66;
-    }
-    
-    .logout {
-      text-align: center;
-      margin-top: 2rem;
-    }
-    
-    .logout a {
-      color: #cc0000;
       text-decoration: none;
       font-weight: bold;
+      margin-top: 1rem;
+      transition: opacity 0.2s;
     }
-    
-    .logout a:hover {
-      text-decoration: underline;
+    .btn-action:hover {
+      opacity: 0.9;
     }
   </style>
 </head>
 <body>
-  <div class="dashboard-container">
-    <div class="header">
-      <div class="club-logo">
-        <?php if ($club_logo): ?>
-          <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:10px;">
-        <?php else: ?>
-          ⚽
-        <?php endif; ?>
-      </div>
-      <div class="club-info">
-        <h1><?= htmlspecialchars($club_nombre) ?></h1>
-        <p>Bienvenido a tu cancha</p>
-      </div>
+  <div class="header">
+    <h1>🏟️ <?= htmlspecialchars($club['nombre']) ?></h1>
+    <span><?= htmlspecialchars(ucfirst($club['deporte'])) ?></span>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card next-event">
+      <h3>Próximo evento</h3>
+      <?php if ($proximo_evento): ?>
+        <div class="value"><?= date('d M', strtotime($proximo_evento['fecha'])) ?></div>
+        <p><?= date('H:i', strtotime($proximo_evento['hora'])) ?> • <?= htmlspecialchars($proximo_evento['lugar'] ?? 'Lugar por definir') ?></p>
+        <p>Cuota: $<?= number_format($proximo_evento['valor_cuota'], 0, ',', '.') ?></p>
+        <a href="crear_evento.php?id=<?= $proximo_evento['id_evento'] ?>" class="btn-action">Ver convocatoria</a>
+      <?php else: ?>
+        <div class="value">—</div>
+        <p>No hay eventos programados</p>
+        <a href="crear_evento.php?id_club=<?= $id_club ?>" class="btn-action">Crear evento</a>
+      <?php endif; ?>
     </div>
 
-    <!-- Estadísticas básicas -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <h3>Socios</h3>
-        <div class="number" id="totalSocios">0</div>
-      </div>
-      <div class="stat-card">
-        <h3>Eventos</h3>
-        <div class="number" id="totalEventos">0</div>
-      </div>
-      <div class="stat-card">
-        <h3>Próximo partido</h3>
-        <div class="number" id="proximoPartido">-</div>
-      </div>
+    <div class="stat-card">
+      <h3>Total socios</h3>
+      <div class="value"><?= $total_socios ?></div>
+      <a href="gestion_socios.php?id_club=<?= $id_club ?>" class="btn-action">Gestionar</a>
     </div>
 
-    <!-- Acciones principales -->
-    <div class="actions">
-      <h2>Acciones rápidas</h2>
-      <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= htmlspecialchars($club_id) ?>'">Crear convocatoria</button>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= htmlspecialchars($club_id) ?>'">Gestionar socios</button>
-        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_id) ?>'">Eventos</button>
-      </div>
-    </div>
-
-    <!-- Cerrar sesión -->
-    <div class="logout">
-      <a href="index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+    <div class="stat-card impago">
+      <h3>Cuotas impagas</h3>
+      <div class="value">$<?= number_format($total_impago, 0, ',', '.') ?></div>
+      <a href="gestion_cuotas.php?id_club=<?= $id_club ?>" class="btn-action">Ver detalles</a>
     </div>
   </div>
 
+  <div class="main-content">
+    <div></div> <!-- Espacio vacío a la izquierda -->
+
+    <div class="calendar">
+      <h2>📅 Eventos este mes</h2>
+      <?php if ($eventos_mes): ?>
+        <?php foreach ($eventos_mes as $evento): ?>
+          <div class="event-item">
+            <div class="event-date">
+              <?= date('d M', strtotime($evento['fecha'])) ?> • <?= date('H:i', strtotime($evento['hora'])) ?>
+            </div>
+            <div class="event-place"><?= htmlspecialchars($evento['lugar'] ?? 'Sin lugar') ?></div>
+            <div class="event-inscritos"><?= $evento['inscritos'] ?> inscritos</div>
+          </div>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <div class="no-events">
+          No hay eventos este mes.<br>
+          <a href="crear_evento.php?id_club=<?= $id_club ?>" class="btn-action" style="margin-top:1rem;">Crear evento</a>
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
   <script>
-    // Guardar sesión en dispositivo
+    // ✅ localStorage es JavaScript, no PHP
     const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
     localStorage.setItem('cancha_device', deviceId);
     localStorage.setItem('cancha_session', 'active');
     localStorage.setItem('cancha_club', '<?= htmlspecialchars($club_slug) ?>');
-
-    // Limpiar sesión al cerrar
-    function limpiarSesion() {
-      localStorage.removeItem('cancha_session');
-      localStorage.removeItem('cancha_club');
-    }
-
-    // Cargar estadísticas (simuladas)
-    document.addEventListener('DOMContentLoaded', () => {
-      // En producción, cargarías datos reales desde la API
-      document.getElementById('totalSocios').textContent = '24';
-      document.getElementById('totalEventos').textContent = '8';
-      document.getElementById('proximoPartido').textContent = 'Sáb 15:00';
-    });
   </script>
+  <script>
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registrado:', reg.scope))
+          .catch(err => console.log('Error SW:', err));
+      });
+    }
+    </script>
 </body>
 </html>
