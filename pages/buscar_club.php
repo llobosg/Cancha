@@ -168,7 +168,6 @@
   </style>
 </head>
 <body>
-  <div class="search-container">
   <div class="submodal">
     <!-- Botón de cierre -->
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
