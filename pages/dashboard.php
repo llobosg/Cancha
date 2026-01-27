@@ -2,6 +2,14 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
+// inicio Google Login
+session_start();
+if (!isset($_SESSION['google_login']) && !localStorage.getItem('cancha_session')) {
+    // Redirigir a index.php
+    header('Location: index.php');
+    exit;
+}
+
 $id_club = $_GET['id_club'] ?? null;
 if (!$id_club) {
     die('Club no especificado');

@@ -15,7 +15,7 @@
     /* Fondo nuevo */
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -48,6 +48,13 @@
       text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
 
+    /* Google Login */
+    #g_id_onload,
+    .g_id_signin {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+    }
+
     /* Grid de fichas - 3 en fila (web) / 1 en móvil */
     .cards-container {
       display: grid;
@@ -58,7 +65,7 @@
     }
 
     .card {
-      background: rgba(255, 255, 255, 0.1); /* ← 90% transparencia */
+      background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 16px;
@@ -99,10 +106,10 @@
 
     /* Recordar club - sin borde gris y más abajo */
     .remember-section {
-      background: transparent; /* ← sin fondo gris */
+      background: transparent;
       padding: 0.5rem 0;
-      margin-top: 2.5rem; /* ← más abajo */
-      border: none; /* ← sin borde */
+      margin-top: 2.5rem;
+      border: none;
     }
 
     .remember-section label {
@@ -196,7 +203,7 @@
       margin-top: 1rem;
     }
 
-    /* Responsive: en móviles, una columna */
+    /* Responsive */
     @media (max-width: 768px) {
       .cards-container {
         grid-template-columns: 1fr;
@@ -213,33 +220,34 @@
     <h1>🏟️ Cancha</h1>
     <p class="subtitle">Gestiona tu club. Juega mejor. Sin WhatsApp.</p>
 
+    <!-- Google Login -->
+    <div id="g_id_onload"
+         data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_select="false"
+         data-cancel_on_tap_outside="true">
+    </div>
+    <div class="g_id_signin" 
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="continue_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
+    </div>
+
     <div class="cards-container">
-      <!-- Ficha 1: Registrar club -->
-      <div class="card" onclick="window.location.href='/../pages/registro_club.php'">
+      <div class="card" onclick="window.location.href='registro_club.php'">
         <h3>Registra tu club</h3>
         <p>Crea tu espacio único para gestionar socios, eventos y finanzas de tu club deportivo.</p>
       </div>
 
-      <!-- Ficha 2: Inscribirse -->
-      <div class="card" onclick="window.location.href='/../pages/buscar_club.php'">
+      <div class="card" onclick="window.location.href='buscar_club.php'">
         <h3>Inscripción socio</h3>
         <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
 
-      <!-- Ficha 3: Entrar a tu cancha -->
-      <div class="card" onclick="(function() {
-        const clubId = prompt('Ingresa el ID o slug de tu club:');
-        if (clubId) {
-          const url = `https://cancha-web.up.railway.app/pages/registro_socio.php?club=${clubId}`;
-          mostrarQR(url);
-          
-          const rememberCheck = document.getElementById('rememberClub');
-          const remember = rememberCheck?.checked;
-          if (remember) {
-            localStorage.setItem('cancha_club', clubId);
-          }
-        }
-      })()">
+      <div class="card" onclick="accesoRapido()">
         <h3>Entra a tu cancha</h3>
         <p>Accede directamente al dashboard de tu club si ya estás registrado como administrador o socio.</p>
       </div>
@@ -267,41 +275,85 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
-    // Verificar si hay club guardado
-    document.addEventListener('DOMContentLoaded', () => {
-      const savedClub = localStorage.getItem('cancha_club');
-      const btnDirect = document.getElementById('btnDirect');
-      const rememberCheck = document.getElementById('rememberClub');
-      
-      if (savedClub) {
-        btnDirect.style.display = 'inline-block';
-        btnDirect.onclick = () => {
-          window.location.href = `dashboard.php?id_club=${savedClub}`;
-        };
-      }
+    // === FUNCIONES DE NOTIFICACIÓN ===
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+      const tipoMap = {
+        'exito': 'success',
+        'error': 'error',
+        'advertencia': 'warning',
+        'info': 'info'
+      };
+      const claseTipo = tipoMap[tipo] || 'info';
 
-      function abrirEntrarACancha() {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-message');
+      if (!toast || !msg) return;
+
+      msg.textContent = mensaje;
+      toast.className = 'toast ' + claseTipo;
+      toast.style.display = 'flex';
+      void toast.offsetWidth;
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.style.display = 'none', 400);
+      }, 5000);
+    }
+
+    function error(msg) { mostrarNotificacion(msg, 'error'); }
+
+    // === GOOGLE LOGIN ===
+    function handleCredentialResponse(response) {
+      fetch('../api/login_google.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: response.credential})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+          localStorage.setItem('cancha_device', deviceId);
+          localStorage.setItem('cancha_session', 'active');
+          localStorage.setItem('cancha_club', data.club_slug);
+          
+          window.location.href = `dashboard.php?id_club=${data.club_slug}`;
+        } else {
+          alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
+          if (data.redirect) {
+            window.location.href = data.redirect;
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Login error:', err);
+        alert('Error de conexión');
+      });
+    }
+
+    // === ACCESO RÁPIDO ===
+    function accesoRapido() {
+      const savedClub = localStorage.getItem('cancha_club');
+      const hasSession = localStorage.getItem('cancha_session') === 'active';
+      
+      if (savedClub && hasSession) {
+        window.location.href = `dashboard.php?id_club=${savedClub}`;
+      } else {
         const clubId = prompt("Ingresa el ID o slug de tu club:");
         if (clubId) {
           const url = `https://cancha-web.up.railway.app/pages/registro_socio.php?club=${clubId}`;
           mostrarQR(url);
           
           const rememberCheck = document.getElementById('rememberClub');
-          const remember = rememberCheck.checked;
-          if (remember) {
+          if (rememberCheck?.checked) {
             localStorage.setItem('cancha_club', clubId);
           }
         }
       }
+    }
 
-      rememberCheck.addEventListener('change', () => {
-        if (rememberCheck.checked && !localStorage.getItem('cancha_club')) {
-          alert('Primero entra a tu cancha para guardar la preferencia');
-          rememberCheck.checked = false;
-        }
-      });
-    });
-
+    // === QR ===
     function mostrarQR(url) {
       const qrModal = document.getElementById('qrModal');
       const qrCode = document.getElementById('qrCode');
@@ -325,17 +377,49 @@
       document.getElementById('qrModal').style.display = 'none';
     }
 
+    // === INICIALIZAR BOTÓN DIRECTO ===
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedClub = localStorage.getItem('cancha_club');
+      const btnDirect = document.getElementById('btnDirect');
+      const rememberCheck = document.getElementById('rememberClub');
+      
+      if (savedClub) {
+        btnDirect.style.display = 'inline-block';
+        btnDirect.onclick = () => {
+          window.location.href = `dashboard.php?id_club=${savedClub}`;
+        };
+      }
+
+      rememberCheck.addEventListener('change', () => {
+        if (rememberCheck.checked && !localStorage.getItem('cancha_club')) {
+          alert('Primero entra a tu cancha para guardar la preferencia');
+          rememberCheck.checked = false;
+        }
+      });
+    });
+
+    // Cerrar QR con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') cerrarQR();
     });
 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registrado:', reg.scope))
-          .catch(err => console.log('Error SW:', err));
-      });
-    }
+      // Registrar Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registrado:', reg.scope))
+            .catch(err => console.log('Error SW:', err));
+        });
+      }
   </script>
+
+  <!-- Toast de notificaciones -->
+  <div id="toast" class="toast" style="display:none;">
+    <span>ℹ️</span>
+    <span id="toast-message">Mensaje</span>
+  </div>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
