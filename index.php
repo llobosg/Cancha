@@ -15,7 +15,7 @@
     /* Fondo nuevo */
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        linear-gradient(rgba(0, 20, 10, 0.50), rgba(0, 30, 15, 0.60)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
