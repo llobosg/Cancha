@@ -50,7 +50,7 @@ try {
         echo json_encode([
             'success' => false,
             'message' => 'Primero debes inscribirte en un club',
-            'redirect' => 'https://cancha-web.up.railway.app/pages/index.php?error=not_registered'
+            'redirect' => 'https://cancha-web.up.railway.app/index.php?error=not_registered'
         ]);
         exit;
     }
