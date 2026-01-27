@@ -440,7 +440,7 @@
       const error = urlParams.get('error');
       
       if (error === 'not_registered') {
-        alert('⚠️ Primero debes inscribirte en un club antes de iniciar sesión.');
+        alert('⚠️ Primero debes inscribirte en un club y luego puedes Entrar a tu Cancha ⚽.');
         // Opcional: desplazar a la ficha de inscripción
         document.querySelector('.cards-container').scrollIntoView({ behavior: 'smooth' });
       }
