@@ -49,7 +49,7 @@ try {
         // Socio no existe → redirigir al landing con mensaje
         echo json_encode([
             'success' => false,
-            'message' => 'ups !!! Parece que no estás registrado aún... Vamos a solucionarlo 😊',
+            'message' => 'ups !!! Parece que no estás registrado aún.. 😊',
             'redirect' => 'https://cancha-web.up.railway.app/index.php?error=not_registered'
         ]);
         exit;
