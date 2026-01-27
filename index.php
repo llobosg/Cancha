@@ -222,13 +222,13 @@
     <div class="cards-container">
 
       <!-- Ficha 1 -->
-      <div class="card" onclick="window.location.href='registro_club.php'">
+      <div class="card" onclick="window.location.href='/../pages/registro_club.php'">
         <h3>Registra tu club</h3>
         <p>Crea tu espacio único para gestionar socios, eventos y finanzas de tu club deportivo.</p>
       </div>
 
       <!-- Ficha 2 -->
-      <div class="card" onclick="window.location.href='buscar_club.php'">
+      <div class="card" onclick="window.location.href='/../pages/buscar_club.php'">
         <h3>Inscripción socio</h3>
         <p>Únete a un club existente, confirma tu inscripción y comienza a participar en eventos.</p>
       </div>
