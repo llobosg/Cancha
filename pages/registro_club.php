@@ -190,7 +190,7 @@ $error = $_GET['error'] ?? '';
 <body>
   <div class="form-container">
     <!-- Botón de cierre -->
-    <a href="index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <h2>Registra tu Club ⚽</h2>
 
