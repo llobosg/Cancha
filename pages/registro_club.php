@@ -20,7 +20,7 @@ $error = $_GET['error'] ?? '';
     /* Fondo de estadio vibrante */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
+        linear-gradient(rgba(0, 10, 20, 0.50), rgba(0, 15, 30, 0.60)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       display: flex;
@@ -182,7 +182,7 @@ $error = $_GET['error'] ?? '';
   <div class="form-container">
     <h2>Registra tu Club</h2>
     <!-- Botón de cierre -->
-    <a href="../pages/index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
