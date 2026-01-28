@@ -369,6 +369,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         grid-column: span 2 !important;
       }
     }
+    /* Grid base - 6 columnas */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.8rem 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Columnas vacías para mantener el alineamiento */
+    .empty-col {
+      visibility: hidden;
+    }
+
+    /* Clase para nombre del club */
+    .col-span-nombre {
+      grid-column: span 2;
+    }
+
+    /* En móviles: nombre del club ocupa 1 columna */
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr; /* Solo 2 columnas en móvil */
+        gap: 0.7rem;
+      }
+      
+      .col-span-nombre {
+        grid-column: span 2 !important; /* En móvil, nombre ocupa las 2 columnas */
+      }
+      
+      .empty-col {
+        display: none; /* Ocultar columnas vacías en móvil */
+      }
+      
+      /* Ajustar labels en móvil */
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-size: 0.8rem;
+      }
+      
+      .form-group input,
+      .form-group select {
+        font-size: 0.85rem;
+        padding: 0.45rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -407,78 +453,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
         
         <div class="form-grid">
-        <!-- Fila 1 -->
-        <div class="form-group"><label for="nombre">Nombre club *</label></div>
-        <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
-        <div class="form-group"></div>
-        <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
-        <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
+          <!-- Fila 1 -->
+          <!-- Fila 1 - CORREGIDA -->
+          <div class="form-group"><label for="nombre">Nombre club *</label></div>
+          <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
+          <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
+          <div class="form-group empty-col"></div>
 
-        <!-- Fila 2 -->
-        <div class="form-group"><label for="region">Región *</label></div>
-        <div class="form-group">
-          <select id="region" name="region" required onchange="actualizarCiudades()">
-            <option value="">Seleccionar región</option>
-            <?php foreach ($regiones_chile as $codigo => $nombre): ?>
-              <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="form-group"><label for="ciudad">Ciudad *</label></div>
-        <div class="form-group">
-          <select id="ciudad" name="ciudad" required disabled>
-            <option value="">Seleccionar región primero</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="comuna">Comuna *</label></div>
-        <div class="form-group">
-          <select id="comuna" name="comuna" required disabled>
-            <option value="">Seleccionar ciudad primero</option>
-          </select>
-        </div>
+          <!-- Fila 2 -->
+          <div class="form-group"><label for="region">Región *</label></div>
+          <div class="form-group">
+            <select id="region" name="region" required onchange="actualizarCiudades()">
+              <option value="">Seleccionar región</option>
+              <?php foreach ($regiones_chile as $codigo => $nombre): ?>
+                <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="form-group"><label for="ciudad">Ciudad *</label></div>
+          <div class="form-group">
+            <select id="ciudad" name="ciudad" required disabled>
+              <option value="">Seleccionar región primero</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="comuna">Comuna *</label></div>
+          <div class="form-group">
+            <select id="comuna" name="comuna" required disabled>
+              <option value="">Seleccionar ciudad primero</option>
+            </select>
+          </div>
 
-        <!-- Fila 3 -->
-        <div class="form-group"><label for="deporte">Deporte *</label></div>
-        <div class="form-group">
-          <select id="deporte" name="deporte" required>
-            <option value="">Seleccionar</option>
-            <option value="futbol">Fútbol</option>
-            <option value="futbolito">Futbolito</option>
-            <option value="baby">Baby fútbol</option>
-            <option value="tenis">Tenis</option>
-            <option value="padel">Pádel</option>
-          </select>
+          <!-- Fila 3 -->
+          <div class="form-group"><label for="deporte">Deporte *</label></div>
+          <div class="form-group">
+            <select id="deporte" name="deporte" required>
+              <option value="">Seleccionar</option>
+              <option value="futbol">Fútbol</option>
+              <option value="futbolito">Futbolito</option>
+              <option value="baby">Baby fútbol</option>
+              <option value="tenis">Tenis</option>
+              <option value="padel">Pádel</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
+          <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+
+          <!-- Fila 4 -->
+          <div class="form-group"><label for="responsable">Responsable *</label></div>
+          <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
+          <div class="form-group"><label for="email_responsable">Correo *</label></div>
+          <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
+          <div class="form-group"><label for="telefono">Teléfono</label></div>
+          <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+
+          <!-- LOGO al final -->
+          <div class="form-group"><label for="logo">Logo del club</label></div>
+          <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+
+          <!-- Botón -->
+          <div class="submit-section">
+            <button type="submit" class="btn-submit">Registrar club</button>
+          </div>
         </div>
-        <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
-        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-
-        <!-- Fila 4 -->
-        <div class="form-group"><label for="responsable">Responsable *</label></div>
-        <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
-        <div class="form-group"><label for="email_responsable">Correo *</label></div>
-        <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
-        <div class="form-group"><label for="telefono">Teléfono</label></div>
-        <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-
-        <!-- LOGO al final -->
-        <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-
-        <!-- Botón -->
-        <div class="submit-section">
-          <button type="submit" class="btn-submit">Registrar club</button>
-        </div>
-      </div>
       </form>
     <?php endif; ?>
   </div>
