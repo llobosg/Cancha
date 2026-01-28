@@ -194,13 +194,40 @@
 
 <!-- Contenido principal -->
 <div class="hero">
-  <h1 class="title-cancha">CANCHA ⚽</h1>
-  <p class="subtitle">Tu club deportivo, sin fricción</p>
+  <h1 style="color: white;" class="title-cancha">CANCHA ⚽</h1>
+  <p class="subtitle">Tu club a un click</p>
 
-  <!-- Espacio para anuncios multimedia -->
+  <!-- Anuncios multimedia -->
   <div class="media-section">
-    <div class="media-placeholder">
-      Próximamente: Anuncios visuales de Cancha
+    <div class="carousel-container">
+      <div class="carousel-slide active">
+        <img src="../assets/img/feature1.jpg" alt="Gestión de socios">
+        <div class="carousel-text">
+          <h3>👥 Gestión de Socios</h3>
+          <p>Registra, organiza y comunica con todos los miembros de tu club en un solo lugar.</p>
+        </div>
+      </div>
+      <div class="carousel-slide">
+        <img src="../assets/img/feature2.jpg" alt="Convocatorias inteligentes">
+        <div class="carousel-text">
+          <h3>📢 Convocatorias Inteligentes</h3>
+          <p>Crea convocatorias automáticas y recibe confirmaciones en tiempo real.</p>
+        </div>
+      </div>
+      <div class="carousel-slide">
+        <img src="../assets/img/feature3.jpg" alt="Finanzas transparentes">
+        <div class="carousel-text">
+          <h3>💰 Finanzas Transparentes</h3>
+          <p>Lleva control de cuotas, gastos y balance financiero de tu club.</p>
+        </div>
+      </div>
+      
+      <!-- Indicadores -->
+      <div class="carousel-indicators">
+        <span class="indicator active" data-slide="0"></span>
+        <span class="indicator" data-slide="1"></span>
+        <span class="indicator" data-slide="2"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -241,7 +268,7 @@
   function adjustForMobile() {
     const registerText = document.querySelector('.register-text');
     if (window.innerWidth <= 768 && registerText) {
-      registerText.textContent = 'Registrar';
+      registerText.textContent = 'Regista tu club';
     }
   }
 
