@@ -22,7 +22,8 @@ $regiones_chile = [
     '16' => 'Ñuble'
 ];
 
-$error = '';
+$error_message = '';
+$error_type = '';
 $success = false;
 $club_slug = '';
 
@@ -51,7 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt_check = $pdo->prepare("SELECT id_club FROM clubs WHERE email_responsable = ?");
         $stmt_check->execute([$_POST['email_responsable']]);
         if ($stmt_check->fetch()) {
-            throw new Exception('duplicate_email');
+            $error_type = 'duplicate';
+            $error_message = 'duplicate_email';
+            return; // Salir sin procesar más
         }
 
         // Subir logo si existe
@@ -119,24 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $success = true;
 
     } catch (Exception $e) {
-        $error_code = $e->getMessage();
-        
-        if ($error_code === 'duplicate_email') {
-            $error = '
-            <div style="text-align: left; line-height: 1.6;">
-                <strong>⚠️ ¡Hola! Ya tienes un club registrado con este correo.</strong><br><br>
-                En Cancha, la versión <strong>Gratuita</strong> permite registrar <strong>1 club por responsable</strong>.<br><br>
-                Si deseas gestionar <strong>múltiples clubes</strong>, te invitamos a conocer nuestra versión <strong>Premiere League</strong> con beneficios exclusivos:<br>
-                • Gestión de múltiples clubes<br>
-                • Estadísticas avanzadas<br>
-                • Soporte prioritario<br>
-                • Funciones premium<br><br>
-                ¿Te interesa? Escríbenos a <strong>hola@cancha-sport.cl</strong> para más información.
-            </div>
-            ';
-        } else {
-            $error = $error_code;
-        }
+        $error_type = 'general';
+        $error_message = $e->getMessage();
     }
 }
 ?>
@@ -335,48 +322,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       margin-top: 0.5rem;
     }
 
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.7rem;
-      }
-      
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-        font-size: 0.8rem;
-      }
-      
-      .form-group input,
-      .form-group select {
-        font-size: 0.85rem;
-        padding: 0.45rem;
-      }
-    }
-    /* Clase para nombre del club - adaptable */
-    .col-span-nombre {
-      grid-column: span 2;
-    }
-
-    /* En móviles: nombre del club ocupa 1 columna */
-    @media (max-width: 768px) {
-      .col-span-nombre {
-        grid-column: span 1 !important;
-      }
-      
-      /* Ajustar otras columnas en móvil si es necesario */
-      .col-span-2 {
-        grid-column: span 2 !important;
-      }
-    }
-    /* Grid base - 6 columnas */
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 0.8rem 1.2rem;
-      margin-bottom: 1.5rem;
-    }
-
     /* Columnas vacías para mantener el alineamiento */
     .empty-col {
       visibility: hidden;
@@ -387,22 +332,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       grid-column: span 2;
     }
 
-    /* En móviles: nombre del club ocupa 1 columna */
+    /* Responsive móvil */
     @media (max-width: 768px) {
       .form-grid {
-        grid-template-columns: 1fr 1fr; /* Solo 2 columnas en móvil */
+        grid-template-columns: 1fr 1fr;
         gap: 0.7rem;
       }
       
       .col-span-nombre {
-        grid-column: span 2 !important; /* En móvil, nombre ocupa las 2 columnas */
+        grid-column: span 2 !important;
       }
       
       .empty-col {
-        display: none; /* Ocultar columnas vacías en móvil */
+        display: none;
       }
       
-      /* Ajustar labels en móvil */
       .form-group label {
         text-align: left;
         padding-right: 0;
@@ -445,8 +389,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php else: ?>
       <h2>Registra tu Club ⚽</h2>
 
-      <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
+      <?php if ($error_message): ?>
+        <div class="error">
+          <?php if ($error_type === 'duplicate'): ?>
+            <div style="text-align: left; line-height: 1.6;">
+              <strong>⚠️ ¡Hola! Ya tienes un club registrado con este correo.</strong><br><br>
+              En Cancha, la versión <strong>Gratuita</strong> permite registrar <strong>1 club por responsable</strong>.<br><br>
+              Si deseas gestionar <strong>múltiples clubes</strong>, te invitamos a conocer nuestra versión <strong>Premiere League</strong> con beneficios exclusivos:<br>
+              • Gestión de múltiples clubes<br>
+              • Estadísticas avanzadas<br>
+              • Soporte prioritario<br>
+              • Funciones premium<br><br>
+              ¿Te interesa? Escríbenos a <strong>hola@cancha-sport.cl</strong> para más información.
+            </div>
+          <?php else: ?>
+            <?= htmlspecialchars($error_message) ?>
+          <?php endif; ?>
+        </div>
       <?php endif; ?>
 
       <form method="POST" enctype="multipart/form-data">
@@ -456,6 +415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 1 -->
           <div class="form-group"><label for="nombre">Nombre club *</label></div>
           <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
+          <div class="form-group empty-col"></div>
           <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
           <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
           <div class="form-group empty-col"></div>
@@ -507,21 +467,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-
-          <!-- Espacios vacíos para mantener alineación -->
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
 
           <!-- LOGO al final -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
           <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
 
           <!-- Botón -->
           <div class="submit-section">
@@ -622,8 +577,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           'petorca': 'Petorca',
           'quilpue': 'Quilpué',
           'san_antonio': 'San Antonio',
-          'san_felipe': 'San Felipe',
-          'santiago': 'Santiago' // No, esto es error - corregido abajo
+          'san_felipe': 'San Felipe'
         },
         comunas: {
           'valparaiso': ['Valparaíso', 'Casablanca', 'Concón', 'Juan Fernández', 'Puchuncaví', 'Quintero', 'Viña del Mar'],
@@ -695,14 +649,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ciudades: {
           'concepcion': 'Concepción',
           'arauco': 'Arauco',
-          'biobio': 'Biobío',
-          'nuble': 'Ñuble'
+          'biobio': 'Biobío'
         },
         comunas: {
           'concepcion': ['Concepción', 'Coronel', 'Chiguayante', 'Florida', 'Hualqui', 'Lota', 'Penco', 'San Pedro de la Paz', 'Santa Juana', 'Talcahuano', 'Tomé', 'Hualpén'],
           'arauco': ['Arauco', 'Cañete', 'Contulmo', 'Curanilahue', 'Lebu', 'Los Álamos', 'Tirúa'],
-          'biobio': ['Los Ángeles', 'Antuco', 'Cabrero', 'Laja', 'Mulchén', 'Nacimiento', 'Negrete', 'Quilaco', 'Quilleco', 'San Rosendo', 'Santa Bárbara', 'Tucapel', 'Yumbel', 'Alto Biobío'],
-          'nuble': ['San Fabián', 'San Carlos', 'Ñiquén'] // Nota: Ñuble ahora es región 16
+          'biobio': ['Los Ángeles', 'Antuco', 'Cabrero', 'Laja', 'Mulchén', 'Nacimiento', 'Negrete', 'Quilaco', 'Quilleco', 'San Rosendo', 'Santa Bárbara', 'Tucapel', 'Yumbel', 'Alto Biobío']
         }
       },
       '9': { // La Araucanía
@@ -790,7 +742,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
-    document.getElementById('ciudad').addEventListener('change', function() {
+    document.getElementById('ciudad')?.addEventListener('change', function() {
       const region = document.getElementById('region').value;
       const ciudad = this.value;
       const comunaSelect = document.getElementById('comuna');
