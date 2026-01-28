@@ -29,22 +29,22 @@ $club_slug = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos requeridos
-        $required = ['nombre', 'deporte', 'jugadores_por_lado', 'ciudad', 'comuna', 'responsable', 'correo'];
+        $required = ['nombre', 'deporte', 'jugadores_por_lado', 'ciudad', 'comuna', 'responsable', 'email_responsable'];
         foreach ($required as $field) {
             if (empty($_POST[$field])) {
                 throw new Exception('Todos los campos marcados son obligatorios');
             }
         }
 
+        // Validar email_responsable
+        if (!filter_var($_POST['email_responsable'], FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('Correo electrónico del responsable inválido');
+        }
+
         // Validar jugadores_por_lado
         $jugadores = (int)$_POST['jugadores_por_lado'];
         if ($jugadores < 1 || $jugadores > 20) {
             throw new Exception('Jugadores por lado debe estar entre 1 y 20');
-        }
-
-        // Validar correo
-        if (!filter_var($_POST['correo'], FILTER_VALIDATE_EMAIL)) {
-            throw new Exception('Correo electrónico inválido');
         }
 
         // Subir logo si existe
@@ -70,11 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Insertar club - CON jugadores_por_lado
+        // Insertar club - USANDO NOMBRES CORRECTOS DE COLUMNAS
         $stmt = $pdo->prepare("
             INSERT INTO clubs (
                 nombre, deporte, jugadores_por_lado, fecha_fundacion, pais, ciudad, comuna, 
-                responsable, correo, telefono, logo, email_verified, created_at
+                responsable, telefono, email_responsable, logo, email_verified, created_at
             ) VALUES (?, ?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
         $stmt->execute([
@@ -85,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['ciudad'],
             $_POST['comuna'],
             $_POST['responsable'],
-            $_POST['correo'],
             $_POST['telefono'] ?: null,
+            $_POST['email_responsable'],
             $logo_filename
         ]);
 
@@ -100,14 +100,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([
             $club_id, 
-            $_POST['correo'], 
+            $_POST['email_responsable'], // Usar email_responsable como email del socio
             $_POST['responsable'], 
             'Responsable', 
             $verification_code
         ]);
 
-        // Generar slug del club
-        $club_slug = substr(md5($club_id . $_POST['correo']), 0, 8);
+        // Generar slug del club usando email_responsable
+        $club_slug = substr(md5($club_id . $_POST['email_responsable']), 0, 8);
 
         $success = true;
 
@@ -417,14 +417,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 4 -->
           <div class="form-group"><label for="responsable">Responsable *</label></div>
           <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
-          <div class="form-group"><label for="correo">Correo *</label></div>
-          <div class="form-group"><input type="email" id="correo" name="correo" required></div>
+          <div class="form-group"><label for="email_responsable">Correo *</label></div>
+          <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
 
           <!-- LOGO al final -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
