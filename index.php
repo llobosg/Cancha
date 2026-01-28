@@ -18,7 +18,7 @@
 
     body {
       background:
-        linear-gradient(rgba(0,20,10,.55), rgba(0,30,15,.65)),
+        linear-gradient(rgba(0,20,10,.40), rgba(0,30,15,.50)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       font-family: 'Poppins', sans-serif;
       min-height: 100vh;
@@ -297,7 +297,7 @@
 
 <!-- Barra superior -->
 <div class="top-bar">
-  <button class="btn-register" onclick="window.location.href='registro_club.php'">
+  <button class="btn-register" onclick="window.location.href='../pages/registro_club.php'">
     <span class="flag-icon"></span>
     <span class="register-text">Registrar un club</span>
   </button>
