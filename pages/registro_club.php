@@ -2,17 +2,23 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Obtener regiones únicas desde la base de datos
-$stmt_regiones = $pdo->query("SELECT DISTINCT codigo_region, nombre_region FROM regiones_chile ORDER BY nombre_region");
-$regiones_chile = [];
-while ($row = $stmt_regiones->fetch()) {
-    $regiones_chile[$row['codigo_region']] = $row['nombre_region'];
-}
+// Datos de Chile - Versión ligera
+$regiones_chile = [
+    '13' => 'Metropolitana',
+    '5' => 'Valparaíso',
+    '8' => 'Biobío',
+    '7' => 'Maule',
+    '9' => 'La Araucanía',
+    '6' => 'O\'Higgins',
+    '4' => 'Coquimbo',
+    '2' => 'Antofagasta'
+];
 
 $error_message = '';
 $error_type = '';
 $success = false;
-$club_slug = '';
+$email_to_verify = '';
+$club_data = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -42,6 +48,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_type = 'duplicate';
             $error_message = 'duplicate_email';
         } else {
+            // Generar código de verificación
+            $verification_code = rand(1000, 9999);
+            
+            // Preparar datos del club (sin guardar aún)
+            $club_data = [
+                'nombre' => $_POST['nombre'],
+                'deporte' => $_POST['deporte'],
+                'jugadores_por_lado' => $jugadores,
+                'fecha_fundacion' => $_POST['fecha_fundacion'] ?: null,
+                'ciudad' => $_POST['ciudad'],
+                'comuna' => $_POST['comuna'],
+                'responsable' => $_POST['responsable'],
+                'telefono' => $_POST['telefono'] ?: null,
+                'email_responsable' => $_POST['email_responsable'],
+                'verification_code' => $verification_code
+            ];
+
             // Subir logo si existe
             $logo_filename = null;
             if (!empty($_FILES['logo']['name'])) {
@@ -63,51 +86,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!move_uploaded_file($_FILES['logo']['tmp_name'], $upload_dir . $logo_filename)) {
                     throw new Exception('Error al subir el logo');
                 }
+                $club_data['logo'] = $logo_filename;
             }
 
-            // Insertar club
+            // ENVIAR CORREO DE VERIFICACIÓN CON BREVO
+            $email_to_verify = $_POST['email_responsable'];
+            $brevo_api_key = $_ENV['BREVO_API_KEY'] ?? '';
+
+            if (!$brevo_api_key) {
+                throw new Exception('Error de configuración del servicio de correo');
+            }
+
+            // Usar la variable MAILER_FROM_EMAIL que ya tienes
+            $from_email = $_ENV['MAILER_FROM_EMAIL'] ?? 'llobos@gltcomex.com';
+            $from_name = 'Cancha';
+
+            $correo_data = [
+                'sender' => [
+                    'name' => $from_name,
+                    'email' => $from_email
+                ],
+                'to' => [[
+                    'email' => $email_to_verify,
+                    'name' => $_POST['responsable']
+                ]],
+                'subject' => '⚽ Código de verificación - Cancha',
+                'htmlContent' => "
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 12px;'>
+                    <div style='text-align: center; margin-bottom: 30px;'>
+                        <h1 style='color: #003366; font-size: 28px;'>⚽ Cancha</h1>
+                        <p style='color: #666; font-size: 14px;'>Tu club deportivo, sin fricción</p>
+                    </div>
+                    
+                    <div style='background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'>
+                        <h2 style='color: #003366; margin-bottom: 15px;'>¡Hola " . htmlspecialchars($_POST['responsable']) . "!</h2>
+                        <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px;'>
+                            Gracias por registrar tu club en Cancha. 
+                        </p>
+                        <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                            Tu código de verificación es:
+                        </p>
+                        
+                        <div style='text-align: center; margin: 25px 0;'>
+                            <span style='background: #003366; color: white; padding: 15px 25px; font-size: 24px; font-weight: bold; border-radius: 8px; letter-spacing: 3px; display: inline-block;'>
+                                " . $verification_code . "
+                            </span>
+                        </div>
+                        
+                        <p style='font-size: 16px; line-height: 1.6; color: #333; text-align: center;'>
+                            Ingresa este código en la página de verificación para activar tu club.
+                        </p>
+                    </div>
+                    
+                    <div style='text-align: center; color: #666; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee;'>
+                        <p>¡Bienvenido a Cancha!</p>
+                        <p>El equipo de Cancha</p>
+                    </div>
+                </div>
+                "
+            ];
+
+            // Enviar con Brevo API
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, 'https://api.brevo.com/v3/smtp/email');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($correo_data));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'accept: application/json',
+                'api-key: ' . $brevo_api_key,
+                'content-type: application/json'
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            // Manejo de errores detallado
+            if ($httpCode !== 201) {
+                $error_msg = "Brevo error: HTTP $httpCode";
+                if ($response) {
+                    $error_msg .= ", Response: " . substr($response, 0, 200);
+                }
+                if ($error) {
+                    $error_msg .= ", cURL Error: $error";
+                }
+                
+                error_log($error_msg);
+                
+                if ($httpCode === 401) {
+                    throw new Exception('Error de autenticación del servicio de correo');
+                } elseif ($httpCode === 400) {
+                    throw new Exception('Error en los datos del correo. Por favor, verifica tu dirección de correo.');
+                } elseif ($httpCode === 429) {
+                    throw new Exception('Límite diario de correos alcanzado. Por favor, inténtalo mañana.');
+                } else {
+                    throw new Exception('No se pudo enviar el correo de verificación. Por favor, inténtalo nuevamente.');
+                }
+            }
+
+            // ✅ Correo enviado exitosamente - GUARDAR EN BASE DE DATOS
             $stmt = $pdo->prepare("
                 INSERT INTO clubs (
                     nombre, deporte, jugadores_por_lado, fecha_fundacion, pais, ciudad, comuna, 
-                    responsable, telefono, email_responsable, logo, email_verified, created_at
-                ) VALUES (?, ?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, 0, NOW())
+                    responsable, telefono, email_responsable, logo, verification_code, email_verified, created_at
+                ) VALUES (?, ?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, ?, 0, NOW())
             ");
             $stmt->execute([
-                $_POST['nombre'],
-                $_POST['deporte'],
-                $jugadores,
-                $_POST['fecha_fundacion'] ?: null,
-                $_POST['ciudad'],
-                $_POST['comuna'],
-                $_POST['responsable'],
-                $_POST['telefono'] ?: null,
-                $_POST['email_responsable'],
-                $logo_filename
+                $club_data['nombre'],
+                $club_data['deporte'],
+                $club_data['jugadores_por_lado'],
+                $club_data['fecha_fundacion'],
+                $club_data['ciudad'],
+                $club_data['comuna'],
+                $club_data['responsable'],
+                $club_data['telefono'],
+                $club_data['email_responsable'],
+                $club_data['logo'] ?? null,
+                $club_data['verification_code']
             ]);
 
             $club_id = $pdo->lastInsertId();
+            $club_slug = substr(md5($club_id . $club_data['email_responsable']), 0, 8);
 
-            // Crear socio automático
-            $verification_code = rand(1000, 9999);
-            $stmt = $pdo->prepare("
-                INSERT INTO socios (id_club, email, nombre, alias, verification_code, es_responsable, created_at) 
-                VALUES (?, ?, ?, ?, ?, 1, NOW())
-            ");
-            $stmt->execute([
-                $club_id, 
-                $_POST['email_responsable'],
-                $_POST['responsable'], 
-                'Responsable', 
-                $verification_code
-            ]);
-
-            $club_slug = substr(md5($club_id . $_POST['email_responsable']), 0, 8);
             $success = true;
         }
 
     } catch (Exception $e) {
         $error_type = 'general';
         $error_message = $e->getMessage();
+        
+        // Limpiar logo si hubo error
+        if (!empty($logo_filename)) {
+            $upload_dir = __DIR__ . '/../uploads/logos/';
+            if (file_exists($upload_dir . $logo_filename)) {
+                unlink($upload_dir . $logo_filename);
+            }
+        }
     }
 }
 ?>
@@ -303,9 +419,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($success): ?>
       <h2>✅ ¡Club registrado exitosamente!</h2>
       <div class="success">
-        Hemos creado tu club y te hemos inscrito automáticamente como responsable.
-        <br>Recibirás un código de verificación en tu correo para activar tu cuenta.
+        Hemos enviado un código de verificación a <strong><?= htmlspecialchars($email_to_verify) ?></strong>.<br>
+        Por favor, revisa tu bandeja de entrada (y spam) para activar tu club.
       </div>
+      
+      <!-- Botón para ir a verificación -->
+      <div style="text-align: center; margin-top: 1.5rem;">
+        <button class="btn-submit" onclick="window.location.href='verificar_codigo.php?email=<?= urlencode($email_to_verify) ?>'">
+          Ingresar código de verificación
+        </button>
+      </div>
+
     <?php else: ?>
       <h2>Registra tu Club ⚽</h2>
 
@@ -335,6 +459,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 1 -->
           <div class="form-group"><label for="nombre">Nombre club *</label></div>
           <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
+          <div class="form-group empty-col"></div>
           <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
           <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
           <div class="form-group empty-col"></div>
@@ -386,21 +511,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-
-          <!-- Espacios vacíos para mantener alineación -->
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
 
-          <!-- LOGO al final -->
+          <!-- LOGO -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
           <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
 
           <!-- Botón -->
           <div class="submit-section">
@@ -411,20 +531,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
   </div>
 
+  <!-- SCRIPTS DE REGIONES (versión ligera) -->
   <script>
-    // Cargar datos de regiones desde API
-    let datosChile = {};
-    
-    fetch('../api/get_regiones.php')
-      .then(response => response.json())
-      .then(data => {
-        datosChile = data;
-        console.log('Regiones cargadas:', Object.keys(datosChile).length);
-      })
-      .catch(error => {
-        console.error('Error al cargar regiones:', error);
-        alert('Error al cargar las regiones. Por favor recarga la página.');
-      });
+    const datosChile = {
+      "13": {
+        ciudades: {"santiago": "Santiago", "cordillera": "Cordillera"},
+        comunas: {
+          "santiago": ["Santiago", "Las Condes", "Providencia", "Ñuñoa", "Vitacura", "La Florida", "Maipú", "Peñalolén"],
+          "cordillera": ["Puente Alto", "Pirque", "San José de Maipo"]
+        }
+      },
+      "5": {
+        ciudades: {"valparaiso": "Valparaíso", "quilpue": "Quilpué"},
+        comunas: {
+          "valparaiso": ["Valparaíso", "Viña del Mar", "Concón", "Quintero", "Puchuncaví"],
+          "quilpue": ["Quilpué", "Villa Alemana", "Limache", "Olmué"]
+        }
+      },
+      "8": {
+        ciudades: {"concepcion": "Concepción", "losangeles": "Los Ángeles"},
+        comunas: {
+          "concepcion": ["Concepción", "Talcahuano", "Hualpén", "San Pedro de la Paz", "Coronel"],
+          "losangeles": ["Los Ángeles", "Laja", "Mulchén", "Nacimiento", "Santa Bárbara"]
+        }
+      },
+      "7": {
+        ciudades: {"talca": "Talca", "curico": "Curicó"},
+        comunas: {
+          "talca": ["Talca", "San Clemente", "Pelarco", "Pencahue", "Río Claro"],
+          "curico": ["Curicó", "Molina", "Rauco", "Romeral", "Teno"]
+        }
+      }
+    };
 
     function actualizarCiudades() {
       const region = document.getElementById('region').value;
