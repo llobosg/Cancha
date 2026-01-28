@@ -1,27 +1,111 @@
 <!-- pages/registro_club.php -->
 <?php
 require_once __DIR__ . '/../includes/config.php';
-$error = $_GET['error'] ?? '';
-?>
+$error = '';
+$success = false;
+$club_slug = '';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        // Validar campos requeridos
+        $required = ['nombre', 'deporte', 'ciudad', 'responsable', 'correo'];
+        foreach ($required as $field) {
+            if (empty($_POST[$field])) {
+                throw new Exception('Todos los campos marcados son obligatorios');
+            }
+        }
+
+        // Validar correo
+        if (!filter_var($_POST['correo'], FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('Correo electrónico inválido');
+        }
+
+        // Subir logo si existe
+        $logo_filename = null;
+        if (!empty($_FILES['logo']['name'])) {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!in_array($_FILES['logo']['type'], $allowed_types)) {
+                throw new Exception('Solo se permiten imágenes JPG, PNG o GIF');
+            }
+            
+            if ($_FILES['logo']['size'] > 2 * 1024 * 1024) {
+                throw new Exception('El logo debe pesar menos de 2MB');
+            }
+            
+            $logo_filename = uniqid() . '_' . basename($_FILES['logo']['name']);
+            $upload_dir = __DIR__ . '/../uploads/logos/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            if (!move_uploaded_file($_FILES['logo']['tmp_name'], $upload_dir . $logo_filename)) {
+                throw new Exception('Error al subir el logo');
+            }
+        }
+
+        // Insertar club
+        $stmt = $pdo->prepare("
+            INSERT INTO clubs (
+                nombre, deporte, fecha_fundacion, pais, ciudad, comuna, 
+                responsable, correo, telefono, logo, email_verified, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+        ");
+        $stmt->execute([
+            $_POST['nombre'],
+            $_POST['deporte'],
+            $_POST['fecha_fundacion'] ?: null,
+            $_POST['pais'] ?: null,
+            $_POST['ciudad'],
+            $_POST['comuna'] ?: null,
+            $_POST['responsable'],
+            $_POST['correo'],
+            $_POST['telefono'] ?: null,
+            $logo_filename
+        ]);
+
+        $club_id = $pdo->lastInsertId();
+
+        // Crear socio automático para el responsable
+        $verification_code = rand(1000, 9999);
+        $stmt = $pdo->prepare("
+            INSERT INTO socios (id_club, email, nombre, alias, verification_code, es_responsable, created_at) 
+            VALUES (?, ?, ?, ?, ?, 1, NOW())
+        ");
+        $stmt->execute([
+            $club_id, 
+            $_POST['correo'], 
+            $_POST['responsable'], 
+            'Responsable', 
+            $verification_code
+        ]);
+
+        $socio_id = $pdo->lastInsertId();
+
+        // Generar slug del club
+        $club_slug = substr(md5($club_id . $_POST['correo']), 0, 8);
+
+        // Aquí iría el envío de correo con el código de verificación
+        // mail($_POST['correo'], 'Código de verificación - Cancha', "Tu código es: $verification_code");
+
+        $success = true;
+
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Registrar Club - Cancha</title>
+  <title>Registra tu Club - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#003366">
-  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
-    /* Fondo corporativo */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.45), rgba(0, 15, 30, 0.55)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
+        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
@@ -33,7 +117,6 @@ $error = $_GET['error'] ?? '';
       color: white;
     }
 
-    /* Submodal en web */
     .form-container {
       width: 95%;
       max-width: 900px;
@@ -45,7 +128,6 @@ $error = $_GET['error'] ?? '';
       margin: 0 auto;
     }
 
-    /* En móvil: pantalla completa */
     @media (max-width: 768px) {
       body {
         background: white !important;
@@ -62,11 +144,9 @@ $error = $_GET['error'] ?? '';
         margin: 0;
         padding: 1.5rem;
         background: white !important;
-        position: relative;
       }
     }
 
-    /* Botón de cierre */
     .close-btn {
       position: absolute;
       top: 15px;
@@ -101,7 +181,16 @@ $error = $_GET['error'] ?? '';
       font-size: 0.85rem;
     }
 
-    /* Formulario */
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 0.7rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -162,7 +251,44 @@ $error = $_GET['error'] ?? '';
       background: #050d66;
     }
 
-    /* Mobile layout */
+    /* QR Section */
+    .qr-section {
+      text-align: center;
+      padding: 2rem;
+      background: #f8f9fa;
+      border-radius: 12px;
+      margin-top: 2rem;
+    }
+
+    .qr-code {
+      margin: 1rem auto;
+      width: 200px;
+      height: 200px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .share-link {
+      background: #e9ecef;
+      padding: 0.8rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    .copy-btn {
+      background: #071289;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
     @media (max-width: 768px) {
       .form-grid {
         grid-template-columns: 1fr 1fr;
@@ -180,266 +306,171 @@ $error = $_GET['error'] ?? '';
         font-size: 0.85rem;
         padding: 0.45rem;
       }
-      
-      .col-span-2 {
-        grid-column: span 2;
-      }
     }
   </style>
 </head>
 <body>
   <div class="form-container">
-    <!-- Botón de cierre -->
-    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="index.php" class="close-btn" title="Volver al inicio">×</a>
 
-    <h2>Registra tu Club ⚽</h2>
-
-    <?php if ($error): ?>
-      <div class="error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <form id="registroForm" method="POST" enctype="multipart/form-data">
-      <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
-
-      <div class="form-grid">
-        <!-- Fila 1 -->
-        <div class="form-group"><label for="nombre">Nombre Club</label></div>
-        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
-        <div class="form-group"><label for="fecha_fundacion">Fecha Fundación</label></div>
-        <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
-        <div class="form-group"><label for="pais">País</label></div>
-        <div class="form-group"><input type="text" id="pais" name="pais" value="Chile" required></div>
-
-        <!-- Fila 2 -->
-        <div class="form-group"><label for="region">Región</label></div>
-          <div class="form-group">
-            <select id="region" name="region" required>
-              <option value="">Seleccionar</option>
-              <option value="Arica y Parinacota">Arica y Parinacota</option>
-              <option value="Tarapacá">Tarapacá</option>
-              <option value="Antofagasta">Antofagasta</option>
-              <option value="Atacama">Atacama</option>
-              <option value="Coquimbo">Coquimbo</option>
-              <option value="Valparaíso">Valparaíso</option>
-              <option value="Metropolitana">Metropolitana</option>
-              <option value="O'Higgins">O'Higgins</option>
-              <option value="Maule">Maule</option>
-              <option value="Ñuble">Ñuble</option>
-              <option value="Biobío">Biobío</option>
-              <option value="Araucanía">Araucanía</option>
-              <option value="Los Ríos">Los Ríos</option>
-              <option value="Los Lagos">Los Lagos</option>
-              <option value="Aysén">Aysén</option>
-              <option value="Magallanes">Magallanes</option>
-            </select>
-        </div>
-        <div class="form-group"><label for="ciudad">Ciudad</label></div>
-        <div class="form-group">
-            <select id="ciudad" name="ciudad" required disabled>
-              <option value="">Seleccione región</option>
-            </select>
-        </div>
-        <div class="form-group"><label for="comuna">Comuna</label></div>
-        <div class="form-group">
-            <select id="comuna" name="comuna" required disabled>
-              <option value="">Seleccione ciudad</option>
-            </select>
-        </div>
-
-        <!-- Fila 3 -->
-        <div class="form-group"><label for="deporte">Deporte</label></div>
-        <div class="form-group">
-          <select id="deporte" name="deporte" required>
-            <option value="">Seleccionar</option>
-            <option value="futbol">Fútbol</option>
-            <option value="futbolito">Futbolito</option>
-            <option value="futsal">Futsal</option>
-            <option value="futbol11">Fútbol 11</option>
-            <option value="tenis">Tenis</option>
-            <option value="padel">Pádel</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
-        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-          
-        <!-- Fila 4 -->  
-        <div class="form-group"><label for="responsable">Responsable</label></div>
-        <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
-        <div class="form-group"><label for="telefono">Teléfono</label></div>
-        <div class="form-group"><input type="tel" id="telefono" name="telefono" required></div>
-        <div class="form-group"><label for="email_responsable">Correo</label></div>
-        <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
-
-        <!-- Fila 5 --> 
-        <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-
-        <!-- Fila 6 -->  
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-
-        <!-- Botón -->
-        <div class="submit-section">
-          <button type="submit" class="btn-submit">Enviar código de verificación</button>
-        </div>
+    <?php if ($success): ?>
+      <h2>✅ ¡Club registrado exitosamente!</h2>
+      
+      <div class="success">
+        Hemos creado tu club y te hemos inscrito automáticamente como responsable.
+        <br>Recibirás un código de verificación en tu correo para activar tu cuenta.
       </div>
-    </form>
+
+      <div class="qr-section">
+        <h3>📱 Comparte tu club</h3>
+        <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
+        
+        <?php
+        $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+        ?>
+        
+        <div class="qr-code" id="qrCode"></div>
+        <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
+        <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
+      </div>
+
+    <?php else: ?>
+      <h2>🏟️ Registra tu Club</h2>
+
+      <?php if ($error): ?>
+        <div class="error"><?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
+
+      <form id="registroForm" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
+        
+        <div class="form-grid">
+          <!-- Fila 1 -->
+          <div class="form-group"><label for="nombre">Nombre club *</label></div>
+          <div class="form-group col-span-2"><input type="text" id="nombre" name="nombre" required></div>
+          <div class="form-group"><label for="deporte">Deporte *</label></div>
+          <div class="form-group">
+            <select id="deporte" name="deporte" required>
+              <option value="">Seleccionar</option>
+              <option value="futbol">Fútbol</option>
+              <option value="futbolito">Futbolito</option>
+              <option value="baby">Baby fútbol</option>
+              <option value="tenis">Tenis</option>
+              <option value="padel">Pádel</option>
+            </select>
+          </div>
+          <div class="form-group"></div>
+
+          <!-- Fila 2 -->
+          <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
+          <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
+          <div class="form-group"><label for="pais">País</label></div>
+          <div class="form-group"><input type="text" id="pais" name="pais"></div>
+          <div class="form-group"><label for="ciudad">Ciudad *</label></div>
+          <div class="form-group"><input type="text" id="ciudad" name="ciudad" required></div>
+
+          <!-- Fila 3 -->
+          <div class="form-group"><label for="comuna">Comuna</label></div>
+          <div class="form-group"><input type="text" id="comuna" name="comuna"></div>
+          <div class="form-group"><label for="responsable">Responsable *</label></div>
+          <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
+          <div class="form-group"><label for="correo">Correo *</label></div>
+          <div class="form-group"><input type="email" id="correo" name="correo" required></div>
+
+          <!-- Fila 4 -->
+          <div class="form-group"><label for="telefono">Teléfono</label></div>
+          <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+
+          <!-- LOGO al final -->
+          <div class="form-group"><label for="logo">Logo del club</label></div>
+          <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+
+          <!-- Botón -->
+          <div class="submit-section">
+            <button type="submit" class="btn-submit">Registrar club</button>
+          </div>
+        </div>
+      </form>
+    <?php endif; ?>
   </div>
 
-  <!-- Toast de notificaciones -->
-  <div id="toast" class="toast" style="display:none;">
-    <span>ℹ️</span>
-    <span id="toast-message">Mensaje</span>
-  </div>
+  <?php if ($success): ?>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+      // Generar QR
+      const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
+      new QRCode(document.getElementById("qrCode"), {
+        text: shareUrl,
+        width: 180,
+        height: 180,
+        colorDark: "#003366",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      function copyLink() {
+        const link = document.getElementById('shareLink').textContent;
+        navigator.clipboard.writeText(link).then(() => {
+          alert('¡Enlace copiado al portapapeles!');
+        });
+      }
+    </script>
+  <?php endif; ?>
 
   <script>
-    // === FUNCIONES DE NOTIFICACIÓN ===
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-      const tipoMap = {
-        'exito': 'success',
-        'error': 'error',
-        'advertencia': 'warning',
-        'info': 'info'
-      };
-      const claseTipo = tipoMap[tipo] || 'info';
+    // Validación del formulario
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('registroForm');
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const formData = new FormData(e.target);
+          const btn = e.submitter;
+          const originalText = btn.innerHTML;
+          
+          btn.innerHTML = 'Registrando...';
+          btn.disabled = true;
 
-      const toast = document.getElementById('toast');
-      const msg = document.getElementById('toast-message');
-      if (!toast || !msg) return;
-
-      msg.textContent = mensaje;
-      toast.className = 'toast ' + claseTipo;
-      toast.style.display = 'flex';
-      void toast.offsetWidth;
-      toast.classList.add('show');
-
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.style.display = 'none', 400);
-      }, 5000);
-    }
-
-    function exito(msg) { mostrarNotificacion(msg, 'exito'); }
-    function error(msg) { mostrarNotificacion(msg, 'error'); }
-    function advertencia(msg) { mostrarNotificacion(msg, 'warning'); } // ← ¡Definida!
-
-    // === DATOS LOCALES DE CHILE ===
-    const regionesComunas = {
-      "Valparaíso": {
-        "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana", "Concón", "Limache", "Olmué", "Casablanca", "Juan Fernández"],
-        "Isla de Pascua": ["Isla de Pascua"]
-      },
-      "Metropolitana": {
-        "Santiago": ["Santiago", "Providencia", "Las Condes", "Ñuñoa", "La Florida", "Maipú", "Puente Alto", "San Bernardo", "Quilicura", "Pudahuel", "Recoleta", "Independencia", "Renca", "Lo Prado", "Cerro Navia", "Estación Central", "Conchalí", "Huechuraba", "Vitacura", "Lo Barnechea", "Peñalolén", "La Reina", "Macul", "San Joaquín", "La Granja", "San Ramón", "La Pintana", "El Bosque", "San Miguel", "Lo Espejo", "Pedro Aguirre Cerda", "Cerrillos", "Buin", "Calera de Tango", "Paine", "San José de Maipo", "Alhué", "Curacaví", "María Pinto", "Melipilla", "San Pedro", "Isla de Maipo", "El Monte", "Padre Hurtado", "Peñaflor", "Talagante", "Tiltil"],
-        "Cordillera": ["Puente Alto", "San José de Maipo", "Pirque"]
-      },
-      "Biobío": {
-        "Concepción": ["Concepción", "Talcahuano", "Hualpén", "San Pedro de la Paz", "Chiguayante", "Coronel", "Lota", "Santa Juana", "Tomé", "Penco", "Florida", "Hualqui", "Cabrero", "Yumbel", "San Rosendo", "Laja", "Nacimiento", "Los Ángeles", "Mulchén", "Negrete", "Quilaco", "Quilleco", "San Pablo", "Tucapel", "Antuco", "Coihueco", "Ñiquén", "San Fabián", "San Nicolás"]
-      }
-      // Agrega más regiones si lo deseas
-    };
-
-    // === CARGAR CIUDADES AL CAMBIAR REGIÓN ===
-    document.getElementById('region').addEventListener('change', function() {
-      const ciudadSelect = document.getElementById('ciudad');
-      const comunaSelect = document.getElementById('comuna');
-      ciudadSelect.innerHTML = '<option value="">Seleccione ciudad</option>';
-      comunaSelect.innerHTML = '<option value="">Seleccione ciudad</option>';
-      ciudadSelect.disabled = true;
-      comunaSelect.disabled = true;
-
-      if (!this.value) return;
-
-      const ciudades = Object.keys(regionesComunas[this.value] || {});
-      if (ciudades.length > 0) {
-        ciudades.forEach(ciudad => {
-          const opt = document.createElement('option');
-          opt.value = ciudad;
-          opt.textContent = ciudad;
-          ciudadSelect.appendChild(opt);
+          try {
+            const response = await fetch('../api/registrar_club.php', {
+              method: 'POST',
+              body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              window.location.reload(); // Recargar para mostrar QR
+            } else {
+              alert(data.message || 'Error al registrar club');
+            }
+          } catch (err) {
+            console.error('Error:', err);
+            alert('Error de conexión');
+          } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
         });
-        ciudadSelect.disabled = false;
-      } else {
-        ciudadSelect.innerHTML = '<option value="">Sin ciudades</option>';
-      }
-    });
 
-    // === CARGAR COMUNAS AL CAMBIAR CIUDAD ===
-    document.getElementById('ciudad').addEventListener('change', function() {
-      const comunaSelect = document.getElementById('comuna');
-      comunaSelect.innerHTML = '<option value="">Cargando...</option>';
-      comunaSelect.disabled = true;
-
-      const region = document.getElementById('region').value;
-      if (!region || !this.value) return;
-
-      const comunas = regionesComunas[region]?.[this.value] || [];
-      if (comunas.length > 0) {
-        comunaSelect.innerHTML = '<option value="">Seleccionar</option>';
-        comunas.forEach(comuna => {
-          const opt = document.createElement('option');
-          opt.value = comuna;
-          opt.textContent = comuna;
-          comunaSelect.appendChild(opt);
-        });
-        comunaSelect.disabled = false;
-      } else {
-        comunaSelect.innerHTML = '<option value="">Sin comunas</option>';
-      }
-    });
-
-    // === MANEJO DEL FORMULARIO ===
-    document.getElementById('registroForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(e.target);
-      const btn = e.submitter;
-      const originalText = btn.innerHTML;
-      
-      btn.innerHTML = 'Enviando...';
-      btn.disabled = true;
-
-      try {
-        const response = await fetch('../api/enviar_codigo_club.php', {
-          method: 'POST',
-          body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          exito('Código enviado a tu correo');
-          setTimeout(() => window.location.href = data.redirect, 1500);
-        } else {
-          error(data.message || 'Error al enviar código');
+        // Validación de teléfono
+        const telefono = document.getElementById('telefono');
+        if (telefono) {
+          telefono.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9+]/g, '');
+          });
         }
-      } catch (err) {
-        console.error('Error:', err);
-        error('Error de conexión. Revisa la consola.');
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
       }
     });
-
-    // Registrar Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registrado:', reg.scope))
-          .catch(err => console.log('Error SW:', err));
-      });
-    }
   </script>
 </body>
 </html>
