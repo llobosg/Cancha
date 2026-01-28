@@ -29,7 +29,7 @@ $club_slug = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos requeridos
-        $required = ['nombre', 'deporte', 'region', 'ciudad', 'comuna', 'responsable', 'correo'];
+        $required = ['nombre', 'deporte', 'ciudad', 'comuna', 'responsable', 'correo'];
         foreach ($required as $field) {
             if (empty($_POST[$field])) {
                 throw new Exception('Todos los campos marcados son obligatorios');
@@ -64,18 +64,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Insertar club
+        // Insertar club - SIN columna region
         $stmt = $pdo->prepare("
             INSERT INTO clubs (
-                nombre, deporte, fecha_fundacion, pais, region, ciudad, comuna, 
+                nombre, deporte, fecha_fundacion, pais, ciudad, comuna, 
                 responsable, correo, telefono, logo, email_verified, created_at
-            ) VALUES (?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            ) VALUES (?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
         $stmt->execute([
             $_POST['nombre'],
             $_POST['deporte'],
             $_POST['fecha_fundacion'] ?: null,
-            $_POST['region'],
             $_POST['ciudad'],
             $_POST['comuna'],
             $_POST['responsable'],
@@ -327,7 +326,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <div class="form-container">
-    <a href="index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <?php if ($success): ?>
       <h2>✅ ¡Club registrado exitosamente!</h2>
@@ -459,35 +458,215 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script>
     // Datos de ciudades y comunas por región
     const datosChile = {
-      '13': { // Metropolitana
+      '15': { // Arica y Parinacota
         ciudades: {
-          'santiago': 'Santiago',
-          'providencia': 'Providencia',
-          'las_condes': 'Las Condes',
-          'vitacura': 'Vitacura',
-          'ñuñoa': 'Ñuñoa'
+          'arica': 'Arica',
+          'parinacota': 'Parinacota'
         },
         comunas: {
-          'santiago': ['Santiago Centro', 'Bellavista', 'Barrio Brasil'],
-          'providencia': ['Providencia Centro', 'Plaza Baquedano'],
-          'las_condes': ['Las Condes Centro', 'Los Trapenses'],
-          'vitacura': ['Vitacura Centro', 'San Carlos de Apoquindo'],
-          'ñuñoa': ['Ñuñoa Centro', 'Plaza Ñuñoa']
+          'arica': ['Arica', 'Camarones'],
+          'parinacota': ['Putre', 'General Lagos']
+        }
+      },
+      '1': { // Tarapacá
+        ciudades: {
+          'iquique': 'Iquique',
+          'tamarugal': 'Tamarugal'
+        },
+        comunas: {
+          'iquique': ['Iquique', 'Alto Hospicio'],
+          'tamarugal': ['Pozo Almonte', 'Camiña', 'Colchane', 'Huara', 'Pica']
+        }
+      },
+      '2': { // Antofagasta
+        ciudades: {
+          'antofagasta': 'Antofagasta',
+          'el_loa': 'El Loa',
+          'tocopilla': 'Tocopilla'
+        },
+        comunas: {
+          'antofagasta': ['Antofagasta', 'Mejillones', 'Sierra Gorda', 'Taltal'],
+          'el_loa': ['Calama', 'Ollagüe', 'San Pedro de Atacama'],
+          'tocopilla': ['Tocopilla', 'María Elena']
+        }
+      },
+      '3': { // Atacama
+        ciudades: {
+          'copiapo': 'Copiapó',
+          'chañaral': 'Chañaral',
+          'huasco': 'Huasco'
+        },
+        comunas: {
+          'copiapo': ['Copiapó', 'Caldera', 'Tierra Amarilla'],
+          'chañaral': ['Chañaral', 'Diego de Almagro'],
+          'huasco': ['Vallenar', 'Freirina', 'Huasco']
+        }
+      },
+      '4': { // Coquimbo
+        ciudades: {
+          'elqui': 'Elqui',
+          'choapa': 'Choapa',
+          'limari': 'Limarí'
+        },
+        comunas: {
+          'elqui': ['La Serena', 'Coquimbo', 'Andacollo', 'La Higuera', 'Paiguano', 'Vicuña'],
+          'choapa': ['Illapel', 'Canela', 'Los Vilos', 'Salamanca'],
+          'limari': ['Ovalle', 'Combarbalá', 'Monte Patria', 'Punitaqui', 'Río Hurtado']
         }
       },
       '5': { // Valparaíso
         ciudades: {
           'valparaiso': 'Valparaíso',
-          'vina_del_mar': 'Viña del Mar',
-          'quilpue': 'Quilpué'
+          'isanca': 'Isla de Pascua',
+          'los_andes': 'Los Andes',
+          'petorca': 'Petorca',
+          'quilpue': 'Quilpué',
+          'san_antonio': 'San Antonio',
+          'san_felipe': 'San Felipe',
+          'santiago': 'Santiago' // No, esto es error - corregido abajo
         },
         comunas: {
-          'valparaiso': ['Valparaíso Centro', 'Cerro Alegre', 'Cerro Concepción'],
-          'vina_del_mar': ['Viña Centro', 'Reñaca', 'Forestal'],
-          'quilpue': ['Quilpué Centro', 'Villa Alemana']
+          'valparaiso': ['Valparaíso', 'Casablanca', 'Concón', 'Juan Fernández', 'Puchuncaví', 'Quintero', 'Viña del Mar'],
+          'isanca': ['Isla de Pascua'],
+          'los_andes': ['Los Andes', 'Calle Larga', 'Rinconada', 'San Esteban'],
+          'petorca': ['La Ligua', 'Cabildo', 'Papudo', 'Petorca', 'Zapallar'],
+          'quilpue': ['Quilpué', 'Limache', 'Olmué', 'Villa Alemana'],
+          'san_antonio': ['San Antonio', 'Algarrobo', 'Cartagena', 'El Quisco', 'El Tabo', 'Santo Domingo'],
+          'san_felipe': ['San Felipe', 'Catemu', 'Llaillay', 'Panquehue', 'Putaendo', 'Santa María']
+        }
+      },
+      '13': { // Metropolitana
+        ciudades: {
+          'santiago': 'Santiago',
+          'cordillera': 'Cordillera',
+          'chacabuco': 'Chacabuco',
+          'maipo': 'Maipo',
+          'melipilla': 'Melipilla',
+          'talagante': 'Talagante'
+        },
+        comunas: {
+          'santiago': ['Santiago', 'Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central', 'Huechuraba', 'Independencia', 'La Cisterna', 'La Florida', 'La Granja', 'La Pintana', 'La Reina', 'Las Condes', 'Lo Barnechea', 'Lo Espejo', 'Lo Prado', 'Macul', 'Maipú', 'Ñuñoa', 'Pedro Aguirre Cerda', 'Peñalolén', 'Providencia', 'Pudahuel', 'Quilicura', 'Quinta Normal', 'Recoleta', 'Renca', 'San Joaquín', 'San Miguel', 'San Ramón', 'Vitacura'],
+          'cordillera': ['Puente Alto', 'Pirque', 'San José de Maipo'],
+          'chacabuco': ['Colina', 'Lampa', 'Tiltil'],
+          'maipo': ['San Bernardo', 'Buin', 'Calera de Tango', 'Paine'],
+          'melipilla': ['Melipilla', 'Alhué', 'Curacaví', 'María Pinto', 'San Pedro'],
+          'talagante': ['Talagante', 'El Monte', 'Isla de Maipo', 'Padre Hurtado', 'Peñaflor']
+        }
+      },
+      '6': { // O'Higgins
+        ciudades: {
+          'cachapoal': 'Cachapoal',
+          'colchagua': 'Colchagua',
+          'cardenal_caro': 'Cardenal Caro'
+        },
+        comunas: {
+          'cachapoal': ['Rancagua', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue', 'Graneros', 'Las Cabras', 'Machalí', 'Malloa', 'Mostazal', 'Olivar', 'Peumo', 'Pichidegua', 'Quinta de Tilcoco', 'Rengo', 'Requínoa', 'San Vicente'],
+          'colchagua': ['San Fernando', 'Chimbarongo', 'Lolol', 'Nancagua', 'Palmilla', 'Peralillo', 'Placilla', 'Pumanque', 'Santa Cruz'],
+          'cardenal_caro': ['Pichilemu', 'La Estrella', 'Litueche', 'Marchihue', 'Navidad', 'Paredones']
+        }
+      },
+      '7': { // Maule
+        ciudades: {
+          'talca': 'Talca',
+          'linares': 'Linares',
+          'curico': 'Curicó',
+          'cauquenes': 'Cauquenes'
+        },
+        comunas: {
+          'talca': ['Talca', 'Constitución', 'Curepto', 'Empedrado', 'Maule', 'Pelarco', 'Pencahue', 'Río Claro', 'San Clemente', 'San Rafael'],
+          'linares': ['Linares', 'Colbún', 'Longaví', 'Parral', 'Retiro', 'San Javier', 'Villa Alegre', 'Yerbas Buenas'],
+          'curico': ['Curicó', 'Hualañé', 'Licantén', 'Molina', 'Rauco', 'Romeral', 'Sagrada Familia', 'Teno', 'Vichuquén'],
+          'cauquenes': ['Cauquenes', 'Chanco', 'Pelluhue']
+        }
+      },
+      '16': { // Ñuble
+        ciudades: {
+          'diguillin': 'Diguillín',
+          'punilla': 'Punilla',
+          'itata': 'Itata'
+        },
+        comunas: {
+          'diguillin': ['Chillán', 'Bulnes', 'Chillán Viejo', 'El Carmen', 'Pemuco', 'Pinto', 'Quillón', 'San Ignacio', 'Yungay'],
+          'punilla': ['San Carlos', 'Coihueco', 'Ñiquén', 'San Nicolás'],
+          'itata': ['Quirihue', 'Cobquecura', 'Coelemu', 'Ninhue', 'Portezuelo', 'Ránquil', 'Treguaco']
+        }
+      },
+      '8': { // Biobío
+        ciudades: {
+          'concepcion': 'Concepción',
+          'arauco': 'Arauco',
+          'biobio': 'Biobío',
+          'nuble': 'Ñuble'
+        },
+        comunas: {
+          'concepcion': ['Concepción', 'Coronel', 'Chiguayante', 'Florida', 'Hualqui', 'Lota', 'Penco', 'San Pedro de la Paz', 'Santa Juana', 'Talcahuano', 'Tomé', 'Hualpén'],
+          'arauco': ['Arauco', 'Cañete', 'Contulmo', 'Curanilahue', 'Lebu', 'Los Álamos', 'Tirúa'],
+          'biobio': ['Los Ángeles', 'Antuco', 'Cabrero', 'Laja', 'Mulchén', 'Nacimiento', 'Negrete', 'Quilaco', 'Quilleco', 'San Rosendo', 'Santa Bárbara', 'Tucapel', 'Yumbel', 'Alto Biobío'],
+          'nuble': ['San Fabián', 'San Carlos', 'Ñiquén'] // Nota: Ñuble ahora es región 16
+        }
+      },
+      '9': { // La Araucanía
+        ciudades: {
+          'cautin': 'Cautín',
+          'malleco': 'Malleco'
+        },
+        comunas: {
+          'cautin': ['Temuco', 'Carahue', 'Cunco', 'Curarrehue', 'Freire', 'Galvarino', 'Gorbea', 'Lautaro', 'Loncoche', 'Melipeuco', 'Nueva Imperial', 'Padre Las Casas', 'Perquenco', 'Pitrufquén', 'Pucón', 'Saavedra', 'Teodoro Schmidt', 'Toltén', 'Vilcún', 'Villarrica', 'Cholchol'],
+          'malleco': ['Angol', 'Collipulli', 'Curacautín', 'Ercilla', 'Lonquimay', 'Los Sauces', 'Lumaco', 'Purén', 'Renaico', 'Traiguén', 'Victoria']
+        }
+      },
+      '14': { // Los Ríos
+        ciudades: {
+          'valdivia': 'Valdivia',
+          'ranco': 'Ranco'
+        },
+        comunas: {
+          'valdivia': ['Valdivia', 'Corral', 'Lanco', 'Los Lagos', 'Máfil', 'Mariquina', 'Paillaco', 'Panguipulli'],
+          'ranco': ['La Unión', 'Futrono', 'Lago Ranco', 'Río Bueno']
+        }
+      },
+      '10': { // Los Lagos
+        ciudades: {
+          'llanquihue': 'Llanquihue',
+          'osorno': 'Osorno',
+          'chiloe': 'Chiloé',
+          'palena': 'Palena'
+        },
+        comunas: {
+          'llanquihue': ['Puerto Montt', 'Calbuco', 'Cochamó', 'Fresia', 'Frutillar', 'Los Muermos', 'Llanquihue', 'Maullín', 'Puerto Varas'],
+          'osorno': ['Osorno', 'Puerto Octay', 'Purranque', 'Puyehue', 'Río Negro', 'San Juan de la Costa', 'San Pablo'],
+          'chiloe': ['Castro', 'Ancud', 'Chonchi', 'Curaco de Vélez', 'Dalcahue', 'Puqueldón', 'Queilén', 'Quellón', 'Quemchi', 'Quinchao'],
+          'palena': ['Chaitén', 'Futaleufú', 'Hualaihué', 'Palena']
+        }
+      },
+      '11': { // Aysén
+        ciudades: {
+          'coyhaique': 'Coyhaique',
+          'aysen': 'Aysén',
+          'general_carrera': 'General Carrera',
+          'capitan_prat': 'Capitán Prat'
+        },
+        comunas: {
+          'coyhaique': ['Coyhaique', 'Lago Verde'],
+          'aysen': ['Puerto Aysén', 'Puerto Chacabuco', 'Cisnes', 'Guaitecas'],
+          'general_carrera': ['Chile Chico', 'Río Ibáñez'],
+          'capitan_prat': ['Cochrane', 'O\'Higgins', 'Tortel']
+        }
+      },
+      '12': { // Magallanes
+        ciudades: {
+          'magallanes': 'Magallanes',
+          'ultima_esperanza': 'Última Esperanza',
+          'tierra_del_fuego': 'Tierra del Fuego',
+          'antartica_chilena': 'Antártica Chilena'
+        },
+        comunas: {
+          'magallanes': ['Punta Arenas', 'Laguna Blanca', 'Río Verde', 'San Gregorio'],
+          'ultima_esperanza': ['Puerto Natales', 'Torres del Paine'],
+          'tierra_del_fuego': ['Porvenir', 'Primavera', 'Timaukel'],
+          'antartica_chilena': ['Puerto Williams', 'Cabo de Hornos']
         }
       }
-      // Agrega más regiones según necesites
     };
 
     function actualizarCiudades() {
