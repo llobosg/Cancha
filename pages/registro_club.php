@@ -29,11 +29,17 @@ $club_slug = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos requeridos
-        $required = ['nombre', 'deporte', 'ciudad', 'comuna', 'responsable', 'correo'];
+        $required = ['nombre', 'deporte', 'jugadores_por_lado', 'ciudad', 'comuna', 'responsable', 'correo'];
         foreach ($required as $field) {
             if (empty($_POST[$field])) {
                 throw new Exception('Todos los campos marcados son obligatorios');
             }
+        }
+
+        // Validar jugadores_por_lado
+        $jugadores = (int)$_POST['jugadores_por_lado'];
+        if ($jugadores < 1 || $jugadores > 20) {
+            throw new Exception('Jugadores por lado debe estar entre 1 y 20');
         }
 
         // Validar correo
@@ -64,16 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Insertar club - SIN columna region
+        // Insertar club - CON jugadores_por_lado
         $stmt = $pdo->prepare("
             INSERT INTO clubs (
-                nombre, deporte, fecha_fundacion, pais, ciudad, comuna, 
+                nombre, deporte, jugadores_por_lado, fecha_fundacion, pais, ciudad, comuna, 
                 responsable, correo, telefono, logo, email_verified, created_at
-            ) VALUES (?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, 0, NOW())
+            ) VALUES (?, ?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
         $stmt->execute([
             $_POST['nombre'],
             $_POST['deporte'],
+            $jugadores,
             $_POST['fecha_fundacion'] ?: null,
             $_POST['ciudad'],
             $_POST['comuna'],
@@ -402,20 +409,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="padel">Pádel</option>
             </select>
           </div>
+          <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
+          <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
+          <div class="form-group"></div>
           <div class="form-group"></div>
 
-          
-          
-          
-
-          
-          
+          <!-- Fila 4 -->
           <div class="form-group"><label for="responsable">Responsable *</label></div>
           <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
           <div class="form-group"><label for="correo">Correo *</label></div>
           <div class="form-group"><input type="email" id="correo" name="correo" required></div>
-
-          <!-- Fila 4 -->
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
           <div class="form-group"></div>
