@@ -290,6 +290,85 @@
     .flag-icon::before {
       content: "🚩";
     }
+
+  .submodal {
+    position: fixed;
+    z-index: 1001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .submodal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .close-modal:hover {
+    color: #333;
+  }
+
+  .modal-header h3 {
+    color: #003366;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .register-options {
+    text-align: center;
+  }
+
+  .btn-primary {
+    background: #00cc66;
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    max-width: 250px;
+    margin: 0 auto;
+  }
+
+  .btn-primary:hover {
+    background: #00aa55;
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    .submodal-content {
+      padding: 1.5rem;
+      margin: 1rem;
+    }
+    
+    .btn-primary {
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+    }
+  }
   </style>
 </head>
 
@@ -382,6 +461,33 @@
   <!-- Descripción sincronizada -->
   <div class="feature-description" id="featureDescription">
     <!-- Contenido dinámico -->
+  </div>
+</div>
+
+<!-- Submodal de inscripción - ASEGÚRATE DE TENER ESTO -->
+<div id="registerModal" class="submodal" style="display:none;">
+  <div class="submodal-content">
+    <span class="close-modal" onclick="cerrarRegisterModal()">&times;</span>
+    <div class="modal-header">
+      <h3>⚽ ¡Hola! Bienvenido a Cancha</h3>
+    </div>
+    <div class="modal-body">
+      <p style="text-align: center; margin-bottom: 1.5rem;">
+        <strong>¿Ya perteneces a un club?</strong><br>
+        Si es así, pide a tu responsable que te envíe el enlace de invitación.
+      </p>
+      
+      <div class="register-options">
+        <button class="btn-primary" onclick="window.location.href='buscar_club.php'">
+          🔍 Buscar mi club
+        </button>
+        
+        <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
+          ¿Eres responsable de un club?<br>
+          <a href="registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
+        </p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -520,33 +626,52 @@
     }
   }
 
-  // Google Login
+  // Reemplaza tu función handleCredentialResponse actual con esta:
   function handleCredentialResponse(response) {
     fetch('../api/login_google.php', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ token: response.credential })
+      body: JSON.stringify({token: response.credential})
     })
     .then(r => r.json())
     .then(data => {
-      if (!data.success) {
-        alert(data.message || 'Error al iniciar sesión');
-        if (data.redirect) window.location.href = data.redirect;
-        return;
-      }
-
-      const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
-      localStorage.setItem('cancha_device', deviceId);
-      localStorage.setItem('cancha_session', 'active');
-
-      if (data.club_slug) {
+      if (data.success) {
+        const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+        localStorage.setItem('cancha_device', deviceId);
+        localStorage.setItem('cancha_session', 'active');
         localStorage.setItem('cancha_club', data.club_slug);
-        window.location.href = `pages/dashboard.php?id_club=${data.club_slug}`;
+        
+        window.location.href = data.redirect;
+      } else if (data.action === 'register') {
+        // ✅ MOSTRAR SUBMODAL EN LUGAR DE ALERT
+        mostrarRegisterModal(data.email);
       } else {
-        window.location.href = `pages/buscar_club.php`;
+        // Error genérico
+        alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
       }
     })
-    .catch(() => alert('Error de conexión'));
+    .catch(err => {
+      console.error('Login error:', err);
+      alert('Error de conexión');
+    });
+  }
+
+  function mostrarRegisterModal(email = '') {
+    document.getElementById('registerModal').style.display = 'flex';
+    if (email) {
+      localStorage.setItem('google_email', email);
+    }
+  }
+
+  function cerrarRegisterModal() {
+    document.getElementById('registerModal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('registerModal');
+    if (event.target === modal) {
+      cerrarRegisterModal();
+    }
   }
 
   // Inicialización
