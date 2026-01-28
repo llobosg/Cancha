@@ -45,10 +45,12 @@ try {
     $socio = $stmt->fetch();
 
     if (!$socio) {
+        // Usuario no registrado - devolver email para inscripción
         echo json_encode([
             'success' => false,
-            'message' => 'Primero debes inscribirte en un club',
-            'redirect' => 'https://cancha-web.up.railway.app/index.php?error=not_registered'
+            'action' => 'register',
+            'email' => $email,
+            'message' => 'Revisamos las planillas y no estás inscrito, y ya que estás en Cancha aprovecha y e inscríbite en tu Club.'
         ]);
         exit;
     }
@@ -59,12 +61,12 @@ try {
     echo json_encode([
         'success' => true,
         'club_slug' => $club_slug,
-        'redirect' => 'https://cancha-web.up.railway.app/pages/dashboard.php?id_club=' . $club_slug
+        'redirect' => '../pages/dashboard.php?id_club=' . $club_slug
     ]);
 
 } catch (Exception $e) {
     error_log("Google login error: " . $e->getMessage());
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'action' => 'error', 'message' => $e->getMessage()]);
 }
 ?>
