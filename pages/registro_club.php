@@ -1,6 +1,27 @@
 <!-- pages/registro_club.php -->
 <?php
 require_once __DIR__ . '/../includes/config.php';
+
+// Datos de Chile
+$regiones_chile = [
+    '1' => 'Tarapacá',
+    '2' => 'Antofagasta', 
+    '3' => 'Atacama',
+    '4' => 'Coquimbo',
+    '5' => 'Valparaíso',
+    '6' => 'O\'Higgins',
+    '7' => 'Maule',
+    '8' => 'Biobío',
+    '9' => 'La Araucanía',
+    '10' => 'Los Lagos',
+    '11' => 'Aysén',
+    '12' => 'Magallanes',
+    '13' => 'Metropolitana',
+    '14' => 'Los Ríos',
+    '15' => 'Arica y Parinacota',
+    '16' => 'Ñuble'
+];
+
 $error = '';
 $success = false;
 $club_slug = '';
@@ -8,7 +29,7 @@ $club_slug = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos requeridos
-        $required = ['nombre', 'deporte', 'ciudad', 'responsable', 'correo'];
+        $required = ['nombre', 'deporte', 'region', 'ciudad', 'comuna', 'responsable', 'correo'];
         foreach ($required as $field) {
             if (empty($_POST[$field])) {
                 throw new Exception('Todos los campos marcados son obligatorios');
@@ -46,17 +67,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Insertar club
         $stmt = $pdo->prepare("
             INSERT INTO clubs (
-                nombre, deporte, fecha_fundacion, pais, ciudad, comuna, 
+                nombre, deporte, fecha_fundacion, pais, region, ciudad, comuna, 
                 responsable, correo, telefono, logo, email_verified, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            ) VALUES (?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
         $stmt->execute([
             $_POST['nombre'],
             $_POST['deporte'],
             $_POST['fecha_fundacion'] ?: null,
-            $_POST['pais'] ?: null,
+            $_POST['region'],
             $_POST['ciudad'],
-            $_POST['comuna'] ?: null,
+            $_POST['comuna'],
             $_POST['responsable'],
             $_POST['correo'],
             $_POST['telefono'] ?: null,
@@ -79,13 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $verification_code
         ]);
 
-        $socio_id = $pdo->lastInsertId();
-
         // Generar slug del club
         $club_slug = substr(md5($club_id . $_POST['correo']), 0, 8);
-
-        // Aquí iría el envío de correo con el código de verificación
-        // mail($_POST['correo'], 'Código de verificación - Cancha', "Tu código es: $verification_code");
 
         $success = true;
 
@@ -104,8 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <style>
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.60), rgba(0, 15, 30, 0.70)),
-        url('../assets/img/fondo-estadio-noche.jpg') center/cover no-repeat fixed;
+        linear-gradient(rgba(0, 10, 20, 0.40), rgba(0, 15, 30, 0.50)),
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
@@ -322,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="qr-section">
-        <h3>📱 Comparte tu club</h3>
+        <h3>Comparte tu club</h3>
         <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
         
         <?php
@@ -335,13 +351,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
     <?php else: ?>
-      <h2>🏟️ Registra tu Club</h2>
+      <h2>Registra tu Club ⚽</h2>
 
       <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
-      <form id="registroForm" method="POST" enctype="multipart/form-data">
+      <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
         
         <div class="form-grid">
@@ -364,14 +380,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 2 -->
           <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
           <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
-          <div class="form-group"><label for="pais">País</label></div>
-          <div class="form-group"><input type="text" id="pais" name="pais"></div>
+          <div class="form-group"><label for="region">Región *</label></div>
+          <div class="form-group">
+            <select id="region" name="region" required onchange="actualizarCiudades()">
+              <option value="">Seleccionar región</option>
+              <?php foreach ($regiones_chile as $codigo => $nombre): ?>
+                <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
           <div class="form-group"><label for="ciudad">Ciudad *</label></div>
-          <div class="form-group"><input type="text" id="ciudad" name="ciudad" required></div>
+          <div class="form-group">
+            <select id="ciudad" name="ciudad" required disabled>
+              <option value="">Seleccionar región primero</option>
+            </select>
+          </div>
 
           <!-- Fila 3 -->
-          <div class="form-group"><label for="comuna">Comuna</label></div>
-          <div class="form-group"><input type="text" id="comuna" name="comuna"></div>
+          <div class="form-group"><label for="comuna">Comuna *</label></div>
+          <div class="form-group">
+            <select id="comuna" name="comuna" required disabled>
+              <option value="">Seleccionar ciudad primero</option>
+            </select>
+          </div>
           <div class="form-group"><label for="responsable">Responsable *</label></div>
           <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
           <div class="form-group"><label for="correo">Correo *</label></div>
@@ -426,50 +457,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endif; ?>
 
   <script>
-    // Validación del formulario
-    document.addEventListener('DOMContentLoaded', function() {
-      const form = document.getElementById('registroForm');
-      if (form) {
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          
-          const formData = new FormData(e.target);
-          const btn = e.submitter;
-          const originalText = btn.innerHTML;
-          
-          btn.innerHTML = 'Registrando...';
-          btn.disabled = true;
-
-          try {
-            const response = await fetch('../api/registrar_club.php', {
-              method: 'POST',
-              body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-              window.location.reload(); // Recargar para mostrar QR
-            } else {
-              alert(data.message || 'Error al registrar club');
-            }
-          } catch (err) {
-            console.error('Error:', err);
-            alert('Error de conexión');
-          } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-          }
-        });
-
-        // Validación de teléfono
-        const telefono = document.getElementById('telefono');
-        if (telefono) {
-          telefono.addEventListener('input', function(e) {
-            this.value = this.value.replace(/[^0-9+]/g, '');
-          });
+    // Datos de ciudades y comunas por región
+    const datosChile = {
+      '13': { // Metropolitana
+        ciudades: {
+          'santiago': 'Santiago',
+          'providencia': 'Providencia',
+          'las_condes': 'Las Condes',
+          'vitacura': 'Vitacura',
+          'ñuñoa': 'Ñuñoa'
+        },
+        comunas: {
+          'santiago': ['Santiago Centro', 'Bellavista', 'Barrio Brasil'],
+          'providencia': ['Providencia Centro', 'Plaza Baquedano'],
+          'las_condes': ['Las Condes Centro', 'Los Trapenses'],
+          'vitacura': ['Vitacura Centro', 'San Carlos de Apoquindo'],
+          'ñuñoa': ['Ñuñoa Centro', 'Plaza Ñuñoa']
+        }
+      },
+      '5': { // Valparaíso
+        ciudades: {
+          'valparaiso': 'Valparaíso',
+          'vina_del_mar': 'Viña del Mar',
+          'quilpue': 'Quilpué'
+        },
+        comunas: {
+          'valparaiso': ['Valparaíso Centro', 'Cerro Alegre', 'Cerro Concepción'],
+          'vina_del_mar': ['Viña Centro', 'Reñaca', 'Forestal'],
+          'quilpue': ['Quilpué Centro', 'Villa Alemana']
         }
       }
+      // Agrega más regiones según necesites
+    };
+
+    function actualizarCiudades() {
+      const region = document.getElementById('region').value;
+      const ciudadSelect = document.getElementById('ciudad');
+      const comunaSelect = document.getElementById('comuna');
+      
+      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      ciudadSelect.disabled = !region;
+      comunaSelect.disabled = true;
+      
+      if (region && datosChile[region]) {
+        Object.entries(datosChile[region].ciudades).forEach(([codigo, nombre]) => {
+          const option = document.createElement('option');
+          option.value = codigo;
+          option.textContent = nombre;
+          ciudadSelect.appendChild(option);
+        });
+        ciudadSelect.disabled = false;
+      }
+    }
+
+    document.getElementById('ciudad').addEventListener('change', function() {
+      const region = document.getElementById('region').value;
+      const ciudad = this.value;
+      const comunaSelect = document.getElementById('comuna');
+      
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
+      
+      if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
+        datosChile[region].comunas[ciudad].forEach(comuna => {
+          const option = document.createElement('option');
+          option.value = comuna.toLowerCase().replace(/\s+/g, '_');
+          option.textContent = comuna;
+          comunaSelect.appendChild(option);
+        });
+        comunaSelect.disabled = false;
+      }
+    });
+
+    // Validación de teléfono
+    document.getElementById('telefono')?.addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9+]/g, '');
     });
   </script>
 </body>
