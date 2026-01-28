@@ -333,6 +333,52 @@
         font-size: 1.4rem;
       }
     }
+    /* Controles de navegación */
+    .carousel-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .nav-btn {
+      background: rgba(0, 51, 102, 0.8);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-btn:hover {
+      background: rgba(0, 51, 102, 1);
+      border-color: white;
+      transform: scale(1.1);
+    }
+
+    .play-pause {
+      font-size: 1rem;
+    }
+
+    /* Responsive - mantener controles en móvil */
+    @media (max-width: 768px) {
+      .carousel-controls {
+        margin: 1rem auto;
+        width: fit-content;
+      }
+      
+      .nav-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 
@@ -410,6 +456,13 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Controles de navegación -->
+<div class="carousel-controls">
+  <button class="nav-btn" onclick="moveCarousel(-1)">‹</button>
+  <button class="nav-btn play-pause" onclick="toggleAutoPlay()">⏸️</button>
+  <button class="nav-btn" onclick="moveCarousel(1)">›</button>
 </div>
 
 <!-- Línea divisoria amarilla -->
@@ -510,12 +563,13 @@
     }
   });
 
-  // Configuración del carrusel
+  // === CARRUSEL MEJORADO CON TOUCH Y CONTROLES ===
   let currentIndex = 0;
   const track = document.getElementById('carouselTrack');
   const items = document.querySelectorAll('.carousel-item');
   const totalItems = items.length;
   let autoSlideInterval;
+  let isAutoPlaying = true;
 
   // Textos descriptivos para cada feature
   const featureTexts = {
@@ -537,35 +591,120 @@
     }
   };
 
-  // Actualizar descripción según feature activo
+  // Actualizar descripción
   function updateDescription() {
     const currentItem = items[currentIndex];
     const feature = currentItem.dataset.feature;
     const description = document.getElementById('featureDescription');
     
-    description.innerHTML = `
-      <h3>${featureTexts[feature].title}</h3>
-      <p>${featureTexts[feature].content}</p>
-    `;
+    if (description && featureTexts[feature]) {
+      description.innerHTML = `
+        <h3>${featureTexts[feature].title}</h3>
+        <p>${featureTexts[feature].content}</p>
+      `;
+    }
   }
 
   // Mover carrusel
   function moveCarousel(direction = 1) {
     currentIndex = (currentIndex + direction + totalItems) % totalItems;
     
-    // Web: mover 2 imágenes, Móvil: mover 1 imagen
     if (window.innerWidth > 768) {
-      // Web: posición centrada entre 2 imágenes
-      const offset = -currentIndex * (track.offsetWidth / 2);
+      // Web: 2 imágenes visibles
+      const itemWidth = (track.offsetWidth / 2);
+      const offset = -currentIndex * itemWidth;
       track.style.transform = `translateX(${offset}px)`;
     } else {
-      // Móvil: centrar imagen actual
+      // Móvil: 1 imagen centrada
       const offset = -currentIndex * track.offsetWidth;
       track.style.transform = `translateX(${offset}px)`;
     }
     
     updateDescription();
+    resetAutoPlay();
   }
+
+  // Toggle autoplay
+  function toggleAutoPlay() {
+    const playPauseBtn = document.querySelector('.play-pause');
+    if (isAutoPlaying) {
+      clearInterval(autoSlideInterval);
+      isAutoPlaying = false;
+      playPauseBtn.textContent = '▶️';
+    } else {
+      startAutoSlide();
+      isAutoPlaying = true;
+      playPauseBtn.textContent = '⏸️';
+    }
+  }
+
+  // Reset autoplay timer
+  function resetAutoPlay() {
+    if (isAutoPlaying) {
+      clearInterval(autoSlideInterval);
+      startAutoSlide();
+    }
+  }
+
+  // Iniciar autoplay
+  function startAutoSlide() {
+    autoSlideInterval = setInterval(() => {
+      moveCarousel(1);
+    }, 3000);
+  }
+
+  // === TOUCH SWIPE MEJORADO ===
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  function handleTouchStart(e) {
+    if (window.innerWidth > 768) return;
+    touchStartX = e.touches[0].clientX;
+  }
+
+  function handleTouchMove(e) {
+    if (window.innerWidth > 768) return;
+    touchEndX = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd() {
+    if (window.innerWidth > 768) return;
+    
+    const diff = touchStartX - touchEndX;
+    const threshold = 30; // Umbral más sensible
+    
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        moveCarousel(1); // Siguiente
+      } else {
+        moveCarousel(-1); // Anterior
+      }
+    }
+  }
+
+  // Inicialización
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!track || items.length === 0) return;
+    
+    // Mostrar primera descripción
+    updateDescription();
+    
+    // Iniciar autoplay
+    startAutoSlide();
+    
+    // Eventos touch
+    const carousel = document.querySelector('.carousel-horizontal');
+    if (carousel) {
+      carousel.addEventListener('touchstart', handleTouchStart, { passive: true });
+      carousel.addEventListener('touchmove', handleTouchMove, { passive: true });
+      carousel.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+    
+    // Ajustar en resize
+    window.addEventListener('resize', () => {
+      setTimeout(() => moveCarousel(0), 100);
+    });
+  });
 
   // Iniciar carrusel automático
   function startAutoSlide() {
