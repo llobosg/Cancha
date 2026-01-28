@@ -497,8 +497,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
           <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
 
           <!-- Fila 4 -->
           <div class="form-group"><label for="responsable">Responsable *</label></div>
@@ -507,15 +507,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
+
+          <!-- Espacios vacíos para mantener alineación -->
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
 
           <!-- LOGO al final -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
           <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-          <div class="form-group"></div>
           <div class="form-group"></div>
           <div class="form-group"></div>
           <div class="form-group"></div>
