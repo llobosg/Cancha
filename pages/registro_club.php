@@ -415,7 +415,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 1 -->
           <div class="form-group"><label for="nombre">Nombre club *</label></div>
           <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
-          <div class="form-group empty-col"></div>
           <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
           <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
           <div class="form-group empty-col"></div>
@@ -467,16 +466,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
+
+          <!-- Espacios vacíos para mantener alineación -->
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
 
           <!-- LOGO al final -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
           <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
 
           <!-- Botón -->
           <div class="submit-section">
