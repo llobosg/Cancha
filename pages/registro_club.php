@@ -47,6 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Jugadores por lado debe estar entre 1 y 20');
         }
 
+        // Verificar si el correo ya tiene un club registrado
+        $stmt_check = $pdo->prepare("SELECT id_club FROM clubs WHERE email_responsable = ?");
+        $stmt_check->execute([$_POST['email_responsable']]);
+        if ($stmt_check->fetch()) {
+            throw new Exception('duplicate_email');
+        }
+
         // Subir logo si existe
         $logo_filename = null;
         if (!empty($_FILES['logo']['name'])) {
@@ -100,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([
             $club_id, 
-            $_POST['email_responsable'], // Usar email_responsable como email del socio
+            $_POST['email_responsable'],
             $_POST['responsable'], 
             'Responsable', 
             $verification_code
@@ -112,7 +119,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $success = true;
 
     } catch (Exception $e) {
-        $error = $e->getMessage();
+        $error_code = $e->getMessage();
+        
+        if ($error_code === 'duplicate_email') {
+            $error = '
+            <div style="text-align: left; line-height: 1.6;">
+                <strong>⚠️ ¡Hola! Ya tienes un club registrado con este correo.</strong><br><br>
+                En Cancha, la versión <strong>Gratuita</strong> permite registrar <strong>1 club por responsable</strong>.<br><br>
+                Si deseas gestionar <strong>múltiples clubes</strong>, te invitamos a conocer nuestra versión <strong>Premiere League</strong> con beneficios exclusivos:<br>
+                • Gestión de múltiples clubes<br>
+                • Estadísticas avanzadas<br>
+                • Soporte prioritario<br>
+                • Funciones premium<br><br>
+                ¿Te interesa? Escríbenos a <strong>hola@cancha-sport.cl</strong> para más información.
+            </div>
+            ';
+        } else {
+            $error = $error_code;
+        }
     }
 }
 ?>
