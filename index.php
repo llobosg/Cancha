@@ -478,7 +478,7 @@
       </p>
       
       <div class="register-options">
-        <button class="btn-primary" onclick="window.location.href='buscar_club.php'">
+        <button class="btn-primary" onclick="window.location.href='../pages/buscar_club.php'">
           🔍 Buscar mi club
         </button>
         

@@ -9,7 +9,7 @@
   <style>
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.45), rgba(0, 30, 15, 0.55)),
+        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
