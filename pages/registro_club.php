@@ -360,97 +360,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
         
         <div class="form-grid">
-        <!-- Fila 1 -->
-        <div class="form-group"><label for="nombre">Nombre Club</label></div>
-        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
-        <div class="form-group"><label for="fecha_fundacion">Fecha Fundación</label></div>
-        <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
-        <div class="form-group"><label for="pais">País</label></div>
-        <div class="form-group"><input type="text" id="pais" name="pais" value="Chile" required></div>
+          <!-- Fila 1 -->
+          <div class="form-group"><label for="nombre">Nombre club *</label></div>
+          <div class="form-group col-span-2"><input type="text" id="nombre" name="nombre" required></div>
+          <div class="form-group"></div>
+          <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
+          <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
 
-        <!-- Fila 2 -->
-        <div class="form-group"><label for="region">Región</label></div>
+          <!-- Fila 2 -->
+          <div class="form-group"><label for="region">Región *</label></div>
           <div class="form-group">
-            <select id="region" name="region" required>
-              <option value="">Seleccionar</option>
-              <option value="Arica y Parinacota">Arica y Parinacota</option>
-              <option value="Tarapacá">Tarapacá</option>
-              <option value="Antofagasta">Antofagasta</option>
-              <option value="Atacama">Atacama</option>
-              <option value="Coquimbo">Coquimbo</option>
-              <option value="Valparaíso">Valparaíso</option>
-              <option value="Metropolitana">Metropolitana</option>
-              <option value="O'Higgins">O'Higgins</option>
-              <option value="Maule">Maule</option>
-              <option value="Ñuble">Ñuble</option>
-              <option value="Biobío">Biobío</option>
-              <option value="Araucanía">Araucanía</option>
-              <option value="Los Ríos">Los Ríos</option>
-              <option value="Los Lagos">Los Lagos</option>
-              <option value="Aysén">Aysén</option>
-              <option value="Magallanes">Magallanes</option>
+            <select id="region" name="region" required onchange="actualizarCiudades()">
+              <option value="">Seleccionar región</option>
+              <?php foreach ($regiones_chile as $codigo => $nombre): ?>
+                <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
+              <?php endforeach; ?>
             </select>
-        </div>
-        <div class="form-group"><label for="ciudad">Ciudad</label></div>
-        <div class="form-group">
+          </div>
+          <div class="form-group"><label for="ciudad">Ciudad *</label></div>
+          <div class="form-group">
             <select id="ciudad" name="ciudad" required disabled>
-              <option value="">Seleccione región</option>
+              <option value="">Seleccionar región primero</option>
             </select>
-        </div>
-        <div class="form-group"><label for="comuna">Comuna</label></div>
-        <div class="form-group">
+          </div>
+          <div class="form-group"><label for="comuna">Comuna *</label></div>
+          <div class="form-group">
             <select id="comuna" name="comuna" required disabled>
-              <option value="">Seleccione ciudad</option>
+              <option value="">Seleccionar ciudad primero</option>
             </select>
-        </div>
+          </div>
 
-        <!-- Fila 3 -->
-        <div class="form-group"><label for="deporte">Deporte</label></div>
-        <div class="form-group">
-          <select id="deporte" name="deporte" required>
-            <option value="">Seleccionar</option>
-            <option value="futbol">Fútbol</option>
-            <option value="futbolito">Futbolito</option>
-            <option value="futsal">Futsal</option>
-            <option value="futbol11">Fútbol 11</option>
-            <option value="tenis">Tenis</option>
-            <option value="padel">Pádel</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
-        <div class="form-group"><input type="number" id="jugadores_por_lado" name="jugadores_por_lado" min="1" max="20" value="14" required></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+          <!-- Fila 3 -->
+          <div class="form-group"><label for="deporte">Deporte *</label></div>
+          <div class="form-group">
+            <select id="deporte" name="deporte" required>
+              <option value="">Seleccionar</option>
+              <option value="futbol">Fútbol</option>
+              <option value="futbolito">Futbolito</option>
+              <option value="baby">Baby fútbol</option>
+              <option value="tenis">Tenis</option>
+              <option value="padel">Pádel</option>
+            </select>
+          </div>
+          <div class="form-group"></div>
+
           
-        <!-- Fila 4 -->  
-        <div class="form-group"><label for="responsable">Responsable</label></div>
-        <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
-        <div class="form-group"><label for="telefono">Teléfono</label></div>
-        <div class="form-group"><input type="tel" id="telefono" name="telefono" required></div>
-        <div class="form-group"><label for="email_responsable">Correo</label></div>
-        <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
+          
+          
 
-        <!-- Fila 5 --> 
-        <div class="form-group"><label for="logo">Logo del club</label></div>
-        <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+          
+          
+          <div class="form-group"><label for="responsable">Responsable *</label></div>
+          <div class="form-group"><input type="text" id="responsable" name="responsable" required></div>
+          <div class="form-group"><label for="correo">Correo *</label></div>
+          <div class="form-group"><input type="email" id="correo" name="correo" required></div>
 
-        <!-- Fila 6 -->  
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
-        <div class="form-group"></div>
+          <!-- Fila 4 -->
+          <div class="form-group"><label for="telefono">Teléfono</label></div>
+          <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
 
-        <!-- Botón -->
-        <div class="submit-section">
-          <button type="submit" class="btn-submit">Enviar código de verificación</button>
+          <!-- LOGO al final -->
+          <div class="form-group"><label for="logo">Logo del club</label></div>
+          <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+
+          <!-- Botón -->
+          <div class="submit-section">
+            <button type="submit" class="btn-submit">Registrar club</button>
+          </div>
         </div>
-      </div>
       </form>
     <?php endif; ?>
   </div>
