@@ -155,6 +155,162 @@
     .flag-icon::before {
       content: "🚩";
     }
+
+    /* Botones de la barra superior - transparentes con borde blanco */
+    .btn-register,
+    .btn-enter {
+      background: transparent !important;
+      border: 2px solid white !important;
+      color: white !important;
+    }
+
+    /* Sección multimedia principal */
+    .media-main {
+      position: relative;
+      height: 280px;
+      margin: 2rem 0;
+      overflow: hidden;
+    }
+
+    /* Carrusel horizontal */
+    .carousel-horizontal {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .carousel-track {
+      display: flex;
+      height: 100%;
+      transition: transform 0.5s ease-in-out;
+    }
+
+    .carousel-item {
+      min-width: 300px;
+      height: 100%;
+      position: relative;
+      margin: 0 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .carousel-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .item-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 51, 102, 0.85);
+      padding: 1rem;
+      color: white;
+      text-align: center;
+    }
+
+    .item-overlay h4 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    /* Controles del carrusel */
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: background 0.2s;
+    }
+
+    .carousel-btn:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .carousel-btn.prev { left: 10px; }
+    .carousel-btn.next { right: 10px; }
+
+    /* Línea divisoria amarilla */
+    .divider-yellow {
+      height: 3px;
+      background: #FFD700;
+      margin: 2rem 0;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Métricas inferiores */
+    .metrics-section {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
+      padding: 1.2rem 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .metric-card:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-3px);
+    }
+
+    .metric-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 0.3rem;
+    }
+
+    .metric-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    /* Responsive móvil */
+    @media (max-width: 768px) {
+      .media-main {
+        height: 220px;
+      }
+      
+      .carousel-item {
+        min-width: 250px;
+      }
+      
+      .metrics-section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
+      }
+      
+      .metric-value {
+        font-size: 1.4rem;
+      }
+    }
   </style>
 </head>
 
@@ -197,38 +353,67 @@
   <h1 style="color: white;" class="title-cancha">CANCHA ⚽</h1>
   <p class="subtitle">Tu club a un click</p>
 
-  <!-- Anuncios multimedia -->
-  <div class="media-section">
-    <div class="carousel-container">
-      <div class="carousel-slide active">
+  <!-- Sección multimedia principal -->
+<div class="media-main">
+  <!-- Carrusel horizontal -->
+  <div class="carousel-horizontal">
+    <div class="carousel-track" id="carouselTrack">
+      <div class="carousel-item">
         <img src="../assets/img/feature1.jpg" alt="Gestión de socios">
-        <div class="carousel-text">
-          <h3>👥 Gestión de Socios</h3>
-          <p>Registra, organiza y comunica con todos los miembros de tu club en un solo lugar.</p>
+        <div class="item-overlay">
+          <h4>👥 Gestión de Socios</h4>
         </div>
       </div>
-      <div class="carousel-slide">
-        <img src="../assets/img/feature2.jpg" alt="Convocatorias inteligentes">
-        <div class="carousel-text">
-          <h3>📢 Convocatorias Inteligentes</h3>
-          <p>Crea convocatorias automáticas y recibe confirmaciones en tiempo real.</p>
+      <div class="carousel-item">
+        <img src="../assets/img/feature2.jpg" alt="Convocatorias">
+        <div class="item-overlay">
+          <h4>📢 Convocatorias</h4>
         </div>
       </div>
-      <div class="carousel-slide">
-        <img src="../assets/img/feature3.jpg" alt="Finanzas transparentes">
-        <div class="carousel-text">
-          <h3>💰 Finanzas Transparentes</h3>
-          <p>Lleva control de cuotas, gastos y balance financiero de tu club.</p>
+      <div class="carousel-item">
+        <img src="../assets/img/feature3.jpg" alt="Finanzas">
+        <div class="item-overlay">
+          <h4>💰 Finanzas</h4>
         </div>
       </div>
-      
-      <!-- Indicadores -->
-      <div class="carousel-indicators">
-        <span class="indicator active" data-slide="0"></span>
-        <span class="indicator" data-slide="1"></span>
-        <span class="indicator" data-slide="2"></span>
+      <div class="carousel-item">
+        <img src="../assets/img/feature4.jpg" alt="Estadísticas">
+        <div class="item-overlay">
+          <h4>📊 Estadísticas</h4>
+        </div>
       </div>
     </div>
+    
+    <!-- Controles -->
+    <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
+    <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
+  </div>
+</div>
+
+<!-- Línea divisoria amarilla -->
+<div class="divider-yellow"></div>
+
+<!-- Métricas inferiores -->
+<div class="metrics-section">
+  <div class="metric-card" onclick="showMetric('clubes')">
+    <div class="metric-icon">🏟️</div>
+    <div class="metric-value" id="metric-clubes">0</div>
+    <div class="metric-label">Clubes</div>
+  </div>
+  <div class="metric-card" onclick="showMetric('socios')">
+    <div class="metric-icon">👥</div>
+    <div class="metric-value" id="metric-socios">0</div>
+    <div class="metric-label">Socios</div>
+  </div>
+  <div class="metric-card" onclick="showMetric('eventos')">
+    <div class="metric-icon">📅</div>
+    <div class="metric-value" id="metric-eventos">0</div>
+    <div class="metric-label">Eventos</div>
+  </div>
+  <div class="metric-card" onclick="showMetric('visitas')">
+    <div class="metric-icon">👁️</div>
+    <div class="metric-value" id="metric-visitas">0</div>
+    <div class="metric-label">Visitas</div>
   </div>
 </div>
 
@@ -293,6 +478,55 @@
       btnEnter.style.display = 'none';
       googleContainer.style.display = 'block';
     }
+  });
+
+  // Carrusel horizontal
+  let currentIndex = 0;
+  const track = document.getElementById('carouselTrack');
+  const items = document.querySelectorAll('.carousel-item');
+  const totalItems = items.length;
+
+  function moveCarousel(direction) {
+    currentIndex += direction;
+    
+    // Loop infinito
+    if (currentIndex >= totalItems) {
+      currentIndex = 0;
+    } else if (currentIndex < 0) {
+      currentIndex = totalItems - 1;
+    }
+    
+    const offset = -currentIndex * (300 + 20); // ancho + margen
+    track.style.transform = `translateX(${offset}px)`;
+  }
+
+  // Métricas (simuladas - reemplazar con API real)
+  function loadMetrics() {
+    // Simular datos reales
+    document.getElementById('metric-clubes').textContent = '127';
+    document.getElementById('metric-socios').textContent = '2.4K';
+    document.getElementById('metric-eventos').textContent = '89';
+    document.getElementById('metric-visitas').textContent = '15K';
+  }
+
+  function showMetric(type) {
+    const values = {
+      clubes: '127 clubes activos',
+      socios: '2.4K socios registrados',
+      eventos: '89 eventos este mes',
+      visitas: '15K visitas mensuales'
+    };
+    alert(values[type]);
+  }
+
+  // Cargar métricas al inicio
+  document.addEventListener('DOMContentLoaded', () => {
+    loadMetrics();
+    
+    // También ajustar botones de barra superior
+    const registerBtn = document.querySelector('.btn-register');
+    const enterBtn = document.getElementById('btnEnterClub');
+    if (registerBtn) registerBtn.textContent = 'Registrar un club';
   });
 </script>
 
