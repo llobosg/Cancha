@@ -167,16 +167,16 @@
     /* Sección multimedia principal */
     .media-main {
       position: relative;
-      height: 280px;
+      height: 320px;
       margin: 2rem 0;
       overflow: hidden;
     }
 
     /* Carrusel horizontal */
     .carousel-horizontal {
-      position: relative;
       width: 100%;
       height: 100%;
+      overflow: hidden;
     }
 
     .carousel-track {
@@ -214,7 +214,7 @@
 
     .item-overlay h4 {
       margin: 0;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
     }
 
     /* Controles del carrusel */
@@ -241,14 +241,36 @@
     .carousel-btn.prev { left: 10px; }
     .carousel-btn.next { right: 10px; }
 
+    /* Descripción sincronizada */
+    .feature-description {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .feature-description h3 {
+      color: white;
+      margin-bottom: 1rem;
+      font-size: 1.4rem;
+    }
+
+    .feature-description p {
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
     /* Línea divisoria amarilla */
     .divider-yellow {
       height: 3px;
       background: #FFD700;
-      margin: 2rem 0;
+      margin: 2rem auto;
       width: 80%;
-      margin-left: auto;
-      margin-right: auto;
     }
 
     /* Métricas inferiores */
@@ -353,41 +375,49 @@
   <h1 style="color: white;" class="title-cancha">CANCHA ⚽</h1>
   <p class="subtitle">Tu club a un click</p>
 
-  <!-- Sección multimedia principal -->
+<!-- Sección multimedia principal -->
 <div class="media-main">
   <!-- Carrusel horizontal -->
   <div class="carousel-horizontal">
     <div class="carousel-track" id="carouselTrack">
-      <div class="carousel-item">
+      <!-- Feature 1 -->
+      <div class="carousel-item" data-feature="socios">
         <img src="../assets/img/feature1.jpg" alt="Gestión de socios">
         <div class="item-overlay">
-          <h4>👥 Gestión de Socios</h4>
+          <h4>Gestión de Socios</h4>
         </div>
       </div>
-      <div class="carousel-item">
+      <!-- Feature 2 -->
+      <div class="carousel-item" data-feature="convocatorias">
         <img src="../assets/img/feature2.jpg" alt="Convocatorias">
         <div class="item-overlay">
-          <h4>📢 Convocatorias</h4>
+          <h4>Convocatorias</h4>
         </div>
       </div>
-      <div class="carousel-item">
+      <!-- Feature 3 -->
+      <div class="carousel-item" data-feature="finanzas">
         <img src="../assets/img/feature3.jpg" alt="Finanzas">
         <div class="item-overlay">
-          <h4>💰 Finanzas</h4>
+          <h4>Pago de cuotas</h4>
         </div>
       </div>
-      <div class="carousel-item">
+      <!-- Feature 4 -->
+      <div class="carousel-item" data-feature="estadisticas">
         <img src="../assets/img/feature4.jpg" alt="Estadísticas">
         <div class="item-overlay">
-          <h4>📊 Estadísticas</h4>
+          <h4>Estadísticas</h4>
         </div>
       </div>
     </div>
-    
-    <!-- Controles -->
-    <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
-    <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
   </div>
+</div>
+
+<!-- Línea divisoria amarilla -->
+<div class="divider-yellow"></div>
+
+<!-- Descripción sincronizada -->
+<div class="feature-description" id="featureDescription">
+  <!-- Contenido dinámico -->
 </div>
 
 <!-- Línea divisoria amarilla -->
@@ -480,54 +510,124 @@
     }
   });
 
-  // Carrusel horizontal
+  // Configuración del carrusel
   let currentIndex = 0;
   const track = document.getElementById('carouselTrack');
   const items = document.querySelectorAll('.carousel-item');
   const totalItems = items.length;
+  let autoSlideInterval;
 
-  function moveCarousel(direction) {
-    currentIndex += direction;
+  // Textos descriptivos para cada feature
+  const featureTexts = {
+    socios: {
+      title: "👥 Gestión de Socios",
+      content: "En Cancha, cada socio es parte fundamental de la familia. Desde tu primer registro, tendrás acceso inmediato a todas las actividades de tu club, podrás confirmar asistencia a partidos, recibir notificaciones importantes y participar en la vida comunitaria. ¡Tu club te espera!"
+    },
+    convocatorias: {
+      title: "📢 Convocatorias Inteligentes",
+      content: "¿Cansado de los grupos de WhatsApp infinitos? Con Cancha, las convocatorias son claras, organizadas y eficientes. Recibe invitaciones personalizadas, confirma tu asistencia con un clic y mantén todo tu historial de participación. La organización nunca fue tan fácil."
+    },
+    finanzas: {
+      title: "💰 Finanzas Transparentes",
+      content: "La transparencia es clave en cualquier club. En Cancha, puedes ver el estado de tus cuotas, el uso de los fondos colectivos y contribuir al crecimiento sostenible de tu equipo. Todo claro, justo y accesible desde tu celular."
+    },
+    estadisticas: {
+      title: "📊 Estadísticas que Inspiran",
+      content: "Sigue el crecimiento de tu club en tiempo real. Número de socios, eventos realizados, participación en actividades... Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos."
+    }
+  };
+
+  // Actualizar descripción según feature activo
+  function updateDescription() {
+    const currentItem = items[currentIndex];
+    const feature = currentItem.dataset.feature;
+    const description = document.getElementById('featureDescription');
     
-    // Loop infinito
-    if (currentIndex >= totalItems) {
-      currentIndex = 0;
-    } else if (currentIndex < 0) {
-      currentIndex = totalItems - 1;
+    description.innerHTML = `
+      <h3>${featureTexts[feature].title}</h3>
+      <p>${featureTexts[feature].content}</p>
+    `;
+  }
+
+  // Mover carrusel
+  function moveCarousel(direction = 1) {
+    currentIndex = (currentIndex + direction + totalItems) % totalItems;
+    
+    // Web: mover 2 imágenes, Móvil: mover 1 imagen
+    if (window.innerWidth > 768) {
+      // Web: posición centrada entre 2 imágenes
+      const offset = -currentIndex * (track.offsetWidth / 2);
+      track.style.transform = `translateX(${offset}px)`;
+    } else {
+      // Móvil: centrar imagen actual
+      const offset = -currentIndex * track.offsetWidth;
+      track.style.transform = `translateX(${offset}px)`;
     }
     
-    const offset = -currentIndex * (300 + 20); // ancho + margen
-    track.style.transform = `translateX(${offset}px)`;
+    updateDescription();
   }
+
+  // Iniciar carrusel automático
+  function startAutoSlide() {
+    autoSlideInterval = setInterval(() => {
+      moveCarousel(1);
+    }, 3000);
+  }
+
+  // Detener/reanudar en hover
+  function setupHoverPause() {
+    const carousel = document.querySelector('.carousel-horizontal');
+    if (carousel) {
+      carousel.addEventListener('mouseenter', () => clearInterval(autoSlideInterval));
+      carousel.addEventListener('mouseleave', startAutoSlide);
+    }
+  }
+
+  // Inicialización
+  document.addEventListener('DOMContentLoaded', () => {
+    // Mostrar primera descripción
+    updateDescription();
+    
+    // Iniciar carrusel automático
+    startAutoSlide();
+    
+    // Configurar pausa en hover
+    setupHoverPause();
+    
+    // Ajustar en resize
+    window.addEventListener('resize', () => {
+      moveCarousel(0); // Reajustar posición
+    });
+  });
 
   // Métricas (simuladas - reemplazar con API real)
-  function loadMetrics() {
+  //function loadMetrics() {
     // Simular datos reales
-    document.getElementById('metric-clubes').textContent = '127';
-    document.getElementById('metric-socios').textContent = '2.4K';
-    document.getElementById('metric-eventos').textContent = '89';
-    document.getElementById('metric-visitas').textContent = '15K';
-  }
+  //  document.getElementById('metric-clubes').textContent = '127';
+  //  document.getElementById('metric-socios').textContent = '2.4K';
+  //  document.getElementById('metric-eventos').textContent = '89';
+  //  document.getElementById('metric-visitas').textContent = '15K';
+  //}
 
-  function showMetric(type) {
-    const values = {
-      clubes: '127 clubes activos',
-      socios: '2.4K socios registrados',
-      eventos: '89 eventos este mes',
-      visitas: '15K visitas mensuales'
-    };
-    alert(values[type]);
-  }
+  //function showMetric(type) {
+  //  const values = {
+  //    clubes: '127 clubes activos',
+  //    socios: '2.4K socios registrados',
+  //    eventos: '89 eventos este mes',
+  //    visitas: '15K visitas mensuales'
+  //  };
+  //  alert(values[type]);
+  //}
 
   // Cargar métricas al inicio
-  document.addEventListener('DOMContentLoaded', () => {
-    loadMetrics();
+  //document.addEventListener('DOMContentLoaded', () => {
+  //  loadMetrics();
     
     // También ajustar botones de barra superior
-    const registerBtn = document.querySelector('.btn-register');
-    const enterBtn = document.getElementById('btnEnterClub');
-    if (registerBtn) registerBtn.textContent = 'Registrar un club';
-  });
+  //  const registerBtn = document.querySelector('.btn-register');
+  //  const enterBtn = document.getElementById('btnEnterClub');
+  //  if (registerBtn) registerBtn.textContent = 'Registrar un club';
+  //});
 </script>
 
 </body>
