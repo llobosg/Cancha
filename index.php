@@ -397,23 +397,23 @@
   let autoSlideInterval;
   let isAutoPlaying = true;
 
-  // Textos descriptivos
+  // Textos descriptivos para cada feature
   const featureTexts = {
     socios: {
-      title: "👥 Gestión de Socios",
-      content: "En Cancha, cada socio es parte fundamental de la familia. Desde tu primer registro, tendrás acceso inmediato a todas las actividades de tu club, podrás confirmar asistencia a partidos, recibir notificaciones importantes y participar en la vida comunitaria. ¡Tu club te espera!"
+      title: "Gestión de Socios",
+      content: "En Cancha, cada socio es parte fundamental de la familia. Desde tu inscripción a un Club tendrás acceso inmediato a todas las actividades y eventos, podrás confirmar asistencia a partidos, recibir notificaciones de quienes se anotan o bajan y participar en la vida comunitaria. ¡Tu club te espera!"
     },
     convocatorias: {
-      title: "📢 Convocatorias Inteligentes",
-      content: "¿Cansado de los grupos de WhatsApp infinitos? Con Cancha, las convocatorias son claras, organizadas y eficientes. Recibe invitaciones personalizadas, confirma tu asistencia con un clic y mantén todo tu historial de participación. La organización nunca fue tan fácil."
+      title: "Convocatorias Inteligentes",
+      content: "¿Cansado de los grupos de WhatsApp infinitos y llenos de porno que suenan toda la noche mientras quieres dormir? Con Cancha, las convocatorias son claras, organizadas y eficientes. Recibe invitaciones personalizadas, confirma tu asistencia con un clic y mantén todo tu historial de participación. La organización nunca fue tan fácil."
     },
     finanzas: {
-      title: "💰 Finanzas Transparentes",
+      title: "Finanzas Transparentes",
       content: "La transparencia es clave en cualquier club. En Cancha, puedes ver el estado de tus cuotas, el uso de los fondos colectivos y contribuir al crecimiento sostenible de tu equipo. Todo claro, justo y accesible desde tu celular."
     },
     estadisticas: {
-      title: "📊 Estadísticas que Inspiran",
-      content: "Sigue el crecimiento de tu club en tiempo real. Número de socios, eventos realizados, participación en actividades... Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos."
+      title: "Estadísticas que Inspiran",
+      content: "Sigue el crecimiento de tu club en tiempo real. Número de socios, eventos realizados, participación en actividades... Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos. Y más adelante podremos ver otros Clubes inscritos en nuestar ciudad y comuna, organizar partidos con ellos, campeonatos entre la comunidad cancha, disponibilidad de canchas, y mucho más."
     }
   };
 
