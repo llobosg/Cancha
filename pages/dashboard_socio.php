@@ -28,7 +28,7 @@ foreach ($clubs as $c) {
 }
 
 if (!$club_id) {
-    header('Location: index.php?error=invalid_club');
+    header('Location: ../index.php?error=invalid_club');
     exit;
 }
 
