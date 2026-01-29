@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
                 rol = ?, id_puesto = ?, genero = ?, habilidad = ?, 
-                foto_url = ?, datos_completos = 1 
+                foto_url = ?
             WHERE id_socio = ?
         ");
         $stmt->execute([
