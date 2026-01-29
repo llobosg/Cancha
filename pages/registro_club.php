@@ -2,17 +2,12 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Datos de Chile - Versión ligera
-$regiones_chile = [
-    '13' => 'Metropolitana',
-    '5' => 'Valparaíso',
-    '8' => 'Biobío',
-    '7' => 'Maule',
-    '9' => 'La Araucanía',
-    '6' => 'O\'Higgins',
-    '4' => 'Coquimbo',
-    '2' => 'Antofagasta'
-];
+// Obtener regiones desde la base de datos
+$stmt_regiones = $pdo->query("SELECT DISTINCT codigo_region, nombre_region FROM regiones_chile ORDER BY nombre_region");
+$regiones_chile = [];
+while ($row = $stmt_regiones->fetch()) {
+    $regiones_chile[$row['codigo_region']] = $row['nombre_region'];
+}
 
 $error_message = '';
 $error_type = '';
@@ -51,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Generar código de verificación
             $verification_code = rand(1000, 9999);
             
-            // Preparar datos del club (sin guardar aún)
+            // Preparar datos del club
             $club_data = [
                 'nombre' => $_POST['nombre'],
                 'deporte' => $_POST['deporte'],
@@ -97,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Error de configuración del servicio de correo');
             }
 
-            // Usar la variable MAILER_FROM_EMAIL que ya tienes
             $from_email = $_ENV['MAILER_FROM_EMAIL'] ?? 'llobos@gltcomex.com';
             $from_name = 'Cancha';
 
@@ -163,30 +157,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = curl_error($ch);
             curl_close($ch);
 
-            // Manejo de errores detallado
             if ($httpCode !== 201) {
-                $error_msg = "Brevo error: HTTP $httpCode";
-                if ($response) {
-                    $error_msg .= ", Response: " . substr($response, 0, 200);
-                }
-                if ($error) {
-                    $error_msg .= ", cURL Error: $error";
-                }
-                
-                error_log($error_msg);
-                
-                if ($httpCode === 401) {
-                    throw new Exception('Error de autenticación del servicio de correo');
-                } elseif ($httpCode === 400) {
-                    throw new Exception('Error en los datos del correo. Por favor, verifica tu dirección de correo.');
-                } elseif ($httpCode === 429) {
-                    throw new Exception('Límite diario de correos alcanzado. Por favor, inténtalo mañana.');
-                } else {
-                    throw new Exception('No se pudo enviar el correo de verificación. Por favor, inténtalo nuevamente.');
-                }
+                error_log("Brevo error: HTTP $httpCode, Response: " . substr($response, 0, 200));
+                throw new Exception('No se pudo enviar el correo de verificación. Por favor, inténtalo nuevamente.');
             }
 
-            // ✅ Correo enviado exitosamente - GUARDAR EN BASE DE DATOS
+            // Guardar en base de datos
             $stmt = $pdo->prepare("
                 INSERT INTO clubs (
                     nombre, deporte, jugadores_por_lado, fecha_fundacion, pais, ciudad, comuna, 
@@ -217,7 +193,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_type = 'general';
         $error_message = $e->getMessage();
         
-        // Limpiar logo si hubo error
         if (!empty($logo_filename)) {
             $upload_dir = __DIR__ . '/../uploads/logos/';
             if (file_exists($upload_dir . $logo_filename)) {
@@ -423,7 +398,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Por favor, revisa tu bandeja de entrada (y spam) para activar tu club.
       </div>
       
-      <!-- Botón para ir a verificación -->
       <div style="text-align: center; margin-top: 1.5rem;">
         <button class="btn-submit" onclick="window.location.href='verificar_codigo.php?email=<?= urlencode($email_to_verify) ?>'">
           Ingresar código de verificación
@@ -459,6 +433,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 1 -->
           <div class="form-group"><label for="nombre">Nombre club *</label></div>
           <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
+          <div class="form-group empty-col"></div>
           <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
           <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
           <div class="form-group empty-col"></div>
@@ -510,21 +485,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-
-          <!-- Espacios vacíos para mantener alineación -->
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
           <div class="form-group empty-col"></div>
 
-          <!-- LOGO al final -->
+          <!-- LOGO -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
           <div class="form-group col-span-2"><input type="file" id="logo" name="logo" accept="image/*"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
+          <div class="form-group empty-col"></div>
 
           <!-- Botón -->
           <div class="submit-section">
@@ -535,38 +505,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
   </div>
 
-  <!-- SCRIPTS DE REGIONES (versión ligera) -->
+  <!-- SCRIPTS DINÁMICOS DE REGIONES -->
   <script>
-    const datosChile = {
-      "13": {
-        ciudades: {"santiago": "Santiago", "cordillera": "Cordillera"},
-        comunas: {
-          "santiago": ["Santiago", "Las Condes", "Providencia", "Ñuñoa", "Vitacura", "La Florida", "Maipú", "Peñalolén"],
-          "cordillera": ["Puente Alto", "Pirque", "San José de Maipo"]
-        }
-      },
-      "5": {
-        ciudades: {"valparaiso": "Valparaíso", "quilpue": "Quilpué"},
-        comunas: {
-          "valparaiso": ["Valparaíso", "Viña del Mar", "Concón", "Quintero", "Puchuncaví"],
-          "quilpue": ["Quilpué", "Villa Alemana", "Limache", "Olmué"]
-        }
-      },
-      "8": {
-        ciudades: {"concepcion": "Concepción", "losangeles": "Los Ángeles"},
-        comunas: {
-          "concepcion": ["Concepción", "Talcahuano", "Hualpén", "San Pedro de la Paz", "Coronel"],
-          "losangeles": ["Los Ángeles", "Laja", "Mulchén", "Nacimiento", "Santa Bárbara"]
-        }
-      },
-      "7": {
-        ciudades: {"talca": "Talca", "curico": "Curicó"},
-        comunas: {
-          "talca": ["Talca", "San Clemente", "Pelarco", "Pencahue", "Río Claro"],
-          "curico": ["Curicó", "Molina", "Rauco", "Romeral", "Teno"]
-        }
-      }
-    };
+    let datosChile = {};
+    
+    // Cargar datos desde API
+    fetch('../api/get_regiones.php')
+      .then(response => response.json())
+      .then(data => {
+        datosChile = data;
+      })
+      .catch(error => {
+        console.error('Error al cargar regiones:', error);
+        alert('Error al cargar las regiones. Por favor recarga la página.');
+      });
 
     function actualizarCiudades() {
       const region = document.getElementById('region').value;

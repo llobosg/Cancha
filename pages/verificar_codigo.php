@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/config.php';
 $error_message = '';
 $success = false;
 $email = $_GET['email'] ?? '';
+$club_slug = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -25,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Verificar código en la base de datos
         $stmt = $pdo->prepare("
-            SELECT id_club, email_responsable, verification_code, email_verified 
+            SELECT id_club, email_responsable, verification_code, email_verified, responsable 
             FROM clubs 
             WHERE email_responsable = ? AND verification_code = ?
         ");
@@ -37,8 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($club['email_verified']) {
-            // Ya verificado
-            $success = true;
+            // Ya verificado - solo generar slug
             $club_slug = substr(md5($club['id_club'] . $club['email_responsable']), 0, 8);
         } else {
             // Activar club
@@ -61,14 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_insert_socio->execute([
                     $club['id_club'],
                     $email,
-                    'Responsable', // Podrías obtener el nombre real del club
+                    $club['responsable'], // Nombre real del responsable
                     'Responsable'
                 ]);
             }
             
-            $success = true;
             $club_slug = substr(md5($club['id_club'] . $email), 0, 8);
         }
+        
+        $success = true;
+        $email_verified = $email;
         
     } catch (Exception $e) {
         $error_message = $e->getMessage();
@@ -236,6 +238,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       width: 100%;
       margin-top: 1rem;
     }
+
+    /* Redirección automática */
+    .redirect-message {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #071289;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -249,7 +259,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button class="dashboard-btn" onclick="window.location.href='dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>'">
           Ir al Dashboard
         </button>
+        <div class="redirect-message">
+          Redirigiendo automáticamente en 3 segundos...
+        </div>
       </div>
+      
+      <script>
+        // Redirección automática
+        setTimeout(() => {
+          window.location.href = 'dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>';
+        }, 3000);
+        
+        // Guardar sesión
+        const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+        localStorage.setItem('cancha_device', deviceId);
+        localStorage.setItem('cancha_session', 'active');
+        localStorage.setItem('cancha_club', '<?= htmlspecialchars($club_slug) ?>');
+      </script>
+      
     <?php else: ?>
       <h2>🔐 Verificar Código</h2>
       
