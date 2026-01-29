@@ -50,7 +50,7 @@ try {
             'success' => false,
             'action' => 'register',
             'email' => $email,
-            'message' => 'Revisamos las planillas y no estás inscrito, y ya que estás en Cancha aprovecha e inscríbite en tu Club.'
+            'message' => 'Primero debes inscribirte en un club'
         ]);
         exit;
     }
@@ -61,7 +61,7 @@ try {
     echo json_encode([
         'success' => true,
         'club_slug' => $club_slug,
-        'redirect' => '../pages/dashboard.php?id_club=' . $club_slug
+        'redirect' => 'pages/dashboard_socio.php?id_club=' . $club_slug
     ]);
 
 } catch (Exception $e) {
