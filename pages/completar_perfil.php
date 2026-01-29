@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
-                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, puntaje = ?, 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, 
                 foto_url = ?, datos_completos = 1 
             WHERE id_socio = ?
         ");
@@ -62,8 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['rol'] ?: null,
             $_POST['id_puesto'] ?: null,
             $_POST['genero'] ?: null,
-            $_POST['habilidad'] ?: null,
-            $_POST['puntaje'] ?: 0,
+            $_POST['habilidad'] ?: 'Básica',
             $foto_url,
             $socio_id
         ]);
