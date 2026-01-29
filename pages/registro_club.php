@@ -484,8 +484,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group"><input type="email" id="email_responsable" name="email_responsable" required></div>
           <div class="form-group"><label for="telefono">Teléfono</label></div>
           <div class="form-group"><input type="tel" id="telefono" name="telefono"></div>
-          <div class="form-group empty-col"></div>
-          <div class="form-group empty-col"></div>
 
           <!-- LOGO -->
           <div class="form-group"><label for="logo">Logo del club</label></div>
