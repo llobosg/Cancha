@@ -433,7 +433,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 1 -->
           <div class="form-group"><label for="nombre">Nombre club *</label></div>
           <div class="form-group col-span-nombre"><input type="text" id="nombre" name="nombre" required></div>
-          <div class="form-group empty-col"></div>
           <div class="form-group"><label for="fecha_fundacion">Fecha Fund.</label></div>
           <div class="form-group"><input type="date" id="fecha_fundacion" name="fecha_fundacion"></div>
           <div class="form-group empty-col"></div>
