@@ -722,19 +722,33 @@ $_SESSION['visited_index'] = true;
     adjustForMobile();
     window.addEventListener('resize', adjustForMobile);
     
-    // Manejo de sesión (solo JavaScript, sin PHP)
+    // Manejo de sesión mejorado
     const savedClub = localStorage.getItem('cancha_club');
     const btnEnter = document.getElementById('btnEnterClub');
     const googleContainer = document.getElementById('googleLoginContainer');
     
-    if (savedClub) {
+    // Validar que el club sea válido (no null, undefined, o vacío)
+    if (savedClub && savedClub !== 'null' && savedClub !== 'undefined' && savedClub.trim() !== '') {
       btnEnter.style.display = 'block';
       googleContainer.style.display = 'none';
       
       btnEnter.onclick = () => {
-        window.location.href = `/pages/dashboard.php?id_club=${savedClub}`;
+        // Validación adicional antes de redirigir
+        if (!savedClub || savedClub.length !== 8) {
+          console.warn('🔍 Club inválido en localStorage, limpiando sesión');
+          localStorage.removeItem('cancha_club');
+          localStorage.removeItem('cancha_session');
+          location.reload();
+          return;
+        }
+        
+        window.location.href = `pages/dashboard_socio.php?id_club=${savedClub}`;
       };
     } else {
+      // Limpiar sesión inválida
+      localStorage.removeItem('cancha_club');
+      localStorage.removeItem('cancha_session');
+      
       btnEnter.style.display = 'none';
       googleContainer.style.display = 'block';
     }

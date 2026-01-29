@@ -4,8 +4,9 @@ require_once __DIR__ . '/../includes/config.php';
 // Obtener club desde URL
 $club_slug = $_GET['id_club'] ?? '';
 
-// Si no hay slug, redirigir a inicio
-if (!$club_slug) {
+// Validar que el slug sea válido (8 caracteres alfanuméricos)
+if (!$club_slug || strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
+    // Redirigir a inicio SIN parámetros de error
     header('Location: ../index.php');
     exit;
 }
