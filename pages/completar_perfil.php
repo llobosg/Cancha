@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
-                rol = ?, id_puesto = ?, genero = ?, puntaje = ?, datos_completos = 1 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, datos_completos = 1 
             WHERE id_socio = ?
         ");
         $stmt->execute([
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['rol'] ?: null,
             $_POST['id_puesto'] ?: null,
             $_POST['genero'] ?: null,
-            $_POST['puntaje'] ?: 0,
+            $_POST['habilidad'] ?: 'Básica',
             $socio_id
         ]);
 
@@ -278,6 +278,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="">Cargando puestos...</option>
             </select>
           </div>
+          <div class="form-group"><label for="habilidad">Habilidad</label></div>
+          <div class="form-group">
+            <select id="habilidad" name="habilidad">
+              <option value="">Seleccionar</option>
+              <option value="Básica">Básica</option>
+              <option value="Intermedia">Intermedia</option>
+              <option value="Avanzada">Avanzada</option>
+            </select>
+          </div>
           <div class="form-group"><label for="genero">Género</label></div>
           <div class="form-group">
             <select id="genero" name="genero">
@@ -287,9 +296,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="otro">Otro</option>
             </select>
           </div>
-          <div class="form-group"><label for="puntaje">Habilidad</label></div>
-          <div class="form-group"><input type="number" id="puntaje" name="puntaje" min="0" max="100" value="0"></div>
-        </div>
         
         <button type="submit" class="btn-submit">Guardar perfil completo</button>
       </form>
