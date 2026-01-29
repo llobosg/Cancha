@@ -495,7 +495,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <!-- Botón -->
           <div class="submit-section">
-            <button type="submit" class="btn-submit">Registrar club</button>
+            <button type="submit" class="btn-submit">Registrar Club</button>
           </div>
         </div>
       </form>

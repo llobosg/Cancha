@@ -311,7 +311,7 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
         
         <?php
         $club_slug = htmlspecialchars($_GET['id_club'] ?? '');
-        $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+        $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
         ?>
         
         <div class="qr-code" id="qrCode"></div>
@@ -322,7 +322,7 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
 
     <!-- Cerrar sesión -->
     <div class="logout">
-      <a href="index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
     </div>
   </div>
 
