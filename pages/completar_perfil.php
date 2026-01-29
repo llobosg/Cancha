@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
-                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, datos_completos = 1 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ? 
             WHERE id_socio = ?
         ");
         $stmt->execute([
