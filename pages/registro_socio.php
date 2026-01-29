@@ -400,19 +400,20 @@ if (!$club) {
       <div class="form-group"><input type="text" id="alias" name="alias" required></div>
       <div class="form-group"><label for="rol">Rol</label></div>
       <div class="form-group">
-        <select id="rol" name="rol" required>
-          <option value="">Seleccionar</option>
-          <option value="Jugador">Jugador</option>
-          <option value="Capitán">Capitán</option>
-          <option value="Tesorero">Tesorero</option>
-          <option value="Director">Director</option>
-          <option value="Delegado">Delegado</option>
-          <option value="Profe">Profe</option>
-          <option value="Kine">Kine</option>
-          <option value="Preparador Físico">Preparador Físico</option>
-          <option value="Utilero">Utilero</option>
-        </select>
-      </div>
+            <select id="rol" name="rol" required>
+              <option value="">Seleccionar</option>
+              <option value="Jugador">Jugador</option>
+              <option value="Capitán">Galleta</option>
+              <option value="Entrenador">Amigo del club</option>
+              <option value="Tesorero">Tesorero</option>
+              <option value="Director">Director</option>
+              <option value="Delegado">Delegado</option>
+              <option value="Profe">Profe</option>
+              <option value="Kine">Kine</option>
+              <option value="Preparador Físico">Preparador Físico</option>
+              <option value="Utilero">Utilero</option>
+            </select>
+          </div>
 
       <!-- Fila 2 -->
       <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>

@@ -2,25 +2,40 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-$club_slug = $_GET['club'] ?? '';
-if (!$club_slug) {
-    header('Location: index.php');
-    exit;
-}
+// Obtener datos actuales del socio (simulado - en producción usarías sesión)
+$socio_id = $_SESSION['id_socio'] ?? 1; // Ajusta según tu sistema de autenticación
 
 $error = '';
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        // Validar campos
-        if (empty($_POST['telefono']) || empty($_POST['direccion'])) {
-            throw new Exception('Teléfono y dirección son obligatorios');
+        // Validar campos obligatorios
+        $required = ['alias', 'celular', 'direccion'];
+        foreach ($required as $field) {
+            if (empty($_POST[$field])) {
+                throw new Exception('Campos obligatorios incompletos');
+            }
         }
 
-        // Aquí actualizarías la base de datos
-        // $stmt = $pdo->prepare("UPDATE socios SET telefono = ?, direccion = ?, genero = ?, puesto = ?, datos_completos = 1 WHERE id_socio = ?");
-        // $stmt->execute([$_POST['telefono'], $_POST['direccion'], $_POST['genero'], $_POST['puesto'], $_SESSION['id_socio']]);
+        // Actualizar perfil completo
+        $stmt = $pdo->prepare("
+            UPDATE socios 
+            SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
+                rol = ?, id_puesto = ?, genero = ?, puntaje = ?, datos_completos = 1 
+            WHERE id_socio = ?
+        ");
+        $stmt->execute([
+            $_POST['alias'],
+            $_POST['fecha_nac'] ?: null,
+            $_POST['celular'],
+            $_POST['direccion'],
+            $_POST['rol'] ?: null,
+            $_POST['id_puesto'] ?: null,
+            $_POST['genero'] ?: null,
+            $_POST['puntaje'] ?: 0,
+            $socio_id
+        ]);
 
         $success = true;
 
@@ -122,26 +137,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 0.85rem;
     }
 
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.8rem 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
     .form-group {
-      margin-bottom: 1.2rem;
+      margin: 0;
     }
 
     .form-group label {
+      text-align: right;
+      padding-right: 0.5rem;
       display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
+      font-size: 0.85rem;
       color: #333;
+      font-weight: normal;
     }
 
     .form-group input,
     .form-group select,
     .form-group textarea {
       width: 100%;
-      padding: 0.8rem;
+      padding: 0.5rem;
       border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: 5px;
+      font-size: 0.85rem;
       color: #071289;
+    }
+
+    .col-span-2 {
+      grid-column: span 2;
     }
 
     .btn-submit {
@@ -168,18 +196,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #071289;
       text-decoration: none;
     }
+
+    /* Responsive móvil */
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.7rem;
+      }
+      
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-size: 0.8rem;
+      }
+      
+      .form-group input,
+      .form-group select {
+        font-size: 0.85rem;
+        padding: 0.45rem;
+      }
+      
+      .col-span-2 {
+        grid-column: span 2 !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="form-container">
-    <a href="index.php" class="close-btn" title="Volver al inicio">×</a>
+    <a href="javascript:history.back()" class="close-btn" title="Volver atrás">×</a>
 
     <?php if ($success): ?>
       <h2>✅ ¡Perfil completado!</h2>
       <div class="success">
         Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades de Cancha.
       </div>
-      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>" class="btn-submit" style="text-decoration: none; text-align: center;">
+      <a href="dashboard_socio.php" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">
         Ir al dashboard
       </a>
     <?php else: ?>
@@ -190,38 +242,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="POST">
-        <div class="form-group">
-          <label for="telefono">Teléfono de contacto *</label>
-          <input type="tel" id="telefono" name="telefono" required>
+        <div class="form-grid">
+          <!-- Fila 1 -->
+          <div class="form-group"><label for="alias">Alias *</label></div>
+          <div class="form-group"><input type="text" id="alias" name="alias" required></div>
+          <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
+          <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
+          <div class="form-group"><label for="celular">Celular *</label></div>
+          <div class="form-group"><input type="tel" id="celular" name="celular" required></div>
+
+          <!-- Fila 2 -->
+          <div class="form-group"><label for="direccion">Dirección *</label></div>
+          <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
+          <div class="form-group"><label for="rol">Rol</label></div>
+          <div class="form-group">
+            <select id="rol" name="rol" required>
+              <option value="">Seleccionar</option>
+              <option value="Jugador">Jugador</option>
+              <option value="Capitán">Galleta</option>
+              <option value="Entrenador">Amigo del club</option>
+              <option value="Tesorero">Tesorero</option>
+              <option value="Director">Director</option>
+              <option value="Delegado">Delegado</option>
+              <option value="Profe">Profe</option>
+              <option value="Kine">Kine</option>
+              <option value="Preparador Físico">Preparador Físico</option>
+              <option value="Utilero">Utilero</option>
+            </select>
+          </div>
+          <div class="form-group"></div>
+
+          <!-- Fila 3 -->
+          <div class="form-group"><label for="id_puesto">Puesto</label></div>
+          <div class="form-group">
+            <select id="id_puesto" name="id_puesto">
+              <option value="">Cargando puestos...</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="genero">Género</label></div>
+          <div class="form-group">
+            <select id="genero" name="genero">
+              <option value="">Seleccionar</option>
+              <option value="masculino">Masculino</option>
+              <option value="femenino">Femenino</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="puntaje">Habilidad</label></div>
+          <div class="form-group"><input type="number" id="puntaje" name="puntaje" min="0" max="100" value="0"></div>
         </div>
         
-        <div class="form-group">
-          <label for="direccion">Dirección completa *</label>
-          <textarea id="direccion" name="direccion" rows="3" required></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label for="genero">Género</label>
-          <select id="genero" name="genero">
-            <option value="">Seleccionar</option>
-            <option value="masculino">Masculino</option>
-            <option value="femenino">Femenino</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="puesto">Puesto en el club</label>
-          <input type="text" id="puesto" name="puesto" placeholder="Ej: Jugador, Entrenador, etc.">
-        </div>
-        
-        <button type="submit" class="btn-submit">Guardar perfil</button>
+        <button type="submit" class="btn-submit">Guardar perfil completo</button>
       </form>
       
-      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>" class="back-link">
-        ← Volver al dashboard
+      <a href="javascript:history.back()" class="back-link">
+        ← Volver
       </a>
     <?php endif; ?>
   </div>
+
+  <script>
+    // Cargar puestos desde API
+    document.addEventListener('DOMContentLoaded', () => {
+      const puestoSelect = document.getElementById('id_puesto');
+      
+      fetch('../api/get_puestos.php')
+        .then(response => response.json())
+        .then(puestos => {
+          // Limpiar opción de carga
+          puestoSelect.innerHTML = '<option value="">Seleccionar puesto</option>';
+          
+          puestos.forEach(puesto => {
+            const option = document.createElement('option');
+            option.value = puesto.id_puesto;
+            option.textContent = puesto.puesto;
+            puestoSelect.appendChild(option);
+          });
+        })
+        .catch(error => {
+          console.error('Error al cargar puestos:', error);
+          puestoSelect.innerHTML = '<option value="">Error al cargar puestos</option>';
+        });
+
+      // Validación de teléfono
+      document.getElementById('celular')?.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9+]/g, '');
+      });
+    });
+  </script>
 </body>
 </html>

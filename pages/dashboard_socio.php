@@ -46,7 +46,7 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
   <style>
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -209,6 +209,43 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
     .logout a:hover {
       text-decoration: underline;
     }
+    .share-section {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 14px;
+      margin-top: 2rem;
+      text-align: center;
+    }
+
+    .qr-code {
+      margin: 1rem auto;
+      width: 180px;
+      height: 180px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .share-link {
+      background: #e9ecef;
+      padding: 0.8rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    .copy-btn {
+      background: #071289;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -230,8 +267,8 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
     <!-- Mensaje de bienvenida para socio fundador -->
     <?php if ($socio_es_responsable && !$socio_datos_completos): ?>
     <div class="welcome-message">
-      <h3>👋 ¡Bienvenido, Responsable!</h3>
-      <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+      <h3>👋 ¡Bienvenido a Cancha!</h3>
+      <p>Como Responsable de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
       <ul>
         <li>📞 Teléfono de contacto</li>
         <li>🏠 Dirección completa</li>
@@ -265,7 +302,21 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
       <div class="action-buttons">
         <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_id ?>'">Crear convocatoria</button>
         <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_id ?>'">Gestionar socios</button>
-        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_id ?>'">Eventos</button>
+        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_id ?>'">Eventos/Partidos</button>
+      </div>
+      <!-- En la sección de acciones, agrega esto -->
+      <div class="share-section">
+        <h3>Comparte tu club</h3>
+        <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
+        
+        <?php
+        $club_slug = htmlspecialchars($_GET['id_club'] ?? '');
+        $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+        ?>
+        
+        <div class="qr-code" id="qrCode"></div>
+        <div class="share-link" id="shareLink"><?= $share_url ?></div>
+        <button class="copy-btn" onclick="copyLink()">Copiar enlace</button>
       </div>
     </div>
 
@@ -286,6 +337,25 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
       localStorage.removeItem('cancha_session');
       localStorage.removeItem('cancha_club');
     }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+  const shareUrl = '<?= $share_url ?>';
+  new QRCode(document.getElementById("qrCode"), {
+    text: shareUrl,
+    width: 160,
+    height: 160,
+    colorDark: "#003366",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  function copyLink() {
+    const link = document.getElementById('shareLink').textContent;
+    navigator.clipboard.writeText(link).then(() => {
+      alert('¡Enlace copiado al portapapeles!');
+    });
+  }
   </script>
 </body>
 </html>
