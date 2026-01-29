@@ -1,40 +1,19 @@
-<!-- pages/dashboard_socio.php -->
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
 // Obtener club desde URL
 $club_slug = $_GET['id_club'] ?? '';
+
+// Si no hay slug, redirigir a inicio
 if (!$club_slug) {
-    header('Location: ../index.php?error=no_club');
+    header('Location: ../index.php');
     exit;
 }
 
-// Buscar club válido
-$stmt = $pdo->prepare("SELECT id_club, nombre, logo, email_responsable FROM clubs WHERE email_verified = 1");
-$stmt->execute();
-$clubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$club_id = null;
-$club_nombre = '';
+// Simular datos del club (en producción cargarías desde la base de datos)
+// Por ahora asumimos que el slug es válido (viene de localStorage)
+$club_nombre = 'Tu Club';
 $club_logo = '';
-
-foreach ($clubs as $c) {
-    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    if ($generated_slug === $club_slug) {
-        $club_id = (int)$c['id_club'];
-        $club_nombre = $c['nombre'];
-        $club_logo = $c['logo'];
-        break;
-    }
-}
-
-if (!$club_id) {
-    header('Location: ../index.php?error=club_invalido');
-    exit;
-}
-
-// Obtener datos del socio actual (simulado - en producción usarías sesión)
-$socio_es_responsable = true; // Esto vendría de la base de datos
-$socio_datos_completos = false; // Esto vendría de la base de datos
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -46,7 +25,7 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
   <style>
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -209,6 +188,8 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
     .logout a:hover {
       text-decoration: underline;
     }
+
+    /* Share section */
     .share-section {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
@@ -265,10 +246,9 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
     </div>
 
     <!-- Mensaje de bienvenida para socio fundador -->
-    <?php if ($socio_es_responsable && !$socio_datos_completos): ?>
     <div class="welcome-message">
-      <h3>👋 ¡Bienvenido a Cancha!</h3>
-      <p>Como Responsable de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+      <h3>👋 ¡Bienvenido, Responsable!</h3>
+      <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
       <ul>
         <li>📞 Teléfono de contacto</li>
         <li>🏠 Dirección completa</li>
@@ -278,7 +258,6 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
         Completar mi perfil ahora
       </a>
     </div>
-    <?php endif; ?>
 
     <!-- Estadísticas -->
     <div class="stats-grid">
@@ -300,24 +279,24 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
     <div class="actions">
       <h2>Acciones rápidas</h2>
       <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_id ?>'">Crear convocatoria</button>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_id ?>'">Gestionar socios</button>
-        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_id ?>'">Eventos/Partidos</button>
+        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_slug ?>'">Crear convocatoria</button>
+        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
+        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
       </div>
-      <!-- En la sección de acciones, agrega esto -->
-      <div class="share-section">
-        <h3>Comparte tu club</h3>
-        <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
-        
-        <?php
-        $club_slug = htmlspecialchars($_GET['id_club'] ?? '');
-        $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
-        ?>
-        
-        <div class="qr-code" id="qrCode"></div>
-        <div class="share-link" id="shareLink"><?= $share_url ?></div>
-        <button class="copy-btn" onclick="copyLink()">Copiar enlace</button>
-      </div>
+    </div>
+
+    <!-- Share section -->
+    <div class="share-section">
+      <h3>📱 Comparte tu club</h3>
+      <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
+      
+      <?php
+      $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+      ?>
+      
+      <div class="qr-code" id="qrCode"></div>
+      <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
+      <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
     </div>
 
     <!-- Cerrar sesión -->
@@ -326,7 +305,26 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
+    // Generar QR
+    const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
+    new QRCode(document.getElementById("qrCode"), {
+      text: shareUrl,
+      width: 160,
+      height: 160,
+      colorDark: "#003366",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    function copyLink() {
+      const link = document.getElementById('shareLink').textContent;
+      navigator.clipboard.writeText(link).then(() => {
+        alert('¡Enlace copiado al portapapeles!');
+      });
+    }
+
     // Guardar sesión en dispositivo
     const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
     localStorage.setItem('cancha_device', deviceId);
@@ -337,25 +335,6 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
       localStorage.removeItem('cancha_session');
       localStorage.removeItem('cancha_club');
     }
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script>
-  const shareUrl = '<?= $share_url ?>';
-  new QRCode(document.getElementById("qrCode"), {
-    text: shareUrl,
-    width: 160,
-    height: 160,
-    colorDark: "#003366",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-  });
-
-  function copyLink() {
-    const link = document.getElementById('shareLink').textContent;
-    navigator.clipboard.writeText(link).then(() => {
-      alert('¡Enlace copiado al portapapeles!');
-    });
-  }
   </script>
 </body>
 </html>
