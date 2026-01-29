@@ -650,7 +650,7 @@ $_SESSION['visited_index'] = true;
   function adjustForMobile() {
     const registerText = document.querySelector('.register-text');
     if (window.innerWidth <= 768 && registerText) {
-      registerText.textContent = 'Registrar';
+      registerText.textContent = 'Registrar Club';
     }
   }
 

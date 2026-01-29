@@ -6,14 +6,13 @@ if (isset($_GET['club'])) {
     $_SESSION['club_slug'] = $_GET['club'];
 }
 
-// Obtener datos actuales del socio (ajusta según tu sistema de autenticación)
+// Obtener datos actuales del socio (ajusta según tu sistema)
 $socio_id = $_SESSION['id_socio'] ?? 1;
 $club_slug = $_SESSION['club_slug'] ?? '';
 
 $error = '';
 $success = false;
 
-// En completar_perfil.php - Reemplaza el bloque de actualización
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos obligatorios
@@ -47,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Actualizar perfil completo - INCLUYE TODOS LOS CAMPOS
+        // Actualizar perfil completo
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
@@ -65,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['genero'] ?: null,
             $_POST['habilidad'] ?: null,
             $_POST['puntaje'] ?: 0,
-            $foto_url, // ← Campo faltante
+            $foto_url,
             $socio_id
         ]);
 
@@ -229,7 +228,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       text-decoration: none;
     }
 
-    /* Responsive móvil */
     @media (max-width: 768px) {
       .form-grid {
         grid-template-columns: 1fr 1fr;
@@ -258,135 +256,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="form-container">
     <a href="javascript:history.back()" class="close-btn" title="Volver atrás">×</a>
 
-    <?php if ($success): ?>
-      <h2>✅ ¡Perfil completado!</h2>
-      <div class="success">
-        Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades. Bienvenido a la comunidad Cancha.
+<?php if ($success): ?>
+    <h2>✅ ¡Perfil completado!</h2>
+    <div class="success">
+      Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades. Bienvenido a la comunidad Cancha.
+    </div>
+    
+    <?php
+    // Determinar qué dashboard mostrar
+    $es_responsable = false;
+    if (isset($_SESSION['id_socio'])) {
+        $stmt_check = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
+        $stmt_check->execute([$_SESSION['id_socio']]);
+        $socio_data = $stmt_check->fetch();
+        $es_responsable = $socio_data ? (bool)$socio_data['es_responsable'] : false;
+    }
+    
+    if ($es_responsable && $club_slug) {
+        $redirect_url = "dashboard_socio.php?id_club=" . htmlspecialchars($club_slug);
+    } else {
+        $redirect_url = "dashboard_socio.php?id_club=" . htmlspecialchars($club_slug);
+    }
+    ?>
+    
+    <div style="text-align: center; margin-top: 1.5rem;">
+      <div class="redirect-message" style="color: #071289; font-style: italic; margin-bottom: 1rem;">
+        Redirigiendo automáticamente en 2 segundos...
       </div>
-      
-      <?php
-      // Determinar qué dashboard mostrar
-      $es_responsable = false; // Obtener de la base de datos
-      $stmt_check = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
-      $stmt_check->execute([$socio_id]);
-      $socio_data = $stmt_check->fetch();
-      $es_responsable = $socio_data ? (bool)$socio_data['es_responsable'] : false;
-      
-      if ($es_responsable && $club_slug) {
-          // Responsable → dashboard_socio.php
-          $redirect_url = "dashboard_socio.php?id_club=" . htmlspecialchars($club_slug);
-      } else {
-          // Socio normal → dashboard_socio.php (mismo archivo, diferente vista)
-          $redirect_url = "dashboard_socio.php?id_club=" . htmlspecialchars($club_slug);
-      }
-      ?>
-      
-      <div style="text-align: center; margin-top: 1.5rem;">
-        <div class="redirect-message" style="color: #071289; font-style: italic; margin-bottom: 1rem;">
-          Redirigiendo automáticamente en 2 segundos...
-        </div>
-        <a href="<?= $redirect_url ?>" class="btn-submit" style="text-decoration: none; display: inline-block; width: auto; padding: 0.8rem 2rem;">
-          Ir al dashboard ahora
-        </a>
-      </div>
-      
-      <script>
-        // Redirección automática
-        setTimeout(() => {
-          window.location.href = '<?= $redirect_url ?>';
-        }, 2000);
-      </script>
-    <?php endif; ?>
-      <h2>📝 Completa tu perfil</h2>
-      
-      <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
-      <?php endif; ?>
-
-      <!-- Agregar campo de foto en el formulario -->
-      <form method="POST" enctype="multipart/form-data">
-        <div class="form-grid">
-          <!-- Fila 1 -->
-          <div class="form-group"><label for="alias">Alias *</label></div>
-          <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-          <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
-          <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
-          <div class="form-group"><label for="celular">Celular *</label></div>
-          <div class="form-group"><input type="tel" id="celular" name="celular" required></div>
-
-          <!-- Fila 2 -->
-          <div class="form-group"><label for="direccion">Dirección *</label></div>
-          <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
-          <div class="form-group"><label for="foto_url">Foto</label></div>
-          <div class="form-group"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
-          <div class="form-group"></div>
-
-          <!-- Fila 3 -->
-          <div class="form-group"><label for="rol">Rol</label></div>
-          <div class="form-group">
-            <select id="rol" name="rol">
-              <option value="">Seleccionar</option>
-              <option value="jugador">Jugador</option>
-              <option value="entrenador">Entrenador</option>
-              <option value="director">Director Técnico</option>
-              <option value="administrativo">Administrativo</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div class="form-group"><label for="id_puesto">Puesto</label></div>
-          <div class="form-group">
-            <select id="id_puesto" name="id_puesto">
-              <option value="">Cargando puestos...</option>
-            </select>
-          </div>
-          <div class="form-group"><label for="habilidad">Habilidad</label></div>
-          <div class="form-group">
-            <select id="habilidad" name="habilidad">
-              <option value="">Seleccionar</option>
-              <option value="Básica">Básica</option>
-              <option value="Intermedia">Intermedia</option>
-              <option value="Avanzada">Avanzada</option>
-            </select>
-          </div>
-
-          <!-- Fila 4 -->
-          <div class="form-group"><label for="genero">Género</label></div>
-          <div class="form-group">
-            <select id="genero" name="genero">
-              <option value="">Seleccionar</option>
-              <option value="masculino">Masculino</option>
-              <option value="femenino">Femenino</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div class="form-group"><label for="puntaje">Puntaje</label></div>
-          <div class="form-group"><input type="number" id="puntaje" name="puntaje" min="0" max="100" value="0"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-          <div class="form-group"></div>
-        </div>
-        
-        <button type="submit" class="btn-submit">Guardar perfil completo</button>
-      </form>
-      
-      <a href="javascript:history.back()" class="back-link">
-        ← Volver
+      <a href="<?= $redirect_url ?>" class="btn-submit" style="text-decoration: none; display: inline-block; width: auto; padding: 0.8rem 2rem;">
+        Ir al dashboard ahora
       </a>
+    </div>
+    
+    <script>
+      setTimeout(() => {
+        window.location.href = '<?= $redirect_url ?>';
+      }, 2000);
+    </script>
+    
+<?php else: ?>
+    <h2>📝 Completa tu perfil</h2>
+    
+    <?php if ($error): ?>
+      <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="form-grid">
+        <!-- Fila 1 -->
+        <div class="form-group"><label for="alias">Alias *</label></div>
+        <div class="form-group"><input type="text" id="alias" name="alias" required></div>
+        <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
+        <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
+        <div class="form-group"><label for="celular">Celular *</label></div>
+        <div class="form-group"><input type="tel" id="celular" name="celular" required></div>
+
+        <!-- Fila 2 -->
+        <div class="form-group"><label for="direccion">Dirección *</label></div>
+        <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
+        <div class="form-group"><label for="foto_url">Foto</label></div>
+        <div class="form-group"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
+        <div class="form-group"></div>
+
+        <!-- Fila 3 -->
+        <div class="form-group"><label for="rol">Rol</label></div>
+        <div class="form-group">
+          <select id="rol" name="rol">
+            <option value="">Seleccionar</option>
+            <option value="jugador">Jugador</option>
+            <option value="entrenador">Entrenador</option>
+            <option value="director">Director Técnico</option>
+            <option value="administrativo">Administrativo</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="id_puesto">Puesto</label></div>
+        <div class="form-group">
+          <select id="id_puesto" name="id_puesto">
+            <option value="">Cargando puestos...</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="habilidad">Habilidad</label></div>
+        <div class="form-group">
+          <select id="habilidad" name="habilidad">
+            <option value="">Seleccionar</option>
+            <option value="Básica">Básica</option>
+            <option value="Intermedia">Intermedia</option>
+            <option value="Avanzada">Avanzada</option>
+          </select>
+        </div>
+
+        <!-- Fila 4 -->
+        <div class="form-group"><label for="genero">Género</label></div>
+        <div class="form-group">
+          <select id="genero" name="genero">
+            <option value="">Seleccionar</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="puntaje">Puntaje</label></div>
+        <div class="form-group"><input type="number" id="puntaje" name="puntaje" min="0" max="100" value="0"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+      </div>
+      
+      <button type="submit" class="btn-submit">Guardar perfil completo</button>
+    </form>
+    
+    <a href="javascript:history.back()" class="back-link">
+      ← Volver
+    </a>
+<?php endif; ?>
   </div>
 
   <script>
-    // Cargar puestos desde API
     document.addEventListener('DOMContentLoaded', () => {
       const puestoSelect = document.getElementById('id_puesto');
       
       fetch('../api/get_puestos.php')
         .then(response => response.json())
         .then(puestos => {
-          // Limpiar opción de carga
           puestoSelect.innerHTML = '<option value="">Seleccionar puesto</option>';
-          
           puestos.forEach(puesto => {
             const option = document.createElement('option');
             option.value = puesto.id_puesto;
@@ -399,7 +393,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           puestoSelect.innerHTML = '<option value="">Error al cargar puestos</option>';
         });
 
-      // Validación de teléfono
       document.getElementById('celular')?.addEventListener('input', function(e) {
         this.value = this.value.replace(/[^0-9+]/g, '');
       });
