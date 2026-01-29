@@ -443,7 +443,7 @@
 </style>
 
 <script>
-// Ocultar splash screen después de 2 segundos
+// Ocultar splash screen después de 3 segundos
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(() => {
     const splash = document.getElementById('splashScreen');
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
         splash.style.display = 'none';
       }, 500);
     }
-  }, 2000); // 2000ms = 2 segundos
+  }, 3000); // 3000ms = 3 segundos
 });
 
 // Fallback por si hay errores
