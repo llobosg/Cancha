@@ -9,17 +9,14 @@ $_SESSION['visited_index'] = true;
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cancha - Gestión para clubes deportivos</title>
-
   <link rel="stylesheet" href="../styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       background:
         linear-gradient(rgba(0,20,10,.40), rgba(0,30,15,.50)),
@@ -29,7 +26,6 @@ $_SESSION['visited_index'] = true;
       color: #fff;
       padding-top: 70px;
     }
-
     /* Barra superior fija */
     .top-bar {
       position: fixed;
@@ -46,7 +42,6 @@ $_SESSION['visited_index'] = true;
       z-index: 1000;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
-
     .btn-register {
       background: transparent !important;
       border: 2px solid white !important;
@@ -61,11 +56,9 @@ $_SESSION['visited_index'] = true;
       align-items: center;
       gap: 0.4rem;
     }
-
     .btn-register:hover {
       background: rgba(255,255,255,0.1) !important;
     }
-
     .btn-enter {
       background: transparent !important;
       border: 2px solid white !important;
@@ -77,17 +70,14 @@ $_SESSION['visited_index'] = true;
       cursor: pointer;
       transition: all 0.2s;
     }
-
     .btn-enter:hover {
       background: rgba(255,255,255,0.1) !important;
     }
-
     .google-login-container {
       display: flex;
       align-items: center;
       gap: 0.8rem;
     }
-
     /* Contenido principal */
     .hero {
       text-align: center;
@@ -95,7 +85,6 @@ $_SESSION['visited_index'] = true;
       margin: 0 auto;
       padding: 0 2rem;
     }
-
     .title-cancha {
       font-family: 'Dancing Script', cursive;
       font-size: 3.8rem;
@@ -103,14 +92,12 @@ $_SESSION['visited_index'] = true;
       color: white;
       text-shadow: 0 3px 6px rgba(0,0,0,.5);
     }
-
     .subtitle {
       font-size: 1.25rem;
       margin-bottom: 2.5rem;
       opacity: .95;
       color: white;
     }
-
     /* Sección multimedia principal */
     .media-main {
       position: relative;
@@ -118,20 +105,17 @@ $_SESSION['visited_index'] = true;
       margin: 2rem 0;
       overflow: hidden;
     }
-
     /* Carrusel horizontal */
     .carousel-horizontal {
       width: 100%;
       height: 100%;
       overflow: hidden;
     }
-
     .carousel-track {
       display: flex;
       height: 100%;
       transition: transform 0.5s ease-in-out;
     }
-
     /* Web: 2 imágenes visibles */
     @media (min-width: 769px) {
       .carousel-item {
@@ -143,12 +127,10 @@ $_SESSION['visited_index'] = true;
         box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         position: relative;
       }
-      
       .media-main {
         height: 350px;
       }
     }
-
     /* Móvil: 1 imagen centrada */
     @media (max-width: 768px) {
       .carousel-item {
@@ -160,18 +142,15 @@ $_SESSION['visited_index'] = true;
         box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         position: relative;
       }
-      
       .media-main {
         height: 280px;
       }
     }
-
     .carousel-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-
     .item-overlay {
       position: absolute;
       bottom: 0;
@@ -182,12 +161,10 @@ $_SESSION['visited_index'] = true;
       color: white;
       text-align: center;
     }
-
     .item-overlay h4 {
       margin: 0;
       font-size: 1.2rem;
     }
-
     /* Controles de navegación */
     .carousel-controls {
       display: flex;
@@ -195,7 +172,6 @@ $_SESSION['visited_index'] = true;
       gap: 1rem;
       margin: 1rem 0;
     }
-
     .nav-btn {
       background: rgba(0, 51, 102, 0.8);
       color: white;
@@ -210,31 +186,26 @@ $_SESSION['visited_index'] = true;
       align-items: center;
       justify-content: center;
     }
-
     .nav-btn:hover {
       background: rgba(0, 51, 102, 1);
       border-color: white;
       transform: scale(1.1);
     }
-
     .play-pause {
       font-size: 1rem;
     }
-
     /* Responsive controles */
     @media (max-width: 768px) {
       .carousel-controls {
         margin: 1rem auto;
         width: fit-content;
       }
-      
       .nav-btn {
         width: 45px;
         height: 45px;
         font-size: 1.1rem;
       }
     }
-
     /* Descripción sincronizada */
     .feature-description {
       background: rgba(255, 255, 255, 0.1);
@@ -245,20 +216,17 @@ $_SESSION['visited_index'] = true;
       text-align: center;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
-
     .feature-description h3 {
       color: white;
       margin-bottom: 1rem;
       font-size: 1.4rem;
     }
-
     .feature-description p {
       color: rgba(255, 255, 255, 0.9);
       line-height: 1.6;
       max-width: 800px;
       margin: 0 auto;
     }
-
     /* Línea divisoria amarilla */
     .divider-yellow {
       height: 3px;
@@ -266,127 +234,99 @@ $_SESSION['visited_index'] = true;
       margin: 2rem auto;
       width: 80%;
     }
-
     /* Responsive móvil */
     @media (max-width: 768px) {
       .top-bar {
         padding: 0 1rem;
         height: 55px;
       }
-      
       .btn-register,
       .btn-enter {
         font-size: 0.8rem;
         padding: 0.3rem 0.6rem;
       }
-      
-      .title-cancha { 
+      .title-cancha {
         font-size: 2.8rem;
         margin-top: 1.5rem;
       }
-      
       .subtitle {
         font-size: 1.1rem;
       }
     }
-    
     /* Ícono banderín */
     .flag-icon::before {
       content: "🚩";
     }
-
-  .submodal {
-    position: fixed;
-    z-index: 1001;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .submodal-content {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    max-width: 500px;
-    width: 90%;
-    position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  }
-
-  .close-modal {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 28px;
-    color: #999;
-    cursor: pointer;
-    font-weight: bold;
-  }
-
-  .close-modal:hover {
-    color: #333;
-  }
-
-  .modal-header h3 {
-    color: #003366;
-    margin-bottom: 1.5rem;
-    text-align: center;
-  }
-
-  .register-options {
-    text-align: center;
-  }
-
-  .btn-primary {
-    background: #00cc66;
-    color: white;
-    border: none;
-    padding: 0.8rem 2rem;
-    border-radius: 50px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-    width: 100%;
-    max-width: 250px;
-    margin: 0 auto;
-  }
-
-  .btn-primary:hover {
-    background: #00aa55;
-    transform: translateY(-2px);
-  }
-
-  @media (max-width: 768px) {
+    .submodal {
+      position: fixed;
+      z-index: 1001;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
     .submodal-content {
-      padding: 1.5rem;
-      margin: 1rem;
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
-    
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 28px;
+      color: #999;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .close-modal:hover {
+      color: #333;
+    }
+    .modal-header h3 {
+      color: #003366;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .register-options {
+      text-align: center;
+    }
     .btn-primary {
-      padding: 0.7rem 1.5rem;
-      font-size: 1rem;
+      background: #00cc66;
+      color: white;
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 250px;
+      margin: 0 auto;
     }
-  }
-  </style>
-</head>
+    .btn-primary:hover {
+      background: #00aa55;
+      transform: translateY(-2px);
+    }
+    @media (max-width: 768px) {
+      .submodal-content {
+        padding: 1.5rem;
+        margin: 1rem;
+      }
+      .btn-primary {
+        padding: 0.7rem 1.5rem;
+        font-size: 1rem;
+      }
+    }
 
-<body>
-  <?php if ($show_splash): ?>
-    <!-- Splash Screen Animado - SOLO EN ENTRADA DIRECTA -->
-    <div id="splashScreen" class="splash-screen">
-      <div class="ball-container">
-        <div class="spinning-ball">⚽</div>
-      </div>
-      <div class="loading-text">Estamos abriendo el recinto para que entres a Cancha</div>
-    </div>
-
-    <style>
     /* Splash Screen Animado */
     .splash-screen {
       position: fixed;
@@ -402,17 +342,14 @@ $_SESSION['visited_index'] = true;
       z-index: 9999;
       transition: opacity 0.5s ease-out;
     }
-
     .ball-container {
       animation: bounce 2s infinite;
     }
-
     .spinning-ball {
       font-size: 4rem;
       animation: spin 2s linear infinite;
       text-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
-
     .loading-text {
       color: white;
       font-size: 1.2rem;
@@ -422,33 +359,36 @@ $_SESSION['visited_index'] = true;
       line-height: 1.4;
       opacity: 0.9;
     }
-
-    /* Animaciones */
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-
     @keyframes bounce {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-10px); }
     }
-
-    /* Versión móvil optimizada */
     @media (max-width: 768px) {
       .spinning-ball {
         font-size: 3rem;
       }
-      
       .loading-text {
         font-size: 1rem;
         max-width: 90%;
       }
     }
-    </style>
+  </style>
+</head>
+<body>
 
-    <script>
-    // Ocultar splash screen después de 2 segundos
+<?php if ($show_splash): ?>
+  <!-- Splash Screen Animado - SOLO EN ENTRADA DIRECTA -->
+  <div id="splashScreen" class="splash-screen">
+    <div class="ball-container">
+      <div class="spinning-ball">⚽</div>
+    </div>
+    <div class="loading-text">Estamos abriendo el recinto para que entres a Cancha</div>
+  </div>
+  <script>
     document.addEventListener('DOMContentLoaded', function() {
       setTimeout(() => {
         const splash = document.getElementById('splashScreen');
@@ -460,12 +400,12 @@ $_SESSION['visited_index'] = true;
         }
       }, 2000);
     });
-    </script>
-  <?php endif; ?>
+  </script>
+<?php endif; ?>
 
 <!-- Barra superior -->
 <div class="top-bar">
-  <button class="btn-register" onclick="window.location.href='../pages/registro_club.php'">
+  <button class="btn-register" onclick="window.location.href='registro_club.php'">
     <span class="flag-icon"></span>
     <span class="register-text">Registrar un club</span>
   </button>
@@ -509,7 +449,7 @@ $_SESSION['visited_index'] = true;
         <div class="carousel-item" data-feature="socios">
           <img src="../assets/img/feature1.jpg" alt="Gestión de socios">
           <div class="item-overlay">
-            <h4>Gestión de Socios</h4>
+            <h4>👥 Gestión de Socios</h4>
           </div>
         </div>
         <!-- Feature 2 -->
@@ -553,7 +493,7 @@ $_SESSION['visited_index'] = true;
   </div>
 </div>
 
-<!-- Submodal de inscripción - ASEGÚRATE DE TENER ESTO -->
+<!-- Submodal de inscripción -->
 <div id="registerModal" class="submodal" style="display:none;">
   <div class="submodal-content">
     <span class="close-modal" onclick="cerrarRegisterModal()">&times;</span>
@@ -567,13 +507,13 @@ $_SESSION['visited_index'] = true;
       </p>
       
       <div class="register-options">
-        <button class="btn-primary" onclick="window.location.href='../pages/buscar_club.php'">
+        <button class="btn-primary" onclick="window.location.href='buscar_club.php'">
           🔍 Buscar mi club
         </button>
         
         <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
           ¿Eres responsable de un club?<br>
-          <a href="../pages/registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
+          <a href="registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
         </p>
       </div>
     </div>
@@ -582,7 +522,6 @@ $_SESSION['visited_index'] = true;
 
 <!-- GOOGLE LOGIN SCRIPT -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-
 <script>
   // === CARRUSEL MEJORADO CON TOUCH Y CONTROLES ===
   let currentIndex = 0;
@@ -715,7 +654,7 @@ $_SESSION['visited_index'] = true;
     }
   }
 
-  // Reemplaza tu función handleCredentialResponse actual con esta:
+  // Google Login
   function handleCredentialResponse(response) {
     fetch('../api/login_google.php', {
       method: 'POST',
@@ -729,13 +668,10 @@ $_SESSION['visited_index'] = true;
         localStorage.setItem('cancha_device', deviceId);
         localStorage.setItem('cancha_session', 'active');
         localStorage.setItem('cancha_club', data.club_slug);
-        
         window.location.href = data.redirect;
       } else if (data.action === 'register') {
-        // ✅ MOSTRAR SUBMODAL EN LUGAR DE ALERT
         mostrarRegisterModal(data.email);
       } else {
-        // Error genérico
         alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
       }
     })
@@ -768,7 +704,7 @@ $_SESSION['visited_index'] = true;
     adjustForMobile();
     window.addEventListener('resize', adjustForMobile);
     
-    // Manejo de sesión
+    // Manejo de sesión (solo JavaScript, sin PHP)
     const savedClub = localStorage.getItem('cancha_club');
     const btnEnter = document.getElementById('btnEnterClub');
     const googleContainer = document.getElementById('googleLoginContainer');
@@ -778,7 +714,7 @@ $_SESSION['visited_index'] = true;
       googleContainer.style.display = 'none';
       
       btnEnter.onclick = () => {
-        window.location.href = `pages/dashboard.php?id_club=${savedClub}`;
+        window.location.href = `dashboard.php?id_club=${savedClub}`;
       };
     } else {
       btnEnter.style.display = 'none';
@@ -809,6 +745,5 @@ $_SESSION['visited_index'] = true;
     });
   });
 </script>
-
 </body>
 </html>

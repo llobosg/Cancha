@@ -144,6 +144,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       margin-bottom: 1.5rem;
     }
 
+    /* Responsive móvil */
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.7rem;
+      }
+      
+      .col-span-2 {
+        grid-column: span 2 !important;
+      }
+      
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-size: 0.8rem;
+      }
+      
+      .form-group input,
+      .form-group select {
+        font-size: 0.85rem;
+        padding: 0.45rem;
+      }
+    }
+
     .form-group {
       margin: 0;
     }
@@ -196,30 +220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #071289;
       text-decoration: none;
     }
-
-    /* Responsive móvil */
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.7rem;
-      }
-      
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-        font-size: 0.8rem;
-      }
-      
-      .form-group input,
-      .form-group select {
-        font-size: 0.85rem;
-        padding: 0.45rem;
-      }
-      
-      .col-span-2 {
-        grid-column: span 2 !important;
-      }
-    }
   </style>
 </head>
 <body>
@@ -270,7 +270,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="Utilero">Utilero</option>
             </select>
           </div>
-          <div class="form-group"></div>
 
           <!-- Fila 3 -->
           <div class="form-group"><label for="id_puesto">Puesto</label></div>
