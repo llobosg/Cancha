@@ -369,80 +369,82 @@
       font-size: 1rem;
     }
   }
-
-  /* Splash Screen Animado */
-  .splash-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #003366;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    transition: opacity 0.5s ease-out;
-  }
-
-  .ball-container {
-    animation: bounce 2s infinite;
-  }
-
-  .spinning-ball {
-    font-size: 4rem;
-    animation: spin 3s linear infinite;
-    text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  }
-
-  .loading-text {
-    color: white;
-    font-size: 1.2rem;
-    margin-top: 1.5rem;
-    text-align: center;
-    max-width: 80%;
-    line-height: 1.4;
-    opacity: 0.9;
-  }
-
-  /* Animaciones */
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-
-  /* Versión móvil optimizada */
-  @media (max-width: 768px) {
-    .spinning-ball {
-      font-size: 3rem;
-    }
-    
-    .loading-text {
-      font-size: 1rem;
-      max-width: 90%;
-    }
-  }
   </style>
 </head>
 
 <body>
-<!-- Splash Screen Animado -->
+<!-- Splash Screen Animado - 2 segundos -->
 <div id="splashScreen" class="splash-screen">
   <div class="ball-container">
     <div class="spinning-ball">⚽</div>
   </div>
-  <div class="loading-text">Estamos ordenando el camarín para que entres a tu club</div>
+  <div class="loading-text">Estamos abriendo el recinto para que entres a tu Cancha</div>
 </div>
+
+<style>
+/* Splash Screen Animado */
+.splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #003366;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease-out;
+}
+
+.ball-container {
+  animation: bounce 2s infinite;
+}
+
+.spinning-ball {
+  font-size: 4rem;
+  animation: spin 2s linear infinite;
+  text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.loading-text {
+  color: white;
+  font-size: 1.2rem;
+  margin-top: 1.5rem;
+  text-align: center;
+  max-width: 80%;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+/* Animaciones */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Versión móvil optimizada */
+@media (max-width: 768px) {
+  .spinning-ball {
+    font-size: 3rem;
+  }
+  
+  .loading-text {
+    font-size: 1rem;
+    max-width: 90%;
+  }
+}
+</style>
+
 <script>
-// Ocultar splash screen cuando la página esté cargada
+// Ocultar splash screen después de 2 segundos
 document.addEventListener('DOMContentLoaded', function() {
-  // Esperar un momento para asegurar que todo esté listo
   setTimeout(() => {
     const splash = document.getElementById('splashScreen');
     if (splash) {
@@ -451,17 +453,19 @@ document.addEventListener('DOMContentLoaded', function() {
         splash.style.display = 'none';
       }, 500);
     }
-  }, 1500);
+  }, 2000); // 2000ms = 2 segundos
 });
 
-// También ocultar si hay errores de carga
+// Fallback por si hay errores
 window.addEventListener('load', function() {
   const splash = document.getElementById('splashScreen');
   if (splash && splash.style.display !== 'none') {
-    splash.style.opacity = '0';
     setTimeout(() => {
-      splash.style.display = 'none';
-    }, 500);
+      splash.style.opacity = '0';
+      setTimeout(() => {
+        splash.style.display = 'none';
+      }, 500);
+    }, 2000);
   }
 });
 </script>
