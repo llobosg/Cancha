@@ -13,6 +13,7 @@ $club_slug = $_SESSION['club_slug'] ?? '';
 $error = '';
 $success = false;
 
+// En completar_perfil.php - Reemplaza el bloque de actualización
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos obligatorios
@@ -23,11 +24,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Actualizar perfil completo
+        // Subir foto si existe
+        $foto_url = null;
+        if (!empty($_FILES['foto_url']['name'])) {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!in_array($_FILES['foto_url']['type'], $allowed_types)) {
+                throw new Exception('Solo se permiten imágenes JPG, PNG o GIF');
+            }
+            
+            if ($_FILES['foto_url']['size'] > 2 * 1024 * 1024) {
+                throw new Exception('La foto debe pesar menos de 2MB');
+            }
+            
+            $foto_url = uniqid() . '_' . basename($_FILES['foto_url']['name']);
+            $upload_dir = __DIR__ . '/../uploads/fotos/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            if (!move_uploaded_file($_FILES['foto_url']['tmp_name'], $upload_dir . $foto_url)) {
+                throw new Exception('Error al subir la foto');
+            }
+        }
+
+        // Actualizar perfil completo - INCLUYE TODOS LOS CAMPOS
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
-                rol = ?, id_puesto = ?, genero = ?, habilidad = ?
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, puntaje = ?, 
+                foto_url = ?, datos_completos = 1 
             WHERE id_socio = ?
         ");
         $stmt->execute([
@@ -38,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['rol'] ?: null,
             $_POST['id_puesto'] ?: null,
             $_POST['genero'] ?: null,
-            $_POST['habilidad'] ?: 'Básica',
+            $_POST['habilidad'] ?: null,
+            $_POST['puntaje'] ?: 0,
+            $foto_url, // ← Campo faltante
             $socio_id
         ]);
 
@@ -237,28 +264,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades. Bienvenido a la comunidad Cancha.
       </div>
       
-      <?php if ($club_slug): ?>
-        <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>" 
-           class="btn-submit" 
-           style="text-decoration: none; text-align: center; display: block;">
-          Ir al dashboard
-        </a>
-      <?php else: ?>
-        <a href="../index.php" 
-           class="btn-submit" 
-           style="text-decoration: none; text-align: center; display: block;">
-          Volver al inicio
-        </a>
-      <?php endif; ?>
+      <?php
+      // Determinar qué dashboard mostrar
+      $es_responsable = false; // Obtener de la base de datos
+      $stmt_check = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
+      $stmt_check->execute([$socio_id]);
+      $socio_data = $stmt_check->fetch();
+      $es_responsable = $socio_data ? (bool)$socio_data['es_responsable'] : false;
       
-    <?php else: ?>
+      if ($es_responsable && $club_slug) {
+          // Responsable → dashboard_socio.php
+          $redirect_url = "dashboard_socio.php?id_club=" . htmlspecialchars($club_slug);
+      } else {
+          // Socio normal → dashboard_socio.php (mismo archivo, diferente vista)
+          $redirect_url = "dashboard_socio.php?id_club=" . htmlspecialchars($club_slug);
+      }
+      ?>
+      
+      <div style="text-align: center; margin-top: 1.5rem;">
+        <div class="redirect-message" style="color: #071289; font-style: italic; margin-bottom: 1rem;">
+          Redirigiendo automáticamente en 2 segundos...
+        </div>
+        <a href="<?= $redirect_url ?>" class="btn-submit" style="text-decoration: none; display: inline-block; width: auto; padding: 0.8rem 2rem;">
+          Ir al dashboard ahora
+        </a>
+      </div>
+      
+      <script>
+        // Redirección automática
+        setTimeout(() => {
+          window.location.href = '<?= $redirect_url ?>';
+        }, 2000);
+      </script>
+    <?php endif; ?>
       <h2>📝 Completa tu perfil</h2>
       
       <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
-      <form method="POST">
+      <!-- Agregar campo de foto en el formulario -->
+      <form method="POST" enctype="multipart/form-data">
         <div class="form-grid">
           <!-- Fila 1 -->
           <div class="form-group"><label for="alias">Alias *</label></div>
@@ -271,6 +317,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <!-- Fila 2 -->
           <div class="form-group"><label for="direccion">Dirección *</label></div>
           <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
+          <div class="form-group"><label for="foto_url">Foto</label></div>
+          <div class="form-group"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
+          <div class="form-group"></div>
+
+          <!-- Fila 3 -->
           <div class="form-group"><label for="rol">Rol</label></div>
           <div class="form-group">
             <select id="rol" name="rol">
@@ -282,9 +333,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="otro">Otro</option>
             </select>
           </div>
-          <div class="form-group"></div>
-
-          <!-- Fila 3 -->
           <div class="form-group"><label for="id_puesto">Puesto</label></div>
           <div class="form-group">
             <select id="id_puesto" name="id_puesto">
@@ -300,6 +348,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="Avanzada">Avanzada</option>
             </select>
           </div>
+
+          <!-- Fila 4 -->
           <div class="form-group"><label for="genero">Género</label></div>
           <div class="form-group">
             <select id="genero" name="genero">
@@ -309,6 +359,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="otro">Otro</option>
             </select>
           </div>
+          <div class="form-group"><label for="puntaje">Puntaje</label></div>
+          <div class="form-group"><input type="number" id="puntaje" name="puntaje" min="0" max="100" value="0"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
+          <div class="form-group"></div>
         </div>
         
         <button type="submit" class="btn-submit">Guardar perfil completo</button>
