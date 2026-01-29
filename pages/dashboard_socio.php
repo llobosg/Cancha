@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/config.php';
 // Obtener club desde URL
 $club_slug = $_GET['id_club'] ?? '';
 if (!$club_slug) {
-    header('Location: index.php?error=no_club');
+    header('Location: ../index.php?error=no_club');
     exit;
 }
 
