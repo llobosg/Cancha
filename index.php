@@ -714,7 +714,7 @@ $_SESSION['visited_index'] = true;
       googleContainer.style.display = 'none';
       
       btnEnter.onclick = () => {
-        window.location.href = `dashboard.php?id_club=${savedClub}`;
+        window.location.href = `../pages/dashboard.php?id_club=${savedClub}`;
       };
     } else {
       btnEnter.style.display = 'none';
