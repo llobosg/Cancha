@@ -656,28 +656,46 @@ $_SESSION['visited_index'] = true;
 
   // Google Login
   function handleCredentialResponse(response) {
+    console.log('🔍 [LOG] Iniciando login con Google');
+    
     fetch('../api/login_google.php', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({token: response.credential})
     })
-    .then(r => r.json())
+    .then(r => {
+      console.log('🔍 [LOG] Respuesta de API recibida - Status:', r.status);
+      return r.json();
+    })
     .then(data => {
+      console.log('🔍 [LOG] Datos de respuesta:', data);
+      
       if (data.success) {
+        console.log('🔍 [LOG] Login exitoso - Redirigiendo al dashboard');
         const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
         localStorage.setItem('cancha_device', deviceId);
         localStorage.setItem('cancha_session', 'active');
         localStorage.setItem('cancha_club', data.club_slug);
+        
+        console.log('🔍 [LOG] Guardando en localStorage:', {
+          deviceId: deviceId,
+          club_slug: data.club_slug
+        });
+        
+        console.log('🔍 [LOG] Redirección final:', data.redirect);
         window.location.href = data.redirect;
+        
       } else if (data.action === 'register') {
+        console.log('🔍 [LOG] Usuario no registrado - Mostrando modal de inscripción');
         mostrarRegisterModal(data.email);
       } else {
+        console.error('🔍 [LOG] Error en login:', data.message);
         alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
       }
     })
     .catch(err => {
-      console.error('Login error:', err);
-      alert('Error de conexión');
+      console.error('🔍 [LOG] Error de conexión:', err);
+      alert('Error de conexión: ' + err.message);
     });
   }
 
