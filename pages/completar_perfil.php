@@ -312,13 +312,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group"><input type="tel" id="celular" name="celular" required></div>
 
         <!-- Fila 2 -->
-        <div class="form-group"><label for="direccion">Dirección *</label></div>
-        <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
-        <div class="form-group"><label for="foto_url">Foto</label></div>
-        <div class="form-group"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
-        <div class="form-group"></div>
-
-        <!-- Fila 3 -->
+        <div class="form-group"><label for="genero">Género</label></div>
+        <div class="form-group">
+          <select id="genero" name="genero">
+            <option value="">Seleccionar</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
         <div class="form-group"><label for="rol">Rol</label></div>
         <div class="form-group">
           <select id="rol" name="rol">
@@ -328,13 +330,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="director">Director Técnico</option>
             <option value="administrativo">Administrativo</option>
             <option value="otro">Otro</option>
-          </select>
+        </select>
         </div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+
+        <!-- Fila 3 -->
         <div class="form-group"><label for="id_puesto">Puesto</label></div>
         <div class="form-group">
           <select id="id_puesto" name="id_puesto">
             <option value="">Cargando puestos...</option>
-          </select>
+        </select>
         </div>
         <div class="form-group"><label for="habilidad">Habilidad</label></div>
         <div class="form-group">
@@ -345,19 +351,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="Avanzada">Avanzada</option>
           </select>
         </div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
 
         <!-- Fila 4 -->
-        <div class="form-group"><label for="genero">Género</label></div>
-        <div class="form-group">
-          <select id="genero" name="genero">
-            <option value="">Seleccionar</option>
-            <option value="masculino">Masculino</option>
-            <option value="femenino">Femenino</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="form-group"><label for="puntaje">Puntaje</label></div>
-        <div class="form-group"><input type="number" id="puntaje" name="puntaje" min="0" max="100" value="0"></div>
+        <div class="form-group"><label for="direccion">Dirección *</label></div>
+        <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
+         <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+
+        <!-- Fila 5 -->
+        <div class="form-group"><label for="foto_url">Foto</label></div>
+        <div class="form-group"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
