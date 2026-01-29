@@ -405,7 +405,7 @@ $_SESSION['visited_index'] = true;
 
 <!-- Barra superior -->
 <div class="top-bar">
-  <button class="btn-register" onclick="window.location.href='registro_club.php'">
+  <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
     <span class="flag-icon"></span>
     <span class="register-text">Registrar un club</span>
   </button>
@@ -507,13 +507,13 @@ $_SESSION['visited_index'] = true;
       </p>
       
       <div class="register-options">
-        <button class="btn-primary" onclick="window.location.href='buscar_club.php'">
+        <button class="btn-primary" onclick="window.location.href='pages/buscar_club.php'">
           🔍 Buscar mi club
         </button>
         
         <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
           ¿Eres responsable de un club?<br>
-          <a href="registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
+          <a href="pages/registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
         </p>
       </div>
     </div>
@@ -714,7 +714,7 @@ $_SESSION['visited_index'] = true;
       googleContainer.style.display = 'none';
       
       btnEnter.onclick = () => {
-        window.location.href = `../pages/dashboard.php?id_club=${savedClub}`;
+        window.location.href = `/pages/dashboard.php?id_club=${savedClub}`;
       };
     } else {
       btnEnter.style.display = 'none';

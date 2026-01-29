@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/config.php';
 // Obtener club desde URL
 $club_slug = $_GET['id_club'] ?? '';
 if (!$club_slug) {
-    header('Location: index.php?error=no_club');
+    header('Location: ../index.php?error=no_club');
     exit;
 }
 
@@ -28,7 +28,7 @@ foreach ($clubs as $c) {
 }
 
 if (!$club_id) {
-    header('Location: index.php?error=invalid_club');
+    header('Location: ../index.php?error=invalid_club');
     exit;
 }
 
@@ -322,7 +322,7 @@ $socio_datos_completos = false; // Esto vendría de la base de datos
 
     <!-- Cerrar sesión -->
     <div class="logout">
-      <a href="index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
     </div>
   </div>
 
