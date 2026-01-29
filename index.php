@@ -1,12 +1,10 @@
 <!-- pages/index.php -->
 <?php
-// Iniciar sesión para controlar splash screen
 session_start();
-
-// Mostrar splash screen solo si es entrada directa (no desde formularios internos)
 $show_splash = !isset($_SESSION['visited_index']) || $_SESSION['visited_index'] === false;
 $_SESSION['visited_index'] = true;
-?><!DOCTYPE html>
+?>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
