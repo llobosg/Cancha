@@ -369,10 +369,102 @@
       font-size: 1rem;
     }
   }
+
+  /* Splash Screen Animado */
+  .splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #003366;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease-out;
+  }
+
+  .ball-container {
+    animation: bounce 2s infinite;
+  }
+
+  .spinning-ball {
+    font-size: 4rem;
+    animation: spin 3s linear infinite;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+
+  .loading-text {
+    color: white;
+    font-size: 1.2rem;
+    margin-top: 1.5rem;
+    text-align: center;
+    max-width: 80%;
+    line-height: 1.4;
+    opacity: 0.9;
+  }
+
+  /* Animaciones */
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Versión móvil optimizada */
+  @media (max-width: 768px) {
+    .spinning-ball {
+      font-size: 3rem;
+    }
+    
+    .loading-text {
+      font-size: 1rem;
+      max-width: 90%;
+    }
+  }
   </style>
 </head>
 
 <body>
+<!-- Splash Screen Animado -->
+<div id="splashScreen" class="splash-screen">
+  <div class="ball-container">
+    <div class="spinning-ball">⚽</div>
+  </div>
+  <div class="loading-text">Estamos ordenando el camarín para que entres a tu club</div>
+</div>
+<script>
+// Ocultar splash screen cuando la página esté cargada
+document.addEventListener('DOMContentLoaded', function() {
+  // Esperar un momento para asegurar que todo esté listo
+  setTimeout(() => {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+      splash.style.opacity = '0';
+      setTimeout(() => {
+        splash.style.display = 'none';
+      }, 500);
+    }
+  }, 1500);
+});
+
+// También ocultar si hay errores de carga
+window.addEventListener('load', function() {
+  const splash = document.getElementById('splashScreen');
+  if (splash && splash.style.display !== 'none') {
+    splash.style.opacity = '0';
+    setTimeout(() => {
+      splash.style.display = 'none';
+    }, 500);
+  }
+});
+</script>
 
 <!-- Barra superior -->
 <div class="top-bar">
@@ -409,7 +501,7 @@
 <!-- Contenido principal -->
 <div class="hero">
   <h1 class="title-cancha">CANCHA ⚽</h1>
-  <p class="subtitle">Tu club deportivo, sin fricción</p>
+  <p class="subtitle">Tu club a un click</p>
 
   <!-- Sección multimedia principal -->
   <div class="media-main">
@@ -420,28 +512,28 @@
         <div class="carousel-item" data-feature="socios">
           <img src="../assets/img/feature1.jpg" alt="Gestión de socios">
           <div class="item-overlay">
-            <h4>👥 Gestión de Socios</h4>
+            <h4>Gestión de Socios</h4>
           </div>
         </div>
         <!-- Feature 2 -->
         <div class="carousel-item" data-feature="convocatorias">
           <img src="../assets/img/feature2.jpg" alt="Convocatorias">
           <div class="item-overlay">
-            <h4>📢 Convocatorias</h4>
+            <h4>Convocatorias</h4>
           </div>
         </div>
         <!-- Feature 3 -->
         <div class="carousel-item" data-feature="finanzas">
           <img src="../assets/img/feature3.jpg" alt="Finanzas">
           <div class="item-overlay">
-            <h4>💰 Finanzas</h4>
+            <h4>Finanzas</h4>
           </div>
         </div>
         <!-- Feature 4 -->
         <div class="carousel-item" data-feature="estadisticas">
           <img src="../assets/img/feature4.jpg" alt="Estadísticas">
           <div class="item-overlay">
-            <h4>📊 Estadísticas</h4>
+            <h4>Estadísticas</h4>
           </div>
         </div>
       </div>
