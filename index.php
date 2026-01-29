@@ -438,7 +438,7 @@ $_SESSION['visited_index'] = true;
 <!-- Contenido principal -->
 <div class="hero">
   <h1 class="title-cancha">CANCHA ⚽</h1>
-  <p class="subtitle">Tu club a un click</p>
+  <p class="subtitle">Tu club deportivo, sin fricción</p>
 
   <!-- Sección multimedia principal -->
   <div class="media-main">
@@ -456,21 +456,21 @@ $_SESSION['visited_index'] = true;
         <div class="carousel-item" data-feature="convocatorias">
           <img src="../assets/img/feature2.jpg" alt="Convocatorias">
           <div class="item-overlay">
-            <h4>Convocatorias</h4>
+            <h4>📢 Convocatorias</h4>
           </div>
         </div>
         <!-- Feature 3 -->
         <div class="carousel-item" data-feature="finanzas">
           <img src="../assets/img/feature3.jpg" alt="Finanzas">
           <div class="item-overlay">
-            <h4>Finanzas</h4>
+            <h4>💰 Finanzas</h4>
           </div>
         </div>
         <!-- Feature 4 -->
         <div class="carousel-item" data-feature="estadisticas">
           <img src="../assets/img/feature4.jpg" alt="Estadísticas">
           <div class="item-overlay">
-            <h4>Estadísticas</h4>
+            <h4>📊 Estadísticas</h4>
           </div>
         </div>
       </div>
@@ -714,7 +714,7 @@ $_SESSION['visited_index'] = true;
       googleContainer.style.display = 'none';
       
       btnEnter.onclick = () => {
-        window.location.href = `../pages/dashboard.php?id_club=${savedClub}`;
+        window.location.href = `dashboard.php?id_club=${savedClub}`;
       };
     } else {
       btnEnter.style.display = 'none';
