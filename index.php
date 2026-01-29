@@ -1,4 +1,3 @@
-<!-- pages/index.php -->
 <?php
 session_start();
 $show_splash = !isset($_SESSION['visited_index']) || $_SESSION['visited_index'] === false;
