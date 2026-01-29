@@ -717,38 +717,57 @@ $_SESSION['visited_index'] = true;
     }
   }
 
-  // Inicialización
-  document.addEventListener('DOMContentLoaded', () => {
+  // Función mejorada para detectar sesión
+  function checkUserSession() {
+      return new Promise((resolve) => {
+          // Esperar un momento para asegurar que localStorage esté listo
+          setTimeout(() => {
+              try {
+                  const savedClub = localStorage.getItem('cancha_club');
+                  const hasSession = localStorage.getItem('cancha_session') === 'active';
+                  
+                  // Validar que el club sea válido
+                  const isValidClub = savedClub && 
+                                    savedClub !== 'null' && 
+                                    savedClub !== 'undefined' && 
+                                    savedClub.trim() !== '' && 
+                                    savedClub.length === 8;
+                  
+                  resolve({
+                      hasValidSession: hasSession && isValidClub,
+                      clubSlug: isValidClub ? savedClub : null
+                  });
+              } catch (error) {
+                  console.error('Error checking session:', error);
+                  resolve({ hasValidSession: false, clubSlug: null });
+              }
+          }, 100);
+      });
+  }
+
+  // Inicialización mejorada
+  document.addEventListener('DOMContentLoaded', async () => {
     adjustForMobile();
     window.addEventListener('resize', adjustForMobile);
-    
-    // Manejo de sesión mejorado
-    const savedClub = localStorage.getItem('cancha_club');
+      
+    // Verificar sesión con la función mejorada
+    const session = await checkUserSession();
     const btnEnter = document.getElementById('btnEnterClub');
     const googleContainer = document.getElementById('googleLoginContainer');
-    
-    // Validar que el club sea válido (no null, undefined, o vacío)
-    if (savedClub && savedClub !== 'null' && savedClub !== 'undefined' && savedClub.trim() !== '') {
+      
+    if (session.hasValidSession) {
       btnEnter.style.display = 'block';
       googleContainer.style.display = 'none';
-      
+          
       btnEnter.onclick = () => {
-        // Validación adicional antes de redirigir
-        if (!savedClub || savedClub.length !== 8) {
-          console.warn('🔍 Club inválido en localStorage, limpiando sesión');
-          localStorage.removeItem('cancha_club');
-          localStorage.removeItem('cancha_session');
-          location.reload();
-          return;
-        }
-        
-        window.location.href = `pages/dashboard_socio.php?id_club=${savedClub}`;
+        window.location.href = `pages/dashboard_socio.php?id_club=${session.clubSlug}`;
       };
     } else {
       // Limpiar sesión inválida
       localStorage.removeItem('cancha_club');
       localStorage.removeItem('cancha_session');
-      
+      localStorage.removeItem('cancha_device');
+          
       btnEnter.style.display = 'none';
       googleContainer.style.display = 'block';
     }

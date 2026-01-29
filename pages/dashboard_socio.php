@@ -4,15 +4,17 @@ require_once __DIR__ . '/../includes/config.php';
 // Obtener club desde URL
 $club_slug = $_GET['id_club'] ?? '';
 
-// Validar que el slug sea válido (8 caracteres alfanuméricos)
+// Validar slug
 if (!$club_slug || strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
-    // Redirigir a inicio SIN parámetros de error
+    // Redirigir a inicio sin parámetros de error
     header('Location: ../index.php');
     exit;
 }
 
-// Simular datos del club (en producción cargarías desde la base de datos)
-// Por ahora asumimos que el slug es válido (viene de localStorage)
+// Guardar en sesión para futuras referencias
+$_SESSION['current_club'] = $club_slug;
+
+// Obtener datos del club (simulado)
 $club_nombre = 'Tu Club';
 $club_logo = '';
 ?>
