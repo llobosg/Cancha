@@ -50,7 +50,7 @@ try {
             'success' => false,
             'action' => 'register',
             'email' => $email,
-            'message' => 'Revisamos las planillas y no estás inscrito, y ya que estás en Cancha aprovecha y e inscríbite en tu Club.'
+            'message' => 'Revisamos las planillas y no estás inscrito, y ya que estás en Cancha aprovecha e inscríbite en tu Club.'
         ]);
         exit;
     }

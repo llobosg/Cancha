@@ -484,7 +484,7 @@
         
         <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
           ¿Eres responsable de un club?<br>
-          <a href="registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
+          <a href="../pages/registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
         </p>
       </div>
     </div>
@@ -507,7 +507,7 @@
   const featureTexts = {
     socios: {
       title: "Gestión de Socios",
-      content: "En Cancha, cada socio es parte fundamental de la familia. Desde tu inscripción a un Club tendrás acceso inmediato a todas las actividades y eventos, podrás confirmar asistencia a partidos, recibir notificaciones de quienes se anotan o bajan y participar en la vida comunitaria. ¡Tu club te espera!"
+      content: "En Cancha, cada socio es parte fundamental de la familia. Desde tu inscripción a un Club tendrás acceso inmediato a todas las actividades y eventos, podrás confirmar asistencia a partidos, pagar las cuotas, recibir notificaciones de quienes se anotan o bajan y participar en la vida comunitaria. ¡Tu club te espera!"
     },
     convocatorias: {
       title: "Convocatorias Inteligentes",
@@ -519,7 +519,7 @@
     },
     estadisticas: {
       title: "Estadísticas que Inspiran",
-      content: "Sigue el crecimiento de tu club en tiempo real. Número de socios, eventos realizados, participación en actividades... Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos. Y más adelante podremos ver otros Clubes inscritos en nuestar ciudad y comuna, organizar partidos con ellos, campeonatos entre la comunidad cancha, disponibilidad de canchas, y mucho más."
+      content: "Sigue el crecimiento de tu club en tiempo real. Número de socios, eventos realizados, participación en actividades... Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos. Y más adelante podremos ver otros Clubes inscritos en nuestar ciudad, comuna y organizar partidos con ellos, campeonatos entre la comunidad cancha, disponibilidad de canchas, y mucho más."
     }
   };
 

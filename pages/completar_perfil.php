@@ -229,13 +229,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($success): ?>
       <h2>✅ ¡Perfil completado!</h2>
       <div class="success">
-        Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades de Cancha.
+        Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades. Bienvenido a la comunidad Cancha.
       </div>
       <a href="dashboard_socio.php" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">
         Ir al dashboard
       </a>
     <?php else: ?>
-      <h2>📝 Completa tu perfil</h2>
+      <h2>Completa tu perfil</h2>
       
       <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
