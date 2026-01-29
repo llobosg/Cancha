@@ -654,50 +654,95 @@ $_SESSION['visited_index'] = true;
     }
   }
 
-  // Google Login
+  // Google Login con manejo de flujos diferenciados
   function handleCredentialResponse(response) {
-    console.log('🔍 [LOG] Iniciando login con Google');
-    
-    fetch('../api/login_google.php', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({token: response.credential})
-    })
-    .then(r => {
-      console.log('🔍 [LOG] Respuesta de API recibida - Status:', r.status);
-      return r.json();
-    })
-    .then(data => {
-      console.log('🔍 [LOG] Datos de respuesta:', data);
-      
-      if (data.success) {
-        console.log('🔍 [LOG] Login exitoso - Redirigiendo al dashboard');
-        const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
-        localStorage.setItem('cancha_device', deviceId);
-        localStorage.setItem('cancha_session', 'active');
-        localStorage.setItem('cancha_club', data.club_slug);
-        
-        console.log('🔍 [LOG] Guardando en localStorage:', {
-          deviceId: deviceId,
-          club_slug: data.club_slug
-        });
-        
-        console.log('🔍 [LOG] Redirección final:', data.redirect);
-        window.location.href = data.redirect;
-        
-      } else if (data.action === 'register') {
-        console.log('🔍 [LOG] Usuario no registrado - Mostrando modal de inscripción');
-        mostrarRegisterModal(data.email);
-      } else {
-        console.error('🔍 [LOG] Error en login:', data.message);
-        alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
-      }
-    })
-    .catch(err => {
-      console.error('🔍 [LOG] Error de conexión:', err);
-      alert('Error de conexión: ' + err.message);
-    });
+      fetch('../api/login_google.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token: response.credential})
+      })
+      .then(r => r.json())
+      .then(data => {
+          if (data.success && data.action === 'redirect_existing') {
+              // Usuario existente - ir directo al dashboard
+              const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+              localStorage.setItem('cancha_device', deviceId);
+              localStorage.setItem('cancha_session', 'active');
+              localStorage.setItem('cancha_club', data.club_slug);
+              
+              window.location.href = data.redirect;
+              
+          } else if (!data.success && data.action === 'welcome_new') {
+              // Usuario nuevo - mostrar submodal de bienvenida
+              mostrarWelcomeModal(data.email);
+              
+          } else {
+              alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
+          }
+      })
+      .catch(err => {
+          console.error('Login error:', err);
+          alert('Error de conexión');
+      });
   }
+
+  // Submodal de bienvenida para usuarios nuevos
+  function mostrarWelcomeModal(email = '') {
+      // Crear el submodal si no existe
+      let modal = document.getElementById('welcomeModal');
+      if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'welcomeModal';
+          modal.className = 'submodal';
+          modal.innerHTML = `
+              <div class="submodal-content">
+                  <span class="close-modal" onclick="cerrarWelcomeModal()">&times;</span>
+                  <div class="modal-header">
+                      <h3>⚽ ¡Hola! Bienvenido a Cancha</h3>
+                  </div>
+                  <div class="modal-body">
+                      <p style="text-align: center; margin-bottom: 1.5rem;">
+                          <strong>¿Ya perteneces a un club?</strong><br>
+                          Si es así, pide a tu responsable que te envíe el enlace de invitación.
+                      </p>
+                      
+                      <div class="register-options">
+                          <button class="btn-primary" onclick="window.location.href='pages/buscar_club.php'">
+                              🔍 Buscar mi club
+                          </button>
+                          
+                          <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
+                              ¿Eres responsable de un club?<br>
+                              <a href="pages/registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
+                          </p>
+                      </div>
+                  </div>
+              </div>
+          `;
+          document.body.appendChild(modal);
+      }
+      
+      modal.style.display = 'flex';
+      
+      if (email) {
+          localStorage.setItem('google_email', email);
+      }
+  }
+
+  function cerrarWelcomeModal() {
+      const modal = document.getElementById('welcomeModal');
+      if (modal) {
+          modal.style.display = 'none';
+      }
+  }
+
+  // Manejar clic fuera del modal
+  document.addEventListener('click', function(event) {
+      const modal = document.getElementById('welcomeModal');
+      if (modal && event.target === modal) {
+          cerrarWelcomeModal();
+      }
+  });
 
   function mostrarRegisterModal(email = '') {
     document.getElementById('registerModal').style.display = 'flex';

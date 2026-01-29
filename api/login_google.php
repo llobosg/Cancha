@@ -10,8 +10,6 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     $token = $input['token'] ?? '';
 
-    error_log("🔍 [API LOG] Token recibido: " . ($token ? 'SÍ' : 'NO'));
-    
     if (!$token) {
         throw new Exception('Token no proporcionado');
     }
@@ -24,16 +22,11 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    error_log("🔍 [API LOG] Verificación Google - HTTP Code: $httpCode");
-    
     if ($httpCode !== 200) {
-        error_log("🔍 [API LOG] Respuesta Google: $response");
         throw new Exception('Token inválido');
     }
 
     $payload = json_decode($response, true);
-    error_log("🔍 [API LOG] Payload decodificado: " . print_r($payload, true));
-    
     if (!$payload || !isset($payload['email'])) {
         throw new Exception('Payload inválido');
     }
@@ -43,7 +36,7 @@ try {
 
     // Buscar socio por email
     $stmt = $pdo->prepare("
-        SELECT s.id_socio, s.id_club, s.alias, c.nombre as club_nombre, c.email_responsable
+        SELECT s.id_socio, s.id_club, s.alias, s.es_responsable, c.nombre as club_nombre, c.email_responsable
         FROM socios s
         JOIN clubs c ON s.id_club = c.id_club
         WHERE s.email = ? AND s.email_verified = 1
@@ -51,32 +44,30 @@ try {
     $stmt->execute([$email]);
     $socio = $stmt->fetch();
 
-    error_log("🔍 [API LOG] Búsqueda de socio - Email: $email, Encontrado: " . ($socio ? 'SÍ' : 'NO'));
-    
     if (!$socio) {
-        error_log("🔍 [API LOG] Usuario no registrado - Devolviendo acción register");
+        // Usuario NO registrado - mostrar mensaje de bienvenida
         echo json_encode([
             'success' => false,
-            'action' => 'register',
+            'action' => 'welcome_new',
             'email' => $email,
-            'message' => 'Primero debes inscribirte en un club'
+            'message' => 'Bienvenido a Cancha'
         ]);
         exit;
     }
 
-    // Generar slug del club
+    // Usuario registrado - generar slug y redirigir
     $club_slug = substr(md5($socio['id_club'] . $socio['email_responsable']), 0, 8);
-    
-    error_log("🔍 [API LOG] Login exitoso - Club slug: $club_slug");
-    
+
     echo json_encode([
         'success' => true,
+        'action' => 'redirect_existing',
         'club_slug' => $club_slug,
+        'is_responsable' => (bool)$socio['es_responsable'],
         'redirect' => 'pages/dashboard_socio.php?id_club=' . $club_slug
     ]);
 
 } catch (Exception $e) {
-    error_log("🔍 [API LOG] ERROR CRÍTICO: " . $e->getMessage());
+    error_log("Google login error: " . $e->getMessage());
     http_response_code(400);
     echo json_encode(['success' => false, 'action' => 'error', 'message' => $e->getMessage()]);
 }
