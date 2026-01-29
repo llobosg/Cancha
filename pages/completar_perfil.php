@@ -1,9 +1,14 @@
-<!-- pages/completar_perfil.php -->
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Obtener datos actuales del socio (simulado - en producción usarías sesión)
-$socio_id = $_SESSION['id_socio'] ?? 1; // Ajusta según tu sistema de autenticación
+// Guardar club en sesión si viene por URL
+if (isset($_GET['club'])) {
+    $_SESSION['club_slug'] = $_GET['club'];
+}
+
+// Obtener datos actuales del socio (ajusta según tu sistema de autenticación)
+$socio_id = $_SESSION['id_socio'] ?? 1;
+$club_slug = $_SESSION['club_slug'] ?? '';
 
 $error = '';
 $success = false;
@@ -22,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
-                rol = ?, id_puesto = ?, genero = ?, habilidad = ? 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?
             WHERE id_socio = ?
         ");
         $stmt->execute([
@@ -144,30 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       margin-bottom: 1.5rem;
     }
 
-    /* Responsive móvil */
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.7rem;
-      }
-      
-      .col-span-2 {
-        grid-column: span 2 !important;
-      }
-      
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-        font-size: 0.8rem;
-      }
-      
-      .form-group input,
-      .form-group select {
-        font-size: 0.85rem;
-        padding: 0.45rem;
-      }
-    }
-
     .form-group {
       margin: 0;
     }
@@ -220,6 +201,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #071289;
       text-decoration: none;
     }
+
+    /* Responsive móvil */
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.7rem;
+      }
+      
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-size: 0.8rem;
+      }
+      
+      .form-group input,
+      .form-group select {
+        font-size: 0.85rem;
+        padding: 0.45rem;
+      }
+      
+      .col-span-2 {
+        grid-column: span 2 !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -231,11 +236,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="success">
         Tu perfil ha sido actualizado correctamente. Ahora tienes acceso a todas las funcionalidades. Bienvenido a la comunidad Cancha.
       </div>
-      <a href="dashboard_socio.php" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">
-        Ir al dashboard
-      </a>
+      
+      <?php if ($club_slug): ?>
+        <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>" 
+           class="btn-submit" 
+           style="text-decoration: none; text-align: center; display: block;">
+          Ir al dashboard
+        </a>
+      <?php else: ?>
+        <a href="../index.php" 
+           class="btn-submit" 
+           style="text-decoration: none; text-align: center; display: block;">
+          Volver al inicio
+        </a>
+      <?php endif; ?>
+      
     <?php else: ?>
-      <h2>Completa tu perfil</h2>
+      <h2>📝 Completa tu perfil</h2>
       
       <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
@@ -256,20 +273,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
           <div class="form-group"><label for="rol">Rol</label></div>
           <div class="form-group">
-            <select id="rol" name="rol" required>
+            <select id="rol" name="rol">
               <option value="">Seleccionar</option>
-              <option value="Jugador">Jugador</option>
-              <option value="Capitán">Galleta</option>
-              <option value="Entrenador">Amigo del club</option>
-              <option value="Tesorero">Tesorero</option>
-              <option value="Director">Director</option>
-              <option value="Delegado">Delegado</option>
-              <option value="Profe">Profe</option>
-              <option value="Kine">Kine</option>
-              <option value="Preparador Físico">Preparador Físico</option>
-              <option value="Utilero">Utilero</option>
+              <option value="jugador">Jugador</option>
+              <option value="entrenador">Entrenador</option>
+              <option value="director">Director Técnico</option>
+              <option value="administrativo">Administrativo</option>
+              <option value="otro">Otro</option>
             </select>
           </div>
+          <div class="form-group"></div>
 
           <!-- Fila 3 -->
           <div class="form-group"><label for="id_puesto">Puesto</label></div>
@@ -296,6 +309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="otro">Otro</option>
             </select>
           </div>
+        </div>
         
         <button type="submit" class="btn-submit">Guardar perfil completo</button>
       </form>
