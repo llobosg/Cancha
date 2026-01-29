@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Validar email_responsable
         if (!filter_var($_POST['email_responsable'], FILTER_VALIDATE_EMAIL)) {
-            throw new Exception('Correo electrónico del responsable inválido');
+            throw new Exception('Correo electrónico del responsable inválido, primera amarilla !!');
         }
 
         // Validar jugadores_por_lado
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 12px;'>
                     <div style='text-align: center; margin-bottom: 30px;'>
                         <h1 style='color: #003366; font-size: 28px;'>⚽ Cancha</h1>
-                        <p style='color: #666; font-size: 14px;'>Tu club deportivo, sin fricción</p>
+                        <p style='color: #666; font-size: 14px;'>Tu club deportivo a un click</p>
                     </div>
                     
                     <div style='background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'>
