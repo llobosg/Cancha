@@ -386,41 +386,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Verificar que el elemento exista antes de intentar modificarlo
-      const puestoSelect = document.getElementById('id_puesto');
-      
-      if (puestoSelect) {
-        fetch('../api/get_puestos.php')
-          .then(response => response.json())
-          .then(puestos => {
-            // Limpiar opciones existentes
-            puestoSelect.innerHTML = '<option value="">Seleccionar puesto</option>';
-            
-            // Agregar puestos
-            puestos.forEach(puesto => {
-              const option = document.createElement('option');
-              option.value = puesto.id_puesto;
-              option.textContent = puesto.puesto;
-              puestoSelect.appendChild(option);
-            });
-          })
-          .catch(error => {
-            console.error('Error al cargar puestos:', error);
-            puestoSelect.innerHTML = '<option value="">Error al cargar puestos</option>';
-          });
-      } else {
-        console.warn('Elemento #id_puesto no encontrado en el DOM');
-      }
+// Debug: Verificar todo el DOM
+console.log('🔍 DEBUG - Todos los select en la página:');
+const allSelects = document.querySelectorAll('select');
+allSelects.forEach((select, index) => {
+    console.log(`Select ${index}: id="${select.id}", name="${select.name}"`);
+});
 
-      // Validación de teléfono
-      const celularInput = document.getElementById('celular');
-      if (celularInput) {
-        celularInput.addEventListener('input', function(e) {
-          this.value = this.value.replace(/[^0-9+]/g, '');
-        });
-      }
-    });
-  </script>
+// Debug: Verificar si existe el elemento específico
+console.log('🔍 DEBUG - Buscando id_puesto:', document.getElementById('id_puesto'));
+
+// Función robusta para cargar puestos
+function loadPuestosRobust() {
+    // Método 1: Buscar por ID
+    let puestoSelect = document.getElementById('id_puesto');
+    
+    // Método 2: Buscar por name si no se encuentra por ID
+    if (!puestoSelect) {
+        puestoSelect = document.querySelector('select[name="id_puesto"]');
+        console.log('🔍 DEBUG - Encontrado por name:', puestoSelect);
+    }
+    
+    // Método 3: Buscar cualquier select en la posición esperada
+    if (!puestoSelect) {
+        const selects = document.querySelectorAll('select');
+        if (selects.length >= 3) {
+            puestoSelect = selects[2]; // Tercer select (índice 2)
+            console.log('🔍 DEBUG - Usando tercer select:', puestoSelect);
+        }
+    }
+    
+    if (puestoSelect) {
+        fetch('../api/get_puestos.php')
+            .then(response => response.json())
+            .then(puestos => {
+                puestoSelect.innerHTML = '<option value="">Seleccionar puesto</option>';
+                puestos.forEach(puesto => {
+                    const option = document.createElement('option');
+                    option.value = puesto.id_puesto;
+                    option.textContent = puesto.puesto;
+                    puestoSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar puestos:', error);
+                puestoSelect.innerHTML = '<option value="">Error al cargar puestos</option>';
+            });
+    } else {
+        console.error('❌ ERROR CRÍTICO: No se encontró ningún elemento para puestos');
+    }
+}
+
+// Ejecutar después de que todo esté cargado
+setTimeout(() => {
+    loadPuestosRobust();
+}, 500);
+</script>
 </body>
 </html>
