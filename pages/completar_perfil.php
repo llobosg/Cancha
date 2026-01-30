@@ -13,7 +13,6 @@ $club_slug = $_SESSION['club_slug'] ?? '';
 $error = '';
 $success = false;
 
-// Reemplaza el bloque de actualización con este código corregido:
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos obligatorios
@@ -47,12 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Actualizar perfil completo - CORREGIDO
+        // Actualizar perfil completo
         $stmt = $pdo->prepare("
             UPDATE socios 
             SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
-                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, 
-                foto_url = ?
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, puntaje = ?, 
+                foto_url = ?, datos_completos = 1 
             WHERE id_socio = ?
         ");
         $result = $stmt->execute([
@@ -64,17 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['id_puesto'] ?: null,
             $_POST['genero'] ?: null,
             $_POST['habilidad'] ?: null,
+            $_POST['puntaje'] ?: 0,
             $foto_url,
             $socio_id
         ]);
 
         if (!$result) {
-            throw new Exception('Error al actualizar el perfil: ' . implode(', ', $stmt->errorInfo()));
+            throw new Exception('Error al actualizar el perfil');
         }
 
-        // Actualizar sesión para reflejar cambios
+        // Actualizar sesión
         $_SESSION['perfil_completo'] = true;
-        
         $success = true;
 
     } catch (Exception $e) {

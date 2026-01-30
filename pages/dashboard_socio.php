@@ -258,10 +258,20 @@ $club_logo = '';
     }
     ?>
 
+    <?php
+    // Obtener datos del socio actual para verificar si el perfil está completo
+    $socio_actual = null;
+    if (isset($_SESSION['id_socio'])) {
+        $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
+        $stmt_socio->execute([$_SESSION['id_socio']]);
+        $socio_actual = $stmt_socio->fetch();
+    }
+    ?>
+
     <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
       <div class="welcome-message">
-        <h3>👋 ¡Bienvenido a registrar tu Club!</h3>
-        <p>Como Responsable de este club en cancha, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+        <h3>👋 ¡Bienvenido, Responsable!</h3>
+        <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
         <ul>
           <li>📞 Teléfono de contacto</li>
           <li>🏠 Dirección completa</li>
