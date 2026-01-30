@@ -16,22 +16,61 @@ if (isset($_GET['club'])) {
     error_log("Guardado club_slug en sesión: " . $_GET['club']);
 }
 
-// Obtener socio_id de la sesión
+// Obtener socio_id a partir del club_slug
 $socio_id = $_SESSION['id_socio'] ?? null;
 $club_slug = $_SESSION['club_slug'] ?? null;
 
 error_log("socio_id desde sesión: " . ($socio_id ?? 'NULL'));
 error_log("club_slug desde sesión: " . ($club_slug ?? 'NULL'));
 
-// Si no tenemos socio_id, intentar obtenerlo del email en sesión
-if (!$socio_id && isset($_SESSION['user_email'])) {
-    $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
-    $stmt->execute([$_SESSION['user_email']]);
-    $result = $stmt->fetch();
-    if ($result) {
-        $socio_id = $result['id_socio'];
-        $_SESSION['id_socio'] = $socio_id;
-        error_log("socio_id obtenido por email: $socio_id");
+// Si no tenemos socio_id pero tenemos club_slug, buscar el socio correspondiente
+if (!$socio_id && $club_slug) {
+    // Buscar el club por slug
+    $stmt_club = $pdo->prepare("
+        SELECT id_club, email_responsable 
+        FROM clubs 
+        WHERE SUBSTRING(MD5(CONCAT(id_club, email_responsable)), 1, 8) = ?
+    ");
+    $stmt_club->execute([$club_slug]);
+    $club = $stmt_club->fetch();
+    
+    if ($club) {
+        error_log("Club encontrado: id=" . $club['id_club'] . ", email=" . $club['email_responsable']);
+        
+        // Buscar el socio responsable de este club
+        $stmt_socio = $pdo->prepare("
+            SELECT id_socio 
+            FROM socios 
+            WHERE id_club = ? AND email = ? AND es_responsable = 1
+        ");
+        $stmt_socio->execute([$club['id_club'], $club['email_responsable']]);
+        $socio = $stmt_socio->fetch();
+        
+        if ($socio) {
+            $socio_id = $socio['id_socio'];
+            $_SESSION['id_socio'] = $socio_id;
+            $_SESSION['user_email'] = $club['email_responsable'];
+            error_log("socio_id encontrado: $socio_id");
+        } else {
+            // Si no existe el socio, crearlo
+            error_log("Socio no encontrado, creando nuevo...");
+            $stmt_create = $pdo->prepare("
+                INSERT INTO socios (id_club, email, nombre, alias, es_responsable, created_at) 
+                VALUES (?, ?, ?, ?, 1, NOW())
+            ");
+            $stmt_create->execute([
+                $club['id_club'],
+                $club['email_responsable'],
+                'Responsable',
+                'Responsable'
+            ]);
+            $socio_id = $pdo->lastInsertId();
+            $_SESSION['id_socio'] = $socio_id;
+            $_SESSION['user_email'] = $club['email_responsable'];
+            error_log("Nuevo socio creado: $socio_id");
+        }
+    } else {
+        error_log("Club no encontrado para slug: $club_slug");
     }
 }
 
