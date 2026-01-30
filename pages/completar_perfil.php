@@ -64,8 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['genero'] ?: null,
             $_POST['habilidad'] ?: null,
             $foto_url,
-            $socio_id,
-            $_POST['datos_completos'] ?: 0
+            $socio_id
         ]);
 
         if (!$result) {
