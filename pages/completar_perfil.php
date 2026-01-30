@@ -387,27 +387,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Verificar que el elemento exista antes de intentar modificarlo
       const puestoSelect = document.getElementById('id_puesto');
       
-      fetch('../api/get_puestos.php')
-        .then(response => response.json())
-        .then(puestos => {
-          puestoSelect.innerHTML = '<option value="">Seleccionar puesto</option>';
-          puestos.forEach(puesto => {
-            const option = document.createElement('option');
-            option.value = puesto.id_puesto;
-            option.textContent = puesto.puesto;
-            puestoSelect.appendChild(option);
+      if (puestoSelect) {
+        fetch('../api/get_puestos.php')
+          .then(response => response.json())
+          .then(puestos => {
+            // Limpiar opciones existentes
+            puestoSelect.innerHTML = '<option value="">Seleccionar puesto</option>';
+            
+            // Agregar puestos
+            puestos.forEach(puesto => {
+              const option = document.createElement('option');
+              option.value = puesto.id_puesto;
+              option.textContent = puesto.puesto;
+              puestoSelect.appendChild(option);
+            });
+          })
+          .catch(error => {
+            console.error('Error al cargar puestos:', error);
+            puestoSelect.innerHTML = '<option value="">Error al cargar puestos</option>';
           });
-        })
-        .catch(error => {
-          console.error('Error al cargar puestos:', error);
-          puestoSelect.innerHTML = '<option value="">Error al cargar puestos</option>';
-        });
+      } else {
+        console.warn('Elemento #id_puesto no encontrado en el DOM');
+      }
 
-      document.getElementById('celular')?.addEventListener('input', function(e) {
-        this.value = this.value.replace(/[^0-9+]/g, '');
-      });
+      // Validación de teléfono
+      const celularInput = document.getElementById('celular');
+      if (celularInput) {
+        celularInput.addEventListener('input', function(e) {
+          this.value = this.value.replace(/[^0-9+]/g, '');
+        });
+      }
     });
   </script>
 </body>
