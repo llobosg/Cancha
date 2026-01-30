@@ -435,6 +435,150 @@ if (celularInput) {
         this.value = this.value.replace(/[^0-9+]/g, '');
     });
 }
-</script>
-</body>
-</html>
+</script><?php
+require_once __DIR__ . '/../includes/config.php';
+
+// Iniciar sesión si no está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Guardar club en sesión si viene por URL
+if (isset($_GET['club'])) {
+    $_SESSION['club_slug'] = $_GET['club'];
+}
+
+// Obtener datos del socio desde la sesión
+$socio_id = null;
+$club_slug = $_SESSION['club_slug'] ?? '';
+
+// Debug: Verificar qué tenemos en sesión
+error_log("DEBUG SESSION: " . print_r($_SESSION, true));
+
+// Intentar obtener socio_id de diferentes fuentes
+if (isset($_SESSION['id_socio'])) {
+    $socio_id = $_SESSION['id_socio'];
+} elseif (isset($_SESSION['user_email'])) {
+    // Buscar socio por email
+    $stmt_email = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
+    $stmt_email->execute([$_SESSION['user_email']]);
+    $result = $stmt_email->fetch();
+    if ($result) {
+        $socio_id = $result['id_socio'];
+        $_SESSION['id_socio'] = $socio_id;
+    }
+}
+
+// Si no tenemos socio_id, intentar obtenerlo del club
+if (!$socio_id && $club_slug) {
+    $stmt_club = $pdo->prepare("
+        SELECT s.id_socio 
+        FROM socios s 
+        JOIN clubs c ON s.id_club = c.id_club 
+        WHERE c.email_responsable = ? AND s.es_responsable = 1
+    ");
+    // Necesitamos el email del responsable - lo obtenemos de la sesión o de localStorage
+    $email_responsable = $_SESSION['user_email'] ?? null;
+    if ($email_responsable) {
+        $stmt_club->execute([$email_responsable]);
+        $result = $stmt_club->fetch();
+        if ($result) {
+            $socio_id = $result['id_socio'];
+            $_SESSION['id_socio'] = $socio_id;
+        }
+    }
+}
+
+error_log("DEBUG SOCIO_ID: " . ($socio_id ?? 'NULL'));
+
+$error = '';
+$success = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        error_log("DEBUG POST DATA: " . print_r($_POST, true));
+        
+        // Validar campos obligatorios
+        $required = ['alias', 'celular', 'direccion'];
+        foreach ($required as $field) {
+            if (empty($_POST[$field])) {
+                throw new Exception('Campos obligatorios incompletos: ' . $field);
+            }
+        }
+
+        if (!$socio_id) {
+            throw new Exception('No se pudo identificar tu perfil. Por favor, inicia sesión nuevamente.');
+        }
+
+        // Subir foto si existe
+        $foto_url = null;
+        if (!empty($_FILES['foto_url']['name'])) {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!in_array($_FILES['foto_url']['type'], $allowed_types)) {
+                throw new Exception('Solo se permiten imágenes JPG, PNG o GIF');
+            }
+            
+            if ($_FILES['foto_url']['size'] > 2 * 1024 * 1024) {
+                throw new Exception('La foto debe pesar menos de 2MB');
+            }
+            
+            $foto_url = uniqid() . '_' . basename($_FILES['foto_url']['name']);
+            $upload_dir = __DIR__ . '/../uploads/fotos/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            if (!move_uploaded_file($_FILES['foto_url']['tmp_name'], $upload_dir . $foto_url)) {
+                throw new Exception('Error al subir la foto');
+            }
+        }
+
+        // Actualizar perfil completo
+        $stmt = $pdo->prepare("
+            UPDATE socios 
+            SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, 
+                foto_url = ?, datos_completos = 1 
+            WHERE id_socio = ?
+        ");
+        
+        error_log("DEBUG EXECUTE PARAMS: socio_id=$socio_id, alias=" . ($_POST['alias'] ?? 'null'));
+        
+        $result = $stmt->execute([
+            $_POST['alias'],
+            $_POST['fecha_nac'] ?: null,
+            $_POST['celular'],
+            $_POST['direccion'],
+            $_POST['rol'] ?: null,
+            $_POST['id_puesto'] ?: null,
+            $_POST['genero'] ?: null,
+            $_POST['habilidad'] ?: null,
+            $foto_url,
+            $socio_id
+        ]);
+
+        if (!$result) {
+            $errorInfo = $stmt->errorInfo();
+            error_log("DEBUG SQL ERROR: " . implode(', ', $errorInfo));
+            throw new Exception('Error al actualizar el perfil: ' . $errorInfo[2]);
+        }
+
+        // Verificar cuántas filas se actualizaron
+        $rowCount = $stmt->rowCount();
+        error_log("DEBUG ROWS UPDATED: $rowCount");
+        
+        if ($rowCount === 0) {
+            throw new Exception('No se encontró tu perfil para actualizar. Por favor, contacta al soporte.');
+        }
+
+        // Actualizar sesión
+        $_SESSION['perfil_completo'] = true;
+        $success = true;
+        error_log("DEBUG SUCCESS: Perfil actualizado correctamente");
+
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+        error_log("DEBUG EXCEPTION: " . $error);
+    }
+}
+?>
