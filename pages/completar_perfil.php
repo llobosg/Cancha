@@ -335,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="director">Director Técnico</option>
             <option value="administrativo">Administrativo</option>
             <option value="otro">Otro</option>
-        </select>
+          </select>
         </div>
         <div class="form-group"></div>
         <div class="form-group"></div>
@@ -345,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group">
           <select id="id_puesto" name="id_puesto">
             <option value="">Cargando puestos...</option>
-        </select>
+          </select>
         </div>
         <div class="form-group"><label for="habilidad">Habilidad</label></div>
         <div class="form-group">
@@ -362,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Fila 4 -->
         <div class="form-group"><label for="direccion">Dirección *</label></div>
         <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" required></div>
-         <div class="form-group"></div>
+        <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
