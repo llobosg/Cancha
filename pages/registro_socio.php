@@ -40,7 +40,7 @@ if (!$club) {
     /* Fondo corporativo */
     body {
       background: 
-        linear-gradient(rgba(0, 10, 20, 0.50), rgba(0, 15, 30, 0.60)),
+        linear-gradient(rgba(0, 10, 20, 0.40), rgba(0, 15, 30, 0.50)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
