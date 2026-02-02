@@ -336,7 +336,7 @@ if (isset($_SESSION['id_socio'])) {
       ?>
       
       <div class="qr-code" id="qrCode"></div>
-      <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
+      <div class="share-link" id="shareLink" style="color: #0c0874ff;"><?= htmlspecialchars($share_url) ?></div>
       <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
     </div>
 
