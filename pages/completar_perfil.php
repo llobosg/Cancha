@@ -203,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <style>
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.75)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -465,11 +465,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
-        <div class="form-group"></div>
 
         <!-- Fila 5 -->
         <div class="form-group"><label for="foto_url">Foto</label></div>
-        <div class="form-group"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
+        <div class="form-group col-span-2"><input type="file" id="foto_url" name="foto_url" accept="image/*"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
         <div class="form-group"></div>
