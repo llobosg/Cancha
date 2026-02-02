@@ -80,13 +80,64 @@ if (isset($_SESSION['id_socio'])) {
       padding: 2rem;
     }
     
+    /* Header - mantener el diseño original */
     .header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 1.2rem;
       margin-bottom: 2.5rem;
       padding-bottom: 1rem;
       border-bottom: 2px solid rgba(255,255,255,0.3);
+    }
+
+    /* Menú desplegable - corregido */
+    .maintainers-menu {
+      position: relative;
+      margin-left: auto;
+    }
+
+    .menu-btn {
+      background: #071289;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      min-width: 120px;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: white;
+      min-width: 160px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      z-index: 1000;
+      border-radius: 8px;
+      margin-top: 5px;
+    }
+
+    .dropdown-content a {
+      color: #071289;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      border-bottom: 1px solid #eee;
+    }
+
+    .dropdown-content a:hover {
+      background: #f5f5f5;
+    }
+
+    .dropdown-content a:last-child {
+      border-bottom: none;
+    }
+
+    .maintainers-menu:hover .dropdown-content {
+      display: block;
     }
     
     .club-logo {
@@ -335,20 +386,22 @@ if (isset($_SESSION['id_socio'])) {
 <body>
   <!-- Header con menú desplegable para responsable -->
   <div class="header">
-    <div class="club-logo">
-      <?php if ($club_logo): ?>
-        <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
-      <?php else: ?>
-        ⚽
-      <?php endif; ?>
-    </div>
-    <div class="club-info">
-      <h1><?= htmlspecialchars($club_nombre) ?></h1>
-      <p>Tu cancha está lista</p>
+    <div style="display: flex; align-items: center; gap: 1.2rem;">
+      <div class="club-logo">
+        <?php if ($club_logo): ?>
+          <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+        <?php else: ?>
+          ⚽
+        <?php endif; ?>
+      </div>
+      <div class="club-info">
+        <h1><?= htmlspecialchars($club_nombre) ?></h1>
+        <p>Tu cancha está lista</p>
+      </div>
     </div>
     
     <!-- Menú desplegable solo para responsable -->
-    <?php if (isset($_SESSION['id_socio']) && $socio_actual && /* verificar si es responsable */ true): ?>
+    <?php if (isset($_SESSION['id_socio']) && $socio_actual): ?>
       <div class="maintainers-menu">
         <button class="menu-btn">Mantenedores ▼</button>
         <div class="dropdown-content">
