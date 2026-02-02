@@ -1,22 +1,58 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Obtener club desde URL
-$club_slug = $_GET['id_club'] ?? '';
+// Iniciar sesión si no está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Validar slug
-if (!$club_slug || strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
-    // Redirigir a inicio sin parámetros de error
+// Obtener club desde URL
+$club_slug_from_url = $_GET['id_club'] ?? '';
+
+// Validar slug básico
+if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
     header('Location: ../index.php');
     exit;
 }
 
-// Guardar en sesión para futuras referencias
-$_SESSION['current_club'] = $club_slug;
+// Buscar todos los clubs verificados
+$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
+$stmt_club->execute();
+$clubs = $stmt_club->fetchAll();
 
-// Obtener datos del club (simulado)
-$club_nombre = 'Tu Club';
+$club_id = null;
+$club_nombre = '';
 $club_logo = '';
+$club_slug = null;
+
+// Encontrar el club que coincide con el slug usando la lógica correcta
+foreach ($clubs as $c) {
+    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+    if ($generated_slug === $club_slug_from_url) {
+        $club_id = (int)$c['id_club'];
+        $club_nombre = $c['nombre'];
+        $club_logo = $c['logo'] ?? '';
+        $club_slug = $generated_slug;
+        break;
+    }
+}
+
+if (!$club_id) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Guardar en sesión
+$_SESSION['current_club'] = $club_slug;
+$_SESSION['club_id'] = $club_id;
+
+// Obtener datos del socio actual para verificar si el perfil está completo
+$socio_actual = null;
+if (isset($_SESSION['id_socio'])) {
+    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
+    $stmt_socio->execute([$_SESSION['id_socio']]);
+    $socio_actual = $stmt_socio->fetch();
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -28,7 +64,7 @@ $club_logo = '';
   <style>
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -248,26 +284,7 @@ $club_logo = '';
       </div>
     </div>
 
-    <?php
-    // Obtener datos del socio actual
-    $socio_actual = null;
-    if (isset($_SESSION['id_socio'])) {
-        $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
-        $stmt_socio->execute([$_SESSION['id_socio']]);
-        $socio_actual = $stmt_socio->fetch();
-    }
-    ?>
-
-    <?php
-    // Obtener datos del socio actual para verificar si el perfil está completo
-    $socio_actual = null;
-    if (isset($_SESSION['id_socio'])) {
-        $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
-        $stmt_socio->execute([$_SESSION['id_socio']]);
-        $socio_actual = $stmt_socio->fetch();
-    }
-    ?>
-
+    <!-- Mensaje de bienvenida para socio fundador -->
     <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
       <div class="welcome-message">
         <h3>👋 ¡Bienvenido, Responsable!</h3>
