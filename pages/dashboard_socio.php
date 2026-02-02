@@ -332,7 +332,7 @@ if (isset($_SESSION['id_socio'])) {
       <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
       
       <?php
-      $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+      $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
       ?>
       
       <div class="qr-code" id="qrCode"></div>
