@@ -840,6 +840,42 @@ $_SESSION['visited_index'] = true;
       }, 100);
     });
   });
+
+  // Registrar PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('SW registered: ', registration);
+        })
+        .catch(registrationError => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+
+  // Solicitar permiso para notificaciones
+  function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      return;
+    }
+    
+    if (Notification.permission === 'granted') {
+      subscribeToPush();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          subscribeToPush();
+        }
+      });
+    }
+  }
+
+  // Suscribir al servicio de push
+  function subscribeToPush() {
+    // Aquí integrarías con Firebase Cloud Messaging o similar
+    console.log('Usuario suscrito a notificaciones');
+  }
 </script>
 </body>
 </html>

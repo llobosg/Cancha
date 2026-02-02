@@ -369,6 +369,18 @@ if (isset($_SESSION['id_socio'])) {
     .maintainers-menu:hover .dropdown-content {
       display: block;
     }
+    /* Añadir al final de tus estilos */
+    .dashboard-container {
+      text-align: center;
+    }
+
+    .header {
+      text-align: left;
+    }
+
+    .stats-grid {
+      justify-content: center;
+    }
 </style>
 
 <script>
@@ -385,94 +397,32 @@ if (isset($_SESSION['id_socio'])) {
 </head>
 <body>
   <div class="dashboard-container">
-    <!-- Header con menú desplegable para responsable -->
-    <div class="header">
-      <div style="display: flex; align-items: center; gap: 1.2rem;">
-        <div class="club-logo">
-          <?php if ($club_logo): ?>
-            <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
-          <?php else: ?>
-            ⚽
-          <?php endif; ?>
-        </div>
-        <div class="club-info">
-          <h1><?= htmlspecialchars($club_nombre) ?></h1>
-          <p>Tu cancha está lista</p>
-        </div>
+  <!-- Header con menú desplegable para responsable -->
+  <div class="header">
+    <div style="display: flex; align-items: center; gap: 1.2rem;">
+      <div class="club-logo">
+        <?php if ($club_logo): ?>
+          <img src="uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+        <?php else: ?>
+          ⚽
+        <?php endif; ?>
       </div>
-      
-      <!-- Menú desplegable solo para responsable -->
-      <?php if (isset($_SESSION['id_socio']) && $socio_actual): ?>
-        <div class="maintainers-menu">
-          <button class="menu-btn">Mantenedores ▼</button>
-          <div class="dropdown-content">
-            <a href="#" onclick="openPuestosModal()">Puestos</a>
-            <a href="#" onclick="openEventosModal()">Eventos</a>
-          </div>
-        </div>
-      <?php endif; ?>
+      <div class="club-info">
+        <h1><?= htmlspecialchars($club_nombre) ?></h1>
+        <p>Tu cancha está lista</p>
+      </div>
     </div>
-
-    <!-- Mensaje de bienvenida para socio fundador -->
-    <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
-      <div class="welcome-message">
-        <h3>👋 ¡Bienvenido, Responsable!</h3>
-        <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
-        <ul>
-          <li>📞 Teléfono de contacto</li>
-          <li>🏠 Dirección completa</li>
-          <li>👤 Información adicional</li>
-        </ul>
-        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
-          Completar mi perfil ahora
-        </a>
+    
+    <!-- Menú desplegable solo para responsable -->
+    <?php if (isset($_SESSION['id_socio'])): ?>
+      <div class="maintainers-menu">
+        <button class="menu-btn">Mantenedores ▼</button>
+        <div class="dropdown-content">
+          <a href="#" onclick="openPuestosModal()">Puestos</a>
+          <a href="#" onclick="openEventosModal()">Eventos</a>
+        </div>
       </div>
     <?php endif; ?>
-
-    <!-- Estadísticas -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <h3>Socios activos</h3>
-        <div class="number">24</div>
-      </div>
-      <div class="stat-card">
-        <h3>Eventos</h3>
-        <div class="number">8</div>
-      </div>
-      <div class="stat-card">
-        <h3>Próximo partido</h3>
-        <div class="number">Sáb 15:00</div>
-      </div>
-    </div>
-
-    <!-- Acciones -->
-    <div class="actions">
-      <h2>Acciones rápidas</h2>
-      <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_slug ?>'">Crear convocatoria</button>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
-        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
-      </div>
-    </div>
-
-    <!-- Share section -->
-    <div class="share-section">
-      <h3>📱 Comparte tu club</h3>
-      <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
-      
-      <?php
-      $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
-      ?>
-      
-      <div class="qr-code" id="qrCode"></div>
-      <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
-      <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
-    </div>
-
-    <!-- Cerrar sesión -->
-    <div class="logout">
-      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
-    </div>
   </div>
 
   <!-- Scripts aquí -->
@@ -513,6 +463,42 @@ if (isset($_SESSION['id_socio'])) {
 
     function openEventosModal() {
       window.location.href = 'mantenedor_eventos.php?club=<?= htmlspecialchars($club_slug) ?>';
+    }
+
+    // Registrar PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('SW registered: ', registration);
+          })
+          .catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+
+    // Solicitar permiso para notificaciones
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        return;
+      }
+      
+      if (Notification.permission === 'granted') {
+        subscribeToPush();
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            subscribeToPush();
+          }
+        });
+      }
+    }
+
+    // Suscribir al servicio de push
+    function subscribeToPush() {
+      // Aquí integrarías con Firebase Cloud Messaging o similar
+      console.log('Usuario suscrito a notificaciones');
     }
   </script>
 </body>
