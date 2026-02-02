@@ -384,33 +384,34 @@ if (isset($_SESSION['id_socio'])) {
 </script>
 </head>
 <body>
-  <!-- Header con menú desplegable para responsable -->
-  <div class="header">
-    <div style="display: flex; align-items: center; gap: 1.2rem;">
-      <div class="club-logo">
-        <?php if ($club_logo): ?>
-          <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
-        <?php else: ?>
-          ⚽
-        <?php endif; ?>
-      </div>
-      <div class="club-info">
-        <h1><?= htmlspecialchars($club_nombre) ?></h1>
-        <p>Tu cancha está lista</p>
-      </div>
-    </div>
-    
-    <!-- Menú desplegable solo para responsable -->
-    <?php if (isset($_SESSION['id_socio']) && $socio_actual): ?>
-      <div class="maintainers-menu">
-        <button class="menu-btn">Mantenedores ▼</button>
-        <div class="dropdown-content">
-          <a href="#" onclick="openPuestosModal()">Puestos</a>
-          <a href="#" onclick="openEventosModal()">Eventos</a>
+  <div class="dashboard-container">
+    <!-- Header con menú desplegable para responsable -->
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 1.2rem;">
+        <div class="club-logo">
+          <?php if ($club_logo): ?>
+            <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+          <?php else: ?>
+            ⚽
+          <?php endif; ?>
+        </div>
+        <div class="club-info">
+          <h1><?= htmlspecialchars($club_nombre) ?></h1>
+          <p>Tu cancha está lista</p>
         </div>
       </div>
-    <?php endif; ?>
-  </div>
+      
+      <!-- Menú desplegable solo para responsable -->
+      <?php if (isset($_SESSION['id_socio']) && $socio_actual): ?>
+        <div class="maintainers-menu">
+          <button class="menu-btn">Mantenedores ▼</button>
+          <div class="dropdown-content">
+            <a href="#" onclick="openPuestosModal()">Puestos</a>
+            <a href="#" onclick="openEventosModal()">Eventos</a>
+          </div>
+        </div>
+      <?php endif; ?>
+    </div>
 
     <!-- Mensaje de bienvenida para socio fundador -->
     <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
@@ -460,20 +461,21 @@ if (isset($_SESSION['id_socio'])) {
       <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
       
       <?php
-      $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
+      $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
       ?>
       
       <div class="qr-code" id="qrCode"></div>
-      <div class="share-link" id="shareLink" style="color: #0c0874ff;"><?= htmlspecialchars($share_url) ?></div>
+      <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
       <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
     </div>
 
     <!-- Cerrar sesión -->
     <div class="logout">
-      <a href="index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
     </div>
   </div>
 
+  <!-- Scripts aquí -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     // Generar QR
@@ -503,6 +505,14 @@ if (isset($_SESSION['id_socio'])) {
     function limpiarSesion() {
       localStorage.removeItem('cancha_session');
       localStorage.removeItem('cancha_club');
+    }
+
+    function openPuestosModal() {
+      window.location.href = 'mantenedor_puestos.php?club=<?= htmlspecialchars($club_slug) ?>';
+    }
+
+    function openEventosModal() {
+      window.location.href = 'mantenedor_eventos.php?club=<?= htmlspecialchars($club_slug) ?>';
     }
   </script>
 </body>
