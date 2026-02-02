@@ -266,23 +266,102 @@ if (isset($_SESSION['id_socio'])) {
       cursor: pointer;
       margin-top: 0.5rem;
     }
+
+    .maintainers-menu {
+      position: relative;
+      margin-left: auto;
+    }
+
+    .menu-btn {
+      background: #071289;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: white;
+      min-width: 160px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      z-index: 1000;
+      border-radius: 8px;
+      margin-top: 5px;
+    }
+
+    .dropdown-content a {
+      color: #071289;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      border-bottom: 1px solid #eee;
+    }
+
+    .dropdown-content a:hover {
+      background: #f5f5f5;
+    }
+
+    .dropdown-content a:last-child {
+      border-bottom: none;
+    }
+
+    .maintainers-menu:hover .dropdown-content {
+      display: block;
+    }
   </style>
+
+
+  border-bottom: none;
+}
+
+.maintainers-menu:hover .dropdown-content {
+  display: block;
+}
+</style>
+
+<script>
+  function openPuestosModal() {
+    // Abrir submodal de puestos
+    window.location.href = 'mantenedor_puestos.php?club=<?= htmlspecialchars($club_slug) ?>';
+  }
+
+  function openEventosModal() {
+    // Abrir submodal de eventos
+    window.location.href = 'mantenedor_eventos.php?club=<?= htmlspecialchars($club_slug) ?>';
+  }
+</script>
 </head>
 <body>
-  <div class="dashboard-container">
-    <div class="header">
-      <div class="club-logo">
-        <?php if ($club_logo): ?>
-          <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
-        <?php else: ?>
-          ⚽
-        <?php endif; ?>
-      </div>
-      <div class="club-info">
-        <h1><?= htmlspecialchars($club_nombre) ?></h1>
-        <p>Tu cancha está lista</p>
-      </div>
+  <!-- Header con menú desplegable para responsable -->
+  <div class="header">
+    <div class="club-logo">
+      <?php if ($club_logo): ?>
+        <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+      <?php else: ?>
+        ⚽
+      <?php endif; ?>
     </div>
+    <div class="club-info">
+      <h1><?= htmlspecialchars($club_nombre) ?></h1>
+      <p>Tu cancha está lista</p>
+    </div>
+    
+    <!-- Menú desplegable solo para responsable -->
+    <?php if (isset($_SESSION['id_socio']) && $socio_actual && /* verificar si es responsable */ true): ?>
+      <div class="maintainers-menu">
+        <button class="menu-btn">Mantenedores ▼</button>
+        <div class="dropdown-content">
+          <a href="#" onclick="openPuestosModal()">Puestos</a>
+          <a href="#" onclick="openEventosModal()">Eventos</a>
+        </div>
+      </div>
+    <?php endif; ?>
+  </div>
 
     <!-- Mensaje de bienvenida para socio fundador -->
     <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
