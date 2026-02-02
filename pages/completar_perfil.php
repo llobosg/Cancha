@@ -414,7 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
         <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
         <div class="form-group"><label for="celular">Celular *</label></div>
-        <div class="form-group"><input type="tel" id="celular" name="celular" required></div>
+        <div class="form-group"><input style="width: 20ch;" type="tel" id="celular" name="celular" required></div>
 
         <!-- Fila 2 -->
         <div class="form-group"><label for="genero">Género</label></div>
@@ -443,13 +443,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Fila 3 -->
         <div class="form-group"><label for="id_puesto">Puesto</label></div>
         <div class="form-group">
-          <select style="width: 25ch;" id="id_puesto" name="id_puesto">
+          <select style="width: 20ch;" id="id_puesto" name="id_puesto">
             <option value="">Cargando puestos...</option>
           </select>
         </div>
         <div class="form-group"><label for="habilidad">Habilidad</label></div>
         <div class="form-group">
-          <select id="habilidad" name="habilidad">
+          <select style="width: 20ch;" id="habilidad" name="habilidad">
             <option value="">Seleccionar</option>
             <option value="Básica">Básica</option>
             <option value="Intermedia">Intermedia</option>
