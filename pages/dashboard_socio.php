@@ -312,16 +312,12 @@ if (isset($_SESSION['id_socio'])) {
 
     .maintainers-menu:hover .dropdown-content {
       display: block;
+      border-bottom: none;
+    } 
+
+    .maintainers-menu:hover .dropdown-content {
+      display: block;
     }
-  </style>
-
-
-  border-bottom: none;
-}
-
-.maintainers-menu:hover .dropdown-content {
-  display: block;
-}
 </style>
 
 <script>
