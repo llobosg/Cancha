@@ -61,6 +61,7 @@ if (isset($_SESSION['id_socio'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | Cancha</title>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="manifest" href="/manifest.json">
   <style>
     body {
       background: 
@@ -78,9 +79,9 @@ if (isset($_SESSION['id_socio'])) {
       max-width: 1200px;
       margin: 0 auto;
       padding: 2rem;
+      text-align: center;
     }
     
-    /* Header - mantener el diseño original */
     .header {
       display: flex;
       justify-content: space-between;
@@ -88,56 +89,7 @@ if (isset($_SESSION['id_socio'])) {
       margin-bottom: 2.5rem;
       padding-bottom: 1rem;
       border-bottom: 2px solid rgba(255,255,255,0.3);
-    }
-
-    /* Menú desplegable - corregido */
-    .maintainers-menu {
-      position: relative;
-      margin-left: auto;
-    }
-
-    .menu-btn {
-      background: #071289;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      min-width: 120px;
-    }
-
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      top: 100%;
-      background: white;
-      min-width: 160px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      z-index: 1000;
-      border-radius: 8px;
-      margin-top: 5px;
-    }
-
-    .dropdown-content a {
-      color: #071289;
-      padding: 12px 16px;
-      text-decoration: none;
-      display: block;
-      border-bottom: 1px solid #eee;
-    }
-
-    .dropdown-content a:hover {
-      background: #f5f5f5;
-    }
-
-    .dropdown-content a:last-child {
-      border-bottom: none;
-    }
-
-    .maintainers-menu:hover .dropdown-content {
-      display: block;
+      text-align: left;
     }
     
     .club-logo {
@@ -204,6 +156,7 @@ if (isset($_SESSION['id_socio'])) {
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1.5rem;
       margin-bottom: 2.5rem;
+      justify-content: center;
     }
     
     .stat-card {
@@ -318,9 +271,9 @@ if (isset($_SESSION['id_socio'])) {
       margin-top: 0.5rem;
     }
 
+    /* Menú desplegable */
     .maintainers-menu {
       position: relative;
-      margin-left: auto;
     }
 
     .menu-btn {
@@ -331,12 +284,14 @@ if (isset($_SESSION['id_socio'])) {
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
+      min-width: 120px;
     }
 
     .dropdown-content {
       display: none;
       position: absolute;
       right: 0;
+      top: 100%;
       background: white;
       min-width: 160px;
       box-shadow: 0 8px 16px rgba(0,0,0,0.2);
@@ -363,69 +318,101 @@ if (isset($_SESSION['id_socio'])) {
 
     .maintainers-menu:hover .dropdown-content {
       display: block;
-      border-bottom: none;
-    } 
-
-    .maintainers-menu:hover .dropdown-content {
-      display: block;
     }
-    /* Añadir al final de tus estilos */
-    .dashboard-container {
-      text-align: center;
-    }
-
-    .header {
-      text-align: left;
-    }
-
-    .stats-grid {
-      justify-content: center;
-    }
-</style>
-
-<script>
-  function openPuestosModal() {
-    // Abrir submodal de puestos
-    window.location.href = 'mantenedor_puestos.php?club=<?= htmlspecialchars($club_slug) ?>';
-  }
-
-  function openEventosModal() {
-    // Abrir submodal de eventos
-    window.location.href = 'mantenedor_eventos.php?club=<?= htmlspecialchars($club_slug) ?>';
-  }
-</script>
+  </style>
 </head>
 <body>
   <div class="dashboard-container">
-  <!-- Header con menú desplegable para responsable -->
-  <div class="header">
-    <div style="display: flex; align-items: center; gap: 1.2rem;">
-      <div class="club-logo">
-        <?php if ($club_logo): ?>
-          <img src="uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
-        <?php else: ?>
-          ⚽
-        <?php endif; ?>
-      </div>
-      <div class="club-info">
-        <h1><?= htmlspecialchars($club_nombre) ?></h1>
-        <p>Tu cancha está lista</p>
-      </div>
-    </div>
-    
-    <!-- Menú desplegable solo para responsable -->
-    <?php if (isset($_SESSION['id_socio'])): ?>
-      <div class="maintainers-menu">
-        <button class="menu-btn">Mantenedores ▼</button>
-        <div class="dropdown-content">
-          <a href="#" onclick="openPuestosModal()">Puestos</a>
-          <a href="#" onclick="openEventosModal()">Eventos</a>
+    <!-- Header con menú desplegable para responsable -->
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 1.2rem;">
+        <div class="club-logo">
+          <?php if ($club_logo): ?>
+            <img src="uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+          <?php else: ?>
+            ⚽
+          <?php endif; ?>
+        </div>
+        <div class="club-info">
+          <h1><?= htmlspecialchars($club_nombre) ?></h1>
+          <p>Tu cancha está lista</p>
         </div>
       </div>
+      
+      <!-- Menú desplegable solo para usuarios con sesión -->
+      <?php if (isset($_SESSION['id_socio'])): ?>
+        <div class="maintainers-menu">
+          <button class="menu-btn">Mantenedores ▼</button>
+          <div class="dropdown-content">
+            <a href="#" onclick="openPuestosModal()">Puestos</a>
+            <a href="#" onclick="openEventosModal()">Eventos</a>
+          </div>
+        </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Mensaje de bienvenida para socio fundador -->
+    <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
+      <div class="welcome-message">
+        <h3>👋 ¡Bienvenido, Responsable!</h3>
+        <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+        <ul>
+          <li>📞 Teléfono de contacto</li>
+          <li>🏠 Dirección completa</li>
+          <li>👤 Información adicional</li>
+        </ul>
+        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
+          Completar mi perfil ahora
+        </a>
+      </div>
     <?php endif; ?>
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Socios activos</h3>
+        <div class="number">24</div>
+      </div>
+      <div class="stat-card">
+        <h3>Eventos</h3>
+        <div class="number">8</div>
+      </div>
+      <div class="stat-card">
+        <h3>Próximo partido</h3>
+        <div class="number">Sáb 15:00</div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="actions">
+      <h2>Acciones rápidas</h2>
+      <div class="action-buttons">
+        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_slug ?>'">Crear convocatoria</button>
+        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
+        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
+      </div>
+    </div>
+
+    <!-- Share section -->
+    <div class="share-section">
+      <h3>📱 Comparte tu club</h3>
+      <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
+      
+      <?php
+      $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+      ?>
+      
+      <div class="qr-code" id="qrCode"></div>
+      <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
+      <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
+    </div>
+
+    <!-- Cerrar sesión -->
+    <div class="logout">
+      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+    </div>
   </div>
 
-  <!-- Scripts aquí -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     // Generar QR
@@ -497,9 +484,11 @@ if (isset($_SESSION['id_socio'])) {
 
     // Suscribir al servicio de push
     function subscribeToPush() {
-      // Aquí integrarías con Firebase Cloud Messaging o similar
       console.log('Usuario suscrito a notificaciones');
     }
+
+    // Solicitar notificaciones al cargar
+    requestNotificationPermission();
   </script>
 </body>
 </html>
