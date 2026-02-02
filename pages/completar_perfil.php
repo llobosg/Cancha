@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     .form-container {
       width: 95%;
-      max-width: 600px;
+      max-width: 800px; /* ← Aumentado de 600px a 800px (33% más ancho) */
       background: white;
       padding: 2rem;
       border-radius: 14px;
