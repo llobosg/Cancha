@@ -342,7 +342,7 @@ if (isset($_SESSION['id_socio'])) {
 
     <!-- Cerrar sesión -->
     <div class="logout">
-      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+      <a href="index.php" onclick="limpiarSesion()">Cerrar sesión</a>
     </div>
   </div>
 
