@@ -12,7 +12,7 @@ if (!$club_slug) {
 }
 
 // Obtener todos los eventos
-$stmt = $pdo->query("SELECT id_evento, tipoevento, players FROM eventos ORDER BY tipoevento");
+$stmt = $pdo->query("SELECT id_evento, tipoevento, players FROM tipoeventos ORDER BY tipoevento");
 $eventos = $stmt->fetchAll();
 
 $error = '';

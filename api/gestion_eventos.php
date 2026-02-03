@@ -16,7 +16,7 @@ try {
     }
     switch ($action) {
         case 'insert':
-            $stmt = $pdo->prepare("INSERT INTO eventos (tipoevento, players) VALUES (?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO tipoeventos (tipoevento, players) VALUES (?, ?)");
             $stmt->execute([$tipoevento, $players]);
             break;
             
@@ -24,7 +24,7 @@ try {
             if (!$id_evento) {
                 throw new Exception('ID de evento requerido');
             }
-            $stmt = $pdo->prepare("UPDATE eventos SET tipoevento = ?, players = ? WHERE id_evento = ?");
+            $stmt = $pdo->prepare("UPDATE tipoeventos SET tipoevento = ?, players = ? WHERE id_evento = ?");
             $stmt->execute([$tipoevento, $players, $id_evento]);
             break;
             
@@ -32,7 +32,7 @@ try {
             if (!$id_evento) {
                 throw new Exception('ID de evento requerido');
             }
-            $stmt = $pdo->prepare("DELETE FROM eventos WHERE id_evento = ?");
+            $stmt = $pdo->prepare("DELETE FROM tipoeventos WHERE id_evento = ?");
             $stmt->execute([$id_evento]);
             break;
             
