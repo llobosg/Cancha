@@ -341,6 +341,7 @@ if (isset($_SESSION['id_socio'])) {
       
       <!-- Menú desplegable solo para usuarios con sesión -->
       <?php if (isset($_SESSION['id_socio'])): ?>
+        <!-- Menú desplegable siempre visible para testing -->
         <div class="maintainers-menu">
           <button class="menu-btn">Mantenedores ▼</button>
           <div class="dropdown-content">
