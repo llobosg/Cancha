@@ -355,6 +355,27 @@ $success = '';
     function closeEventoModal() {
       document.getElementById('eventoModal').style.display = 'none';
     }
+
+    function deleteEvento(id) {
+      if (confirm('¿Estás seguro de eliminar este evento?')) {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('id_evento', id);
+        
+        fetch('api/gestion_eventos.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            location.reload();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        });
+      }
+    }
     
     function saveEvento(event) {
       event.preventDefault();
@@ -381,27 +402,6 @@ $success = '';
         console.error('Error:', error);
         alert('Error al guardar el evento');
       });
-    }
-    
-    function deleteEvento(id) {
-      if (confirm('¿Estás seguro de eliminar este evento?')) {
-        const formData = new FormData();
-        formData.append('action', 'delete');
-        formData.append('id_evento', id);
-        
-        fetch('api/gestion_eventos.php', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            location.reload();
-          } else {
-            alert('Error: ' + data.message);
-          }
-        });
-      }
     }
     
     // Cerrar modal al hacer clic fuera
