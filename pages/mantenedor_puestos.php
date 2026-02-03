@@ -338,7 +338,7 @@ $success = '';
       formData.append('id_puesto', document.getElementById('puestoId').value);
       formData.append('puesto', document.getElementById('puestoNombre').value);
       
-      fetch('api/gestion_puestos.php', {
+      fetch('/../api/gestion_puestos.php', {
         method: 'POST',
         body: formData
       })
@@ -362,7 +362,7 @@ $success = '';
         formData.append('action', 'delete');
         formData.append('id_puesto', id);
         
-        fetch('api/gestion_puestos.php', {
+        fetch('/../api/gestion_puestos.php', {
           method: 'POST',
           body: formData
         })
