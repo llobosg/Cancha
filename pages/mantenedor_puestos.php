@@ -223,7 +223,7 @@ $success = '';
     <!-- Sección superior: Buscador inteligente -->
     <div class="section-title">Buscar Puesto</div>
     <div class="search-section">
-      <input type="text" id="searchPuesto" class="search-input" placeholder="Escribe para buscar puestos..." onkeyup="searchPuestos()">
+      <input style="color: #040942ff;" type="text" id="searchPuesto" class="search-input" placeholder="Escribe para buscar puestos..." onkeyup="searchPuestos()">
       <div id="searchResults" class="search-results"></div>
     </div>
     
@@ -238,14 +238,14 @@ $success = '';
       <table>
         <thead>
           <tr>
-            <th style="color: #040942ff;">Puesto</th>
+            <th>Puesto</th>
             <th>Acción</th>
           </tr>
         </thead>
         <tbody>
           <?php foreach ($puestos as $puesto): ?>
           <tr>
-            <td><?= htmlspecialchars($puesto['puesto']) ?></td>
+            <td style="color: #040942ff;"><?= htmlspecialchars($puesto['puesto']) ?></td>
             <td class="action-icons">
               <span class="action-icon" onclick="openPuestoModal('edit', <?= $puesto['id_puesto'] ?>, '<?= htmlspecialchars($puesto['puesto']) ?>')" title="Editar">✏️</span>
               <span class="action-icon" onclick="deletePuesto(<?= $puesto['id_puesto'] ?>)" title="Eliminar">🗑️</span>
