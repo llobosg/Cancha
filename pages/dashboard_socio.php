@@ -340,7 +340,6 @@ if (isset($_SESSION['id_socio'])) {
       </div>
       
       <!-- Menú desplegable solo para usuarios con sesión -->
-      <?php if (isset($_SESSION['id_socio'])): ?>
         <!-- Menú desplegable siempre visible para testing -->
         <div class="maintainers-menu">
           <button class="menu-btn">Mantenedores ▼</button>
@@ -349,7 +348,6 @@ if (isset($_SESSION['id_socio'])) {
             <a href="#" onclick="openEventosModal()">Eventos</a>
           </div>
         </div>
-      <?php endif; ?>
     </div>
 
     <!-- Mensaje de bienvenida para socio fundador -->
