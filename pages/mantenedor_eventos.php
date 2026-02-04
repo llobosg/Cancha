@@ -340,16 +340,15 @@ $success = '';
     }
     
     function openEventoModal(action, id = null, tipo = '', players = '') {
-      currentAction = action;
-      currentEventoId = id;
-      
-      document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
-      document.getElementById('eventoId').value = id || '';
-      document.getElementById('eventoTipo').value = tipo;
-      document.getElementById('eventoPlayers').value = players;
-      document.getElementById('actionType').value = action;
-      
-      document.getElementById('eventoModal').style.display = 'flex';
+    // Actualizar el valor del campo oculto action
+    document.getElementById('actionType').value = action;
+    
+    document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
+    document.getElementById('eventoId').value = id || '';
+    document.getElementById('eventoTipo').value = tipo;
+    document.getElementById('eventoPlayers').value = players;
+    
+    document.getElementById('eventoModal').style.display = 'flex';
     }
     
     function closeEventoModal() {
@@ -378,30 +377,32 @@ $success = '';
     }
     
     function saveEvento(event) {
-      event.preventDefault();
-      
-      const formData = new FormData();
-      formData.append('action', document.getElementById('actionType').value);
-      formData.append('id_tipoevento', document.getElementById('eventoId').value);
-      formData.append('tipoevento', document.getElementById('eventoTipo').value);
-      formData.append('players', document.getElementById('eventoPlayers').value);
-      
-      fetch('/../api/gestion_eventos.php', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          location.reload();
-        } else {
-          alert('Error: ' + data.message);
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Error al guardar el evento');
-      });
+        event.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('action', document.getElementById('actionType').value);
+        formData.append('id_tipoevento', document.getElementById('eventoId').value);
+        formData.append('tipoevento', document.getElementById('eventoTipo').value);
+        formData.append('players', document.getElementById('eventoPlayers').value);
+        
+        console.log('Enviando acción:', document.getElementById('actionType').value); // Debug
+        
+        fetch('api/gestion_eventos.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+            location.reload();
+            } else {
+            alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar el evento');
+        });
     }
     
     // Cerrar modal al hacer clic fuera
