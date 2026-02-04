@@ -263,17 +263,21 @@ $success = '';
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($eventos as $evento): ?>
-          <tr>
-            <td style="color: #040942ff;"><?= htmlspecialchars($evento['tipoevento']) ?></td>
-            <td style="color: #040942ff;"><?= htmlspecialchars($evento['players']) ?></td>
-            <td class="action-icons">
-              <span class="action-icon" onclick="openEventoModal('edit', <?= $evento['id_tipoevento'] ?>, '<?= htmlspecialchars($evento['tipoevento']) ?>', '<?= htmlspecialchars($evento['players']) ?>')" title="Editar">✏️</span>
-              <span class="action-icon" onclick="deleteEvento(<?= $evento['id_tipoevento'] ?>)" title="Eliminar">🗑️</span>
-            </td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
+            <?php foreach ($eventos as $evento): ?>
+            <tr>
+                <td style="color: #040942ff;"><?= htmlspecialchars($evento['tipoevento']) ?></td>
+                <td style="color: #040942ff;"><?= htmlspecialchars($evento['players']) ?></td>
+                <td class="action-icons">
+                <span class="action-icon" 
+                        onclick="openEventoModal('edit', <?= (int)$evento['id_tipoevento'] ?>, <?= json_encode($evento['tipoevento']) ?>, <?= json_encode($evento['players']) ?>)" 
+                        title="Editar">✏️</span>
+                <span class="action-icon" 
+                        onclick="deleteEvento(<?= (int)$evento['id_tipoevento'] ?>)" 
+                        title="Eliminar">🗑️</span>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
       </table>
     </div>
   </div>
@@ -325,7 +329,7 @@ $success = '';
       
       if (filtered.length > 0) {
         resultsDiv.innerHTML = filtered.map(e => 
-          `<div style="color: #040942ff;" class="search-result-item" onclick="selectEvento(${e.id_tipoevento}, '${e.tipoevento}', '${e.players}')">${e.tipoevento} (${e.players} jugadores)</div>`
+        `<div style="color: #040942ff;" class="search-result-item" onclick="selectEvento(${e.id_tipoevento}, ${JSON.stringify(e.tipoevento)}, ${JSON.stringify(e.players)})">${e.tipoevento} (${e.players} jugadores)</div>`
         ).join('');
         resultsDiv.style.display = 'block';
       } else {
@@ -334,21 +338,21 @@ $success = '';
     }
     
     function selectEvento(id, tipo, players) {
-      openEventoModal('edit', id, tipo, players);
-      document.getElementById('searchEvento').value = '';
-      document.getElementById('searchResults').style.display = 'none';
+        openEventoModal('edit', id, tipo, players);
+        document.getElementById('searchEvento').value = '';
+        document.getElementById('searchResults').style.display = 'none';
     }
     
     function openEventoModal(action, id = null, tipo = '', players = '') {
-    // Actualizar el valor del campo oculto action
-    document.getElementById('actionType').value = action;
-    
-    document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
-    document.getElementById('eventoId').value = id || '';
-    document.getElementById('eventoTipo').value = tipo;
-    document.getElementById('eventoPlayers').value = players;
-    
-    document.getElementById('eventoModal').style.display = 'flex';
+        // Actualizar el valor del campo oculto action
+        document.getElementById('actionType').value = action;
+        
+        document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
+        document.getElementById('eventoId').value = id || '';
+        document.getElementById('eventoTipo').value = tipo;
+        document.getElementById('eventoPlayers').value = players;
+        
+        document.getElementById('eventoModal').style.display = 'flex';
     }
     
     function closeEventoModal() {
@@ -374,36 +378,36 @@ $success = '';
             }
             });
         }
-        }
+    }
 
-        function saveEvento(event) {
-            event.preventDefault();
+    function saveEvento(event) {
+        event.preventDefault();
             
-            const formData = new FormData();
-            formData.append('action', document.getElementById('actionType').value);
-            formData.append('id_tipoevento', document.getElementById('eventoId').value);
-            formData.append('tipoevento', document.getElementById('eventoTipo').value);
-            formData.append('players', document.getElementById('eventoPlayers').value);
+        const formData = new FormData();
+        formData.append('action', document.getElementById('actionType').value);
+        formData.append('id_tipoevento', document.getElementById('eventoId').value);
+        formData.append('tipoevento', document.getElementById('eventoTipo').value);
+        formData.append('players', document.getElementById('eventoPlayers').value);
             
-            console.log('Enviando acción:', document.getElementById('actionType').value);
+        console.log('Enviando acción:', document.getElementById('actionType').value);
             
         fetch('../api/gestion_eventos.php', {  // ← Cambiado a '../api/'
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
                 location.reload();
-                } else {
+            } else {
                 alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al guardar el evento');
-            });
-        }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar el evento');
+        });
+    }
     
     // Cerrar modal al hacer clic fuera
     window.onclick = function(event) {
