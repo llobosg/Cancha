@@ -356,54 +356,54 @@ $success = '';
     }
 
     function deleteEvento(id) {
-      if (confirm('¿Estás seguro de eliminar este evento?')) {
-        const formData = new FormData();
-        formData.append('action', 'delete');
-        formData.append('id_tipoevento', id);
-        
-        fetch('api/gestion_eventos.php', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            location.reload();
-          } else {
-            alert('Error: ' + data.message);
-          }
-        });
-      }
-    }
-    
-    function saveEvento(event) {
-        event.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('action', document.getElementById('actionType').value);
-        formData.append('id_tipoevento', document.getElementById('eventoId').value);
-        formData.append('tipoevento', document.getElementById('eventoTipo').value);
-        formData.append('players', document.getElementById('eventoPlayers').value);
-        
-        console.log('Enviando acción:', document.getElementById('actionType').value); // Debug
-        
-       fetch('api/gestion_eventos.php', {
+        if (confirm('¿Estás seguro de eliminar este evento?')) {
+            const formData = new FormData();
+            formData.append('action', 'delete');
+            formData.append('id_tipoevento', id);
+            
+            fetch('../api/gestion_eventos.php', {  // ← Cambiado a '../api/'
             method: 'POST',
             body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+            })
+            .then(response => response.json())
+            .then(data => {
             if (data.success) {
-            location.reload();
+                location.reload();
             } else {
-            alert('Error: ' + data.message);
+                alert('Error: ' + data.message);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al guardar el evento');
-        });
-    }
+            });
+        }
+        }
+
+        function saveEvento(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('action', document.getElementById('actionType').value);
+            formData.append('id_tipoevento', document.getElementById('eventoId').value);
+            formData.append('tipoevento', document.getElementById('eventoTipo').value);
+            formData.append('players', document.getElementById('eventoPlayers').value);
+            
+            console.log('Enviando acción:', document.getElementById('actionType').value);
+            
+        fetch('../api/gestion_eventos.php', {  // ← Cambiado a '../api/'
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                location.reload();
+                } else {
+                alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al guardar el evento');
+            });
+        }
     
     // Cerrar modal al hacer clic fuera
     window.onclick = function(event) {
