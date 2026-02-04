@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '../includes/config.php';
+require_once __DIR__ . '/../includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -361,7 +361,7 @@ $success = '';
         formData.append('action', 'delete');
         formData.append('id_tipoevento', id);
         
-        fetch('../api/gestion_eventos.php', {
+        fetch('api/gestion_eventos.php', {
           method: 'POST',
           body: formData
         })
@@ -387,7 +387,7 @@ $success = '';
         
         console.log('Enviando acción:', document.getElementById('actionType').value); // Debug
         
-        fetch('..api/gestion_eventos.php', {
+       fetch('api/gestion_eventos.php', {
             method: 'POST',
             body: formData
         })
