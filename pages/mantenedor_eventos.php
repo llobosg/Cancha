@@ -12,7 +12,7 @@ if (!$club_slug) {
 }
 
 // Obtener todos los eventos
-$stmt = $pdo->query("SELECT id_evento, tipoevento, players FROM tipoeventos ORDER BY tipoevento");
+$stmt = $pdo->query("SELECT id_tipoevento, tipoevento, players FROM tipoeventos ORDER BY tipoevento");
 $eventos = $stmt->fetchAll();
 
 $error = '';
@@ -268,8 +268,8 @@ $success = '';
             <td><?= htmlspecialchars($evento['tipoevento']) ?></td>
             <td><?= htmlspecialchars($evento['players']) ?></td>
             <td class="action-icons">
-              <span class="action-icon" onclick="openEventoModal('edit', <?= $evento['id_evento'] ?>, '<?= htmlspecialchars($evento['tipoevento']) ?>', '<?= htmlspecialchars($evento['players']) ?>')" title="Editar">✏️</span>
-              <span class="action-icon" onclick="deleteEvento(<?= $evento['id_evento'] ?>)" title="Eliminar">🗑️</span>
+              <span class="action-icon" onclick="openEventoModal('edit', <?= $evento['id_tipoevento'] ?>, '<?= htmlspecialchars($evento['tipoevento']) ?>', '<?= htmlspecialchars($evento['players']) ?>')" title="Editar">✏️</span>
+              <span class="action-icon" onclick="deleteEvento(<?= $evento['id_tipoevento'] ?>)" title="Eliminar">🗑️</span>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -285,7 +285,7 @@ $success = '';
       <h2 id="modalTitle">Agregar Evento</h2>
       
       <form id="eventoForm" onsubmit="saveEvento(event)">
-        <input type="hidden" id="eventoId" name="id_evento">
+        <input type="hidden" id="eventoId" name="id_tipoevento">
         <input type="hidden" id="actionType" name="action" value="insert">
         
         <div class="form-group">
@@ -325,7 +325,7 @@ $success = '';
       
       if (filtered.length > 0) {
         resultsDiv.innerHTML = filtered.map(e => 
-          `<div class="search-result-item" onclick="selectEvento(${e.id_evento}, '${e.tipoevento}', '${e.players}')">${e.tipoevento} (${e.players} jugadores)</div>`
+          `<div class="search-result-item" onclick="selectEvento(${e.id_tipoevento}, '${e.tipoevento}', '${e.players}')">${e.tipoevento} (${e.players} jugadores)</div>`
         ).join('');
         resultsDiv.style.display = 'block';
       } else {
@@ -360,7 +360,7 @@ $success = '';
       if (confirm('¿Estás seguro de eliminar este evento?')) {
         const formData = new FormData();
         formData.append('action', 'delete');
-        formData.append('id_evento', id);
+        formData.append('id_tipoevento', id);
         
         fetch('api/gestion_eventos.php', {
           method: 'POST',
@@ -382,7 +382,7 @@ $success = '';
       
       const formData = new FormData();
       formData.append('action', document.getElementById('actionType').value);
-      formData.append('id_evento', document.getElementById('eventoId').value);
+      formData.append('id_tipoevento', document.getElementById('eventoId').value);
       formData.append('tipoevento', document.getElementById('eventoTipo').value);
       formData.append('players', document.getElementById('eventoPlayers').value);
       
