@@ -265,8 +265,8 @@ $success = '';
         <tbody>
           <?php foreach ($eventos as $evento): ?>
           <tr>
-            <td><?= htmlspecialchars($evento['tipoevento']) ?></td>
-            <td><?= htmlspecialchars($evento['players']) ?></td>
+            <td style="color: #040942ff;"><?= htmlspecialchars($evento['tipoevento']) ?></td>
+            <td style="color: #040942ff;"><?= htmlspecialchars($evento['players']) ?></td>
             <td class="action-icons">
               <span class="action-icon" onclick="openEventoModal('edit', <?= $evento['id_tipoevento'] ?>, '<?= htmlspecialchars($evento['tipoevento']) ?>', '<?= htmlspecialchars($evento['players']) ?>')" title="Editar">✏️</span>
               <span class="action-icon" onclick="deleteEvento(<?= $evento['id_tipoevento'] ?>)" title="Eliminar">🗑️</span>
@@ -325,7 +325,7 @@ $success = '';
       
       if (filtered.length > 0) {
         resultsDiv.innerHTML = filtered.map(e => 
-          `<div class="search-result-item" onclick="selectEvento(${e.id_tipoevento}, '${e.tipoevento}', '${e.players}')">${e.tipoevento} (${e.players} jugadores)</div>`
+          `<div style="color: #040942ff;" class="search-result-item" onclick="selectEvento(${e.id_tipoevento}, '${e.tipoevento}', '${e.players}')">${e.tipoevento} (${e.players} jugadores)</div>`
         ).join('');
         resultsDiv.style.display = 'block';
       } else {
