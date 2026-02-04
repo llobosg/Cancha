@@ -269,7 +269,7 @@ $success = '';
                 <td style="color: #040942ff;"><?= htmlspecialchars($evento['players']) ?></td>
                 <td class="action-icons">
                 <span class="action-icon" 
-                        onclick="openEventoModal('edit', <?= (int)$evento['id_tipoevento'] ?>, <?= json_encode($evento['tipoevento']) ?>, <?= json_encode($evento['players']) ?>)" 
+                        onclick="openEventoModal('edit', <?= (int)$evento['id_tipoevento'] ?>, '<?= addslashes(htmlspecialchars($evento['tipoevento'])) ?>', '<?= addslashes(htmlspecialchars($evento['players'])) ?>')" 
                         title="Editar">✏️</span>
                 <span class="action-icon" 
                         onclick="deleteEvento(<?= (int)$evento['id_tipoevento'] ?>)" 
