@@ -361,7 +361,7 @@ $success = '';
         formData.append('action', 'delete');
         formData.append('id_tipoevento', id);
         
-        fetch('/../api/gestion_eventos.php', {
+        fetch('../api/gestion_eventos.php', {
           method: 'POST',
           body: formData
         })
@@ -387,7 +387,7 @@ $success = '';
         
         console.log('Enviando acción:', document.getElementById('actionType').value); // Debug
         
-        fetch('api/gestion_eventos.php', {
+        fetch('..api/gestion_eventos.php', {
             method: 'POST',
             body: formData
         })
