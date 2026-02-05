@@ -2,34 +2,41 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
-// Logging detallado
 error_log("=== DEBUG GESTION EVENTOS ===");
-error_log("Método: " . $_SERVER['REQUEST_METHOD']);
 error_log("POST  " . print_r($_POST, true));
 
 try {
-    $action = $_POST['action'] ?? '';
-    // Limpiar espacios en blanco y caracteres invisibles
-    $action = trim($action);
+    $action_raw = $_POST['action'] ?? '';
     
-    error_log("Acción recibida (limpia): '$action'");
-    error_log("Longitud de acción: " . strlen($action));
+    // Mostrar la acción cruda con todos sus caracteres
+    error_log("Acción RAW: '$action_raw'");
+    error_log("Longitud RAW: " . strlen($action_raw));
     
-    // Validar acción primero
-    if (!in_array($action, ['insert', 'update', 'delete'])) {
-        // Mostrar todos los caracteres para debug
-        $action_debug = '';
-        for ($i = 0; $i < strlen($action); $i++) {
-            $action_debug .= ord($action[$i]) . ' ';
-        }
-        error_log("Códigos ASCII de acción: $action_debug");
-        
-        $error_msg = "Acción no válida: '$action'";
-        error_log("ERROR: " . $error_msg);
-        throw new Exception($error_msg);
+    // Convertir cada caracter a su código ASCII
+    $ascii_codes = [];
+    for ($i = 0; $i < strlen($action_raw); $i++) {
+        $ascii_codes[] = ord($action_raw[$i]);
+    }
+    error_log("Códigos ASCII: " . implode(', ', $ascii_codes));
+    
+    // Limpiar la acción: eliminar espacios, retornos, tabs, etc.
+    $action_clean = preg_replace('/[\x00-\x1F\x7F]/', '', trim($action_raw));
+    error_log("Acción LIMPIA: '$action_clean'");
+    error_log("Longitud LIMPIA: " . strlen($action_clean));
+    
+    // Verificar contra acciones válidas
+    $valid_actions = ['insert', 'update', 'delete'];
+    $is_valid = in_array($action_clean, $valid_actions);
+    
+    error_log("¿Es válido? " . ($is_valid ? 'SÍ' : 'NO'));
+    error_log("Acciones válidas: " . implode(', ', $valid_actions));
+    
+    if (!$is_valid) {
+        throw new Exception("Acción no válida: '$action_clean' (raw: '$action_raw')");
     }
     
-    switch ($action) {
+    // Resto del código igual...
+    switch ($action_clean) {
         case 'insert':
         case 'update':
             $tipoevento = $_POST['tipoevento'] ?? '';
@@ -39,7 +46,7 @@ try {
                 throw new Exception('Todos los campos son requeridos');
             }
             
-            if ($action === 'insert') {
+            if ($action_clean === 'insert') {
                 $stmt = $pdo->prepare("INSERT INTO tipoeventos (tipoevento, players) VALUES (?, ?)");
                 $stmt->execute([$tipoevento, $players]);
             } else {
@@ -66,7 +73,7 @@ try {
     
 } catch (Exception $e) {
     $error_msg = $e->getMessage();
-    error_log("EXCEPCIÓN LANZADA: " . $error_msg);
+    error_log("EXCEPCIÓN: " . $error_msg);
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $error_msg]);
 }
