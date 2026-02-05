@@ -233,7 +233,7 @@ $success = '';
 </head>
 <body>
   <div class="container">
-    <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>" class="back-btn">← Volver al Dashboard</a>
+    <a href="ceo_dashboard.php" class="back-btn">← Volver al Dashboard</a>
     
     <h1>Mantenedor de Eventos</h1>
     
