@@ -438,7 +438,9 @@ $_SESSION['visited_index'] = true;
 <!-- Contenido principal -->
 <div class="hero">
   <h1 class="title-cancha">CANCHA ⚽</h1>
-  <p class="subtitle">Tu club deportivo, sin fricción</p>
+  <!-- En index.php, cerca del título "Cancha" -->
+  <h1>Cancha <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
+  <p class="subtitle">Tu club a un click</p>
 
   <!-- Sección multimedia principal -->
   <div class="media-main">

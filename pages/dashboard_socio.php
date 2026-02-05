@@ -338,22 +338,11 @@ if (isset($_SESSION['id_socio'])) {
           <p>Tu cancha está lista</p>
         </div>
       </div>
-      
-      <!-- Menú desplegable solo para usuarios con sesión -->
-        <!-- Menú desplegable siempre visible para testing -->
-        <div class="maintainers-menu">
-          <button class="menu-btn">Mantenedores ▼</button>
-          <div class="dropdown-content">
-            <a href="#" onclick="openPuestosModal()">Puestos</a>
-            <a href="#" onclick="openEventosModal()">Eventos</a>
-          </div>
-        </div>
-    </div>
 
     <!-- Mensaje de bienvenida para socio fundador -->
     <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
       <div class="welcome-message">
-        <h3>👋 ¡Bienvenido, Responsable!</h3>
+        <h3>👋 ¡Bienvenido !</h3>
         <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
         <ul>
           <li>📞 Teléfono de contacto</li>
