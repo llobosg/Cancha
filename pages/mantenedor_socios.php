@@ -11,6 +11,14 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
 $is_socio = isset($_SESSION['id_socio']) && !empty($_SESSION['id_socio']);
 $can_edit = $is_ceo || $is_socio;
 
+// Si no hay sesión pero se pide perfil propio
+if (!$can_edit && isset($_GET['mi_perfil'])) {
+    if (isset($_SESSION['id_socio']) && !empty($_SESSION['id_socio'])) {
+        $is_socio = true;
+        $can_edit = true;
+    }
+}
+
 if (!$can_edit) {
     header('Location: ../index.php');
     exit;

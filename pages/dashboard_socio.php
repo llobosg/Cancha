@@ -354,8 +354,27 @@ if (isset($_SESSION['id_socio'])) {
       </div>
     </div>
 
-    <!-- Botón Actualizar Perfil -->
-    <a href="mantenedor_socios.php" class="update-profile-btn"> 👤 Actualizar mi perfil</a>
+    <!-- Botones condicionales según datos_completos -->
+    <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
+      <div class="welcome-message">
+        <h3>👋 ¡Bienvenido!</h3>
+        <p>Te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+        <ul>
+          <li>📞 Teléfono de contacto</li>
+          <li>🏠 Dirección completa</li>
+          <li>👤 Información adicional</li>
+        </ul>
+        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
+          Completar mi perfil ahora
+        </a>
+      </div>
+    <?php else: ?>
+      <div style="text-align: center; margin: 2rem 0;">
+        <a href="mantenedor_socios.php" class="update-profile-btn">
+          👤 Actualizar mi perfil
+        </a>
+      </div>
+    <?php endif; ?>
 
     <!-- Share section -->
     <div class="share-section">
