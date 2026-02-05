@@ -230,7 +230,7 @@ $comunas = $stmt_comunas->fetchAll();
 <body>
   <div class="dashboard-container">
     <div class="header">
-      <div style="color: #0f056dff class="logo-ceo">👑 CEO...Hola Luis !!</div>
+      <div style="color: #0f056dff;" class="logo-ceo">👑 CEO...Hola Luis ⚽!!</div>
       <div>
         <a href="ceo_logout.php" style="color: #ffcc00; text-decoration: none;">Cerrar sesión</a>
       </div>
