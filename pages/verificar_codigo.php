@@ -255,7 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($success): ?>
       <div class="success success-message">
         <h3>✅ ¡Club verificado exitosamente!</h3>
-        <p>Tu club está ahora activo y puedes acceder al dashboard.</p>
+        <p>Tu club está activo y puedes acceder a tu Cancha.</p>
         <button class="dashboard-btn" onclick="window.location.href='dashboard_socio.php?id_club=<?= htmlspecialchars($club_slug) ?>'">
           Ir al Dashboard
         </button>
