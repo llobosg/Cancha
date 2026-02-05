@@ -252,7 +252,7 @@ $comunas = $stmt_comunas->fetchAll();
     <div class="mantenedores-section">
       <h2>Mantenedores del Sistema</h2>
       <div class="mantenedores-grid">
-        <div class="mantenedor-card" onclick="window.location.href='mantenedor_tipoeventos.php'">
+        <div class="mantenedor-card" onclick="window.location.href='mantenedor_eventos.php'">
           <h4>⚽ Tipo Eventos</h4>
           <p>Gestionar tipos de eventos</p>
         </div>
