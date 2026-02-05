@@ -269,7 +269,7 @@ $success = '';
                 <td style="color: #040942ff;"><?= htmlspecialchars($evento['players']) ?></td>
                 <td class="action-icons">
                 <span class="action-icon" 
-                        onclick="openEventoModal('edit', <?= (int)$evento['id_tipoevento'] ?>, '<?= addslashes(htmlspecialchars($evento['tipoevento'])) ?>', '<?= addslashes(htmlspecialchars($evento['players'])) ?>')" 
+                        onclick="openEventoModal('update', <?= (int)$evento['id_tipoevento'] ?>, '<?= addslashes(htmlspecialchars($evento['tipoevento'])) ?>', '<?= addslashes(htmlspecialchars($evento['players'])) ?>')" 
                         title="Editar">✏️</span>
                 <span class="action-icon" 
                         onclick="deleteEvento(<?= (int)$evento['id_tipoevento'] ?>)" 
@@ -277,7 +277,7 @@ $success = '';
                 </td>
             </tr>
             <?php endforeach; ?>
-            </tbody>
+        </tbody>
       </table>
     </div>
   </div>
@@ -344,16 +344,16 @@ $success = '';
     }
     
     function openEventoModal(action, id = null, tipo = '', players = '') {
-    // Limpiar la acción
-    action = action.trim();
-    
-    document.getElementById('actionType').value = action;
-    document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
-    document.getElementById('eventoId').value = id || '';
-    document.getElementById('eventoTipo').value = tipo;
-    document.getElementById('eventoPlayers').value = players;
-    
-    document.getElementById('eventoModal').style.display = 'flex';
+        // Convertir 'edit' a 'update'
+        const actionForApi = (action === 'edit') ? 'update' : action;
+        
+        document.getElementById('actionType').value = actionForApi;
+        document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
+        document.getElementById('eventoId').value = id || '';
+        document.getElementById('eventoTipo').value = tipo;
+        document.getElementById('eventoPlayers').value = players;
+        
+        document.getElementById('eventoModal').style.display = 'flex';
     }
     
     function closeEventoModal() {
