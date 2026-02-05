@@ -1,12 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-// Evitar salida de errores HTML
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-
 try {
-    // Leer datos del request
     $input = json_decode(file_get_contents('php://input'), true);
     $correo = $input['correo'] ?? '';
     
@@ -14,7 +9,6 @@ try {
         throw new Exception('Correo es requerido');
     }
     
-    // Simular conexión a base de datos (ajusta según tu config)
     require_once __DIR__ . '/../includes/config.php';
     
     // Verificar si el correo existe
@@ -38,45 +32,22 @@ try {
     ");
     $stmt->execute([$ceo['id_ceo'], $codigo]);
     
-    // Enviar email con Brevo (HTTP directo)
-    $apiKey = $_ENV['BREVO_API_KEY'] ?? '';
+    // Enviar correo usando tu clase BrevoMailer
+    require_once __DIR__ . '/../includes/brevo_mailer.php';
+    $mail = new BrevoMailer();
+    $mail->setTo($correo, 'CEO Cancha');
+    $mail->setSubject('🔐 Código de recuperación - Cancha CEO');
+    $mail->setHtmlBody("
+        <h2>Recuperación de contraseña</h2>
+        <p>Tu código de recuperación es:</p>
+        <h1 style='color:#009966;'>$codigo</h1>
+        <p>Ingresa este código para restablecer tu contraseña.</p>
+        <p>El código es válido por <strong>15 minutos</strong>.</p>
+    ");
     
-    if (!empty($apiKey)) {
-        $data = json_encode([
-            'sender' => [
-                'email' => ($_ENV['BREVO_SENDER_EMAIL'] ?? 'no-reply@cancha-sport.cl'),
-                'name' => ($_ENV['BREVO_SENDER_NAME'] ?? 'Cancha CEO')
-            ],
-            'to' => [['email' => $correo]],
-            'subject' => 'Código de recuperación - Cancha CEO',
-            'htmlContent' => "<h2>Recuperación de contraseña</h2><p>Tu código de recuperación es: <strong>$codigo</strong></p><p>Válido por 15 minutos.</p>"
-        ]);
-        
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://api.brevo.com/v3/smtp/email',
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $data,
-            CURLOPT_HTTPHEADER => [
-                'api-key: ' . $apiKey,
-                'Content-Type: application/json',
-                'Accept: application/json'
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => true
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        // Registrar en logs si hay error
-        if ($httpCode !== 201) {
-            error_log("Error Brevo HTTP $httpCode: " . $response);
-        }
-    } else {
-        // Modo desarrollo: mostrar código en logs
-        error_log("MODO DESARROLLO - Código de recuperación para $correo: $codigo");
+    if (!$mail->send()) {
+        error_log("Error al enviar correo de recuperación a: $correo");
+        throw new Exception('Error al enviar el código por correo');
     }
     
     echo json_encode(['success' => true, 'message' => 'Código enviado a tu correo']);
@@ -84,6 +55,6 @@ try {
 } catch (Exception $e) {
     error_log("Error en recuperar_contraseña.php: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
+    echo json_encode(['success' => false, 'message' => 'Error al enviar el código']);
 }
 ?>
