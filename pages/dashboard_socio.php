@@ -300,7 +300,7 @@ if (isset($_SESSION['id_socio'])) {
       <div style="display: flex; align-items: center; gap: 1.2rem;">
         <div class="club-logo">
           <?php if ($club_logo): ?>
-            <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+            <img src="/../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
           <?php else: ?>
             ⚽
           <?php endif; ?>
