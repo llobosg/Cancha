@@ -9,23 +9,47 @@ if (!isset($_SESSION['ceo_id']) || $_SESSION['ceo_rol'] !== 'ceo_cancha') {
     exit;
 }
 
-// Estadísticas
+// Estadísticas generales
 $stmt_clubs = $pdo->query("SELECT COUNT(*) as total FROM clubs");
 $total_clubs = $stmt_clubs->fetch()['total'];
 
 $stmt_socios = $pdo->query("SELECT COUNT(*) as total FROM socios");
 $total_socios = $stmt_socios->fetch()['total'];
 
-// Estadísticas por región
-$stmt_regiones = $pdo->query("
+// Estadísticas por país
+$stmt_paises = $pdo->query("
     SELECT 
-        COALESCE(país, 'Sin país') as país,
+        COALESCE(pais, 'Sin país') as pais,
         COUNT(*) as total 
     FROM clubs 
-    GROUP BY país 
+    GROUP BY pais 
     ORDER BY total DESC
 ");
-$regiones = $stmt_regiones->fetchAll();
+$paises = $stmt_paises->fetchAll();
+
+// Estadísticas por ciudad  
+$stmt_ciudades = $pdo->query("
+    SELECT 
+        COALESCE(ciudad, 'Sin ciudad') as ciudad,
+        COUNT(*) as total 
+    FROM clubs 
+    GROUP BY ciudad 
+    ORDER BY total DESC 
+    LIMIT 10
+");
+$ciudades = $stmt_ciudades->fetchAll();
+
+// Estadísticas por comuna
+$stmt_comunas = $pdo->query("
+    SELECT 
+        COALESCE(comuna, 'Sin comuna') as comuna,
+        COUNT(*) as total 
+    FROM clubs 
+    GROUP BY comuna 
+    ORDER BY total DESC 
+    LIMIT 10
+");
+$comunas = $stmt_comunas->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -139,7 +163,7 @@ $regiones = $stmt_regiones->fetchAll();
       margin: 0 0 1rem 0;
     }
     
-    .region-stats {
+    .stats-section {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
       padding: 2rem;
@@ -147,18 +171,59 @@ $regiones = $stmt_regiones->fetchAll();
       margin-top: 2rem;
     }
     
-    .region-list {
+    .stats-tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+      padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .tab-btn.active {
+      background: #071289;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .stats-grid-detailed {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1rem;
       margin-top: 1rem;
     }
     
-    .region-item {
+    .stat-item {
       background: rgba(255, 255, 255, 0.2);
       padding: 0.8rem;
       border-radius: 8px;
       text-align: center;
+    }
+    
+    .stat-item strong {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    
+    .stat-item .count {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #FFD700;
     }
   </style>
 </head>
@@ -167,7 +232,7 @@ $regiones = $stmt_regiones->fetchAll();
     <div class="header">
       <div class="logo-ceo">👑 CEO Dashboard</div>
       <div>
-        <a href="ceo_logout.php" class="logout" style="color: #ffcc00; text-decoration: none;">Cerrar sesión</a>
+        <a href="ceo_logout.php" style="color: #ffcc00; text-decoration: none;">Cerrar sesión</a>
       </div>
     </div>
 
@@ -206,16 +271,50 @@ $regiones = $stmt_regiones->fetchAll();
       </div>
     </div>
 
-    <!-- Estadísticas por región -->
-    <div class="region-stats">
-      <h2>Clubs por País/Región</h2>
-      <div class="region-list">
-        <?php foreach ($regiones as $region): ?>
-        <div class="region-item">
-          <strong><?= htmlspecialchars($region['país']) ?></strong><br>
-          <?= $region['total'] ?> clubs
+    <!-- Estadísticas detalladas -->
+    <div class="stats-section">
+      <h2>Estadísticas por Ubicación</h2>
+      
+      <div class="stats-tabs">
+        <button class="tab-btn active" onclick="showTab('paises')">Países</button>
+        <button class="tab-btn" onclick="showTab('ciudades')">Ciudades</button>
+        <button class="tab-btn" onclick="showTab('comunas')">Comunas</button>
+      </div>
+      
+      <!-- Países -->
+      <div id="paises" class="tab-content active">
+        <div class="stats-grid-detailed">
+          <?php foreach ($paises as $pais): ?>
+          <div class="stat-item">
+            <strong><?= htmlspecialchars($pais['pais']) ?></strong>
+            <div class="count"><?= $pais['total'] ?></div>
+          </div>
+          <?php endforeach; ?>
         </div>
-        <?php endforeach; ?>
+      </div>
+      
+      <!-- Ciudades -->
+      <div id="ciudades" class="tab-content">
+        <div class="stats-grid-detailed">
+          <?php foreach ($ciudades as $ciudad): ?>
+          <div class="stat-item">
+            <strong><?= htmlspecialchars($ciudad['ciudad']) ?></strong>
+            <div class="count"><?= $ciudad['total'] ?></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      
+      <!-- Comunas -->
+      <div id="comunas" class="tab-content">
+        <div class="stats-grid-detailed">
+          <?php foreach ($comunas as $comuna): ?>
+          <div class="stat-item">
+            <strong><?= htmlspecialchars($comuna['comuna']) ?></strong>
+            <div class="count"><?= $comuna['total'] ?></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
       </div>
     </div>
 
@@ -225,7 +324,21 @@ $regiones = $stmt_regiones->fetchAll();
   </div>
 
   <script>
-    // Agregar protección adicional
+    function showTab(tabId) {
+      // Ocultar todos los tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Mostrar el tab seleccionado
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+    
+    // Protección de sesión
     if (!localStorage.getItem('ceo_session')) {
         localStorage.setItem('ceo_session', 'active');
     }
