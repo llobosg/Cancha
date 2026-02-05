@@ -168,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <h3>Recuperar Contraseña</h3>
       <p>Ingresa tu correo registrado y te enviaremos un código de 4 dígitos.</p>
       
+      <!-- ¡Asegúrate de que este formulario tenga el ID correcto! -->
       <form id="recoveryForm">
         <div class="form-group">
           <label for="recoveryEmail">Correo electrónico *</label>
