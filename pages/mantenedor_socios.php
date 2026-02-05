@@ -1,24 +1,14 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
-
-// Si no hay sesión, intentar con parámetro URL
-if (!$can_edit && isset($_GET['socio_id'])) {
-    $socio_id_from_url = (int)$_GET['socio_id'];
-    // Verificar que este socio existe y pertenece al club actual
-    $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-    $stmt->execute([$socio_id_from_url, $_SESSION['club_id'] ?? 0]);
-    if ($stmt->fetch()) {
-        $_SESSION['id_socio'] = $socio_id_from_url;
-        $is_socio = true;
-        $can_edit = true;
-    }
+// Iniciar sesión si no está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
 // Verificar autenticación (CEO o Socio)
 $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
-$is_socio = isset($_SESSION['id_socio']);
+$is_socio = isset($_SESSION['id_socio']) && !empty($_SESSION['id_socio']);
 $can_edit = $is_ceo || $is_socio;
 
 if (!$can_edit) {
@@ -67,7 +57,6 @@ if ($is_ceo) {
   <title><?= $editing_own_profile ? 'Mi Perfil' : 'Mantenedor de Socios' ?> - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-    /* ... mismo CSS anterior ... */
     body {
       background: 
         linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
