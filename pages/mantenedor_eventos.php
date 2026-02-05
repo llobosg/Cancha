@@ -1,13 +1,11 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
 
-$club_slug = $_GET['club'] ?? '';
-if (!$club_slug) {
-    header('Location: ../index.php');
+// Verificar autenticación CEO
+if (!isset($_SESSION['ceo_id']) || $_SESSION['ceo_rol'] !== 'ceo_cancha') {
+    header('Location: ceo_login.php');
     exit;
 }
 

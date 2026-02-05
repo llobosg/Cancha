@@ -230,7 +230,7 @@ $comunas = $stmt_comunas->fetchAll();
 <body>
   <div class="dashboard-container">
     <div class="header">
-      <div class="logo-ceo">👑 CEO Dashboard</div>
+      <div class="logo-ceo">👑 CEO LandingPage...Hola Luis !!</div>
       <div>
         <a href="ceo_logout.php" style="color: #ffcc00; text-decoration: none;">Cerrar sesión</a>
       </div>
@@ -254,19 +254,19 @@ $comunas = $stmt_comunas->fetchAll();
       <div class="mantenedores-grid">
         <div class="mantenedor-card" onclick="window.location.href='mantenedor_eventos.php'">
           <h4>⚽ Tipo Eventos</h4>
-          <p>Gestionar tipos de eventos</p>
+          <p style="color: #055810ff;">Gestionar tipos de eventos</p>
         </div>
         <div class="mantenedor-card" onclick="window.location.href='mantenedor_puestos.php'">
           <h4>👔 Puestos</h4>
-          <p>Gestionar puestos de socios</p>
+          <p style="color: #055810ff;">Gestionar puestos de socios</p>
         </div>
         <div class="mantenedor-card" onclick="window.location.href='mantenedor_clubs.php'">
           <h4>🏟️ Clubs</h4>
-          <p>Administrar todos los clubs</p>
+          <p style="color: #055810ff;"  >Administrar todos los clubs</p>
         </div>
         <div class="mantenedor-card" onclick="window.location.href='mantenedor_socios.php'">
           <h4>👥 Socios</h4>
-          <p>Administrar todos los socios</p>
+          <p style="color: #055810ff;"  >Administrar todos los socios</p>
         </div>
       </div>
     </div>
