@@ -322,6 +322,9 @@ if (isset($_SESSION['id_socio'])) {
           <li>🏠 Dirección completa</li>
           <li>👤 Información adicional</li>
         </ul>
+        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
+          Completar mi perfil ahora
+        </a>
       </div>
     <?php endif; ?>
 
@@ -352,9 +355,7 @@ if (isset($_SESSION['id_socio'])) {
     </div>
 
     <!-- Botón Actualizar Perfil -->
-    <a href="mantenedor_socios.php" class="update-profile-btn">
-      👤 Actualizar mi perfil
-    </a>
+    <a href="mantenedor_socios.php" class="update-profile-btn"> 👤 Actualizar mi perfil</a>
 
     <!-- Share section -->
     <div class="share-section">
