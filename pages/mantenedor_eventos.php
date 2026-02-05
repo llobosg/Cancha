@@ -344,15 +344,16 @@ $success = '';
     }
     
     function openEventoModal(action, id = null, tipo = '', players = '') {
-        // Actualizar el valor del campo oculto action
-        document.getElementById('actionType').value = action;
-        
-        document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
-        document.getElementById('eventoId').value = id || '';
-        document.getElementById('eventoTipo').value = tipo;
-        document.getElementById('eventoPlayers').value = players;
-        
-        document.getElementById('eventoModal').style.display = 'flex';
+    // Limpiar la acción
+    action = action.trim();
+    
+    document.getElementById('actionType').value = action;
+    document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Evento' : 'Editar Evento';
+    document.getElementById('eventoId').value = id || '';
+    document.getElementById('eventoTipo').value = tipo;
+    document.getElementById('eventoPlayers').value = players;
+    
+    document.getElementById('eventoModal').style.display = 'flex';
     }
     
     function closeEventoModal() {
