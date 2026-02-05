@@ -271,59 +271,31 @@ if (isset($_SESSION['id_socio'])) {
       margin-top: 0.5rem;
     }
 
-    /* Menú desplegable */
-    .maintainers-menu {
-      position: relative;
-    }
-
-    .menu-btn {
+    /* Botón Actualizar Perfil */
+    .update-profile-btn {
       background: #071289;
       color: white;
       border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      min-width: 120px;
-    }
-
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      top: 100%;
-      background: white;
-      min-width: 160px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      z-index: 1000;
+      padding: 0.8rem 2rem;
       border-radius: 8px;
-      margin-top: 5px;
-    }
-
-    .dropdown-content a {
-      color: #071289;
-      padding: 12px 16px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 2rem auto;
+      display: block;
       text-decoration: none;
-      display: block;
-      border-bottom: 1px solid #eee;
+      width: fit-content;
     }
 
-    .dropdown-content a:hover {
-      background: #f5f5f5;
-    }
-
-    .dropdown-content a:last-child {
-      border-bottom: none;
-    }
-
-    .maintainers-menu:hover .dropdown-content {
-      display: block;
+    .update-profile-btn:hover {
+      background: #050d6b;
     }
   </style>
 </head>
 <body>
   <div class="dashboard-container">
-    <!-- Header con menú desplegable para responsable -->
+    <!-- Header -->
     <div class="header">
       <div style="display: flex; align-items: center; gap: 1.2rem;">
         <div class="club-logo">
@@ -338,11 +310,12 @@ if (isset($_SESSION['id_socio'])) {
           <p>Tu cancha está lista</p>
         </div>
       </div>
+    </div>
 
     <!-- Mensaje de bienvenida para socio fundador -->
     <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
       <div class="welcome-message">
-        <h3>👋 ¡Bienvenido !</h3>
+        <h3>👋 ¡Bienvenido, Responsable!</h3>
         <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
         <ul>
           <li>📞 Teléfono de contacto</li>
@@ -381,13 +354,18 @@ if (isset($_SESSION['id_socio'])) {
       </div>
     </div>
 
+    <!-- Botón Actualizar Perfil -->
+    <a href="mantenedor_socios.php" class="update-profile-btn">
+      👤 Actualizar mi perfil
+    </a>
+
     <!-- Share section -->
     <div class="share-section">
       <h3>📱 Comparte tu club</h3>
       <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
       
       <?php
-      $share_url = "https://cancha-sport.cl/pages/registro_socio.php?club=" . $club_slug;
+      $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
       ?>
       
       <div class="qr-code" id="qrCode"></div>
@@ -430,14 +408,6 @@ if (isset($_SESSION['id_socio'])) {
     function limpiarSesion() {
       localStorage.removeItem('cancha_session');
       localStorage.removeItem('cancha_club');
-    }
-
-    function openPuestosModal() {
-      window.location.href = 'mantenedor_puestos.php?club=<?= htmlspecialchars($club_slug) ?>';
-    }
-
-    function openEventosModal() {
-      window.location.href = 'mantenedor_eventos.php?club=<?= htmlspecialchars($club_slug) ?>';
     }
 
     // Registrar PWA
