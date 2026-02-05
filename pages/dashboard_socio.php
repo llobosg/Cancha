@@ -312,22 +312,6 @@ if (isset($_SESSION['id_socio'])) {
       </div>
     </div>
 
-    <!-- Mensaje de bienvenida para socio fundador -->
-    <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
-      <div class="welcome-message">
-        <h3>👋 ¡Bienvenido, Responsable!</h3>
-        <p>Como fundador de este club, te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
-        <ul>
-          <li>📞 Teléfono de contacto</li>
-          <li>🏠 Dirección completa</li>
-          <li>👤 Información adicional</li>
-        </ul>
-        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
-          Completar mi perfil ahora
-        </a>
-      </div>
-    <?php endif; ?>
-
     <!-- Estadísticas -->
     <div class="stats-grid">
       <div class="stat-card">
