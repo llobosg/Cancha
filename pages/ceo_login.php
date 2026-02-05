@@ -179,34 +179,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <script>
-    function openRecoveryModal() {
-      document.getElementById('recoveryModal').style.display = 'flex';
-    }
+  function openRecoveryModal() {
+    document.getElementById('recoveryModal').style.display = 'flex';
+  }
+  
+  function closeRecoveryModal() {
+    document.getElementById('recoveryModal').style.display = 'none';
+  }
+  
+  function openCodeModal() {
+    document.getElementById('recoveryModal').style.display = 'none';
+    document.getElementById('codeModal').style.display = 'flex';
+  }
+  
+  function closeCodeModal() {
+    document.getElementById('codeModal').style.display = 'none';
+  }
+  
+  // Enviar código
+  document.getElementById('recoveryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('recoveryEmail').value;
     
-    function closeRecoveryModal() {
-      document.getElementById('recoveryModal').style.display = 'none';
-    }
-    
-    document.getElementById('recoveryForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const email = document.getElementById('recoveryEmail').value;
-      
-      fetch('../api/recuperar_contraseña.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({correo: email})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          alert('Código enviado a tu correo. Revisa tu bandeja de entrada.');
-          closeRecoveryModal();
-          // Aquí abrirías el submodal para ingresar el código
-        } else {
-          alert('Error: ' + data.message);
-        }
-      });
+    fetch('../api/recuperar_contraseña.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({correo: email})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert('Código enviado a tu correo. Revisa tu bandeja de entrada.');
+        // Guardar el correo para el siguiente paso
+        document.getElementById('codeEmail').value = email;
+        openCodeModal();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al enviar el código');
     });
-  </script>
+  });
+  
+  // Verificar código y cambiar contraseña
+  document.getElementById('codeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('codeEmail').value;
+    const codigo = document.getElementById('recoveryCode').value;
+    const nuevaPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    
+    if (nuevaPass !== confirmPass) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+    
+    fetch('../api/verificar_codigo.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        correo: email,
+        codigo: codigo,
+        nueva_contraseña: nuevaPass
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert('Contraseña actualizada correctamente. Puedes iniciar sesión ahora.');
+        closeCodeModal();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al verificar el código');
+    });
+  });
+</script>
+
+<!-- Submodal para ingresar código -->
+<div id="codeModal" class="submodal" style="display:none;">
+  <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:400px;">
+    <span class="close-modal" onclick="closeCodeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
+    <h3>Ingresa Código de Recuperación</h3>
+    <p>Ingresa el código de 4 dígitos que recibiste en tu correo.</p>
+    
+    <form id="codeForm">
+      <input type="hidden" id="codeEmail" name="correo">
+      <div class="form-group">
+        <label for="recoveryCode">Código de 4 dígitos *</label>
+        <input type="text" id="recoveryCode" name="codigo" maxlength="4" required 
+               style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289; text-align:center; font-size:1.5rem;">
+      </div>
+      
+      <div class="form-group">
+        <label for="newPassword">Nueva contraseña *</label>
+        <input type="password" id="newPassword" name="nueva_contraseña" required 
+               style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;">
+      </div>
+      
+      <div class="form-group">
+        <label for="confirmPassword">Confirmar contraseña *</label>
+        <input type="password" id="confirmPassword" name="confirmar_contraseña" required 
+               style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;">
+      </div>
+      
+      <button type="submit" class="btn-submit" style="width:100%;">Cambiar Contraseña</button>
+    </form>
+  </div>
+</div>
 </body>
 </html>
