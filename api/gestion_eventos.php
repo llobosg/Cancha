@@ -6,37 +6,17 @@ error_log("=== DEBUG GESTION EVENTOS ===");
 error_log("POST  " . print_r($_POST, true));
 
 try {
-    $action_raw = $_POST['action'] ?? '';
+    $action = $_POST['action'] ?? '';
+    $action = trim($action);
     
-    // Mostrar la acción cruda con todos sus caracteres
-    error_log("Acción RAW: '$action_raw'");
-    error_log("Longitud RAW: " . strlen($action_raw));
+    error_log("Acción recibida: '$action'");
     
-    // Convertir cada caracter a su código ASCII
-    $ascii_codes = [];
-    for ($i = 0; $i < strlen($action_raw); $i++) {
-        $ascii_codes[] = ord($action_raw[$i]);
-    }
-    error_log("Códigos ASCII: " . implode(', ', $ascii_codes));
-    
-    // Limpiar la acción: eliminar espacios, retornos, tabs, etc.
-    $action_clean = preg_replace('/[\x00-\x1F\x7F]/', '', trim($action_raw));
-    error_log("Acción LIMPIA: '$action_clean'");
-    error_log("Longitud LIMPIA: " . strlen($action_clean));
-    
-    // Verificar contra acciones válidas
-    $valid_actions = ['insert', 'update', 'delete'];
-    $is_valid = in_array($action_clean, $valid_actions);
-    
-    error_log("¿Es válido? " . ($is_valid ? 'SÍ' : 'NO'));
-    error_log("Acciones válidas: " . implode(', ', $valid_actions));
-    
-    if (!$is_valid) {
-        throw new Exception("Acción no válida: '$action_clean' (raw: '$action_raw')");
+    // Usar comparación directa en lugar de in_array
+    if ($action !== 'insert' && $action !== 'update' && $action !== 'delete') {
+        throw new Exception("Acción no válida: '$action'");
     }
     
-    // Resto del código igual...
-    switch ($action_clean) {
+    switch ($action) {
         case 'insert':
         case 'update':
             $tipoevento = $_POST['tipoevento'] ?? '';
@@ -46,7 +26,7 @@ try {
                 throw new Exception('Todos los campos son requeridos');
             }
             
-            if ($action_clean === 'insert') {
+            if ($action === 'insert') {
                 $stmt = $pdo->prepare("INSERT INTO tipoeventos (tipoevento, players) VALUES (?, ?)");
                 $stmt->execute([$tipoevento, $players]);
             } else {
