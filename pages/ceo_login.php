@@ -180,86 +180,198 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <script>
-  function openRecoveryModal() {
-    document.getElementById('recoveryModal').style.display = 'flex';
-  }
-  
-  function closeRecoveryModal() {
-    document.getElementById('recoveryModal').style.display = 'none';
-  }
-  
-  function openCodeModal() {
-    document.getElementById('recoveryModal').style.display = 'none';
-    document.getElementById('codeModal').style.display = 'flex';
-  }
-  
-  function closeCodeModal() {
-    document.getElementById('codeModal').style.display = 'none';
-  }
-  
-  // Enviar código
-  document.getElementById('recoveryForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const email = document.getElementById('recoveryEmail').value;
+// Funciones para abrir/cerrar modales
+function openRecoveryModal() {
+    const modal = document.getElementById('recoveryModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Animación de entrada
+        modal.style.opacity = '0';
+        modal.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modal.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            modal.style.opacity = '1';
+            modal.style.transform = 'translateY(0)';
+        }, 10);
+    }
+}
+
+function closeRecoveryModal() {
+    const modal = document.getElementById('recoveryModal');
+    if (modal) {
+        // Animación de salida
+        modal.style.opacity = '0';
+        modal.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.style.opacity = '1';
+            modal.style.transform = 'translateY(0)';
+        }, 300);
+    }
+}
+
+function openCodeModal() {
+    closeRecoveryModal();
+    setTimeout(() => {
+        const modal = document.getElementById('codeModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.opacity = '0';
+            modal.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                modal.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                modal.style.opacity = '1';
+                modal.style.transform = 'translateY(0)';
+            }, 10);
+        }
+    }, 300);
+}
+
+function closeCodeModal() {
+    const modal = document.getElementById('codeModal');
+    if (modal) {
+        modal.style.opacity = '0';
+        modal.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.style.opacity = '1';
+            modal.style.transform = 'translateY(0)';
+        }, 300);
+    }
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado - buscando formularios...');
     
-    fetch('../api/recuperar_contraseña.php', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({correo: email})
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        alert('Código enviado a tu correo. Revisa tu bandeja de entrada.');
-        // Guardar el correo para el siguiente paso
-        document.getElementById('codeEmail').value = email;
-        openCodeModal();
-      } else {
-        alert('Error: ' + data.message);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error al enviar el código');
-    });
-  });
-  
-  // Verificar código y cambiar contraseña
-  document.getElementById('codeForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const email = document.getElementById('codeEmail').value;
-    const codigo = document.getElementById('recoveryCode').value;
-    const nuevaPass = document.getElementById('newPassword').value;
-    const confirmPass = document.getElementById('confirmPassword').value;
-    
-    if (nuevaPass !== confirmPass) {
-      alert('Las contraseñas no coinciden');
-      return;
+    // Verificar y configurar formulario de recuperación
+    const recoveryForm = document.getElementById('recoveryForm');
+    if (recoveryForm) {
+        console.log('Formulario recoveryForm encontrado');
+        recoveryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('recoveryEmail')?.value;
+            
+            if (!email) {
+                alert('Por favor ingresa tu correo');
+                return;
+            }
+            
+            fetch('../api/recuperar_contraseña.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({correo: email})
+            })
+            .then(response => {
+                console.log('Respuesta API:', response.status);
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos API:', data);
+                if (data.success) {
+                    alert('Código enviado a tu correo. Revisa tu bandeja de entrada.');
+                    const codeEmail = document.getElementById('codeEmail');
+                    if (codeEmail) codeEmail.value = email;
+                    openCodeModal();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error en recuperación:', error);
+                alert('Error al enviar el código: ' + error.message);
+            });
+        });
+    } else {
+        console.warn('Formulario recoveryForm NO encontrado');
     }
     
-    fetch('../api/verificar_codigo.php', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        correo: email,
-        codigo: codigo,
-        nueva_contraseña: nuevaPass
-      })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        alert('Contraseña actualizada correctamente. Puedes iniciar sesión ahora.');
-        closeCodeModal();
-      } else {
-        alert('Error: ' + data.message);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error al verificar el código');
-    });
-  });
+    // Verificar y configurar formulario de código
+    const codeForm = document.getElementById('codeForm');
+    if (codeForm) {
+        console.log('Formulario codeForm encontrado');
+        codeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('codeEmail')?.value;
+            const codigo = document.getElementById('recoveryCode')?.value;
+            const nuevaPass = document.getElementById('newPassword')?.value;
+            const confirmPass = document.getElementById('confirmPassword')?.value;
+            
+            if (!email || !codigo || !nuevaPass || !confirmPass) {
+                alert('Todos los campos son requeridos');
+                return;
+            }
+            
+            if (nuevaPass !== confirmPass) {
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+            
+            fetch('../api/verificar_codigo.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    correo: email,
+                    codigo: codigo,
+                    nueva_contraseña: nuevaPass
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Contraseña actualizada correctamente. Puedes iniciar sesión ahora.');
+                    closeCodeModal();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error en verificación:', error);
+                alert('Error al verificar el código: ' + error.message);
+            });
+        });
+    } else {
+        console.warn('Formulario codeForm NO encontrado');
+    }
+});
+
+// Estilos para animaciones
+const style = document.createElement('style');
+style.textContent = `
+.submodal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+    opacity: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.submodal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+    transform: translateY(0);
+}
+`;
+document.head.appendChild(style);
 </script>
 
 <!-- Submodal para ingresar código -->
