@@ -40,13 +40,34 @@ if (!$club_id) {
 }
 
 // Verificar que el socio esté en sesión
-if (!isset($_SESSION['id_socio'])) {
-    // Si no hay sesión, redirigir al registro
-    header('Location: registro_socio.php?club=' . $club_slug);
-    exit;
-}
+$id_socio = null;
 
-$id_socio = $_SESSION['id_socio'];
+if (isset($_SESSION['id_socio'])) {
+    // Caso normal: socio ya en sesión
+    $id_socio = $_SESSION['id_socio'];
+} else {
+    // Caso especial: responsable que acaba de registrar club
+    // Buscar al responsable del club actual
+    $stmt = $pdo->prepare("
+        SELECT s.id_socio 
+        FROM socios s 
+        WHERE s.id_club = ? AND s.es_responsable = 1
+    ");
+    $stmt->execute([$club_id]);
+    $responsable = $stmt->fetch();
+    
+    if ($responsable) {
+        // Encontramos al responsable, guardar en sesión
+        $id_socio = $responsable['id_socio'];
+        $_SESSION['id_socio'] = $id_socio;
+        $_SESSION['club_id'] = $club_id;
+        $_SESSION['current_club'] = $club_slug;
+    } else {
+        // No hay responsable encontrado, redirigir a registro
+        header('Location: registro_socio.php?club=' . $club_slug);
+        exit;
+    }
+}
 
 // Verificar que el socio existe y pertenece a este club
 $stmt = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ?");
@@ -54,7 +75,6 @@ $stmt->execute([$id_socio, $club_id]);
 $socio = $stmt->fetch();
 
 if (!$socio) {
-    // Socio no existe o no pertenece a este club
     header('Location: ../index.php');
     exit;
 }
