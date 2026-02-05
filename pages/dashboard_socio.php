@@ -352,7 +352,7 @@ if (isset($_SESSION['id_socio'])) {
     </div>
 
     <!-- Botón Actualizar Perfil -->
-    <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="update-profile-btn">
+    <a href="mantenedor_socios.php" class="update-profile-btn">
       👤 Actualizar mi perfil
     </a>
 
