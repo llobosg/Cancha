@@ -295,14 +295,14 @@ if ($is_ceo) {
         <!-- Vista de perfil actual -->
         <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:2rem;">
           <h3>Datos Actuales</h3>
-          <p><strong>Alias:</strong> <?= htmlspecialchars($socio['alias']) ?></p>
-          <p><strong>Fecha Nac.:</strong> <?= htmlspecialchars($socio['fecha_nac'] ?? '') ?></p>
-          <p><strong>Celular:</strong> <?= htmlspecialchars($socio['celular'] ?? '') ?></p>
-          <p><strong>Email:</strong> <?= htmlspecialchars($socio['email']) ?></p>
-          <p><strong>Dirección:</strong> <?= htmlspecialchars($socio['direccion'] ?? '') ?></p>
-          <p><strong>Rol:</strong> <?= htmlspecialchars($socio['rol'] ?? '') ?></p>
-          <p><strong>Género:</strong> <?= htmlspecialchars(ucfirst($socio['genero'] ?? '')) ?></p>
-          <p><strong>Puesto:</strong> <?= htmlspecialchars($socio['puesto_nombre'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Alias:</strong> <?= htmlspecialchars($socio['alias']) ?></p>
+          <p style="color: #040942ff;"><strong>Fecha Nac.:</strong> <?= htmlspecialchars($socio['fecha_nac'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Celular:</strong> <?= htmlspecialchars($socio['celular'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Email:</strong> <?= htmlspecialchars($socio['email']) ?></p>
+          <p style="color: #040942ff;"><strong>Dirección:</strong> <?= htmlspecialchars($socio['direccion'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Rol:</strong> <?= htmlspecialchars($socio['rol'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Género:</strong> <?= htmlspecialchars(ucfirst($socio['genero'] ?? '')) ?></p>
+          <p style="color: #040942ff;"><strong>Puesto:</strong> <?= htmlspecialchars($socio['puesto_nombre'] ?? '') ?></p>
           <p><strong>Habilidad:</strong> <?= htmlspecialchars($socio['habilidad'] ?? '') ?></p>
         </div>
       <?php endif; ?>
