@@ -3,34 +3,61 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-// Verificar autenticación CEO
-if (!isset($_SESSION['ceo_id']) || $_SESSION['ceo_rol'] !== 'ceo_cancha') {
-    header('Location: ceo_login.php');
+// Verificar autenticación (CEO o Socio)
+$is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
+$is_socio = isset($_SESSION['id_socio']);
+$can_edit = $is_ceo || $is_socio;
+
+if (!$can_edit) {
+    header('Location: ../index.php');
     exit;
 }
 
-// Obtener todos los socios con info de club
-$stmt = $pdo->query("
-    SELECT s.id_socio, s.alias, s.email, s.celular, s.genero, 
-           c.nombre as club_nombre, s.es_responsable
-    FROM socios s
-    LEFT JOIN clubs c ON s.id_club = c.id_club
-    ORDER BY s.alias
-");
-$socios = $stmt->fetchAll();
+// Obtener puestos para el select
+$stmt_puestos = $pdo->query("SELECT id_puesto, puesto FROM puestos ORDER BY puesto");
+$puestos = $stmt_puestos->fetchAll();
+
+// Obtener socio actual si es modo socio
+$current_socio_id = $is_socio ? $_SESSION['id_socio'] : null;
+$editing_own_profile = false;
+
+// Obtener socios según rol
+if ($is_ceo) {
+    // CEO ve todos los socios
+    $stmt = $pdo->query("
+        SELECT s.*, c.nombre as club_nombre, p.puesto as puesto_nombre
+        FROM socios s
+        LEFT JOIN clubs c ON s.id_club = c.id_club
+        LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
+        ORDER BY s.alias
+    ");
+    $socios = $stmt->fetchAll();
+} else {
+    // Socio solo ve su propio perfil
+    $stmt = $pdo->prepare("
+        SELECT s.*, c.nombre as club_nombre, p.puesto as puesto_nombre
+        FROM socios s
+        LEFT JOIN clubs c ON s.id_club = c.id_club
+        LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
+        WHERE s.id_socio = ?
+    ");
+    $stmt->execute([$current_socio_id]);
+    $socios = $stmt->fetchAll();
+    $editing_own_profile = true;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mantenedor de Socios - Cancha</title>
+  <title><?= $editing_own_profile ? 'Mi Perfil' : 'Mantenedor de Socios' ?> - Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-    /* Mismo CSS que mantenedor_clubs.php */
+    /* ... mismo CSS anterior ... */
     body {
       background: 
-        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
         url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
@@ -55,17 +82,13 @@ $socios = $stmt->fetchAll();
       font-weight: bold;
     }
 
-    .back-btn:hover {
-      text-decoration: underline;
-    }
-
     .section-title {
       color: #003366;
       margin: 1.5rem 0;
       font-size: 1.4rem;
     }
 
-    /* Buscador inteligente */
+    /* Buscador (solo para CEO) */
     .search-section {
       background: white;
       padding: 1.5rem;
@@ -82,47 +105,12 @@ $socios = $stmt->fetchAll();
       color: #071289;
     }
 
-    .search-results {
-      margin-top: 1rem;
-      max-height: 200px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      display: none;
-    }
-
-    .search-result-item {
-      padding: 0.5rem;
-      cursor: pointer;
-      border-bottom: 1px solid #eee;
-    }
-
-    .search-result-item:hover {
-      background: #f0f0f0;
-    }
-
-    /* Tabla de socios */
+    /* Tabla (solo para CEO) */
     .table-section {
       background: white;
       padding: 1.5rem;
       border-radius: 12px;
-    }
-
-    .table-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .btn-add {
-      background: #00cc66;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
+      margin-bottom: 2rem;
     }
 
     table {
@@ -141,18 +129,7 @@ $socios = $stmt->fetchAll();
       font-weight: bold;
     }
 
-    .action-icons {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .action-icon {
-      cursor: pointer;
-      color: #071289;
-      font-size: 1.2rem;
-    }
-
-    /* Submodal */
+    /* Submodal - formulario completo */
     .submodal {
       position: fixed;
       top: 0;
@@ -173,6 +150,8 @@ $socios = $stmt->fetchAll();
       max-width: 500px;
       width: 90%;
       position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     .close-modal {
@@ -195,7 +174,7 @@ $socios = $stmt->fetchAll();
       margin-bottom: 0.5rem;
     }
 
-    .form-group input, .form-group select {
+    .form-group input, .form-group select, .form-group textarea {
       width: 100%;
       padding: 0.6rem;
       border: 1px solid #ccc;
@@ -224,77 +203,126 @@ $socios = $stmt->fetchAll();
         padding: 1.5rem;
         margin: 1rem;
       }
-      
-      .form-group input, .form-group select {
-        padding: 0.5rem;
-      }
-      
-      .btn-submit {
-        padding: 0.7rem;
-      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <a href="ceo_dashboard.php" class="back-btn">← Volver al Dashboard</a>
-    
-    <h1>Mantenedor de Socios</h1>
-    
-    <!-- Sección superior: Buscador inteligente -->
-    <div class="section-title">Buscar Socio</div>
-    <div class="search-section">
-      <input type="text" id="searchSocio" class="search-input" placeholder="Escribe para buscar socios..." onkeyup="searchSocios()">
-      <div id="searchResults" class="search-results"></div>
-    </div>
-    
-    <!-- Sección intermedia: Tabla de socios -->
-    <div class="section-title">Todos los Socios</div>
-    <div class="table-section">
-      <div class="table-header">
-        <h3>Socios registrados</h3>
-        <button class="btn-add" onclick="openSocioModal('insert')">+ Agregar Socio</button>
+    <?php if ($is_ceo): ?>
+      <a href="ceo_dashboard.php" class="back-btn">← Volver al Dashboard</a>
+      <h1>Mantenedor de Socios</h1>
+    <?php else: ?>
+      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="back-btn">← Volver a mi Dashboard</a>
+      <h1>Mi Perfil</h1>
+    <?php endif; ?>
+
+    <?php if ($is_ceo): ?>
+      <!-- Sección superior: Buscador inteligente -->
+      <div class="section-title">Buscar Socio</div>
+      <div class="search-section">
+        <input type="text" id="searchSocio" class="search-input" placeholder="Escribe para buscar socios..." onkeyup="searchSocios()">
+        <div id="searchResults" class="search-results" style="margin-top: 1rem; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; display: none;"></div>
       </div>
       
-      <table>
-        <thead>
-          <tr>
-            <th>Alias</th>
-            <th>Email</th>
-            <th>Club</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($socios as $socio): ?>
-          <tr>
-            <td style="color: #040942ff;"><?= htmlspecialchars($socio['alias']) ?></td>
-            <td style="color: #040942ff;"><?= htmlspecialchars($socio['email']) ?></td>
-            <td style="color: #040942ff;"><?= htmlspecialchars($socio['club_nombre'] ?? 'Sin club') ?></td>
-            <td class="action-icons">
-              <span class="action-icon" onclick="openSocioModal('update', <?= $socio['id_socio'] ?>, '<?= addslashes(htmlspecialchars($socio['alias'])) ?>', '<?= addslashes(htmlspecialchars($socio['email'])) ?>', '<?= addslashes(htmlspecialchars($socio['celular'])) ?>', '<?= addslashes(htmlspecialchars($socio['genero'])) ?>', '<?= addslashes(htmlspecialchars($socio['es_responsable'])) ?>')" title="Editar">✏️</span>
-              <span class="action-icon" onclick="deleteSocio(<?= $socio['id_socio'] ?>)" title="Eliminar">🗑️</span>
-            </td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+      <!-- Sección intermedia: Tabla de socios -->
+      <div class="section-title">Todos los Socios</div>
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Alias</th>
+              <th>Email</th>
+              <th>Club</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($socios as $socio): ?>
+            <tr>
+              <td style="color: #040942ff;"><?= htmlspecialchars($socio['alias']) ?></td>
+              <td style="color: #040942ff;"><?= htmlspecialchars($socio['email']) ?></td>
+              <td style="color: #040942ff;"><?= htmlspecialchars($socio['club_nombre'] ?? 'Sin club') ?></td>
+              <td>
+                <span class="action-icon" onclick="openSocioModal('update', 
+                  <?= $socio['id_socio'] ?>, 
+                  '<?= addslashes(htmlspecialchars($socio['alias'])) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['fecha_nac'] ?? '')) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['celular'] ?? '')) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['email'])) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['direccion'] ?? '')) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['rol'] ?? '')) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['foto_url'] ?? '')) ?>',
+                  '<?= addslashes(htmlspecialchars(strtolower($socio['genero'] ?? ''))) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['id_puesto'] ?? '')) ?>',
+                  '<?= addslashes(htmlspecialchars($socio['habilidad'] ?? '')) ?>'
+                )" style="cursor:pointer; color:#071289;" title="Editar">✏️</span>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php else: ?>
+      <!-- Para socios: mostrar directamente su perfil -->
+      <?php if (!empty($socios)): ?>
+        <?php $socio = $socios[0]; ?>
+        <button class="btn-add" onclick="openSocioModal('update', 
+          <?= $socio['id_socio'] ?>, 
+          '<?= addslashes(htmlspecialchars($socio['alias'])) ?>',
+          '<?= addslashes(htmlspecialchars($socio['fecha_nac'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio['celular'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio['email'])) ?>',
+          '<?= addslashes(htmlspecialchars($socio['direccion'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio['rol'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio['foto_url'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars(strtolower($socio['genero'] ?? ''))) ?>',
+          '<?= addslashes(htmlspecialchars($socio['id_puesto'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio['habilidad'] ?? '')) ?>'
+        )" style="background:#00cc66; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold; margin-bottom:2rem;">
+          Editar Mi Perfil
+        </button>
+        
+        <!-- Vista de perfil actual -->
+        <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:2rem;">
+          <h3>Datos Actuales</h3>
+          <p><strong>Alias:</strong> <?= htmlspecialchars($socio['alias']) ?></p>
+          <p><strong>Fecha Nac.:</strong> <?= htmlspecialchars($socio['fecha_nac'] ?? '') ?></p>
+          <p><strong>Celular:</strong> <?= htmlspecialchars($socio['celular'] ?? '') ?></p>
+          <p><strong>Email:</strong> <?= htmlspecialchars($socio['email']) ?></p>
+          <p><strong>Dirección:</strong> <?= htmlspecialchars($socio['direccion'] ?? '') ?></p>
+          <p><strong>Rol:</strong> <?= htmlspecialchars($socio['rol'] ?? '') ?></p>
+          <p><strong>Género:</strong> <?= htmlspecialchars(ucfirst($socio['genero'] ?? '')) ?></p>
+          <p><strong>Puesto:</strong> <?= htmlspecialchars($socio['puesto_nombre'] ?? '') ?></p>
+          <p><strong>Habilidad:</strong> <?= htmlspecialchars($socio['habilidad'] ?? '') ?></p>
+        </div>
+      <?php endif; ?>
+    <?php endif; ?>
   </div>
 
   <!-- Submodal para insertar/editar -->
   <div id="socioModal" class="submodal" style="display:none;">
     <div class="submodal-content">
       <span class="close-modal" onclick="closeSocioModal()">&times;</span>
-      <h2 id="modalTitle">Agregar Socio</h2>
+      <h2 id="modalTitle">Editar Perfil</h2>
       
-      <form id="socioForm" onsubmit="saveSocio(event)">
+      <form id="socioForm" onsubmit="saveSocio(event)" enctype="multipart/form-data">
         <input type="hidden" id="socioId" name="id_socio">
-        <input type="hidden" id="actionType" name="action" value="insert">
+        <input type="hidden" id="actionType" name="action" value="update">
+        <input type="hidden" id="originalEmail" name="original_email">
         
         <div class="form-group">
           <label for="socioAlias">Alias *</label>
           <input type="text" id="socioAlias" name="alias" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="socioFechaNac">Fecha de Nacimiento</label>
+          <input type="date" id="socioFechaNac" name="fecha_nac">
+        </div>
+        
+        <div class="form-group">
+          <label for="socioCelular">Celular</label>
+          <input type="text" id="socioCelular" name="celular">
         </div>
         
         <div class="form-group">
@@ -303,8 +331,18 @@ $socios = $stmt->fetchAll();
         </div>
         
         <div class="form-group">
-          <label for="socioCelular">Celular</label>
-          <input type="text" id="socioCelular" name="celular">
+          <label for="socioDireccion">Dirección</label>
+          <textarea id="socioDireccion" name="direccion" rows="2"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="socioRol">Rol</label>
+          <input type="text" id="socioRol" name="rol">
+        </div>
+        
+        <div class="form-group">
+          <label for="socioFoto">Foto de Perfil</label>
+          <input type="file" id="socioFoto" name="foto_url" accept="image/*">
         </div>
         
         <div class="form-group">
@@ -318,19 +356,33 @@ $socios = $stmt->fetchAll();
         </div>
         
         <div class="form-group">
-          <label for="socioResponsable">Es Responsable</label>
-          <select id="socioResponsable" name="es_responsable">
-            <option value="0">No</option>
-            <option value="1">Sí</option>
+          <label for="socioPuesto">Puesto</label>
+          <select id="socioPuesto" name="id_puesto">
+            <option value="">Seleccionar</option>
+            <?php foreach ($puestos as $puesto): ?>
+            <option value="<?= $puesto['id_puesto'] ?>"><?= htmlspecialchars($puesto['puesto']) ?></option>
+            <?php endforeach; ?>
           </select>
         </div>
         
-        <button type="submit" class="btn-submit">Guardar Socio</button>
+        <div class="form-group">
+          <label for="socioHabilidad">Habilidad</label>
+          <select id="socioHabilidad" name="habilidad">
+            <option value="">Seleccionar</option>
+            <option value="Principiante">Principiante</option>
+            <option value="Intermedia">Intermedia</option>
+            <option value="Avanzada">Avanzada</option>
+          </select>
+        </div>
+        
+        <button type="submit" class="btn-submit">Guardar Cambios</button>
       </form>
     </div>
   </div>
 
   <script>
+    // Funciones para CEO
+    <?php if ($is_ceo): ?>
     function searchSocios() {
       const query = document.getElementById('searchSocio').value.toLowerCase();
       const resultsDiv = document.getElementById('searchResults');
@@ -348,7 +400,7 @@ $socios = $stmt->fetchAll();
       
       if (filtered.length > 0) {
         resultsDiv.innerHTML = filtered.map(s => 
-          `<div style="color: #040942ff;" class="search-result-item" onclick="selectSocio(${s.id_socio}, '${s.alias}', '${s.email}', '${s.celular}', '${s.genero}', '${s.es_responsable}')">${s.alias} - ${s.email}</div>`
+          `<div style="color: #040942ff; padding:0.5rem; cursor:pointer; border-bottom:1px solid #eee;" onclick="selectSocio(${s.id_socio}, '${s.alias}', '${s.fecha_nac || ''}', '${s.celular || ''}', '${s.email}', '${s.direccion || ''}', '${s.rol || ''}', '${s.foto_url || ''}', '${s.genero || ''}', '${s.id_puesto || ''}', '${s.habilidad || ''}')">${s.alias} - ${s.email}</div>`
         ).join('');
         resultsDiv.style.display = 'block';
       } else {
@@ -356,22 +408,34 @@ $socios = $stmt->fetchAll();
       }
     }
     
-    function selectSocio(id, alias, email, celular, genero, responsable) {
-      openSocioModal('update', id, alias, email, celular, genero, responsable);
+    function selectSocio(id, alias, fecha_nac, celular, email, direccion, rol, foto_url, genero, id_puesto, habilidad) {
+      openSocioModal('update', id, alias, fecha_nac, celular, email, direccion, rol, foto_url, genero, id_puesto, habilidad);
       document.getElementById('searchSocio').value = '';
       document.getElementById('searchResults').style.display = 'none';
     }
+    <?php endif; ?>
     
-    function openSocioModal(action, id = null, alias = '', email = '', celular = '', genero = '', responsable = '') {
-      const actionForApi = (action === 'edit') ? 'update' : action;
-      document.getElementById('actionType').value = actionForApi;
-      document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Socio' : 'Editar Socio';
+    function openSocioModal(action, id = null, alias = '', fecha_nac = '', celular = '', email = '', direccion = '', rol = '', foto_url = '', genero = '', id_puesto = '', habilidad = '') {
+      document.getElementById('actionType').value = action;
+      document.getElementById('modalTitle').textContent = action === 'insert' ? 'Agregar Socio' : 'Editar Perfil';
       document.getElementById('socioId').value = id || '';
+      document.getElementById('originalEmail').value = email;
       document.getElementById('socioAlias').value = alias;
-      document.getElementById('socioEmail').value = email;
+      document.getElementById('socioFechaNac').value = fecha_nac;
       document.getElementById('socioCelular').value = celular;
-      document.getElementById('socioGenero').value = genero;
-      document.getElementById('socioResponsable').value = responsable;
+      document.getElementById('socioEmail').value = email;
+      document.getElementById('socioDireccion').value = direccion;
+      document.getElementById('socioRol').value = rol;
+      
+      // Género
+      const generoSelect = document.getElementById('socioGenero');
+      generoSelect.value = genero.toLowerCase();
+      
+      // Puesto
+      document.getElementById('socioPuesto').value = id_puesto;
+      
+      // Habilidad
+      document.getElementById('socioHabilidad').value = habilidad;
       
       document.getElementById('socioModal').style.display = 'flex';
     }
@@ -380,55 +444,46 @@ $socios = $stmt->fetchAll();
       document.getElementById('socioModal').style.display = 'none';
     }
 
-    function deleteSocio(id) {
-      if (confirm('¿Estás seguro de eliminar este socio?')) {
-        const formData = new FormData();
-        formData.append('action', 'delete');
-        formData.append('id_socio', id);
-        
-        fetch('../api/gestion_socios.php', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            location.reload();
-          } else {
-            alert('Error: ' + data.message);
-          }
-        });
-      }
-    }
-    
     function saveSocio(event) {
-        event.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('action', document.getElementById('actionType').value);
-        formData.append('id_socio', document.getElementById('socioId').value);
-        formData.append('alias', document.getElementById('socioAlias').value);
-        formData.append('email', document.getElementById('socioEmail').value);
-        formData.append('celular', document.getElementById('socioCelular').value);
-        formData.append('genero', document.getElementById('socioGenero').value);
-        formData.append('es_responsable', document.getElementById('socioResponsable').value);
-        
-        fetch('../api/gestion_socios.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-            location.reload();
-            } else {
-            alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al guardar el socio');
-        });
+      event.preventDefault();
+      
+      const formData = new FormData();
+      formData.append('action', document.getElementById('actionType').value);
+      formData.append('id_socio', document.getElementById('socioId').value);
+      formData.append('original_email', document.getElementById('originalEmail').value);
+      formData.append('alias', document.getElementById('socioAlias').value);
+      formData.append('fecha_nac', document.getElementById('socioFechaNac').value);
+      formData.append('celular', document.getElementById('socioCelular').value);
+      formData.append('email', document.getElementById('socioEmail').value);
+      formData.append('direccion', document.getElementById('socioDireccion').value);
+      formData.append('rol', document.getElementById('socioRol').value);
+      formData.append('genero', document.getElementById('socioGenero').value);
+      formData.append('id_puesto', document.getElementById('socioPuesto').value);
+      formData.append('habilidad', document.getElementById('socioHabilidad').value);
+      
+      // Archivo de foto
+      const fotoFile = document.getElementById('socioFoto').files[0];
+      if (fotoFile) {
+        formData.append('foto_url', fotoFile);
+      }
+      
+      fetch('../api/gestion_socios.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Perfil actualizado correctamente');
+          location.reload();
+        } else {
+          alert('Error: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error al guardar el perfil');
+      });
     }
     
     window.onclick = function(event) {
