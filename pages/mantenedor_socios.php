@@ -3,6 +3,19 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
+// Si no hay sesión, intentar con parámetro URL
+if (!$can_edit && isset($_GET['socio_id'])) {
+    $socio_id_from_url = (int)$_GET['socio_id'];
+    // Verificar que este socio existe y pertenece al club actual
+    $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+    $stmt->execute([$socio_id_from_url, $_SESSION['club_id'] ?? 0]);
+    if ($stmt->fetch()) {
+        $_SESSION['id_socio'] = $socio_id_from_url;
+        $is_socio = true;
+        $can_edit = true;
+    }
+}
+
 // Verificar autenticación (CEO o Socio)
 $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
 $is_socio = isset($_SESSION['id_socio']);

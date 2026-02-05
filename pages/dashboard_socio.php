@@ -322,7 +322,7 @@ if (isset($_SESSION['id_socio'])) {
           <li>🏠 Dirección completa</li>
           <li>👤 Información adicional</li>
         </ul>
-        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
+        <a href="mantenedor_socios.php?socio_id=<?= $_SESSION['id_socio'] ?>" class="update-profile-btn">
           Completar mi perfil ahora
         </a>
       </div>
