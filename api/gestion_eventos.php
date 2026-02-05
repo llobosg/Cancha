@@ -20,9 +20,8 @@ try {
                 throw new Exception('Todos los campos son requeridos');
             }
             
-            if (!is_numeric($players) || $players < 1) {
-                throw new Exception('Jugadores debe ser un número positivo');
-            }
+            // Eliminar validación numérica ya que players es VARCHAR
+            // Solo aseguramos que no esté vacío (ya validado arriba)
             
             if ($action === 'insert') {
                 $stmt = $pdo->prepare("INSERT INTO tipoeventos (tipoevento, players) VALUES (?, ?)");
