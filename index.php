@@ -404,12 +404,139 @@ $_SESSION['visited_index'] = true;
 <?php endif; ?>
 
 <!-- Barra superior -->
-<div class="top-bar">
-  <a href="../pages/registro_recinto.php" class="menu-option">🏟️ Ingresa a tu Recinto Deportivo</a>
-  <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
-    <span class="flag-icon"></span>
-    <span class="register-text">Registrar un club</span>
-  </button>
+  <div class="top-bar">
+    <!-- Menú principal - index.php -->
+  <div class="menu-container" style="display: flex; justify-content: center; gap: 2rem; margin: 2rem 0; flex-wrap: wrap;">
+    <!-- Menú Recintos Deportivos (desplegable) -->
+    <div class="dropdown-menu" style="position: relative; display: inline-block;">
+      <button class="menu-btn" style="
+        background: rgba(255,255,255,0.9); 
+        color: #071289; 
+        border: none; 
+        padding: 1rem 1.5rem; 
+        border-radius: 12px; 
+        font-size: 1.1rem; 
+        font-weight: bold; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      ">
+        🏟️ Gestión Recintos Deportivos
+      </button>
+      <div class="dropdown-content" style="
+        position: absolute; 
+        top: 100%; 
+        left: 0; 
+        background: white; 
+        min-width: 220px; 
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2); 
+        border-radius: 12px; 
+        z-index: 1000; 
+        opacity: 0; 
+        visibility: hidden; 
+        transform: translateY(-10px); 
+        transition: all 0.3s ease;
+      ">
+        <a href="login_recinto.php" style="
+          display: block; 
+          padding: 0.8rem 1.5rem; 
+          color: #071289; 
+          text-decoration: none; 
+          font-weight: bold;
+          border-bottom: 1px solid #eee;
+        ">🔐 Entrar a tu Recinto</a>
+        <a href="registro_recinto.php" style="
+          display: block; 
+          padding: 0.8rem 1.5rem; 
+          color: #071289; 
+          text-decoration: none; 
+          font-weight: bold;
+        ">➕ Registra tu Recinto</a>
+      </div>
+    </div>
+
+    <!-- Opciones principales -->
+    <a href="registro_club.php" class="menu-option" style="
+      background: rgba(255,255,255,0.9); 
+      color: #071289; 
+      text-decoration: none; 
+      padding: 1rem 1.5rem; 
+      border-radius: 12px; 
+      font-size: 1.1rem; 
+      font-weight: bold; 
+      display: flex; 
+      align-items: center; 
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    ">⚽ Registra tu Club</a>
+    
+    <a href="registro_socio.php" class="menu-option" style="
+      background: rgba(255,255,255,0.9); 
+      color: #071289; 
+      text-decoration: none; 
+      padding: 1rem 1.5rem; 
+      border-radius: 12px; 
+      font-size: 1.1rem; 
+      font-weight: bold; 
+      display: flex; 
+      align-items: center; 
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    ">👥 Inscripción a un Club</a>
+  </div>
+
+  <style>
+  /* Estilos para hover en desktop */
+  .dropdown-menu:hover .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  /* Responsive mobile */
+  @media (max-width: 768px) {
+    .menu-container {
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .dropdown-menu {
+      width: 100%;
+      max-width: 300px;
+    }
+    
+    .menu-btn, .menu-option {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    .dropdown-content {
+      position: static;
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+  }
+  </style>
+
+  <script>
+  // Para mobile, hacer clic para abrir/cerrar
+  document.addEventListener('DOMContentLoaded', function() {
+    const menuBtn = document.querySelector('.menu-btn');
+    const dropdownContent = document.querySelector('.dropdown-content');
+    
+    if (window.innerWidth <= 768) {
+      menuBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
+      });
+    }
+  });
+  </script>
   
   <div class="google-login-container">
     <!-- Botón Entrar a mi club (aparece si hay sesión) -->
