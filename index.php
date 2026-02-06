@@ -11,437 +11,45 @@ $_SESSION['visited_index'] = true;
   <title>Cancha - Gestión para clubes deportivos</title>
   <link rel="stylesheet" href="../styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      background:
-        linear-gradient(rgba(0,20,10,.40), rgba(0,30,15,.50)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      font-family: 'Poppins', sans-serif;
-      min-height: 100vh;
-      color: #fff;
-      padding-top: 70px;
-    }
-    /* Barra superior fija */
-    .top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 60px;
-      background: rgba(0, 51, 102, 0.95);
-      backdrop-filter: blur(10px);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 1.5rem;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-    .btn-register {
-      background: transparent !important;
-      border: 2px solid white !important;
-      color: white !important;
-      padding: 0.4rem 0.8rem;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .btn-register:hover {
-      background: rgba(255,255,255,0.1) !important;
-    }
-    .btn-enter {
-      background: transparent !important;
-      border: 2px solid white !important;
-      color: white !important;
-      padding: 0.4rem 0.8rem;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-enter:hover {
-      background: rgba(255,255,255,0.1) !important;
-    }
-    .google-login-container {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-    }
-    /* Contenido principal */
-    .hero {
-      text-align: center;
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 0 2rem;
-    }
-    .title-cancha {
-      font-family: 'Dancing Script', cursive;
-      font-size: 3.8rem;
-      margin: 2rem 0 1rem 0;
-      color: white;
-      text-shadow: 0 3px 6px rgba(0,0,0,.5);
-    }
-    .subtitle {
-      font-size: 1.25rem;
-      margin-bottom: 2.5rem;
-      opacity: .95;
-      color: white;
-    }
-    /* Sección multimedia principal */
-    .media-main {
-      position: relative;
-      height: 320px;
-      margin: 2rem 0;
-      overflow: hidden;
-    }
-    /* Carrusel horizontal */
-    .carousel-horizontal {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-    .carousel-track {
-      display: flex;
-      height: 100%;
-      transition: transform 0.5s ease-in-out;
-    }
-    /* Web: 2 imágenes visibles */
-    @media (min-width: 769px) {
-      .carousel-item {
-        min-width: calc(50% - 20px);
-        height: 100%;
-        margin: 0 10px;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        position: relative;
-      }
-      .media-main {
-        height: 350px;
-      }
-    }
-    /* Móvil: 1 imagen centrada */
-    @media (max-width: 768px) {
-      .carousel-item {
-        min-width: 90%;
-        height: 100%;
-        margin: 0 auto;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        position: relative;
-      }
-      .media-main {
-        height: 280px;
-      }
-    }
-    .carousel-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .item-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(0, 51, 102, 0.85);
-      padding: 1rem;
-      color: white;
-      text-align: center;
-    }
-    .item-overlay h4 {
-      margin: 0;
-      font-size: 1.2rem;
-    }
-    /* Controles de navegación */
-    .carousel-controls {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin: 1rem 0;
-    }
-    .nav-btn {
-      background: rgba(0, 51, 102, 0.8);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      font-size: 1.2rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .nav-btn:hover {
-      background: rgba(0, 51, 102, 1);
-      border-color: white;
-      transform: scale(1.1);
-    }
-    .play-pause {
-      font-size: 1rem;
-    }
-    /* Responsive controles */
-    @media (max-width: 768px) {
-      .carousel-controls {
-        margin: 1rem auto;
-        width: fit-content;
-      }
-      .nav-btn {
-        width: 45px;
-        height: 45px;
-        font-size: 1.1rem;
-      }
-    }
-    /* Descripción sincronizada */
-    .feature-description {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-radius: 16px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .feature-description h3 {
-      color: white;
-      margin-bottom: 1rem;
-      font-size: 1.4rem;
-    }
-    .feature-description p {
-      color: rgba(255, 255, 255, 0.9);
-      line-height: 1.6;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    /* Línea divisoria amarilla */
-    .divider-yellow {
-      height: 3px;
-      background: #FFD700;
-      margin: 2rem auto;
-      width: 80%;
-    }
-    /* Responsive móvil */
-    @media (max-width: 768px) {
-      .top-bar {
-        padding: 0 1rem;
-        height: 55px;
-      }
-      .btn-register,
-      .btn-enter {
-        font-size: 0.8rem;
-        padding: 0.3rem 0.6rem;
-      }
-      .title-cancha {
-        font-size: 2.8rem;
-        margin-top: 1.5rem;
-      }
-      .subtitle {
-        font-size: 1.1rem;
-      }
-    }
-    /* Ícono banderín */
-    .flag-icon::before {
-      content: "🚩";
-    }
-    .submodal {
-      position: fixed;
-      z-index: 1001;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.6);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .submodal-content {
-      background: white;
-      border-radius: 16px;
-      padding: 2rem;
-      max-width: 500px;
-      width: 90%;
-      position: relative;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    .close-modal {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      font-size: 28px;
-      color: #999;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .close-modal:hover {
-      color: #333;
-    }
-    .modal-header h3 {
-      color: #003366;
-      margin-bottom: 1.5rem;
-      text-align: center;
-    }
-    .register-options {
-      text-align: center;
-    }
-    .btn-primary {
-      background: #00cc66;
-      color: white;
-      border: none;
-      padding: 0.8rem 2rem;
-      border-radius: 50px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
-      max-width: 250px;
-      margin: 0 auto;
-    }
-    .btn-primary:hover {
-      background: #00aa55;
-      transform: translateY(-2px);
-    }
-    @media (max-width: 768px) {
-      .submodal-content {
-        padding: 1.5rem;
-        margin: 1rem;
-      }
-      .btn-primary {
-        padding: 0.7rem 1.5rem;
-        font-size: 1rem;
-      }
-    }
-
-    /* Splash Screen Animado */
-    .splash-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #003366;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      transition: opacity 0.5s ease-out;
-    }
-    .ball-container {
-      animation: bounce 2s infinite;
-    }
-    .spinning-ball {
-      font-size: 4rem;
-      animation: spin 2s linear infinite;
-      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-    .loading-text {
-      color: white;
-      font-size: 1.2rem;
-      margin-top: 1.5rem;
-      text-align: center;
-      max-width: 80%;
-      line-height: 1.4;
-      opacity: 0.9;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    @media (max-width: 768px) {
-      .spinning-ball {
-        font-size: 3rem;
-      }
-      .loading-text {
-        font-size: 1rem;
-        max-width: 90%;
-      }
-    }
-  </style>
-</head>
-<body>
-
-<?php if ($show_splash): ?>
-  <!-- Splash Screen Animado - SOLO EN ENTRADA DIRECTA -->
-  <div id="splashScreen" class="splash-screen">
-    <div class="ball-container">
-      <div class="spinning-ball">⚽</div>
-    </div>
-    <div class="loading-text">Estamos abriendo el recinto para que entres a Cancha</div>
-  </div>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(() => {
-        const splash = document.getElementById('splashScreen');
-        if (splash) {
-          splash.style.opacity = '0';
-          setTimeout(() => {
-            splash.style.display = 'none';
-          }, 500);
-        }
-      }, 2000);
-    });
-  </script>
-<?php endif; ?>
-
-<!-- Barra superior -->
-  <div class="top-bar">
-    <!-- Menú principal - index.php -->
-  <div class="menu-container" style="display: flex; justify-content: center; gap: 2rem; margin: 2rem 0; flex-wrap: wrap;">
+  <!-- Barra superior -->
+<div class="top-bar">
+  <div class="menu-container" style="display: flex; align-items: center; gap: 1.5rem;">
     <!-- Menú Recintos Deportivos (desplegable) -->
     <div class="dropdown-menu" style="position: relative; display: inline-block;">
       <button class="menu-btn" style="
         background: rgba(255,255,255,0.9); 
         color: #071289; 
         border: none; 
-        padding: 1rem 1.5rem; 
-        border-radius: 12px; 
-        font-size: 1.1rem; 
+        padding: 0.5rem 1rem; 
+        border-radius: 8px; 
+        font-size: 0.9rem; 
         font-weight: bold; 
         cursor: pointer; 
         display: flex; 
         align-items: center; 
-        gap: 0.5rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        gap: 0.3rem;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       ">
-        🏟️ Gestión Recintos Deportivos
+        🏟️ Gestión Recintos
       </button>
       <div class="dropdown-content" style="
         position: absolute; 
         top: 100%; 
         left: 0; 
         background: white; 
-        min-width: 220px; 
+        min-width: 200px; 
         box-shadow: 0 8px 16px rgba(0,0,0,0.2); 
-        border-radius: 12px; 
+        border-radius: 8px; 
         z-index: 1000; 
         opacity: 0; 
         visibility: hidden; 
-        transform: translateY(-10px); 
+        transform: translateY(-5px); 
         transition: all 0.3s ease;
+        margin-top: 5px;
       ">
         <a href="login_recinto.php" style="
           display: block; 
-          padding: 0.8rem 1.5rem; 
+          padding: 0.6rem 1.2rem; 
           color: #071289; 
           text-decoration: none; 
           font-weight: bold;
@@ -449,7 +57,7 @@ $_SESSION['visited_index'] = true;
         ">🔐 Entrar a tu Recinto</a>
         <a href="registro_recinto.php" style="
           display: block; 
-          padding: 0.8rem 1.5rem; 
+          padding: 0.6rem 1.2rem; 
           color: #071289; 
           text-decoration: none; 
           font-weight: bold;
@@ -462,82 +70,31 @@ $_SESSION['visited_index'] = true;
       background: rgba(255,255,255,0.9); 
       color: #071289; 
       text-decoration: none; 
-      padding: 1rem 1.5rem; 
-      border-radius: 12px; 
-      font-size: 1.1rem; 
+      padding: 0.5rem 1rem; 
+      border-radius: 8px; 
+      font-size: 0.9rem; 
       font-weight: bold; 
       display: flex; 
       align-items: center; 
-      gap: 0.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      gap: 0.3rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     ">⚽ Registra tu Club</a>
     
     <a href="registro_socio.php" class="menu-option" style="
       background: rgba(255,255,255,0.9); 
       color: #071289; 
       text-decoration: none; 
-      padding: 1rem 1.5rem; 
-      border-radius: 12px; 
-      font-size: 1.1rem; 
+      padding: 0.5rem 1rem; 
+      border-radius: 8px; 
+      font-size: 0.9rem; 
       font-weight: bold; 
       display: flex; 
       align-items: center; 
-      gap: 0.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      gap: 0.3rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     ">👥 Inscripción a un Club</a>
   </div>
 
-  <style>
-  /* Estilos para hover en desktop */
-  .dropdown-menu:hover .dropdown-content {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-
-  /* Responsive mobile */
-  @media (max-width: 768px) {
-    .menu-container {
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    .dropdown-menu {
-      width: 100%;
-      max-width: 300px;
-    }
-    
-    .menu-btn, .menu-option {
-      width: 100%;
-      justify-content: center;
-    }
-    
-    .dropdown-content {
-      position: static;
-      opacity: 1;
-      visibility: visible;
-      transform: none;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-  }
-  </style>
-
-  <script>
-  // Para mobile, hacer clic para abrir/cerrar
-  document.addEventListener('DOMContentLoaded', function() {
-    const menuBtn = document.querySelector('.menu-btn');
-    const dropdownContent = document.querySelector('.dropdown-content');
-    
-    if (window.innerWidth <= 768) {
-      menuBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
-      });
-    }
-  });
-  </script>
-  
   <div class="google-login-container">
     <!-- Botón Entrar a mi club (aparece si hay sesión) -->
     <button id="btnEnterClub" class="btn-enter" style="display:none;">
@@ -562,6 +119,56 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
 </div>
+
+<style>
+/* Estilos para hover en desktop */
+.dropdown-menu:hover .dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .menu-container {
+    gap: 0.8rem;
+  }
+  
+  .menu-btn, .menu-option {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .dropdown-content {
+    min-width: 180px;
+    right: 0;
+    left: auto;
+  }
+  
+  /* Para mobile, hacer clic para abrir/cerrar */
+  .dropdown-menu-click .dropdown-content {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+  }
+}
+</style>
+
+<script>
+// Para mobile, hacer clic para abrir/cerrar
+document.addEventListener('DOMContentLoaded', function() {
+  const menuBtn = document.querySelector('.menu-btn');
+  const dropdownContent = document.querySelector('.dropdown-content');
+  const dropdownMenu = document.querySelector('.dropdown-menu');
+  
+  if (window.innerWidth <= 768) {
+    menuBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      dropdownMenu.classList.toggle('dropdown-menu-click');
+    });
+  }
+});
+</script>
 
 <!-- Contenido principal -->
 <div class="hero">
