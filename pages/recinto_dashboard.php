@@ -26,7 +26,7 @@ $stmt_stats = $pdo->prepare("
     SELECT 
         COUNT(*) as total_canchas,
         SUM(CASE WHEN r.estado = 'confirmada' THEN 1 ELSE 0 END) as reservas_activas,
-        SUM(CASE WHEN r.estado = 'confirmada' THEN r.monto_total ELSE 0 END) as ingresos_hoy
+        COALESCE(SUM(CASE WHEN r.estado = 'confirmada' THEN r.monto_total ELSE 0 END), 0) as ingresos_hoy
     FROM canchas c
     LEFT JOIN reservas r ON c.id_cancha = r.id_cancha AND DATE(r.fecha) = CURDATE()
     WHERE c.id_recinto = ?
@@ -109,12 +109,21 @@ $top_canchas = $stmt_top_canchas->fetchAll();
     }
     
     .header {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
+      gap: 2rem;
       margin-bottom: 2.5rem;
       padding-bottom: 1rem;
       border-bottom: 2px solid rgba(255,255,255,0.3);
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 1rem;
+      }
     }
     
     .logo-recinto {
@@ -237,9 +246,28 @@ $top_canchas = $stmt_top_canchas->fetchAll();
 <body>
   <div class="dashboard-container">
     <div class="header">
-      <div class="logo-recinto">🏟️ <?= htmlspecialchars($recinto['nombre']) ?></div>
       <div>
-        <a href="recinto_logout.php" style="color: #ffcc00; text-decoration: none;">Cerrar sesión</a>
+        <h1 style="margin: 0; color: #FFD700; font-size: 2.8rem;">⚽ Cancha</h1>
+        <p style="margin: 0.5rem 0 0 0; color: rgba(255,255,255,0.8); font-size: 1.1rem;">
+          Administración Recintos Deportivos
+        </p>
+      </div>
+      <div style="text-align: center; margin-top: 1rem;">
+        <?php if ($recinto['logorecinto']): ?>
+          <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
+              alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
+              style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; background: rgba(255,255,255,0.2);">
+        <?php else: ?>
+          <div style="width: 80px; height: 80px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+            🏟️
+          </div>
+        <?php endif; ?>
+        <h2 style="margin: 0.5rem 0 0 0; color: white; font-size: 1.4rem;">
+          <?= htmlspecialchars($recinto['nombre']) ?>
+        </h2>
+      </div>
+      <div>
+        <a href="recinto_logout.php" style="color: #ffcc00; text-decoration: none; font-weight: bold;">Cerrar sesión</a>
       </div>
     </div>
 
@@ -255,7 +283,7 @@ $top_canchas = $stmt_top_canchas->fetchAll();
       </div>
       <div class="stat-card">
         <h3>Ingresos Hoy</h3>
-        <div class="number">$<?= number_format($stats['ingresos_hoy'], 0, ',', '.') ?></div>
+        <div class="number">$<?= number_format($stats['ingresos_hoy'] ?? 0, 0, ',', '.') ?></div>
       </div>
       <div class="stat-card">
         <h3>Ocupación Semanal</h3>

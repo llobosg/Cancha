@@ -43,16 +43,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Generar código de verificación
         $verification_code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
         
-        // Insertar recinto
+        // En el bloque de procesamiento POST, antes del INSERT
+        $logo_filename = null;
+        if (!empty($_FILES['logorecinto']['name'])) {
+            $upload_dir = __DIR__ . '/../uploads/logos_recintos/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+            
+            $file_extension = pathinfo($_FILES['logorecinto']['name'], PATHINFO_EXTENSION);
+            $logo_filename = 'recinto_' . uniqid() . '.' . strtolower($file_extension);
+            $file_path = $upload_dir . $logo_filename;
+            
+            if (move_uploaded_file($_FILES['logorecinto']['tmp_name'], $file_path)) {
+                // Logo subido exitosamente
+            } else {
+                throw new Exception('Error al subir el logo del recinto');
+            }
+        }
+
+        // En el INSERT, agrega el campo logorecinto
         $stmt = $pdo->prepare("
             INSERT INTO recintos_deportivos (
                 nombre, pais, region, ciudad, comuna, direccion, sitioweb, 
-                email, telefono, nombre_admin, correo_admin, telefono_admin, verification_code
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                email, telefono, nombre_admin, correo_admin, telefono_admin, 
+                verification_code, logorecinto
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $nombre, $pais, $region, $ciudad, $comuna, $direccion, $sitioweb,
-            $email, $telefono, $nombre_admin, $correo_admin, $telefono_admin, $verification_code
+            $email, $telefono, $nombre_admin, $correo_admin, $telefono_admin, 
+            $verification_code, $logo_filename
         ]);
         
         $id_recinto = $pdo->lastInsertId();
@@ -279,6 +300,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="sitioweb">Sitio Web</label>
             <input type="url" id="sitioweb" name="sitioweb">
           </div>
+        </div>
+        <div class="form-group">
+          <label for="logorecinto">Logo del Recinto</label>
+          <input type="file" id="logorecinto" name="logorecinto" accept="image/*">
         </div>
 
         <!-- Contacto del Recinto -->
