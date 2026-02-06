@@ -438,25 +438,11 @@ $_SESSION['visited_index'] = true;
 <?php endif; ?>
 
 <!-- Barra superior -->
-  <div class="top-bar">
-    <!-- Menú principal - index.php -->
-  <div class="menu-container" style="display: flex; justify-content: center; gap: 2rem; margin: 2rem 0; flex-wrap: wrap;">
+<div class="top-bar">
+  <div style="display: flex; align-items: center; gap: 1rem;">
     <!-- Menú Recintos Deportivos (desplegable) -->
     <div class="dropdown-menu" style="position: relative; display: inline-block;">
-      <button class="menu-btn" style="
-        background: rgba(255,255,255,0.9); 
-        color: #071289; 
-        border: none; 
-        padding: 1rem 1.5rem; 
-        border-radius: 12px; 
-        font-size: 1.1rem; 
-        font-weight: bold; 
-        cursor: pointer; 
-        display: flex; 
-        align-items: center; 
-        gap: 0.5rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      ">
+      <button class="btn-register" style="background: transparent !important; border: 2px solid white !important; color: white !important;">
         🏟️ Gestión Recintos Deportivos
       </button>
       <div class="dropdown-content" style="
@@ -472,8 +458,9 @@ $_SESSION['visited_index'] = true;
         visibility: hidden; 
         transform: translateY(-10px); 
         transition: all 0.3s ease;
+        margin-top: 5px;
       ">
-        <a href="login_recinto.php" style="
+        <a href="pages/login_recinto.php" style="
           display: block; 
           padding: 0.8rem 1.5rem; 
           color: #071289; 
@@ -481,7 +468,7 @@ $_SESSION['visited_index'] = true;
           font-weight: bold;
           border-bottom: 1px solid #eee;
         ">🔐 Entrar a tu Recinto</a>
-        <a href="registro_recinto.php" style="
+        <a href="pages/registro_recinto.php" style="
           display: block; 
           padding: 0.8rem 1.5rem; 
           color: #071289; 
@@ -492,27 +479,13 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
 
-  <script>
-  // Para mobile, hacer clic para abrir/cerrar
-  document.addEventListener('DOMContentLoaded', function() {
-    const menuBtn = document.querySelector('.menu-btn');
-    const dropdownContent = document.querySelector('.dropdown-content');
-    
-    if (window.innerWidth <= 768) {
-      menuBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
-      });
-    }
-  });
-  </script>
-
-  <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
-    <span class="flag-icon"></span>
-    <span class="register-text">Registrar un club</span>
-  </button>
-  
   <div class="google-login-container">
+    <!-- Botón Registrar club -->
+    <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
+      <span class="flag-icon"></span>
+      <span class="register-text">Registrar un club</span>
+    </button>
+    
     <!-- Botón Entrar a mi club (aparece si hay sesión) -->
     <button id="btnEnterClub" class="btn-enter" style="display:none;">
       👤 Entrar a mi club
@@ -536,6 +509,59 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
 </div>
+
+<style>
+/* Estilos para hover en desktop */
+.dropdown-menu:hover .dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .dropdown-menu {
+    width: auto;
+  }
+  
+  .dropdown-content {
+    position: absolute;
+    right: 0;
+    left: auto;
+    min-width: 200px;
+  }
+  
+  /* Para mobile, hacer clic para abrir/cerrar */
+  .dropdown-menu-click .dropdown-content {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+  }
+}
+</style>
+
+<script>
+// Para mobile, hacer clic para abrir/cerrar
+document.addEventListener('DOMContentLoaded', function() {
+  const menuBtn = document.querySelector('.dropdown-menu .btn-register');
+  const dropdownMenu = document.querySelector('.dropdown-menu');
+  
+  if (window.innerWidth <= 768) {
+    menuBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('dropdown-menu-click');
+    });
+    
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+      if (!dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove('dropdown-menu-click');
+      }
+    });
+  }
+});
+</script>
 
 <!-- Contenido principal -->
 <div class="hero">
