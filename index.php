@@ -490,21 +490,6 @@ $_SESSION['visited_index'] = true;
         ">➕ Registra tu Recinto</a>
       </div>
     </div>
-
-    <!-- Opciones principales -->
-    <a href="registro_club.php" class="menu-option" style="
-      background: rgba(255,255,255,0.9); 
-      color: #071289; 
-      text-decoration: none; 
-      padding: 1rem 1.5rem; 
-      border-radius: 12px; 
-      font-size: 1.1rem; 
-      font-weight: bold; 
-      display: flex; 
-      align-items: center; 
-      gap: 0.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    ">⚽ Registra tu Club</a>
   </div>
 
   <script>
@@ -521,6 +506,11 @@ $_SESSION['visited_index'] = true;
     }
   });
   </script>
+
+  <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
+    <span class="flag-icon"></span>
+    <span class="register-text">Registrar un club</span>
+  </button>
   
   <div class="google-login-container">
     <!-- Botón Entrar a mi club (aparece si hay sesión) -->
