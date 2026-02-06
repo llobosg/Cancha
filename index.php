@@ -441,23 +441,20 @@ $_SESSION['visited_index'] = true;
 <div class="top-bar">
   <div style="display: flex; align-items: center; gap: 1rem;">
     <!-- Menú Recintos Deportivos (desplegable) -->
-    <div class="dropdown-menu" style="position: relative; display: inline-block;">
-      <button class="btn-register" style="background: transparent !important; border: 2px solid white !important; color: white !important;">
-        🏟️ Gestión Recintos Deportivos
+    <div id="recintosDropdown" style="position: relative; display: inline-block;">
+      <button id="recintosBtn" class="btn-register" style="background: transparent !important; border: 2px solid white !important; color: white !important; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+        🏟️ Gestión Recintos
       </button>
-      <div class="dropdown-content" style="
+      <div id="dropdownContent" style="
         position: absolute; 
         top: 100%; 
         left: 0; 
         background: white; 
-        min-width: 220px; 
+        min-width: 200px; 
         box-shadow: 0 8px 16px rgba(0,0,0,0.2); 
         border-radius: 12px; 
-        z-index: 1000; 
-        opacity: 0; 
-        visibility: hidden; 
-        transform: translateY(-10px); 
-        transition: all 0.3s ease;
+        z-index: 1001; 
+        display: none;
         margin-top: 5px;
       ">
         <a href="pages/login_recinto.php" style="
@@ -510,56 +507,29 @@ $_SESSION['visited_index'] = true;
   </div>
 </div>
 
-<style>
-/* Estilos para hover en desktop */
-.dropdown-menu:hover .dropdown-content {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-/* Responsive mobile */
-@media (max-width: 768px) {
-  .dropdown-menu {
-    width: auto;
-  }
-  
-  .dropdown-content {
-    position: absolute;
-    right: 0;
-    left: auto;
-    min-width: 200px;
-  }
-  
-  /* Para mobile, hacer clic para abrir/cerrar */
-  .dropdown-menu-click .dropdown-content {
-    opacity: 1 !important;
-    visibility: visible !important;
-    transform: translateY(0) !important;
-  }
-}
-</style>
-
 <script>
-// Para mobile, hacer clic para abrir/cerrar
+// Funcionalidad del menú desplegable
 document.addEventListener('DOMContentLoaded', function() {
-  const menuBtn = document.querySelector('.dropdown-menu .btn-register');
-  const dropdownMenu = document.querySelector('.dropdown-menu');
+  const dropdown = document.getElementById('recintosDropdown');
+  const btn = document.getElementById('recintosBtn');
+  const content = document.getElementById('dropdownContent');
   
-  if (window.innerWidth <= 768) {
-    menuBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      dropdownMenu.classList.toggle('dropdown-menu-click');
-    });
-    
-    // Cerrar al hacer clic fuera
-    document.addEventListener('click', function(e) {
-      if (!dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('dropdown-menu-click');
-      }
-    });
-  }
+  // Abrir/cerrar con clic (funciona en todos los dispositivos)
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (content.style.display === 'block') {
+      content.style.display = 'none';
+    } else {
+      content.style.display = 'block';
+    }
+  });
+  
+  // Cerrar al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    if (!dropdown.contains(e.target)) {
+      content.style.display = 'none';
+    }
+  });
 });
 </script>
 
