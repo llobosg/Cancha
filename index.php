@@ -405,7 +405,7 @@ $_SESSION['visited_index'] = true;
 
 <!-- Barra superior -->
 <div class="top-bar">
-  <a href="registro_recinto.php" class="menu-option">🏟️ Ingresa a tu Recinto Deportivo</a>
+  <a href="../pages/registro_recinto.php" class="menu-option">🏟️ Ingresa a tu Recinto Deportivo</a>
   <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
     <span class="flag-icon"></span>
     <span class="register-text">Registrar un club</span>
