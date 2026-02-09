@@ -18,10 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombre_admin = trim($_POST['nombre_admin'] ?? '');
         $correo_admin = trim($_POST['correo_admin'] ?? '');
         $telefono_admin = trim($_POST['telefono_admin'] ?? '');
+        $usuario_admin = trim($_POST['usuario_admin'] ?? '');
+        $contrasena_admin = $_POST['contrasena_admin'] ?? '';
+        $contrasena_admin_confirm = $_POST['contrasena_admin_confirm'] ?? '';
         
         // Validaciones
         if (empty($nombre) || empty($ciudad) || empty($comuna) || empty($direccion) || 
-            empty($email) || empty($nombre_admin) || empty($correo_admin)) {
+            empty($email) || empty($nombre_admin) || empty($correo_admin) ||
+            empty($usuario_admin) || empty($contrasena_admin)) {
             throw new Exception('Todos los campos marcados con * son requeridos');
         }
         
@@ -33,18 +37,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Sitio web inválido');
         }
         
-        // Verificar si el email ya existe
+        if ($contrasena_admin !== $contrasena_admin_confirm) {
+            throw new Exception('Las contraseñas no coinciden');
+        }
+        
+        if (strlen($contrasena_admin) < 6) {
+            throw new Exception('La contraseña debe tener al menos 6 caracteres');
+        }
+        
+        // Verificar si el email ya está registrado
         $stmt = $pdo->prepare("SELECT id_recinto FROM recintos_deportivos WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
             throw new Exception('Este email ya está registrado');
         }
         
-        // Generar código de verificación
-        $verification_code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+        // Verificar si el usuario de administrador ya existe
+        $stmt = $pdo->prepare("SELECT id_admin FROM admin_recintos WHERE usuario = ?");
+        $stmt->execute([$usuario_admin]);
+        if ($stmt->fetch()) {
+            throw new Exception('El usuario de administrador ya existe');
+        }
         
-        // En el bloque de procesamiento POST, antes del INSERT
-        $logo_filename = null;
+        // Manejar el logo del recinto
+        $logorecinto_filename = null;
         if (!empty($_FILES['logorecinto']['name'])) {
             $upload_dir = __DIR__ . '/../uploads/logos_recintos/';
             if (!is_dir($upload_dir)) {
@@ -52,31 +68,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $file_extension = pathinfo($_FILES['logorecinto']['name'], PATHINFO_EXTENSION);
-            $logo_filename = 'recinto_' . uniqid() . '.' . strtolower($file_extension);
-            $file_path = $upload_dir . $logo_filename;
+            $logorecinto_filename = 'recinto_' . uniqid() . '.' . strtolower($file_extension);
+            $file_path = $upload_dir . $logorecinto_filename;
             
-            if (move_uploaded_file($_FILES['logorecinto']['tmp_name'], $file_path)) {
-                // Logo subido exitosamente
-            } else {
+            if (!move_uploaded_file($_FILES['logorecinto']['tmp_name'], $file_path)) {
                 throw new Exception('Error al subir el logo del recinto');
             }
         }
-
-        // En el INSERT, agrega el campo logorecinto
-        $stmt = $pdo->prepare("
-            INSERT INTO recintos_deportivos (
-                nombre, pais, region, ciudad, comuna, direccion, sitioweb, 
-                email, telefono, nombre_admin, correo_admin, telefono_admin, 
-                verification_code, logorecinto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $nombre, $pais, $region, $ciudad, $comuna, $direccion, $sitioweb,
-            $email, $telefono, $nombre_admin, $correo_admin, $telefono_admin, 
-            $verification_code, $logo_filename
+        
+        // Generar código de verificación
+        $verification_code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+        
+        // Preparar datos para guardar en pendientes
+        $datos_recinto = json_encode([
+            'nombre' => $nombre,
+            'pais' => $pais,
+            'region' => $region,
+            'ciudad' => $ciudad,
+            'comuna' => $comuna,
+            'direccion' => $direccion,
+            'sitioweb' => $sitioweb,
+            'email' => $email,
+            'telefono' => $telefono,
+            'nombre_admin' => $nombre_admin,
+            'correo_admin' => $correo_admin,
+            'telefono_admin' => $telefono_admin,
+            'logorecinto' => $logorecinto_filename
         ]);
         
-        $id_recinto = $pdo->lastInsertId();
+        $datos_admin = json_encode([
+            'usuario_admin' => $usuario_admin,
+            'contrasena_admin' => password_hash($contrasena_admin, PASSWORD_DEFAULT),
+            'nombre_completo' => $nombre_admin
+        ]);
+        
+        // Guardar en tabla temporal
+        $stmt = $pdo->prepare("
+            INSERT INTO recintos_pendientes (datos_recinto, datos_admin, email_verificacion, codigo_verificacion)
+            VALUES (?, ?, ?, ?)
+        ");
+        $stmt->execute([$datos_recinto, $datos_admin, $email, $verification_code]);
         
         // Enviar código de verificación
         require_once __DIR__ . '/../includes/brevo_mailer.php';
@@ -88,13 +119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p>Tu código de verificación para <strong>{$nombre}</strong> es:</p>
             <h1 style='color:#009966;'>{$verification_code}</h1>
             <p>Ingresa este código para activar tu recinto deportivo.</p>
+            <p>El código es válido por 30 minutos.</p>
         ");
         $mail->send();
         
         // Guardar en sesión para la verificación
         session_start();
-        $_SESSION['pending_recinto_id'] = $id_recinto;
-        $_SESSION['pending_recinto_email'] = $email;
+        $_SESSION['pending_email'] = $email;
         
         header('Location: verificar_recinto.php');
         exit;
@@ -251,7 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data">
         <!-- Información del Recinto -->
         <div class="form-section">
           <h2 class="section-title">Información del Recinto</h2>
@@ -300,10 +331,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="sitioweb">Sitio Web</label>
             <input type="url" id="sitioweb" name="sitioweb">
           </div>
-        </div>
-        <div class="form-group">
-          <label for="logorecinto">Logo del Recinto</label>
-          <input type="file" id="logorecinto" name="logorecinto" accept="image/*">
+          
+          <div class="form-group">
+            <label for="logorecinto">Logo del Recinto</label>
+            <input type="file" id="logorecinto" name="logorecinto" accept="image/*">
+          </div>
         </div>
 
         <!-- Contacto del Recinto -->
@@ -341,6 +373,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
               <label for="telefono_admin">Teléfono</label>
               <input type="tel" id="telefono_admin" name="telefono_admin">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="usuario_admin">Usuario de Administrador <span class="required">*</span></label>
+            <input type="text" id="usuario_admin" name="usuario_admin" required>
+          </div>
+          
+          <div class="form-row">
+            <div class "form-group">
+              <label for="contrasena_admin">Contraseña <span class="required">*</span></label>
+              <input type="password" id="contrasena_admin" name="contrasena_admin" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+              <label for="contrasena_admin_confirm">Confirmar Contraseña <span class="required">*</span></label>
+              <input type="password" id="contrasena_admin_confirm" name="contrasena_admin_confirm" required>
             </div>
           </div>
         </div>

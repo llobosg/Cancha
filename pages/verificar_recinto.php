@@ -6,14 +6,13 @@ session_start();
 $error = '';
 $success = '';
 
-// Verificar si hay un recinto pendiente
-if (!isset($_SESSION['pending_recinto_id']) || !isset($_SESSION['pending_recinto_email'])) {
+// Verificar si hay un registro pendiente
+if (!isset($_SESSION['pending_email'])) {
     header('Location: registro_recinto.php');
     exit;
 }
 
-$pending_recinto_id = $_SESSION['pending_recinto_id'];
-$pending_recinto_email = $_SESSION['pending_recinto_email'];
+$pending_email = $_SESSION['pending_email'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -23,29 +22,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Código inválido. Debe tener 4 dígitos.');
         }
         
-        // Verificar código
+        // Buscar registro pendiente válido
         $stmt = $pdo->prepare("
-            SELECT id_recinto FROM recintos_deportivos 
-            WHERE id_recinto = ? AND email = ? AND verification_code = ?
+            SELECT * FROM recintos_pendientes 
+            WHERE email_verificacion = ? AND codigo_verificacion = ? AND expires_at > NOW()
         ");
-        $stmt->execute([$pending_recinto_id, $pending_recinto_email, $codigo]);
-        $recinto = $stmt->fetch();
+        $stmt->execute([$pending_email, $codigo]);
+        $pendiente = $stmt->fetch();
         
-        if (!$recinto) {
-            throw new Exception('Código de verificación incorrecto.');
+        if (!$pendiente) {
+            throw new Exception('Código de verificación incorrecto o ha expirado.');
         }
         
-        // Activar el recinto
-        $stmt = $pdo->prepare("UPDATE recintos_deportivos SET email_verified = 1, verification_code = NULL WHERE id_recinto = ?");
-        $stmt->execute([$pending_recinto_id]);
+        // Parsear datos JSON
+        $datos_recinto = json_decode($pendiente['datos_recinto'], true);
+        $datos_admin = json_decode($pendiente['datos_admin'], true);
+        
+        if (!$datos_recinto || !$datos_admin) {
+            throw new Exception('Error al procesar los datos del registro.');
+        }
+        
+        // Crear recinto definitivo
+        $stmt = $pdo->prepare("
+            INSERT INTO recintos_deportivos (
+                nombre, pais, region, ciudad, comuna, direccion, sitioweb, 
+                email, telefono, nombre_admin, correo_admin, telefono_admin, 
+                logorecinto, email_verified
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ");
+        $stmt->execute([
+            $datos_recinto['nombre'],
+            $datos_recinto['pais'],
+            $datos_recinto['region'],
+            $datos_recinto['ciudad'],
+            $datos_recinto['comuna'],
+            $datos_recinto['direccion'],
+            $datos_recinto['sitioweb'],
+            $datos_recinto['email'],
+            $datos_recinto['telefono'],
+            $datos_recinto['nombre_admin'],
+            $datos_recinto['correo_admin'],
+            $datos_recinto['telefono_admin'],
+            $datos_recinto['logorecinto']
+        ]);
+        
+        $id_recinto = $pdo->lastInsertId();
+        
+        // Crear administrador definitivo
+        $stmt = $pdo->prepare("
+            INSERT INTO admin_recintos (id_recinto, usuario, contraseña, email, nombre_completo)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $id_recinto,
+            $datos_admin['usuario_admin'],
+            $datos_admin['contrasena_admin'],
+            $datos_recinto['correo_admin'],
+            $datos_admin['nombre_completo']
+        ]);
+        
+        $id_admin = $pdo->lastInsertId();
+        
+        // Eliminar registro pendiente
+        $stmt = $pdo->prepare("DELETE FROM recintos_pendientes WHERE id_pendiente = ?");
+        $stmt->execute([$pendiente['id_pendiente']]);
         
         // Establecer sesión del administrador
-        $_SESSION['id_recinto'] = $pending_recinto_id;
+        $_SESSION['id_recinto'] = $id_recinto;
+        $_SESSION['id_admin_recinto'] = $id_admin;
         $_SESSION['recinto_rol'] = 'admin_recinto';
         
         // Limpiar variables de sesión temporales
-        unset($_SESSION['pending_recinto_id']);
-        unset($_SESSION['pending_recinto_email']);
+        unset($_SESSION['pending_email']);
         
         // Redirigir al dashboard
         header('Location: recinto_dashboard.php');
@@ -206,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       
       <div class="email-info">
         <p>Hemos enviado un código de verificación a:</p>
-        <strong><?= htmlspecialchars($pending_recinto_email) ?></strong>
+        <strong><?= htmlspecialchars($pending_email) ?></strong>
       </div>
       
       <?php if ($error): ?>
@@ -229,7 +277,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
       
       <div class="resend-link">
-        <a href="#" onclick="resendCode()">¿No recibiste el código? Reenviar</a>
+        <a href="#" onclick="alert('Funcionalidad de reenvío en desarrollo. Por favor, verifica tu bandeja de spam.')">¿No recibiste el código? Reenviar</a>
       </div>
     </div>
   </div>
@@ -257,11 +305,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.getElementById('codigoCompleto').value = codigo;
         document.getElementById('verificationForm').submit();
       }
-    }
-    
-    function resendCode() {
-      // Aquí iría la lógica para reenviar el código
-      alert('Funcionalidad de reenvío en desarrollo. Por favor, verifica tu bandeja de spam.');
     }
     
     // Manejar teclas de retroceso
