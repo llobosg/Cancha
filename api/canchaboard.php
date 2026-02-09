@@ -156,23 +156,45 @@ function generarDisponibilidadCancha($cancha, $fecha_inicio, $fecha_fin) {
         $dia_semana = $dias_map[(int)$current_date->format('N')];
         
         if (in_array($dia_semana, $dias_disponibles)) {
-            // Generar bloques horarios
+            // Reemplaza esta sección en generarDisponibilidadCancha():
             $hora_inicio_str = $cancha['hora_inicio'];
             $hora_fin_str = $cancha['hora_fin'];
+
+            // Asegurar formato correcto HH:MM:SS
+            if (strlen($hora_inicio_str) == 5) {
+                $hora_inicio_str .= ':00';
+            }
+            if (strlen($hora_fin_str) == 5) {
+                $hora_fin_str .= ':00';
+            }
+
             $duracion_minutos = (int)$cancha['duracion_bloque'];
-            
-            // Convertir a timestamps
-            $hora_inicio_ts = strtotime("1970-01-01 $hora_inicio_str");
-            $hora_fin_ts = strtotime("1970-01-01 $hora_fin_str");
             $duracion_segundos = $duracion_minutos * 60;
-            
-            $current_hora_ts = $hora_inicio_ts;
-            while ($current_hora_ts < $hora_fin_ts) {
-                $hora_inicio_bloque = date('H:i:s', $current_hora_ts);
-                $hora_fin_bloque = date('H:i:s', $current_hora_ts + $duracion_segundos);
+
+            // Usar DateTime para manejar horas correctamente
+            $fecha_base = new DateTime('1970-01-01');
+            $hora_inicio_dt = clone $fecha_base;
+            $hora_inicio_dt->setTime(
+                (int)substr($hora_inicio_str, 0, 2),
+                (int)substr($hora_inicio_str, 3, 2),
+                (int)substr($hora_inicio_str, 6, 2)
+            );
+            $hora_fin_dt = clone $fecha_base;
+            $hora_fin_dt->setTime(
+                (int)substr($hora_fin_str, 0, 2),
+                (int)substr($hora_fin_str, 3, 2),
+                (int)substr($hora_fin_str, 6, 2)
+            );
+
+            $current_hora_dt = clone $hora_inicio_dt;
+            while ($current_hora_dt < $hora_fin_dt) {
+                $hora_inicio_bloque = $current_hora_dt->format('H:i:s');
+                $hora_fin_bloque_dt = clone $current_hora_dt;
+                $hora_fin_bloque_dt->add(new DateInterval('PT' . $duracion_minutos . 'M'));
                 
-                // Verificar que el bloque no exceda la hora de fin
-                if (strtotime($hora_fin_bloque) <= $hora_fin_ts) {
+                if ($hora_fin_bloque_dt <= $hora_fin_dt) {
+                    $hora_fin_bloque = $hora_fin_bloque_dt->format('H:i:s');
+                    
                     $disponibilidades[] = [
                         'id_cancha' => $cancha['id_cancha'],
                         'nro_cancha' => $cancha['nro_cancha'],
@@ -194,7 +216,7 @@ function generarDisponibilidadCancha($cancha, $fecha_inicio, $fecha_fin) {
                     ];
                 }
                 
-                $current_hora_ts += $duracion_segundos;
+                $current_hora_dt->add(new DateInterval('PT' . $duracion_minutos . 'M'));
             }
         }
         
