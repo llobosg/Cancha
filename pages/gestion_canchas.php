@@ -331,22 +331,23 @@ $canchas = $stmt->fetchAll();
     <div class="header-section">
       <div class="titles-section">
         <h1 class="main-title">⚽ Cancha</h1>
-        <p class="subtitle">Administración de Recintos Deportivos</p>
         <p class="subtitle">Gestión de canchas Recinto Deportivo <?= htmlspecialchars($recinto['nombre']) ?></p>
         
         <div class="recinto-info">
-          <?php if ($recinto['logorecinto']): ?>
-            <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
-                 alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
-                 class="recinto-logo">
-          <?php else: ?>
-            <div class="recinto-logo">🏟️</div>
-          <?php endif; ?>
-          <strong><?= htmlspecialchars($recinto['nombre']) ?></strong>
+            <?php if (!empty($recinto['logorecinto'])): ?>
+                <?php 
+                $logo_path = __DIR__ . '/../uploads/logos_recintos/' . $recinto['logorecinto'];
+                if (file_exists($logo_path)): ?>
+                    <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
+                        alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
+                        class="recinto-logo">
+                <?php else: ?>
+                    <div class="recinto-logo">🏟️</div>
+                <?php endif; ?>
+                <?php else: ?>
+                <div class="recinto-logo">🏟️</div>
+            <?php endif; ?>
         </div>
-      </div>
-      
-      <a href="recinto_dashboard.php" class="close-btn" title="Volver al dashboard">×</a>
     </div>
 
     <!-- Sección superior: Buscador inteligente -->
@@ -358,6 +359,7 @@ $canchas = $stmt->fetchAll();
     <!-- Sección intermedia: Formulario para crear/editar cancha -->
     <div class="form-section">
       <h2 class="form-title">Registrar Nueva Cancha</h2>
+      <a href="recinto_dashboard.php" class="close-btn" title="Volver al dashboard">×</a>
       
       <form id="canchaForm" onsubmit="saveCancha(event)">
         <input type="hidden" id="canchaId" name="id_cancha">
@@ -366,7 +368,7 @@ $canchas = $stmt->fetchAll();
         
         <div class="form-grid">
           <div class="form-group">
-            <label for="nroCancha">Número/Nombre Cancha *</label>
+            <label for="nroCancha">Número *</label>
             <input type="text" id="nroCancha" name="nro_cancha" required placeholder="Ej: Cancha A, Pádel 1">
           </div>
           
@@ -396,7 +398,8 @@ $canchas = $stmt->fetchAll();
           
           <div class="form-group">
             <label for="duracionBloque">Duración Bloque (minutos)*</label>
-            <input type="number" id="duracionBloque" name="duracion_bloque" required min="15" max="180" value="60">
+            <input type="number" id="duracionBloque" name="duracion_bloque" required min="60" max="180" value="60" 
+                    title="La duración mínima es de 60 minutos">
           </div>
           
           <div class="form-group">
@@ -547,29 +550,40 @@ $canchas = $stmt->fetchAll();
     }
     
     function editCancha(id, nro_cancha, nombre_cancha, id_deporte, valor_arriendo, duracion_bloque, hora_inicio, hora_fin, capacidad_jugadores, dias_disponibles, activa, estado) {
-      document.getElementById('actionType').value = 'update';
-      document.getElementById('canchaId').value = id;
-      document.getElementById('nroCancha').value = nro_cancha;
-      document.getElementById('nombreCancha').value = nombre_cancha;
-      document.getElementById('deporte').value = id_deporte;
-      document.getElementById('valorArriendo').value = valor_arriendo;
-      document.getElementById('duracionBloque').value = duracion_bloque;
-      document.getElementById('horaInicio').value = hora_inicio;
-      document.getElementById('horaFin').value = hora_fin;
-      document.getElementById('capacidadJugadores').value = capacidad_jugadores;
-      document.getElementById('activa').value = activa;
-      document.getElementById('estado').value = estado;
-      
-      // Manejar días disponibles
-      const diasSelect = document.getElementById('diasDisponibles');
-      const diasArray = JSON.parse(dias_disponibles);
-      for (let i = 0; i < diasSelect.options.length; i++) {
-        diasSelect.options[i].selected = diasArray.includes(diasSelect.options[i].value);
-      }
-      
-      // Scroll to form
-      document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
-    }
+        document.getElementById('actionType').value = 'update';
+        document.getElementById('canchaId').value = id;
+        document.getElementById('nroCancha').value = nro_cancha;
+        document.getElementById('nombreCancha').value = nombre_cancha;
+        document.getElementById('deporte').value = id_deporte;
+        document.getElementById('valorArriendo').value = valor_arriendo;
+        document.getElementById('duracionBloque').value = Math.max(60, duracion_bloque); // Asegurar mínimo 60
+        document.getElementById('horaInicio').value = hora_inicio;
+        document.getElementById('horaFin').value = hora_fin;
+        document.getElementById('capacidadJugadores').value = capacidad_jugadores;
+        document.getElementById('activa').value = activa;
+        document.getElementById('estado').value = estado;
+        
+        // Manejar días disponibles - versión mejorada
+        const diasSelect = document.getElementById('diasDisponibles');
+        const diasArray = JSON.parse(dias_disponibles);
+        
+        // Desmarcar todos primero
+        for (let i = 0; i < diasSelect.options.length; i++) {
+            diasSelect.options[i].selected = false;
+        }
+        
+        // Marcar los seleccionados
+        if (Array.isArray(diasArray)) {
+            for (let i = 0; i < diasSelect.options.length; i++) {
+            if (diasArray.includes(diasSelect.options[i].value)) {
+                diasSelect.options[i].selected = true;
+            }
+            }
+        }
+        
+        // Scroll to form
+        document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+        }
     
     function resetForm() {
       document.getElementById('actionType').value = 'insert';
@@ -602,6 +616,12 @@ $canchas = $stmt->fetchAll();
     
     function saveCancha(event) {
       event.preventDefault();
+
+      const duracion = parseInt(document.getElementById('duracionBloque').value);
+        if (duracion < 60) {
+            alert('El bloque mínimo debe ser de 60 minutos');
+            return;
+        }
       
       const formData = new FormData();
       formData.append('action', document.getElementById('actionType').value);
