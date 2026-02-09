@@ -382,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           
           <div class="form-row">
-            <div class "form-group">
+            <div class="form-group">
               <label for="contrasena_admin">Contraseña <span class="required">*</span></label>
               <input type="password" id="contrasena_admin" name="contrasena_admin" required minlength="6">
             </div>
