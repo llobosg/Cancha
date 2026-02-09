@@ -25,13 +25,13 @@ $stmt = $pdo->prepare("
         c.nro_cancha,
         c.nombre_cancha,
         c.id_deporte,
-        dc.fecha,
-        dc.hora_inicio,
-        dc.hora_fin,
-        dc.estado as estado_disponibilidad,
+        COALESCE(dc.fecha, ?) as fecha,
+        COALESCE(dc.hora_inicio, '07:00:00') as hora_inicio,
+        COALESCE(dc.hora_fin, '21:00:00') as hora_fin,
+        COALESCE(dc.estado, 'disponible') as estado_disponibilidad,
         r.id_reserva,
         r.estado as estado_reserva,
-        r.estado_pago,
+        COALESCE(r.estado_pago, 'pendiente') as estado_pago,
         cl.nombre as nombre_club,
         s.alias as nombre_responsable,
         r.telefono_cliente,
@@ -42,10 +42,10 @@ $stmt = $pdo->prepare("
     LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
     LEFT JOIN clubs cl ON r.id_club = cl.id_club
     LEFT JOIN socios s ON r.id_socio = s.id_socio
-    WHERE c.id_recinto = ?
+    WHERE c.id_recinto = ? AND c.activa = 1
     ORDER BY c.id_deporte, dc.fecha, dc.hora_inicio
 ");
-$stmt->execute([$fecha_inicio, $fecha_fin, $id_recinto]);
+$stmt->execute([$fecha_inicio, $fecha_inicio, $fecha_fin, $id_recinto]);
 $reservas_data = $stmt->fetchAll();
 
 // Agrupar por fecha y deporte
@@ -298,10 +298,9 @@ foreach ($reservas_data as $reserva) {
       </div>
       
       <div class="reservas-grid" id="reservasGrid">
-        <?php foreach ($reservas_agrupadas as $grupo): ?>
-          <?php foreach ($grupo['reservas'] as $reserva): ?>
-            <div class="reserva-card" onclick="selectReserva(<?= $reserva['id_disponibilidad'] ?>)">
-              <div class="deporte-icon">
+        <?php foreach ($reservas_data as $reserva): ?>
+            <div class="reserva-card" onclick="selectReserva(<?= (int)$reserva['id_disponibilidad'] ?>)">
+            <div class="deporte-icon">
                 <?php 
                 $iconos = [
                     'futbol' => '⚽', 'futbolito' => '⚽', 'futsal' => '⚽',
@@ -310,17 +309,16 @@ foreach ($reservas_data as $reserva) {
                 ];
                 echo $iconos[$reserva['id_deporte']] ?? '🏟️';
                 ?>
-              </div>
-              <div class="cancha-nombre"><?= htmlspecialchars($reserva['nro_cancha']) ?></div>
-              <div class="fecha-hora">
-                <?= date('d/m', strtotime($reserva['fecha'])) ?><br>
-                <?= htmlspecialchars($reserva['hora_inicio']) ?>
-              </div>
-              <div class="estado-indicator <?= getEstadoClass($reserva['estado_disponibilidad']) ?>"></div>
             </div>
-          <?php endforeach; ?>
+            <div class="cancha-nombre"><?= htmlspecialchars($reserva['nro_cancha'] ?? 'Sin nombre') ?></div>
+            <div class="fecha-hora">
+                <?= formatDateSafe($reserva['fecha']) ?><br>
+                <?= formatTimeSafe($reserva['hora_inicio']) ?>
+            </div>
+            <div class="estado-indicator <?= getEstadoClass($reserva['estado_disponibilidad']) ?>"></div>
+            </div>
         <?php endforeach; ?>
-      </div>
+        </div>
     </div>
     
     <div class="detail-panel">
@@ -487,5 +485,24 @@ function getEstadoClass($estado) {
         case 'mantencion': return 'estado-mantencion';
         default: return 'estado-disponible';
     }
+}
+
+function formatDateSafe($dateString) {
+    if (empty($dateString)) {
+        return 'N/A';
+    }
+    $timestamp = strtotime($dateString);
+    if ($timestamp === false) {
+        return 'N/A';
+    }
+    return date('d/m', $timestamp);
+}
+
+function formatTimeSafe($timeString) {
+    if (empty($timeString)) {
+        return 'N/A';
+    }
+    // Extraer solo HH:MM de HH:MM:SS
+    return substr($timeString, 0, 5);
 }
 ?>
