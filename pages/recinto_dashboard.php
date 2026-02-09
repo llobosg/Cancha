@@ -265,9 +265,6 @@ $top_canchas = $stmt_top_canchas->fetchAll();
         <h2 style="margin: 0.5rem 0 0 0; color: white; font-size: 1.4rem;">
           <?= htmlspecialchars($recinto['nombre']) ?>
         </h2>
-      </div>
-        <a href="recinto_logout.php" style="color: #ffcc00; text-decoration: none; font-weight: bold;">Cerrar sesión</a>
-      </div>
     </div>
 
     <!-- Estadísticas generales -->
