@@ -290,11 +290,12 @@ foreach ($reservas_data as $reserva) {
         </select>
         
         <select class="control-select" id="filtroFecha">
-          <option value="">Próximos 7 días</option>
-          <option value="hoy">Hoy</option>
-          <option value="mañana">Mañana</option>
-          <option value="semana">Esta semana</option>
-        </select>
+            <option value="">Últimos 30 días</option>
+            <option value="hoy">Hoy</option>
+            <option value="mañana">Mañana</option>
+            <option value="semana">Esta semana</option>
+            <option value="mes">Este mes</option>
+            </select>
       </div>
       
       <div class="reservas-grid" id="reservasGrid">
@@ -471,6 +472,43 @@ foreach ($reservas_data as $reserva) {
         // Lógica de filtrado (simulada)
         console.log('Filtros aplicados:', {deporte, estado, fecha});
     }
+
+    // Función para cargar reservas con rango de días
+    async function cargarReservasConRango(rangoDias = 30) {
+        try {
+            const response = await fetch(`../api/canchaboard.php?action=get_reservas&rango_dias=${rangoDias}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            reservasData = data;
+            renderizarReservas(reservasData);
+            
+        } catch (error) {
+            console.error('Error al cargar reservas:', error);
+            alert('Error al cargar las reservas: ' + error.message);
+        }
+    }
+
+    // Actualizar los controles de rango
+    document.getElementById('filtroFecha').addEventListener('change', function() {
+        const valor = this.value;
+        let rangoDias = 30;
+        
+        if (valor === 'hoy') rangoDias = 0;
+        else if (valor === 'mañana') rangoDias = 1;
+        else if (valor === 'semana') rangoDias = 7;
+        else if (valor === 'mes') rangoDias = 30;
+        
+        cargarReservasConRango(rangoDias);
+    });
+
+    // Cargar inicialmente con 30 días
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarReservasConRango(30);
+    });
   </script>
 </body>
 </html>
