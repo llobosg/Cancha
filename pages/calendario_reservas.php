@@ -14,53 +14,6 @@ $id_recinto = $_SESSION['id_recinto'];
 $stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
 $stmt->execute([$id_recinto]);
 $recinto = $stmt->fetch();
-
-// Obtener canchas con sus reservas para los próximos 7 días
-$fecha_inicio = date('Y-m-d');
-$fecha_fin = date('Y-m-d', strtotime('+7 days'));
-
-$stmt = $pdo->prepare("
-    SELECT 
-        c.id_cancha,
-        c.nro_cancha,
-        c.nombre_cancha,
-        c.id_deporte,
-        COALESCE(dc.fecha, ?) as fecha,
-        COALESCE(dc.hora_inicio, '07:00:00') as hora_inicio,
-        COALESCE(dc.hora_fin, '21:00:00') as hora_fin,
-        COALESCE(dc.estado, 'disponible') as estado_disponibilidad,
-        r.id_reserva,
-        r.estado as estado_reserva,
-        COALESCE(r.estado_pago, 'pendiente') as estado_pago,
-        cl.nombre as nombre_club,
-        s.alias as nombre_responsable,
-        r.telefono_cliente,
-        r.email_cliente
-    FROM canchas c
-    LEFT JOIN disponibilidad_canchas dc ON c.id_cancha = dc.id_cancha 
-        AND dc.fecha BETWEEN ? AND ?
-    LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
-    LEFT JOIN clubs cl ON r.id_club = cl.id_club
-    LEFT JOIN socios s ON r.id_socio = s.id_socio
-    WHERE c.id_recinto = ? AND c.activa = 1
-    ORDER BY c.id_deporte, dc.fecha, dc.hora_inicio
-");
-$stmt->execute([$fecha_inicio, $fecha_inicio, $fecha_fin, $id_recinto]);
-$reservas_data = $stmt->fetchAll();
-
-// Agrupar por fecha y deporte
-$reservas_agrupadas = [];
-foreach ($reservas_data as $reserva) {
-    $key = $reserva['fecha'] . '_' . $reserva['id_deporte'];
-    if (!isset($reservas_agrupadas[$key])) {
-        $reservas_agrupadas[$key] = [
-            'fecha' => $reserva['fecha'],
-            'deporte' => $reserva['id_deporte'],
-            'reservas' => []
-        ];
-    }
-    $reservas_agrupadas[$key]['reservas'][] = $reserva;
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -290,36 +243,19 @@ foreach ($reservas_data as $reserva) {
         </select>
         
         <select class="control-select" id="filtroFecha">
-            <option value="">Últimos 30 días</option>
-            <option value="hoy">Hoy</option>
-            <option value="mañana">Mañana</option>
-            <option value="semana">Esta semana</option>
-            <option value="mes">Este mes</option>
-            </select>
+          <option value="">Últimos 30 días</option>
+          <option value="hoy">Hoy</option>
+          <option value="mañana">Mañana</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+        </select>
       </div>
       
       <div class="reservas-grid" id="reservasGrid">
-        <?php foreach ($reservas_data as $reserva): ?>
-            <div class="reserva-card" onclick="selectReserva(<?= (int)$reserva['id_disponibilidad'] ?>)">
-            <div class="deporte-icon">
-                <?php 
-                $iconos = [
-                    'futbol' => '⚽', 'futbolito' => '⚽', 'futsal' => '⚽',
-                    'tenis' => '🎾', 'padel' => '🎾', 'voleyball' => '🏐',
-                    'otro' => '🏟️'
-                ];
-                echo $iconos[$reserva['id_deporte']] ?? '🏟️';
-                ?>
-            </div>
-            <div class="cancha-nombre"><?= htmlspecialchars($reserva['nro_cancha'] ?? 'Sin nombre') ?></div>
-            <div class="fecha-hora">
-                <?= formatDateSafe($reserva['fecha']) ?><br>
-                <?= formatTimeSafe($reserva['hora_inicio']) ?>
-            </div>
-            <div class="estado-indicator <?= getEstadoClass($reserva['estado_disponibilidad']) ?>"></div>
-            </div>
-        <?php endforeach; ?>
+        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
+          Cargando disponibilidad...
         </div>
+      </div>
     </div>
     
     <div class="detail-panel">
@@ -348,7 +284,92 @@ foreach ($reservas_data as $reserva) {
 
   <script>
     let reservaSeleccionada = null;
-    
+    let reservasData = [];
+
+    // Definir todas las funciones primero
+    function renderizarReservas(reservas) {
+        const grid = document.getElementById('reservasGrid');
+        
+        if (reservas.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">No hay disponibilidad en el período seleccionado</div>';
+            return;
+        }
+        
+        // Agrupar por fecha para mejor visualización
+        const reservasPorFecha = {};
+        reservas.forEach(reserva => {
+            const fecha = reserva.fecha;
+            if (!reservasPorFecha[fecha]) {
+                reservasPorFecha[fecha] = [];
+            }
+            reservasPorFecha[fecha].push(reserva);
+        });
+        
+        grid.innerHTML = '';
+        
+        // Renderizar por fechas
+        Object.keys(reservasPorFecha).sort().forEach(fecha => {
+            const fechaDiv = document.createElement('div');
+            fechaDiv.style.gridColumn = '1/-1';
+            fechaDiv.style.marginTop = '1.5rem';
+            fechaDiv.style.paddingBottom = '0.5rem';
+            fechaDiv.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
+            fechaDiv.style.color = '#FFD700';
+            fechaDiv.style.fontWeight = 'bold';
+            fechaDiv.textContent = formatDateDisplay(fecha);
+            grid.appendChild(fechaDiv);
+            
+            reservasPorFecha[fecha].forEach(reserva => {
+                const card = document.createElement('div');
+                card.className = 'reserva-card';
+                card.onclick = () => selectReserva(reserva.id_disponibilidad || `${reserva.id_cancha}_${reserva.fecha}_${reserva.hora_inicio}`);
+                
+                const iconos = {
+                    'futbol': '⚽', 'futbolito': '⚽', 'futsal': '⚽',
+                    'tenis': '🎾', 'padel': '🎾', 'voleyball': '🏐',
+                    'otro': '🏟️'
+                };
+                
+                const estadoClass = getEstadoClass(reserva.estado_disponibilidad || 'disponible');
+                
+                card.innerHTML = `
+                    <div class="deporte-icon">${iconos[reserva.id_deporte] || '🏟️'}</div>
+                    <div class="cancha-nombre">${reserva.nro_cancha || 'Sin nombre'}</div>
+                    <div class="fecha-hora">
+                        ${formatTimeDisplay(reserva.hora_inicio)}<br>
+                        ${getEstadoTexto(reserva.estado_disponibilidad || 'disponible')}
+                    </div>
+                    <div class="estado-indicator ${estadoClass}"></div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        });
+    }
+
+    function formatDateDisplay(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        return date.toLocaleDateString('es-ES', options);
+    }
+
+    function formatTimeDisplay(timeString) {
+        if (!timeString) return 'N/A';
+        return timeString.substring(0, 5);
+    }
+
+    function getEstadoTexto(estado) {
+        const estados = {
+            'disponible': 'Disponible',
+            'reservada': 'Reservada',
+            'ocupada': 'Ocupada',
+            'cancelada': 'Cancelada',
+            'mantencion': 'Mantención'
+        };
+        return estados[estado] || estado;
+    }
+
     function getEstadoClass(estado) {
         switch(estado) {
             case 'disponible': return 'estado-disponible';
@@ -359,8 +380,8 @@ foreach ($reservas_data as $reserva) {
             default: return 'estado-disponible';
         }
     }
-    
-    function selectReserva(idDisponibilidad) {
+
+    function selectReserva(id) {
         // Quitar selección anterior
         document.querySelectorAll('.reserva-card').forEach(card => {
             card.classList.remove('selected');
@@ -368,112 +389,218 @@ foreach ($reservas_data as $reserva) {
         
         // Seleccionar nueva
         event.currentTarget.classList.add('selected');
-        reservaSeleccionada = idDisponibilidad;
+        reservaSeleccionada = id;
         
-        // Cargar detalle (simulado por ahora)
-        cargarDetalleReserva(idDisponibilidad);
+        // Cargar detalle real si existe id_disponibilidad
+        const selectedReserva = reservasData.find(r => 
+            r.id_disponibilidad == id || 
+            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` == id)
+        );
+        
+        if (selectedReserva && selectedReserva.id_disponibilidad) {
+            cargarDetalleReserva(selectedReserva.id_disponibilidad);
+        } else {
+            mostrarDetalleDisponibilidad(selectedReserva);
+        }
     }
-    
-    function cargarDetalleReserva(id) {
-        // Aquí iría la llamada AJAX para obtener el detalle real
-        const detalleDiv = document.getElementById('detalleContent');
-        detalleDiv.innerHTML = `
+
+    async function cargarDetalleReserva(id) {
+        try {
+            const formData = new FormData();
+            formData.append('id_disponibilidad', id);
+            
+            const response = await fetch('../api/canchaboard.php?action=get_detalle_reserva', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const detalle = await response.json();
+            
+            if (detalle.error) {
+                throw new Error(detalle.error);
+            }
+            
+            mostrarDetalleReserva(detalle);
+            
+        } catch (error) {
+            console.error('Error al cargar detalle:', error);
+            document.getElementById('detalleContent').innerHTML = '<p>Error al cargar el detalle</p>';
+        }
+    }
+
+    function mostrarDetalleDisponibilidad(reserva) {
+        if (!reserva) {
+            document.getElementById('detalleContent').innerHTML = '<p>Disponibilidad básica</p>';
+            return;
+        }
+        
+        document.getElementById('detalleContent').innerHTML = `
             <div class="detail-item">
                 <span class="detail-label">Cancha:</span> 
-                <span id="detalleCancha">Cancha A</span>
+                <span>${reserva.nro_cancha || 'N/A'}</span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">Club:</span> 
-                <span id="detalleClub">Club XYZ</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Responsable:</span> 
-                <span id="detalleResponsable">Juan Pérez</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Teléfono:</span> 
-                <span id="detalleTelefono">+56 9 1234 5678</span>
+                <span class="detail-label">Deporte:</span> 
+                <span>${reserva.id_deporte || 'N/A'}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Fecha/Hora:</span> 
-                <span id="detalleFechaHora">15/02/2026 15:00</span>
+                <span>${formatDateDisplay(reserva.fecha)} ${formatTimeDisplay(reserva.hora_inicio)}</span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">Estado Pago:</span> 
-                <span id="detallePago" style="color: #4CAF50;">Pagado</span>
+                <span class="detail-label">Estado:</span> 
+                <span>${getEstadoTexto(reserva.estado_disponibilidad || 'disponible')}</span>
+            </div>
+            <div class="detail-item" style="margin-top: 1rem; color: #00cc66; font-weight: bold;">
+                ✅ Disponible para reservar
             </div>
         `;
     }
-    
-    function anularReserva() {
+
+    function mostrarDetalleReserva(detalle) {
+        const pagoColor = {
+            'pagado': '#4CAF50',
+            'pendiente': '#FF9800',
+            'reembolsado': '#2196F3',
+            'fallido': '#F44336'
+        };
+        
+        const pagoTexto = {
+            'pagado': 'Pagado',
+            'pendiente': 'Pendiente',
+            'reembolsado': 'Reembolsado',
+            'fallido': 'Fallido'
+        };
+        
+        document.getElementById('detalleContent').innerHTML = `
+            <div class="detail-item">
+                <span class="detail-label">Cancha:</span> 
+                <span>${detalle.nro_cancha || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Club:</span> 
+                <span>${detalle.nombre_club || 'Particular'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Responsable:</span> 
+                <span>${detalle.nombre_responsable || detalle.email_cliente || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Teléfono:</span> 
+                <span>${detalle.telefono_cliente || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Fecha/Hora:</span> 
+                <span>${formatDateDisplay(detalle.fecha)} ${formatTimeDisplay(detalle.hora_inicio)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Monto:</span> 
+                <span>$${detalle.monto_total || '0'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Estado Pago:</span> 
+                <span style="color: ${pagoColor[detalle.estado_pago] || '#666'};">
+                    ${pagoTexto[detalle.estado_pago] || detalle.estado_pago}
+                </span>
+            </div>
+            ${detalle.notas ? `
+            <div class="detail-item">
+                <span class="detail-label">Notas:</span> 
+                <span>${detalle.notas}</span>
+            </div>` : ''}
+        `;
+    }
+
+    async function anularReserva() {
         if (!reservaSeleccionada) {
             alert('Selecciona una reserva primero');
             return;
         }
-        if (confirm('¿Estás seguro de anular esta reserva?')) {
-            // Lógica de anulación
-            alert('Reserva anulada');
+        
+        if (confirm('¿Estás seguro de anular esta reserva? Esta acción no se puede deshacer.')) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'anular');
+                formData.append('id_disponibilidad', reservaSeleccionada);
+                
+                const response = await fetch('../api/gestion_reservas.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Reserva anulada correctamente');
+                    cargarReservasConRango(30);
+                    document.getElementById('detalleContent').innerHTML = '<p>Selecciona una reserva para ver detalles</p>';
+                    reservaSeleccionada = null;
+                } else {
+                    throw new Error(result.message || 'Error al anular');
+                }
+                
+            } catch (error) {
+                console.error('Error al anular:', error);
+                alert('Error al anular la reserva: ' + error.message);
+            }
         }
     }
-    
+
+    function aplicarFiltros() {
+        const deporte = document.getElementById('filtroDeporte').value;
+        const estado = document.getElementById('filtroEstado').value;
+        
+        let datosFiltrados = [...reservasData];
+        
+        if (deporte) {
+            datosFiltrados = datosFiltrados.filter(r => r.id_deporte === deporte);
+        }
+        
+        if (estado) {
+            datosFiltrados = datosFiltrados.filter(r => (r.estado_disponibilidad || 'disponible') === estado);
+        }
+        
+        renderizarReservas(datosFiltrados);
+    }
+
+    // Funciones placeholder para otras acciones
     function cancelarReserva() {
         if (!reservaSeleccionada) {
             alert('Selecciona una reserva primero');
             return;
         }
-        if (confirm('¿Estás seguro de cancelar esta reserva?')) {
-            // Lógica de cancelación
-            alert('Reserva cancelada');
-        }
+        alert('Funcionalidad de cancelación en desarrollo');
     }
-    
+
     function cambiarCancha() {
         if (!reservaSeleccionada) {
             alert('Selecciona una reserva primero');
             return;
         }
-        // Lógica de cambio de cancha
         alert('Funcionalidad de cambio de cancha en desarrollo');
     }
-    
+
     function enviarMensaje() {
         if (!reservaSeleccionada) {
             alert('Selecciona una reserva primero');
             return;
         }
-        // Usar sistema de notificaciones existente
-        alert('Mensaje enviado mediante notificaciones');
+        alert('Sistema de notificaciones integrado en desarrollo');
     }
-    
+
     function enviarCorreo() {
         if (!reservaSeleccionada) {
             alert('Selecciona una reserva primero');
             return;
         }
-        // Usar sistema de correo Brevo
-        alert('Correo de respaldo enviado');
-    }
-    
-    function crearCampeonato() {
-        // Redirigir a página de creación de campeonatos
-        window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
-    }
-    
-    // Filtros
-    document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroFecha').addEventListener('change', aplicarFiltros);
-    
-    function aplicarFiltros() {
-        const deporte = document.getElementById('filtroDeporte').value;
-        const estado = document.getElementById('filtroEstado').value;
-        const fecha = document.getElementById('filtroFecha').value;
-        
-        // Lógica de filtrado (simulada)
-        console.log('Filtros aplicados:', {deporte, estado, fecha});
+        alert('Sistema de correo Brevo integrado en desarrollo');
     }
 
-    // Función para cargar reservas con rango de días
+    function crearCampeonato() {
+        window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
+    }
+
+    // Ahora sí, cargar los datos iniciales
     async function cargarReservasConRango(rangoDias = 30) {
         try {
             const response = await fetch(`../api/canchaboard.php?action=get_reservas&rango_dias=${rangoDias}`);
@@ -488,11 +615,17 @@ foreach ($reservas_data as $reserva) {
             
         } catch (error) {
             console.error('Error al cargar reservas:', error);
-            alert('Error al cargar las reservas: ' + error.message);
+            document.getElementById('reservasGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Error al cargar las reservas</div>';
         }
     }
 
-    // Actualizar los controles de rango
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarReservasConRango(30);
+    });
+
+    document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroFecha').addEventListener('change', function() {
         const valor = this.value;
         let rangoDias = 30;
@@ -504,43 +637,6 @@ foreach ($reservas_data as $reserva) {
         
         cargarReservasConRango(rangoDias);
     });
-
-    // Cargar inicialmente con 30 días
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarReservasConRango(30);
-    });
-  </script>
+</script>
 </body>
 </html>
-
-<?php
-function getEstadoClass($estado) {
-    switch($estado) {
-        case 'disponible': return 'estado-disponible';
-        case 'reservada': return 'estado-reservada';
-        case 'ocupada': return 'estado-ocupada';
-        case 'cancelada': return 'estado-cancelada';
-        case 'mantencion': return 'estado-mantencion';
-        default: return 'estado-disponible';
-    }
-}
-
-function formatDateSafe($dateString) {
-    if (empty($dateString)) {
-        return 'N/A';
-    }
-    $timestamp = strtotime($dateString);
-    if ($timestamp === false) {
-        return 'N/A';
-    }
-    return date('d/m', $timestamp);
-}
-
-function formatTimeSafe($timeString) {
-    if (empty($timeString)) {
-        return 'N/A';
-    }
-    // Extraer solo HH:MM de HH:MM:SS
-    return substr($timeString, 0, 5);
-}
-?>
