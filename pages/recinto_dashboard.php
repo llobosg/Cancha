@@ -70,7 +70,7 @@ $stmt_top_canchas = $pdo->prepare("
         c.nro_cancha,
         c.id_deporte,
         COUNT(r.id_reserva) as reservas,
-        SUM(r.monto_total) as ingresos
+        COALESCE(SUM(r.monto_total), 0) as ingresos
     FROM canchas c
     LEFT JOIN reservas r ON c.id_cancha = r.id_cancha AND r.estado = 'confirmada'
     WHERE c.id_recinto = ?
@@ -325,7 +325,7 @@ $top_canchas = $stmt_top_canchas->fetchAll();
             <td><?= htmlspecialchars($cancha['nro_cancha']) ?></td>
             <td><?= ucfirst($cancha['id_deporte']) ?></td>
             <td><?= $cancha['reservas'] ?></td>
-            <td>$<?= number_format($cancha['ingresos'], 0, ',', '.') ?></td>
+            <td>$<?= number_format($cancha['ingresos'] ?? 0, 0, ',', '.') ?></td>
           </tr>
           <?php endforeach; ?>
         </tbody>
