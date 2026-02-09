@@ -23,7 +23,21 @@ if (!$recinto) {
 
 // Obtener todas las canchas del recinto
 $stmt = $pdo->prepare("
-    SELECT * FROM canchas 
+    SELECT 
+        id_cancha,
+        id_recinto,
+        id_deporte,
+        nro_cancha,
+        nombre_cancha,
+        valor_arriendo,
+        capacidad_jugadores,
+        duracion_bloque,
+        TIME_FORMAT(hora_inicio, '%H:%i') as hora_inicio,
+        TIME_FORMAT(hora_fin, '%H:%i') as hora_fin,
+        dias_disponibles,
+        activa,
+        estado
+    FROM canchas 
     WHERE id_recinto = ? 
     ORDER BY nro_cancha, id_deporte
 ");
@@ -331,7 +345,6 @@ $canchas = $stmt->fetchAll();
     <div class="header-section">
       <div class="titles-section">
         <h1 class="main-title">⚽ Cancha</h1>
-        <p class="subtitle">Administración de Recintos Deportivos</p>
         <p class="subtitle">Gestión de canchas Recinto Deportivo <?= htmlspecialchars($recinto['nombre']) ?></p>
         
         <div class="recinto-info">
@@ -351,8 +364,6 @@ $canchas = $stmt->fetchAll();
           <strong><?= htmlspecialchars($recinto['nombre']) ?></strong>
         </div>
       </div>
-      
-      <a href="recinto_dashboard.php" class="close-btn" title="Volver al dashboard">×</a>
     </div>
 
     <!-- Sección superior: Buscador inteligente -->
@@ -499,20 +510,20 @@ $canchas = $stmt->fetchAll();
             <td style="color: #040942ff;"><?= htmlspecialchars($cancha['estado']) ?></td>
             <td class="action-icons">
               <span class="action-icon" onclick="editCancha(
-                <?= $cancha['id_cancha'] ?>,
-                '<?= addslashes(htmlspecialchars($cancha['nro_cancha'])) ?>',
-                '<?= addslashes(htmlspecialchars($cancha['nombre_cancha'] ?? '')) ?>',
-                '<?= addslashes(htmlspecialchars($cancha['id_deporte'])) ?>',
-                <?= $cancha['valor_arriendo'] ?>,
-                <?= $cancha['duracion_bloque'] ?>,
-                '<?= addslashes(htmlspecialchars($cancha['hora_inicio'])) ?>',
-                '<?= addslashes(htmlspecialchars($cancha['hora_fin'])) ?>',
-                <?= $cancha['capacidad_jugadores'] ?>,
-                '<?= addslashes(htmlspecialchars(json_encode(json_decode($cancha['dias_disponibles'], true)))) ?>',
-                <?= $cancha['activa'] ?>,
-                '<?= addslashes(htmlspecialchars($cancha['estado'])) ?>'
+                <?= (int)$cancha['id_cancha'] ?>,
+                <?= json_encode($cancha['nro_cancha']) ?>,
+                <?= json_encode($cancha['nombre_cancha'] ?? '') ?>,
+                <?= json_encode($cancha['id_deporte']) ?>,
+                <?= (float)$cancha['valor_arriendo'] ?>,
+                <?= (int)$cancha['duracion_bloque'] ?>,
+                <?= json_encode($cancha['hora_inicio']) ?>,
+                <?= json_encode($cancha['hora_fin']) ?>,
+                <?= (int)$cancha['capacidad_jugadores'] ?>,
+                <?= json_encode($cancha['dias_disponibles']) ?>,
+                <?= (int)$cancha['activa'] ?>,
+                <?= json_encode($cancha['estado']) ?>
               )" title="Editar">✏️</span>
-              <span class="action-icon" onclick="deleteCancha(<?= $cancha['id_cancha'] ?>)" title="Eliminar">🗑️</span>
+              <span class="action-icon" onclick="deleteCancha(<?= (int)$cancha['id_cancha'] ?>)" title="Eliminar">🗑️</span>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -540,7 +551,7 @@ $canchas = $stmt->fetchAll();
       
       if (filtered.length > 0) {
         resultsDiv.innerHTML = filtered.map(c => 
-          `<div class="search-result-item" onclick="selectCancha(${c.id_cancha}, '${c.nro_cancha}', '${c.nombre_cancha || ''}', '${c.id_deporte}', ${c.valor_arriendo}, ${c.duracion_bloque}, '${c.hora_inicio}', '${c.hora_fin}', ${c.capacidad_jugadores}, '${JSON.stringify(JSON.parse(c.dias_disponibles))}', ${c.activa}, '${c.estado}')">${c.nro_cancha} - ${c.id_deporte}</div>`
+          `<div class="search-result-item" onclick="selectCancha(${c.id_cancha}, ${JSON.stringify(c.nro_cancha)}, ${JSON.stringify(c.nombre_cancha || '')}, ${JSON.stringify(c.id_deporte)}, ${c.valor_arriendo}, ${c.duracion_bloque}, ${JSON.stringify(c.hora_inicio)}, ${JSON.stringify(c.hora_fin)}, ${c.capacidad_jugadores}, ${JSON.stringify(c.dias_disponibles)}, ${c.activa}, ${JSON.stringify(c.estado)})">${c.nro_cancha} - ${c.id_deporte}</div>`
         ).join('');
         resultsDiv.style.display = 'block';
       } else {
@@ -549,46 +560,42 @@ $canchas = $stmt->fetchAll();
     }
     
     function selectCancha(id, nro_cancha, nombre_cancha, id_deporte, valor_arriendo, duracion_bloque, hora_inicio, hora_fin, capacidad_jugadores, dias_disponibles, activa, estado) {
-      editCancha(id, nro_cancha, nombre_cancha, id_deporte, valor_arriendo, duracion_bloque, hora_inicio, hora_fin, capacidad_jugadores, dias_disponibles, activa, estado);
-      document.getElementById('searchCancha').value = '';
-      document.getElementById('searchResults').style.display = 'none';
+        // Usar JSON.parse para datos complejos
+        editCancha(id, nro_cancha, nombre_cancha, id_deporte, valor_arriendo, duracion_bloque, hora_inicio, hora_fin, capacidad_jugadores, dias_disponibles, activa, estado);
+        document.getElementById('searchCancha').value = '';
+        document.getElementById('searchResults').style.display = 'none';
     }
-    
+
     function editCancha(id, nro_cancha, nombre_cancha, id_deporte, valor_arriendo, duracion_bloque, hora_inicio, hora_fin, capacidad_jugadores, dias_disponibles, activa, estado) {
         document.getElementById('actionType').value = 'update';
         document.getElementById('canchaId').value = id;
         document.getElementById('nroCancha').value = nro_cancha;
-        document.getElementById('nombreCancha').value = nombre_cancha;
+        document.getElementById('nombreCancha').value = nombre_cancha || '';
         document.getElementById('deporte').value = id_deporte;
         document.getElementById('valorArriendo').value = valor_arriendo;
-        document.getElementById('duracionBloque').value = Math.max(60, duracion_bloque); // Asegurar mínimo 60
+        document.getElementById('duracionBloque').value = Math.max(60, parseInt(duracion_bloque) || 60);
         document.getElementById('horaInicio').value = hora_inicio;
         document.getElementById('horaFin').value = hora_fin;
-        document.getElementById('capacidadJugadores').value = capacidad_jugadores;
+        document.getElementById('capacidadJugadores').value = capacidad_jugadores || 10;
         document.getElementById('activa').value = activa;
         document.getElementById('estado').value = estado;
         
-        // Manejar días disponibles - versión mejorada
+        // Manejar días disponibles
         const diasSelect = document.getElementById('diasDisponibles');
-        const diasArray = JSON.parse(dias_disponibles);
-        
-        // Desmarcar todos primero
-        for (let i = 0; i < diasSelect.options.length; i++) {
-            diasSelect.options[i].selected = false;
-        }
-        
-        // Marcar los seleccionados
-        if (Array.isArray(diasArray)) {
-            for (let i = 0; i < diasSelect.options.length; i++) {
-            if (diasArray.includes(diasSelect.options[i].value)) {
-                diasSelect.options[i].selected = true;
+        try {
+            const diasArray = JSON.parse(dias_disponibles);
+            if (Array.isArray(diasArray)) {
+                for (let i = 0; i < diasSelect.options.length; i++) {
+                    diasSelect.options[i].selected = diasArray.includes(diasSelect.options[i].value);
+                }
             }
-            }
+        } catch (e) {
+            console.error('Error parsing dias_disponibles:', e);
         }
         
         // Scroll to form
         document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
-        }
+    }
     
     function resetForm() {
       document.getElementById('actionType').value = 'insert';
