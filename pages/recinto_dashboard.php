@@ -253,7 +253,7 @@ $top_canchas = $stmt_top_canchas->fetchAll();
         </p>
       </div>
       <div style="text-align: center; margin-top: 1rem;">
-        <?php if ($recinto['logorecinto']): ?>
+        <?php if (!empty($recinto['logorecinto'])): ?>
           <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
               alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
               style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; background: rgba(255,255,255,0.2);">
@@ -266,7 +266,6 @@ $top_canchas = $stmt_top_canchas->fetchAll();
           <?= htmlspecialchars($recinto['nombre']) ?>
         </h2>
       </div>
-      <div>
         <a href="recinto_logout.php" style="color: #ffcc00; text-decoration: none; font-weight: bold;">Cerrar sesión</a>
       </div>
     </div>

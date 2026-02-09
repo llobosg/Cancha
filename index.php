@@ -443,7 +443,7 @@ $_SESSION['visited_index'] = true;
     <!-- Menú Recintos Deportivos (desplegable) -->
     <div id="recintosDropdown" style="position: relative; display: inline-block;">
       <button id="recintosBtn" class="btn-register" style="background: transparent !important; border: 2px solid white !important; color: white !important; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
-        🏟️ Gestión Recintos
+        Gestión Recintos
       </button>
       <div id="dropdownContent" style="
         position: absolute; 
@@ -471,7 +471,7 @@ $_SESSION['visited_index'] = true;
           color: #071289; 
           text-decoration: none; 
           font-weight: bold;
-        ">➕ Registra tu Recinto</a>
+        ">Registra tu Recinto</a>
       </div>
     </div>
   </div>
