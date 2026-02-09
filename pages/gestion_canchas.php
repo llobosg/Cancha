@@ -331,23 +331,28 @@ $canchas = $stmt->fetchAll();
     <div class="header-section">
       <div class="titles-section">
         <h1 class="main-title">⚽ Cancha</h1>
+        <p class="subtitle">Administración de Recintos Deportivos</p>
         <p class="subtitle">Gestión de canchas Recinto Deportivo <?= htmlspecialchars($recinto['nombre']) ?></p>
         
         <div class="recinto-info">
-            <?php if (!empty($recinto['logorecinto'])): ?>
-                <?php 
-                $logo_path = __DIR__ . '/../uploads/logos_recintos/' . $recinto['logorecinto'];
-                if (file_exists($logo_path)): ?>
-                    <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
-                        alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
-                        class="recinto-logo">
-                <?php else: ?>
-                    <div class="recinto-logo">🏟️</div>
-                <?php endif; ?>
-                <?php else: ?>
-                <div class="recinto-logo">🏟️</div>
+          <?php if (!empty($recinto['logorecinto'])): ?>
+            <?php 
+            $logo_path = __DIR__ . '/../uploads/logos_recintos/' . $recinto['logorecinto'];
+            if (file_exists($logo_path)): ?>
+              <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
+                  alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
+                  class="recinto-logo">
+            <?php else: ?>
+              <div class="recinto-logo">🏟️</div>
             <?php endif; ?>
+          <?php else: ?>
+            <div class="recinto-logo">🏟️</div>
+          <?php endif; ?>
+          <strong><?= htmlspecialchars($recinto['nombre']) ?></strong>
         </div>
+      </div>
+      
+      <a href="recinto_dashboard.php" class="close-btn" title="Volver al dashboard">×</a>
     </div>
 
     <!-- Sección superior: Buscador inteligente -->
