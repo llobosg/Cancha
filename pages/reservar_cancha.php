@@ -3,6 +3,18 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
+// DEBUG TEMPORAL - Eliminar después
+error_log("DEBUG SESIÓN: " . print_r($_SESSION, true));
+error_log("DEBUG id_socio: " . ($_SESSION['id_socio'] ?? 'NO EXISTE'));
+error_log("DEBUG club_id: " . ($_SESSION['club_id'] ?? 'NO EXISTE'));
+
+// Verificar que el usuario sea socio de un club (cualquier rol)
+if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+    error_log("REDIRECCIÓN A INDEX: Sesión incompleta");
+    header('Location: ../index.php');
+    exit;
+}
+
 // Verificar que el usuario sea socio de un club (cualquier rol)
 if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
     header('Location: ../index.php');
