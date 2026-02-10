@@ -285,17 +285,18 @@ function getDetalleReserva($pdo, $id_disponibilidad, $id_recinto) {
             dc.hora_fin,
             dc.estado as estado_disponibilidad,
             r.id_reserva,
-            r.tipo_reserva,
             r.estado as estado_reserva,
             r.estado_pago,
             r.monto_total,
+            r.tipo_reserva,
+            r.id_convenio,
+            r.notas,
             cl.nombre as nombre_club,
             cl.logo as logo_club,
             s.alias as nombre_responsable,
             s.email as email_responsable,
             r.telefono_cliente,
             r.email_cliente,
-            r.notas,
             r.created_at as fecha_reserva
         FROM disponibilidad_canchas dc
         JOIN canchas c ON dc.id_cancha = c.id_cancha

@@ -567,7 +567,18 @@ $recinto = $stmt->fetch();
             'evento': 'Evento'
         };
         
-        document.getElementById('detalleContent').innerHTML = `
+        const estadoReservaTexto = {
+            'pendiente': 'Pendiente',
+            'confirmada': 'Confirmada',
+            'cancelada': 'Cancelada',
+            'completada': 'Completada'
+        };
+        
+        // Formatear fecha y hora
+        const fechaHora = formatDateDisplay(detalle.fecha) + ' ' + formatTimeDisplay(detalle.hora_inicio);
+        
+        // Construir contenido del detalle
+        let contenido = `
             <div class="detail-item">
                 <span class="detail-label">Cancha:</span> 
                 <span>${detalle.nro_cancha || 'N/A'}</span>
@@ -578,14 +589,14 @@ $recinto = $stmt->fetch();
             </div>
             <div class="detail-item">
                 <span class="detail-label">Fecha/Hora:</span> 
-                <span>${formatDateDisplay(detalle.fecha)} ${formatTimeDisplay(detalle.hora_inicio)}</span>
+                <span>${fechaHora}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Club:</span> 
                 <span>${detalle.nombre_club || 'Particular'}</span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">Responsable:</span> 
+                <span class="detail-label">Responsable Club:</span> 
                 <span>${detalle.nombre_responsable || detalle.email_cliente || 'N/A'}</span>
             </div>
             <div class="detail-item">
@@ -596,22 +607,46 @@ $recinto = $stmt->fetch();
                 <span class="detail-label">Tipo Reserva:</span> 
                 <span>${tipoReservaTexto[detalle.tipo_reserva] || detalle.tipo_reserva || 'Spot'}</span>
             </div>
+        `;
+        
+        // Agregar ID Convenio si existe
+        if (detalle.id_convenio && detalle.id_convenio !== 'null' && detalle.id_convenio !== 0) {
+            contenido += `
             <div class="detail-item">
-                <span class="detail-label">Monto:</span> 
+                <span class="detail-label">ID Convenio:</span> 
+                <span>${detalle.id_convenio}</span>
+            </div>
+            `;
+        }
+        
+        contenido += `
+            <div class="detail-item">
+                <span class="detail-label">Monto Total:</span> 
                 <span>$${detalle.monto_total || '0'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Estado Reserva:</span> 
+                <span>${estadoReservaTexto[detalle.estado_reserva] || detalle.estado_reserva || 'Pendiente'}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Estado Pago:</span> 
                 <span style="color: ${pagoColor[detalle.estado_pago] || '#666'};">
-                    ${pagoTexto[detalle.estado_pago] || detalle.estado_pago}
+                    ${pagoTexto[detalle.estado_pago] || detalle.estado_pago || 'Pendiente'}
                 </span>
             </div>
-            ${detalle.notas ? `
+        `;
+        
+        // Agregar notas si existen
+        if (detalle.notas && detalle.notas.trim() !== '') {
+            contenido += `
             <div class="detail-item">
                 <span class="detail-label">Notas:</span> 
                 <span>${detalle.notas}</span>
-            </div>` : ''}
-        `;
+            </div>
+            `;
+        }
+        
+        document.getElementById('detalleContent').innerHTML = contenido;
     }
 
     async function anularReserva() {
