@@ -1,4 +1,7 @@
 <?php
+// LOG DE ENTRADA - Verificar si se accede al archivo
+error_log("🎯 ACCESO A reservar_cancha.php - Inicio de ejecución");
+
 require_once __DIR__ . '/../includes/config.php';
 
 session_start();
