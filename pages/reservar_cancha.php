@@ -2,77 +2,78 @@
 // LOG DE ENTRADA
 error_log("🎯 ACCESO A reservar_cancha.php - Inicio de ejecución");
 
-// 🔥 CONFIGURACIÓN ROBUSTA DE SESIONES
+// Configuración robusta de sesiones
 if (session_status() === PHP_SESSION_NONE) {
-    // Configurar sesión para Railway
     session_set_cookie_params([
-        'lifetime' => 86400, // 24 horas
+        'lifetime' => 86400,
         'path' => '/',
-        'domain' => '', // Dejar vacío para Railway
-        'secure' => isset($_SERVER['HTTPS']), // HTTPS si está disponible
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']),
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
     session_start();
 }
-error_log("no pasó por session_status === PHP_SESSION_NONE");
-// DEBUG INMEDIATO - Ver qué hay en la sesión
+
+// DEBUG INMEDIATO
 error_log("=== DEBUG SESIÓN INMEDIATO ===");
 error_log("Session ID: " . session_id());
-error_log("Session Status: " . session_status());
 error_log("Cookies recibidas: " . print_r($_COOKIE, true));
 
 require_once __DIR__ . '/../includes/config.php';
 
+// Intentar obtener datos de sesión
+$id_socio = $_SESSION['id_socio'] ?? null;
+$club_id = $_SESSION['club_id'] ?? null;
+
+// Fallback con cookies
+if ((!$id_socio || !$club_id) && isset($_COOKIE['cancha_id_socio'])) {
+    $id_socio = $_COOKIE['cancha_id_socio'];
+    $club_id = $_COOKIE['cancha_club_id'] ?? null;
+    // Restaurar en sesión
+    $_SESSION['id_socio'] = $id_socio;
+    $_SESSION['club_id'] = $club_id;
+}
+
 // DEBUG DETALLADO
 error_log("=== DEBUG RESERVAR CANCHA ===");
 error_log("Sesión completa: " . print_r($_SESSION, true));
-error_log("id_socio en sesión1: " . (isset($_SESSION['id_socio']) ? $_SESSION['id_socio'] : 'NO EXISTE'));
-error_log("club_id en sesión1: " . (isset($_SESSION['club_id']) ? $_SESSION['club_id'] : 'NO EXISTE'));
+error_log("id_socio: " . ($id_socio ? $id_socio : 'NO EXISTE'));
+error_log("club_id: " . ($club_id ? $club_id : 'NO EXISTE'));
 
-// Verificar requisitos mínimos
-if (!isset($_SESSION['id_socio'])) {
-    error_log("REDIRECCIÓN: Falta id_socio en sesión");
+// Validación final
+if (!$id_socio || !$club_id) {
+    error_log("REDIRECCIÓN: Sesión incompleta");
     header('Location: ../index.php');
     exit;
 }
-
-if (!isset($_SESSION['club_id'])) {
-    error_log("REDIRECCIÓN: Falta club_id en sesión");
-    header('Location: ../index.php');
-    exit;
-}
-
-$id_socio = $_SESSION['id_socio'];
-$id_club = $_SESSION['club_id'];
 
 // Verificar que existan en la base de datos
 $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-$stmt->execute([$id_socio, $id_club]);
+$stmt->execute([$id_socio, $club_id]);
 $socio_valido = $stmt->fetch();
 
 if (!$socio_valido) {
-    error_log("REDIRECCIÓN: Socio no válido o no pertenece al club");
-    error_log("id_socio: $id_socio, id_club: $id_club");
+    error_log("REDIRECCIÓN: Socio no válido");
     header('Location: ../index.php');
     exit;
 }
 
-error_log("✅ ACCESO PERMITIDO: id_socio=$id_socio, id_club=$id_club");
+// Obtener datos del usuario para mostrar
+$stmt_user = $pdo->prepare("
+    SELECT 
+        s.alias, s.email, s.celular,
+        c.nombre as nombre_club, c.logo as logo_club
+    FROM socios s
+    JOIN clubs c ON s.id_club = c.id_club
+    WHERE s.id_socio = ? AND c.id_club = ?
+");
+$stmt_user->execute([$id_socio, $club_id]);
+$usuario_data = $stmt_user->fetch();
 
-if (!$stmt->fetch()) {
-    // Intentar obtener el club_id correcto del socio
-    $stmt_fix = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ?");
-    $stmt_fix->execute([$id_socio]);
-    $correct_club = $stmt_fix->fetch();
-    
-    if ($correct_club) {
-        $_SESSION['club_id'] = $correct_club['id_club'];
-        $id_club = $correct_club['id_club'];
-    } else {
-        header('Location: ../index.php');
-        exit;
-    }
+if (!$usuario_data) {
+    header('Location: ../index.php');
+    exit;
 }
 
 // Obtener recintos deportivos disponibles
@@ -236,12 +237,11 @@ $deportes = [
       border-radius: 50%;
     }
     
-    .estado-disponible { background: #FFD700; } /* Amarillo */
-    .estado-reservada { background: #9C27B0; }  /* Morado */
-    .estado-ocupada { background: #4CAF50; }    /* Verde */
-    .estado-cancelada { background: #F44336; }  /* Rojo */
+    .estado-disponible { background: #FFD700; }
+    .estado-reservada { background: #9C27B0; }
+    .estado-ocupada { background: #4CAF50; }
+    .estado-cancelada { background: #F44336; }
     
-    /* Panel lateral fijo */
     .detail-panel {
       display: flex;
       flex-direction: column;
@@ -307,7 +307,6 @@ $deportes = [
       color: white !important;
     }
     
-    /* Toast Notifications */
     .toast {
       position: fixed;
       bottom: 20px;
@@ -342,7 +341,6 @@ $deportes = [
       background: linear-gradient(135deg, #2196F3, #1565C0);
     }
     
-    /* Responsive móvil */
     @media (max-width: 768px) {
       .dashboard-container {
         grid-template-columns: 1fr;
@@ -368,7 +366,7 @@ $deportes = [
       <h1 class="main-title">Reservar Cancha</h1>
     </div>
     <div>
-      <a href="dashboard_socio.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
     </div>
   </div>
   
@@ -423,33 +421,7 @@ $deportes = [
     </div>
   </div>
 
-  <!-- Submodal para tipo de reserva -->
-  <div id="tipoReservaModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
-    <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px; position:relative;">
-      <span class="close-modal" onclick="closeTipoReservaModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
-      <h3>Seleccionar Tipo de Reserva</h3>
-      <form id="tipoReservaForm">
-        <div class="form-group">
-          <label>
-            <input type="radio" name="tipo_reserva" value="spot" checked> Spot (Una vez)
-          </label><br>
-          <label>
-            <input type="radio" name="tipo_reserva" value="semanal"> Semanal (Mismo día/hora toda la semana)
-          </label><br>
-          <label>
-            <input type="radio" name="tipo_reserva" value="mensual"> Mensual (Mismo día/hora todo el mes)
-          </label>
-        </div>
-        <button type="submit" class="btn-submit" style="width:100%;">Confirmar Tipo</button>
-      </form>
-    </div>
-  </div>
-
   <script>
-    let reservaSeleccionada = null;
-    let reservasData = [];
-    let tipoReservaSeleccionado = 'spot';
-
     // Datos del usuario
     const userData = {
         club: '<?= addslashes(htmlspecialchars($usuario_data['nombre_club'])) ?>',
@@ -492,7 +464,10 @@ $deportes = [
         return true;
     }
 
-    // Cargar disponibilidad inicial
+    // Funciones básicas (mantén las que ya tenías)
+    let reservaSeleccionada = null;
+    let reservasData = [];
+
     async function cargarDisponibilidad(filtros = {}) {
         try {
             const formData = new FormData();
@@ -552,7 +527,7 @@ $deportes = [
             grid.appendChild(fechaDiv);
             
             porFecha[fecha].forEach(item => {
-                if (item.estado !== 'disponible') return; // Solo mostrar disponibles
+                if (item.estado !== 'disponible') return;
                 
                 const card = document.createElement('div');
                 card.className = 'reserva-card';
@@ -580,15 +555,12 @@ $deportes = [
     }
 
     function selectDisponibilidad(item) {
-        // Quitar selección anterior
         document.querySelectorAll('.reserva-card').forEach(card => {
             card.classList.remove('selected');
         });
         
         event.currentTarget.classList.add('selected');
         reservaSeleccionada = item;
-        
-        // Mostrar detalle
         mostrarDetalleDisponibilidad(item);
     }
 
@@ -635,84 +607,11 @@ $deportes = [
         `;
     }
 
-    async function reservarCancha() {
+    function reservarCancha() {
         if (!validarReservaSeleccionada()) return;
-        
-        // Mostrar modal para seleccionar tipo de reserva
-        document.getElementById('tipoReservaModal').style.display = 'flex';
+        alert('Funcionalidad de reserva en desarrollo');
     }
 
-    function closeTipoReservaModal() {
-        document.getElementById('tipoReservaModal').style.display = 'none';
-    }
-
-    document.getElementById('tipoReservaForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        tipoReservaSeleccionado = document.querySelector('input[name="tipo_reserva"]:checked').value;
-        closeTipoReservaModal();
-        
-        // Confirmar la reserva
-        if (tipoReservaSeleccionado !== 'spot') {
-            const mensaje = tipoReservaSeleccionado === 'semanal' 
-                ? '¿Deseas reservar esta cancha para el mismo día y hora durante toda la semana?'
-                : '¿Deseas reservar esta cancha para el mismo día y hora durante todo el mes?';
-            
-            if (!confirm(mensaje)) {
-                return;
-            }
-        }
-        
-        await confirmarReserva();
-    });
-
-    async function confirmarReserva() {
-        try {
-            const formData = new FormData();
-            formData.append('id_cancha', reservaSeleccionada.id_cancha);
-            formData.append('id_club', <?= $id_club ?>);
-            formData.append('id_socio', <?= $id_socio ?>);
-            formData.append('fecha', reservaSeleccionada.fecha);
-            formData.append('hora_inicio', reservaSeleccionada.hora_inicio);
-            formData.append('hora_fin', reservaSeleccionada.hora_fin);
-            formData.append('tipo_reserva', tipoReservaSeleccionado);
-            formData.append('valor_arriendo', reservaSeleccionada.valor_arriendo);
-            
-            const response = await fetch('../api/reservas_club.php?action=crear_reserva', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast('✅ ¡Reserva confirmada! Recibirás un correo con los detalles.', 'success');
-                
-                // Notificar a miembros del club y admin del recinto
-                setTimeout(() => {
-                    showToast('📨 Notificaciones enviadas a todos los miembros del club y al administrador del recinto.', 'info');
-                }, 2000);
-                
-                // Resetear selección
-                reservaSeleccionada = null;
-                document.querySelectorAll('.reserva-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-                document.getElementById('detalleContent').innerHTML = '<p>Selecciona una cancha disponible para ver detalles</p>';
-                
-                // Recargar disponibilidad
-                aplicarFiltros();
-                
-            } else {
-                throw new Error(result.message || 'Error al crear la reserva');
-            }
-            
-        } catch (error) {
-            console.error('Error al reservar:', error);
-            showToast(`❌ Error: ${error.message}`, 'error');
-        }
-    }
-
-    // Filtros
     function aplicarFiltros() {
         const filtros = {
             deporte: document.getElementById('filtroDeporte').value,
@@ -726,7 +625,6 @@ $deportes = [
     document.getElementById('filtroRecinto').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroFecha').addEventListener('change', aplicarFiltros);
 
-    // Cargar inicialmente
     document.addEventListener('DOMContentLoaded', function() {
         cargarDisponibilidad({ rango: 'semana' });
     });

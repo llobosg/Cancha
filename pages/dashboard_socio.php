@@ -1,113 +1,21 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Iniciar sesión si no está iniciada
+// Configuración robusta de sesiones
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Obtener club desde URL
-$club_slug_from_url = $_GET['id_club'] ?? '';
-
-// Validar slug básico
-if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// Buscar todos los clubs verificados
-$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
-$stmt_club->execute();
-$clubs = $stmt_club->fetchAll();
-
-$club_id = null;
-$club_nombre = '';
-$club_logo = '';
-$club_slug = null;
-
-// Encontrar el club que coincide con el slug
-foreach ($clubs as $c) {
-    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    if ($generated_slug === $club_slug_from_url) {
-        $club_id = (int)$c['id_club'];
-        $club_nombre = $c['nombre'];
-        $club_logo = $c['logo'] ?? '';
-        $club_slug = $generated_slug;
-        break;
-    }
-}
-
-if (!$club_id) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO 🔥
-$id_socio = null;
-
-// Verificar si ya tenemos id_socio en sesión
-if (isset($_SESSION['id_socio'])) {
-    $id_socio = $_SESSION['id_socio'];
-    
-    // Validar que el socio pertenece al club actual
-    $stmt_validate = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-    $stmt_validate->execute([$id_socio, $club_id]);
-    if (!$stmt_validate->fetch()) {
-        $id_socio = null; // Invalidar si no pertenece al club
-    }
-}
-
-// Si no tenemos id_socio válido, intentar obtenerlo del login
-if (!$id_socio) {
-    $user_email = null;
-    
-    // Obtener email del login (Google o correo)
-    if (isset($_SESSION['google_email'])) {
-        $user_email = $_SESSION['google_email'];
-    } elseif (isset($_SESSION['user_email'])) {
-        $user_email = $_SESSION['user_email'];
-    }
-    
-    if ($user_email) {
-        // Buscar socio existente con este email y club
-        $stmt_socio = $pdo->prepare("
-            SELECT id_socio FROM socios 
-            WHERE email = ? AND id_club = ?
-        ");
-        $stmt_socio->execute([$user_email, $club_id]);
-        $socio_data = $stmt_socio->fetch();
-        
-        if ($socio_data) {
-            // Socio ya existe
-            $id_socio = $socio_data['id_socio'];
-        } else {
-            // Socio no existe, redirigir a completar perfil
-            header('Location: completar_perfil.php?id=' . $club_slug);
-            exit;
-        }
-    } else {
-        // No hay email en sesión, redirigir a login
-        header('Location: ../index.php');
-        exit;
-    }
-}
-
-// Guardar en sesión
-$_SESSION['id_socio'] = $id_socio;
-$_SESSION['club_id'] = $club_id;
-$_SESSION['current_club'] = $club_slug;
-
-// Obtener datos del socio actual para verificar si el perfil está completo
-$socio_actual = null;
-if (isset($_SESSION['id_socio'])) {
-    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
-    $stmt_socio->execute([$_SESSION['id_socio']]);
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']),
+…    $stmt_socio->execute([$_SESSION['id_socio']]);
     $socio_actual = $stmt_socio->fetch();
 }
-// DEBUG DE SESIÓN EN DASHBOARD
-error_log("=== DEBUG DASHBOARD SESIÓN ===");
-error_log("Session ID: " . session_id());
-error_log("Sesión en dashboard: " . print_r($_SESSION, true));
+
+// DEBUG FINAL
+error_log("=== DEBUG DASHBOARD FINAL ===");
+error_log("id_socio: $id_socio, club_id: $club_id");
+error_log("Sesión final: " . print_r($_SESSION, true));
 ?>
 <!DOCTYPE html>
 <html lang="es">
