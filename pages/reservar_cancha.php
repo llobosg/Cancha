@@ -453,7 +453,12 @@ $deportes = [
             formData.append('recinto', filtros.recinto || '');
             formData.append('rango', filtros.rango || 'semana');
             
-            const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+            //const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+            //    method: 'POST',
+            //    body: formData,
+            //    credentials: 'include'
+            //});
+            const response = await fetch('../api/reservas_club_test.php', {
                 method: 'POST',
                 body: formData,
                 credentials: 'include'
