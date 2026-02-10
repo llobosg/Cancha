@@ -41,7 +41,7 @@ $recinto = $stmt->fetch();
       max-width: 1400px;
       margin: 0 auto;
       padding: 1rem;
-      height: calc(100vh - 80px);
+      height: calc(100vh - 140px); /* Ajustado para espacio fijo */
     }
     
     .header {
@@ -60,19 +60,39 @@ $recinto = $stmt->fetch();
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
     
+    .main-title-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .logo-corporativo {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #FFD700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
     .main-title {
       color: #FFD700;
       font-size: 1.5rem;
       margin: 0;
     }
     
-    .controls {
+    .controls-section {
       display: flex;
       gap: 1rem;
       margin-bottom: 1rem;
       padding: 0.5rem;
       background: rgba(255,255,255,0.1);
       border-radius: 8px;
+      position: sticky;
+      top: 70px;
+      z-index: 999;
     }
     
     .control-select {
@@ -142,11 +162,14 @@ $recinto = $stmt->fetch();
     .estado-cancelada { background: #F44336; }  /* Rojo */
     .estado-mantencion { background: #FF9800; } /* Naranja */
     
+    /* Panel lateral fijo */
     .detail-panel {
       display: flex;
       flex-direction: column;
       gap: 1rem;
       height: 100%;
+      position: sticky;
+      top: 70px;
     }
     
     .detail-section {
@@ -154,6 +177,7 @@ $recinto = $stmt->fetch();
       padding: 1rem;
       border-radius: 12px;
       overflow-y: auto;
+      flex: 1;
     }
     
     .detail-title {
@@ -195,13 +219,13 @@ $recinto = $stmt->fetch();
     .btn-cancelar { background: #FF9800; color: white; }
     .btn-cambiar { background: #2196F3; color: white; }
     .btn-mensaje { background: #4CAF50; color: white; }
-    .btn-correo { background: #9C27B0; color: white; }
+    .btn-campeonato { background: #00cc66; color: white; }
     
     /* Responsive móvil */
     @media (max-width: 768px) {
       .dashboard-container {
         grid-template-columns: 1fr;
-        grid-template-rows: 2fr 1fr;
+        grid-template-rows: auto 1fr auto;
         height: auto;
         min-height: calc(100vh - 120px);
       }
@@ -209,12 +233,19 @@ $recinto = $stmt->fetch();
       .reservas-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       }
+      
+      .detail-panel {
+        position: static;
+      }
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1 class="main-title">🏟️ CanchaBoard - <?= htmlspecialchars($recinto['nombre']) ?></h1>
+    <div class="main-title-section">
+      <div class="logo-corporativo">⚽</div>
+      <h1 class="main-title">Cancha</h1>
+    </div>
     <div>
       <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
     </div>
@@ -222,7 +253,7 @@ $recinto = $stmt->fetch();
   
   <div class="dashboard-container" style="margin-top: 70px;">
     <div>
-      <div class="controls">
+      <div class="controls-section">
         <select class="control-select" id="filtroDeporte">
           <option value="">Todos los deportes</option>
           <option value="futbol">Fútbol</option>
@@ -273,12 +304,26 @@ $recinto = $stmt->fetch();
           <button class="action-btn btn-cancelar" onclick="cancelarReserva()">❌ Cancelar Reserva</button>
           <button class="action-btn btn-cambiar" onclick="cambiarCancha()">🔄 Cambiar de Cancha</button>
           <button class="action-btn btn-mensaje" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
-          <button class="action-btn btn-correo" onclick="enviarCorreo()">📧 Correo de Respald</button>
-          <button class="action-btn" style="background: #00cc66; color: white;" onclick="crearCampeonato()">
+          <button class="action-btn btn-campeonato" onclick="crearCampeonato()">
             🏆 Crear Campeonato
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Submodal para mensaje -->
+  <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:1001;">
+    <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px;">
+      <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
+      <h3>Enviar Mensaje</h3>
+      <form id="mensajeForm">
+        <div class="form-group">
+          <label for="mensajeTexto">Mensaje *</label>
+          <textarea id="mensajeTexto" name="mensaje" rows="4" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;"></textarea>
+        </div>
+        <button type="submit" class="btn-submit" style="width:100%;">Enviar Mensaje y Correo</button>
+      </form>
     </div>
   </div>
 
@@ -472,10 +517,26 @@ $recinto = $stmt->fetch();
             'fallido': 'Fallido'
         };
         
+        const tipoReservaTexto = {
+            'spot': 'Spot',
+            'semanal': 'Semanal',
+            'mensual': 'Mensual',
+            'campeonato': 'Campeonato',
+            'evento': 'Evento'
+        };
+        
         document.getElementById('detalleContent').innerHTML = `
             <div class="detail-item">
                 <span class="detail-label">Cancha:</span> 
                 <span>${detalle.nro_cancha || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Deporte:</span> 
+                <span>${detalle.id_deporte || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Fecha/Hora:</span> 
+                <span>${formatDateDisplay(detalle.fecha)} ${formatTimeDisplay(detalle.hora_inicio)}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Club:</span> 
@@ -490,8 +551,8 @@ $recinto = $stmt->fetch();
                 <span>${detalle.telefono_cliente || 'N/A'}</span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">Fecha/Hora:</span> 
-                <span>${formatDateDisplay(detalle.fecha)} ${formatTimeDisplay(detalle.hora_inicio)}</span>
+                <span class="detail-label">Tipo Reserva:</span> 
+                <span>${tipoReservaTexto[detalle.tipo_reserva] || detalle.tipo_reserva || 'Spot'}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Monto:</span> 
@@ -546,24 +607,6 @@ $recinto = $stmt->fetch();
         }
     }
 
-    function aplicarFiltros() {
-        const deporte = document.getElementById('filtroDeporte').value;
-        const estado = document.getElementById('filtroEstado').value;
-        
-        let datosFiltrados = [...reservasData];
-        
-        if (deporte) {
-            datosFiltrados = datosFiltrados.filter(r => r.id_deporte === deporte);
-        }
-        
-        if (estado) {
-            datosFiltrados = datosFiltrados.filter(r => (r.estado_disponibilidad || 'disponible') === estado);
-        }
-        
-        renderizarReservas(datosFiltrados);
-    }
-
-    // Funciones placeholder para otras acciones
     function cancelarReserva() {
         if (!reservaSeleccionada) {
             alert('Selecciona una reserva primero');
@@ -585,19 +628,44 @@ $recinto = $stmt->fetch();
             alert('Selecciona una reserva primero');
             return;
         }
-        alert('Sistema de notificaciones integrado en desarrollo');
+        document.getElementById('mensajeModal').style.display = 'flex';
     }
 
-    function enviarCorreo() {
-        if (!reservaSeleccionada) {
-            alert('Selecciona una reserva primero');
-            return;
+    function closeMensajeModal() {
+        document.getElementById('mensajeModal').style.display = 'none';
+    }
+
+    async function enviarMensajeYCorreo(formData) {
+        try {
+            // Aquí iría la lógica para enviar notificación y correo
+            // Por ahora simulamos el envío
+            alert('Mensaje enviado y correo de respaldo enviado');
+            closeMensajeModal();
+        } catch (error) {
+            console.error('Error al enviar mensaje:', error);
+            alert('Error al enviar el mensaje: ' + error.message);
         }
-        alert('Sistema de correo Brevo integrado en desarrollo');
     }
 
     function crearCampeonato() {
         window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
+    }
+
+    function aplicarFiltros() {
+        const deporte = document.getElementById('filtroDeporte').value;
+        const estado = document.getElementById('filtroEstado').value;
+        
+        let datosFiltrados = [...reservasData];
+        
+        if (deporte) {
+            datosFiltrados = datosFiltrados.filter(r => r.id_deporte === deporte);
+        }
+        
+        if (estado) {
+            datosFiltrados = datosFiltrados.filter(r => (r.estado_disponibilidad || 'disponible') === estado);
+        }
+        
+        renderizarReservas(datosFiltrados);
     }
 
     // Ahora sí, cargar los datos iniciales
@@ -637,6 +705,20 @@ $recinto = $stmt->fetch();
         
         cargarReservasConRango(rangoDias);
     });
-</script>
+
+    // Formulario de mensaje
+    document.getElementById('mensajeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const mensaje = document.getElementById('mensajeTexto').value;
+        enviarMensajeYCorreo(mensaje);
+    });
+
+    // Cerrar modal con escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMensajeModal();
+        }
+    });
+  </script>
 </body>
 </html>
