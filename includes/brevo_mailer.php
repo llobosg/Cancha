@@ -38,9 +38,13 @@ class BrevoMailer {
             'Content-Type: application/json',
             'Accept: application/json'
         ];
+
+        // ✅ USAR EL REMITENTE VERIFICADO
+        $sender_email = 'llobos@gltcomex.com';
+        $sender_name = 'CanchaSport';
         
         $data = [
-            'sender' => ['email' => 'noreply@cancha.cl', 'name' => 'Cancha'],
+            'sender' => ['email' => $sender_email, 'name' => $sender_name],
             'to' => [$this->to],
             'subject' => $this->subject,
             'htmlContent' => $this->htmlBody
