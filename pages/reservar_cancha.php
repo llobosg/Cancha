@@ -15,7 +15,7 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
-
+error_log("no pasó por session_status === PHP_SESSION_NONE");
 // DEBUG INMEDIATO - Ver qué hay en la sesión
 error_log("=== DEBUG SESIÓN INMEDIATO ===");
 error_log("Session ID: " . session_id());
