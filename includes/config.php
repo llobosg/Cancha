@@ -1,6 +1,9 @@
 <?php
 // includes/config.php
 
+// Configuración Brevo
+define('BREVO_API_KEY', $_ENV['BREVO_API_KEY'] ?? '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');
+
 // Usar getenv() para mayor compatibilidad
 $host = getenv('MYSQLHOST');
 $user = getenv('MYSQLUSER');
