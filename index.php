@@ -559,44 +559,6 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
 </div>
-    <!-- Login alternativo por email/contraseña -->
-    <div id="loginAlternativo" class="login-alternativo" style="display: none; margin-top: 2rem; padding: 2rem; background: rgba(255,255,255,0.15); border-radius: 12px; max-width: 400px; margin-left: auto; margin-right: auto;">
-      <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
-      
-      <?php if (isset($error_login)): ?>
-        <div style="background: #ffebee; color: #c62828; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center; border: 1px solid #ffcdd2;">
-          <?= htmlspecialchars($error_login) ?>
-        </div>
-      <?php endif; ?>
-      
-      <form method="POST" style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <div>
-          <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
-          <input type="email" id="email_alt" name="email_alt" required 
-                style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-        </div>
-        
-        <div>
-          <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Contraseña *</label>
-          <input type="password" id="password_alt" name="password_alt" required 
-                style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-        </div>
-        
-        <div>
-          <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
-          <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
-                placeholder="Ej: 4d2baa78"
-                style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-        </div>
-        
-        <button type="submit" name="login_alternativo" 
-                style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
-          Iniciar Sesión
-        </button>
-      </form>
-    </div>
-</div>
-
 <script>
 // Funcionalidad del menú desplegable
 document.addEventListener('DOMContentLoaded', function() {
@@ -621,24 +583,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Función global para toggle login alternativo
   function toggleLoginAlternativo() {
-        const loginDiv = document.getElementById('loginAlternativo');
-        if (!loginDiv) {
-            console.error('Elemento loginAlternativo no encontrado');
-            return;
-        }
-        
-        if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
-            loginDiv.style.display = 'block';
-            loginDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-            loginDiv.style.display = 'none';
-        }
-    }
-    
-    // Hacer la función accesible globalmente
-    window.toggleLoginAlternativo = toggleLoginAlternativo;
-});
+      const loginDiv = document.getElementById('loginAlternativo');
+      const overlay = document.getElementById('loginOverlay');
+      
+      if (!loginDiv || !overlay) {
+          console.error('Elementos de login alternativo no encontrados');
+          return;
+      }
+      
+      if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
+          loginDiv.style.display = 'block';
+          overlay.style.display = 'block';
+          // Asegurar que esté visible
+          loginDiv.style.opacity = '1';
+      } else {
+          loginDiv.style.display = 'none';
+          overlay.style.display = 'none';
+      }
+  }
+
+  // Hacer accesible globalmente
+  window.toggleLoginAlternativo = toggleLoginAlternativo;
 </script>
 
 <!-- Contenido principal -->
@@ -1085,5 +1052,49 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Usuario suscrito a notificaciones');
   }
 </script>
+  <!-- Login alternativo por email/contraseña - AL FINAL DEL BODY -->
+  <div id="loginAlternativo" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1002; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
+    <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
+    
+    <?php if (isset($error_login)): ?>
+      <div style="background: #ffebee; color: #c62828; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center; border: 1px solid #ffcdd2;">
+        <?= htmlspecialchars($error_login) ?>
+      </div>
+    <?php endif; ?>
+    
+    <form method="POST" style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div>
+        <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
+        <input type="email" id="email_alt" name="email_alt" required 
+              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+      </div>
+      
+      <div>
+        <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Contraseña *</label>
+        <input type="password" id="password_alt" name="password_alt" required 
+              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+      </div>
+      
+      <div>
+        <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
+        <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
+              placeholder="Ej: 4d2baa78"
+              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+      </div>
+      
+      <button type="submit" name="login_alternativo" 
+              style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
+        Iniciar Sesión
+      </button>
+      
+      <button type="button" onclick="toggleLoginAlternativo()" 
+              style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">
+        Cerrar
+      </button>
+    </form>
+  </div>
+
+  <!-- Overlay para el modal -->
+  <div id="loginOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001;"></div>
 </body>
 </html>
