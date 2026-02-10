@@ -563,7 +563,7 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
     <!-- Login alternativo por email/contraseña -->
-    <div class="login-alternativo" style="display:none; margin-top: 4rem; padding: 2rem; background: rgba(255,255,255,0.15); border-radius: 12px; max-width: 400px; margin-left: auto; margin-right: auto;">
+    <div id="loginAlternativo" class="login-alternativo" style="display: none; margin-top: 2rem; padding: 2rem; background: rgba(255,255,255,0.15); border-radius: 12px; max-width: 400px; margin-left: auto; margin-right: auto;">
       <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
       
       <?php if (isset($error_login)): ?>
@@ -623,6 +623,24 @@ document.addEventListener('DOMContentLoaded', function() {
       content.style.display = 'none';
     }
   });
+
+  function toggleLoginAlternativo() {
+        const loginDiv = document.getElementById('loginAlternativo');
+        if (!loginDiv) {
+            console.error('Elemento loginAlternativo no encontrado');
+            return;
+        }
+        
+        if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
+            loginDiv.style.display = 'block';
+            loginDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            loginDiv.style.display = 'none';
+        }
+    }
+    
+    // Hacer la función accesible globalmente
+    window.toggleLoginAlternativo = toggleLoginAlternativo;
 });
 </script>
 
