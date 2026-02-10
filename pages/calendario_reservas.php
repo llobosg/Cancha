@@ -23,222 +23,258 @@ $recinto = $stmt->fetch();
   <title>CanchaBoard - <?= htmlspecialchars($recinto['nombre']) ?> | Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-    body {
-      background: linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-                 url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      background-blend-mode: multiply;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      color: white;
-    }
-    
+  body {
+    background: linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+               url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+    background-blend-mode: multiply;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    color: white;
+  }
+  
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: 4fr 1fr;
+    gap: 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+    height: calc(100vh - 140px);
+    min-height: calc(100vh - 140px);
+  }
+  
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(0, 51, 102, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1.5rem;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  
+  .main-title-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .logo-corporativo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #FFD700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+  
+  .main-title {
+    color: #FFD700;
+    font-size: 1.5rem;
+    margin: 0;
+  }
+  
+  .controls-section {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    position: sticky;
+    top: 70px;
+    z-index: 999;
+  }
+  
+  .control-select {
+    background: white;
+    padding: 0.3rem;
+    border-radius: 4px;
+    color: #071289;
+    border: none;
+  }
+  
+  .reservas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    height: 100%;
+  }
+  
+  .reserva-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .reserva-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  
+  .reserva-card.selected {
+    border: 3px solid #071289;
+  }
+  
+  .deporte-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .cancha-nombre {
+    font-weight: bold;
+    color: #071289;
+    margin-bottom: 0.3rem;
+  }
+  
+  .fecha-hora {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+  }
+  
+  .estado-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .estado-disponible { background: #FFD700; } /* Amarillo */
+  .estado-reservada { background: #9C27B0; }  /* Morado */
+  .estado-ocupada { background: #4CAF50; }    /* Verde */
+  .estado-cancelada { background: #F44336; }  /* Rojo */
+  .estado-mantencion { background: #FF9800; } /* Naranja */
+  
+  /* Panel lateral fijo - CORREGIDO */
+  .detail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: calc(100vh - 140px);
+    max-height: calc(100vh - 140px);
+    position: sticky;
+    top: 70px;
+  }
+  
+  .detail-section {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .detail-title {
+    color: #071289;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+  }
+  
+  .detail-item {
+    margin-bottom: 0.5rem;
+  }
+  
+  .detail-label {
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .action-btn {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+  }
+  
+  .action-btn:hover {
+    background: rgba(255,255,255,0.2);
+  }
+  
+  .btn-anular { background: #F44336; color: white; }
+  .btn-cancelar { background: #FF9800; color: white; }
+  .btn-cambiar { background: #2196F3; color: white; }
+  .btn-mensaje { background: #4CAF50; color: white; }
+  .btn-campeonato { background: #00cc66; color: white; }
+  
+  /* Submodal */
+  .submodal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+  }
+  
+  .submodal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 500px;
+    position: relative;
+  }
+  
+  .close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 28px;
+    cursor: pointer;
+  }
+  
+  /* Responsive móvil */
+  @media (max-width: 768px) {
     .dashboard-container {
-      display: grid;
-      grid-template-columns: 4fr 1fr;
-      gap: 1rem;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 1rem;
-      height: calc(100vh - 140px); /* Ajustado para espacio fijo */
-    }
-    
-    .header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 60px;
-      background: rgba(0, 51, 102, 0.95);
-      backdrop-filter: blur(10px);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 1.5rem;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-    
-    .main-title-section {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    .logo-corporativo {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      background: #FFD700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-    }
-    
-    .main-title {
-      color: #FFD700;
-      font-size: 1.5rem;
-      margin: 0;
-    }
-    
-    .controls-section {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      padding: 0.5rem;
-      background: rgba(255,255,255,0.1);
-      border-radius: 8px;
-      position: sticky;
-      top: 70px;
-      z-index: 999;
-    }
-    
-    .control-select {
-      background: white;
-      padding: 0.3rem;
-      border-radius: 4px;
-      color: #071289;
-      border: none;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto;
+      height: auto;
+      min-height: calc(100vh - 120px);
     }
     
     .reservas-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 1rem;
-      overflow-y: auto;
-      padding-right: 0.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }
     
-    .reserva-card {
-      background: white;
-      border-radius: 12px;
-      padding: 1rem;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .reserva-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    }
-    
-    .reserva-card.selected {
-      border: 3px solid #071289;
-    }
-    
-    .deporte-icon {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
-    
-    .cancha-nombre {
-      font-weight: bold;
-      color: #071289;
-      margin-bottom: 0.3rem;
-    }
-    
-    .fecha-hora {
-      font-size: 0.9rem;
-      color: #666;
-      margin-bottom: 0.5rem;
-    }
-    
-    .estado-indicator {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-    
-    .estado-disponible { background: #FFD700; } /* Amarillo */
-    .estado-reservada { background: #9C27B0; }  /* Morado */
-    .estado-ocupada { background: #4CAF50; }    /* Verde */
-    .estado-cancelada { background: #F44336; }  /* Rojo */
-    .estado-mantencion { background: #FF9800; } /* Naranja */
-    
-    /* Panel lateral fijo */
     .detail-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      height: 100%;
-      position: sticky;
-      top: 70px;
+      position: static;
+      height: auto;
+      max-height: none;
     }
-    
-    .detail-section {
-      background: white;
-      padding: 1rem;
-      border-radius: 12px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    
-    .detail-title {
-      color: #071289;
-      margin-bottom: 1rem;
-      font-size: 1.2rem;
-    }
-    
-    .detail-item {
-      margin-bottom: 0.5rem;
-    }
-    
-    .detail-label {
-      font-weight: bold;
-      color: #333;
-    }
-    
-    .actions-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.5rem;
-    }
-    
-    .action-btn {
-      padding: 0.5rem;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.2s;
-    }
-    
-    .action-btn:hover {
-      background: rgba(255,255,255,0.2);
-    }
-    
-    .btn-anular { background: #F44336; color: white; }
-    .btn-cancelar { background: #FF9800; color: white; }
-    .btn-cambiar { background: #2196F3; color: white; }
-    .btn-mensaje { background: #4CAF50; color: white; }
-    .btn-campeonato { background: #00cc66; color: white; }
-    
-    /* Responsive móvil */
-    @media (max-width: 768px) {
-      .dashboard-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto;
-        height: auto;
-        min-height: calc(100vh - 120px);
-      }
-      
-      .reservas-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      }
-      
-      .detail-panel {
-        position: static;
-      }
-    }
-  </style>
+  }
+</style>
 </head>
 <body>
   <div class="header">
@@ -312,20 +348,20 @@ $recinto = $stmt->fetch();
     </div>
   </div>
 
-  <!-- Submodal para mensaje -->
-  <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:1001;">
-    <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px;">
-      <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
-      <h3>Enviar Mensaje</h3>
-      <form id="mensajeForm">
-        <div class="form-group">
-          <label for="mensajeTexto">Mensaje *</label>
-          <textarea id="mensajeTexto" name="mensaje" rows="4" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;"></textarea>
+    <!-- Submodal para mensaje - CORREGIDO -->
+    <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
+        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px; position:relative;">
+            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
+            <h3>Enviar Mensaje</h3>
+            <form id="mensajeForm">
+            <div class="form-group">
+                <label for="mensajeTexto">Mensaje *</label>
+                <textarea id="mensajeTexto" name="mensaje" rows="4" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;"></textarea>
+            </div>
+            <button type="submit" class="btn-submit" style="width:100%;">Enviar Mensaje y Correo</button>
+            </form>
         </div>
-        <button type="submit" class="btn-submit" style="width:100%;">Enviar Mensaje y Correo</button>
-      </form>
     </div>
-  </div>
 
   <script>
     let reservaSeleccionada = null;
