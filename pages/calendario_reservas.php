@@ -789,7 +789,6 @@ $recinto = $stmt->fetch();
         else if (valor === 'mes') rangoDias = 30;
         
         cargarReservasConRango(rangoDias);
-    });
 
     // Formulario de mensaje
     document.getElementById('mensajeForm').addEventListener('submit', function(e) {
