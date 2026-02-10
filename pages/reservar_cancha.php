@@ -422,13 +422,13 @@ $deportes = [
   </div>
 
   <script>
-    // Datos del usuario
-    const userData = {
-        club: '<?= addslashes(htmlspecialchars($usuario_data['nombre_club'])) ?>',
-        responsable: '<?= addslashes(htmlspecialchars($usuario_data['alias'])) ?>',
-        correo: '<?= addslashes(htmlspecialchars($usuario_data['email'])) ?>',
-        telefono: '<?= addslashes(htmlspecialchars($usuario_data['celular'])) ?>'
-    };
+    // Datos del usuario - INYECCIÓN SEGURA
+    const userData = <?= json_encode([
+        'club' => $usuario_data['nombre_club'] ?? '',
+        'responsable' => $usuario_data['alias'] ?? '',
+        'correo' => $usuario_data['email'] ?? '',
+        'telefono' => $usuario_data['celular'] ?? ''
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
     // Sistema de Toast Notifications
     function showToast(message, type = 'info') {
