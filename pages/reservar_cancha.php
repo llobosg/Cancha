@@ -1,7 +1,4 @@
 <?php
-// LOG DE ENTRADA
-error_log("🎯 ACCESO A reservar_cancha.php - Inicio de ejecución");
-
 // Configuración robusta de sesiones
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -15,51 +12,32 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// DEBUG INMEDIATO
-error_log("=== DEBUG SESIÓN INMEDIATO ===");
-error_log("Session ID: " . session_id());
-error_log("Cookies recibidas: " . print_r($_COOKIE, true));
+// Validación de sesión
+if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+    // Fallback con cookies
+    if (isset($_COOKIE['cancha_id_socio']) && isset($_COOKIE['cancha_club_id'])) {
+        $_SESSION['id_socio'] = $_COOKIE['cancha_id_socio'];
+        $_SESSION['club_id'] = $_COOKIE['cancha_club_id'];
+    } else {
+        header('Location: ../index.php');
+        exit;
+    }
+}
+
+$id_socio = $_SESSION['id_socio'];
+$club_id = $_SESSION['club_id'];
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Intentar obtener datos de sesión
-$id_socio = $_SESSION['id_socio'] ?? null;
-$club_id = $_SESSION['club_id'] ?? null;
-
-// Fallback con cookies
-if ((!$id_socio || !$club_id) && isset($_COOKIE['cancha_id_socio'])) {
-    $id_socio = $_COOKIE['cancha_id_socio'];
-    $club_id = $_COOKIE['cancha_club_id'] ?? null;
-    // Restaurar en sesión
-    $_SESSION['id_socio'] = $id_socio;
-    $_SESSION['club_id'] = $club_id;
-}
-
-// DEBUG DETALLADO
-error_log("=== DEBUG RESERVAR CANCHA ===");
-error_log("Sesión completa: " . print_r($_SESSION, true));
-error_log("id_socio: " . ($id_socio ? $id_socio : 'NO EXISTE'));
-error_log("club_id: " . ($club_id ? $club_id : 'NO EXISTE'));
-
-// Validación final
-if (!$id_socio || !$club_id) {
-    error_log("REDIRECCIÓN: Sesión incompleta");
-    header('Location: ../index.php');
-    exit;
-}
-
-// Verificar que existan en la base de datos
+// Verificar que el socio exista
 $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
 $stmt->execute([$id_socio, $club_id]);
-$socio_valido = $stmt->fetch();
-
-if (!$socio_valido) {
-    error_log("REDIRECCIÓN: Socio no válido");
+if (!$stmt->fetch()) {
     header('Location: ../index.php');
     exit;
 }
 
-// Obtener datos del usuario para mostrar
+// Obtener datos del usuario
 $stmt_user = $pdo->prepare("
     SELECT 
         s.alias, s.email, s.celular,
@@ -464,41 +442,47 @@ $deportes = [
         return true;
     }
 
-    // Funciones básicas (mantén las que ya tenías)
+    // Funciones principales
     let reservaSeleccionada = null;
     let reservasData = [];
 
     async function cargarDisponibilidad(filtros = {}) {
-      try {
-          const formData = new FormData();
-          formData.append('deporte', filtros.deporte || '');
-          formData.append('recinto', filtros.recinto || '');
-          formData.append('rango', filtros.rango || 'semana');
-          
-          // Agregar datos de sesión para la API
-          formData.append('id_socio', userData.id_socio || '');
-          formData.append('club_id', userData.club_id || '');
-          
-          const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
-              method: 'POST',
-              body: formData,
-              credentials: 'include' // ← Importante para cookies/sesiones
-          });
-          
-          const data = await response.json();
-          
-          if (data.error) {
-              throw new Error(data.error);
-          }
-          
-          reservasData = data;
-          renderizarDisponibilidad(reservasData);
-          
-      } catch (error) {
-          console.error('Error al cargar disponibilidad:', error);
-          document.getElementById('reservasGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Error al cargar la disponibilidad</div>';
-      }
-  }
+        try {
+            const formData = new FormData();
+            formData.append('deporte', filtros.deporte || '');
+            formData.append('recinto', filtros.recinto || '');
+            formData.append('rango', filtros.rango || 'semana');
+            
+            const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+            
+            // Verificar si la respuesta es JSON válido
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('La API no devolvió JSON válido');
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            reservasData = data;
+            renderizarDisponibilidad(reservasData);
+            
+        } catch (error) {
+            console.error('Error al cargar disponibilidad:', error);
+            document.getElementById('reservasGrid').innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
+                    Error al cargar la disponibilidad: ${error.message}
+                </div>
+            `;
+        }
+    }
 
     function renderizarDisponibilidad(disponibilidad) {
         const grid = document.getElementById('reservasGrid');
