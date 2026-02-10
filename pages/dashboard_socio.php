@@ -24,6 +24,7 @@ $club_id = null;
 $club_nombre = '';
 $club_logo = '';
 $club_slug = null;
+$id_socio = $_SESSION['id_socio'] ?? null;
 
 // Encontrar el club que coincide con el slug usando la lógica correcta
 foreach ($clubs as $c) {
@@ -45,7 +46,6 @@ if (!$club_id) {
 // Guardar en sesión
 $_SESSION['current_club'] = $club_slug;
 $_SESSION['club_id'] = $club_id;
-$_SESSION['id_socio'] = $id_socio;
 
 
 // Obtener datos del socio actual para verificar si el perfil está completo
