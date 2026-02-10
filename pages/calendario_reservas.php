@@ -212,6 +212,7 @@ $recinto = $stmt->fetch();
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.5rem;
+    color: black;
   }
   
   .action-btn {
@@ -221,13 +222,14 @@ $recinto = $stmt->fetch();
     font-weight: bold;
     cursor: pointer;
     text-align: left;
-    color: black;
     transition: background 0.2s;
-  }
-  
-  .action-btn:hover {
+    color: #333; /* Texto negro por defecto */
+    }
+
+    .action-btn:hover {
     background: rgba(255,255,255,0.2);
-  }
+    color: #000; /* Texto negro en hover */
+    }
   
   .btn-anular { background: #F44336; color: white; }
   .btn-cancelar { background: #FF9800; color: white; }
@@ -515,16 +517,20 @@ $recinto = $stmt->fetch();
         
         // Buscar la reserva completa en los datos
         const selectedReserva = reservasData.find(r => 
-            r.id_disponibilidad == id || 
-            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` == id)
+            (r.id_disponibilidad && r.id_disponibilidad.toString() === id.toString()) || 
+            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString())
         );
         
         if (selectedReserva) {
-            if (selectedReserva.id_disponibilidad && selectedReserva.id_disponibilidad !== 'null') {
-                // Es una reserva real, cargar detalle completo
+            // Verificar si es una reserva real o solo disponibilidad
+            if (selectedReserva.id_disponibilidad && 
+                selectedReserva.id_disponibilidad !== 'null' && 
+                selectedReserva.id_disponibilidad !== null && 
+                selectedReserva.id_disponibilidad !== 'undefined') {
+                // Es una reserva real
                 cargarDetalleReserva(selectedReserva.id_disponibilidad);
             } else {
-                // Es disponibilidad, mostrar info básica
+                // Es solo disponibilidad
                 mostrarDetalleDisponibilidad(selectedReserva);
             }
         } else {
@@ -691,7 +697,7 @@ $recinto = $stmt->fetch();
     }
 
     async function anularReserva() {
-        if (!validarReservaSeleccionada()) return;
+        if (!validarReservaActiva()) return;
         
         if (confirm('¿Estás seguro de anular esta reserva? Esta acción no se puede deshacer.')) {
             try {
@@ -723,22 +729,22 @@ $recinto = $stmt->fetch();
     }
 
     function cancelarReserva() {
-        if (!validarReservaSeleccionada()) return;
+        if (!validarReservaActiva()) return;
         alert('Funcionalidad de cancelación en desarrollo');
     }
 
     function cambiarCancha() {
-        if (!validarReservaSeleccionada()) return;
+        if (!validarReservaActiva()) return;
         alert('Funcionalidad de cambio de cancha en desarrollo');
     }
 
     function enviarMensaje() {
-        if (!validarReservaSeleccionada()) return;
+        if (!validarReservaActiva()) return;
         document.getElementById('mensajeModal').style.display = 'flex';
     }
 
+    // La acción "Crear Campeonato" NO requiere validación de reserva
     function crearCampeonato() {
-        // Esta acción no requiere reserva seleccionada
         window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
     }
 
@@ -777,6 +783,34 @@ $recinto = $stmt->fetch();
         }
         
         renderizarReservas(datosFiltrados);
+    }
+
+    // Función para verificar si hay una reserva real (no solo disponibilidad)
+    function validarReservaActiva() {
+        if (!reservaSeleccionada) {
+            showToast('⚠️ Debes seleccionar una reserva primero', 'warning');
+            return false;
+        }
+        
+        // Buscar la reserva en los datos cargados
+        const selectedReserva = reservasData.find(r => 
+            r.id_disponibilidad == reservaSeleccionada || 
+            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` == reservaSeleccionada)
+        );
+        
+        // Verificar si es una reserva real (tiene id_disponibilidad válido)
+        if (!selectedReserva || !selectedReserva.id_disponibilidad || selectedReserva.id_disponibilidad === 'null') {
+            showToast('⚠️ Para ejecutar esta acción debe existir una reserva activa', 'warning');
+            return false;
+        }
+        
+        // Verificar que el estado no sea cancelado
+        if (selectedReserva.estado_reserva === 'cancelada') {
+            showToast('⚠️ No se pueden ejecutar acciones sobre reservas canceladas', 'warning');
+            return false;
+        }
+        
+        return true;
     }
 
     // Ahora sí, cargar los datos iniciales
