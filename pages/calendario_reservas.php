@@ -478,16 +478,22 @@ $recinto = $stmt->fetch();
         event.currentTarget.classList.add('selected');
         reservaSeleccionada = id;
         
-        // Cargar detalle real si existe id_disponibilidad
+        // Buscar la reserva completa en los datos
         const selectedReserva = reservasData.find(r => 
             r.id_disponibilidad == id || 
             (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` == id)
         );
         
-        if (selectedReserva && selectedReserva.id_disponibilidad) {
-            cargarDetalleReserva(selectedReserva.id_disponibilidad);
+        if (selectedReserva) {
+            if (selectedReserva.id_disponibilidad && selectedReserva.id_disponibilidad !== 'null') {
+                // Es una reserva real, cargar detalle completo
+                cargarDetalleReserva(selectedReserva.id_disponibilidad);
+            } else {
+                // Es disponibilidad, mostrar info básica
+                mostrarDetalleDisponibilidad(selectedReserva);
+            }
         } else {
-            mostrarDetalleDisponibilidad(selectedReserva);
+            document.getElementById('detalleContent').innerHTML = '<p>Reserva no encontrada</p>';
         }
     }
 
@@ -764,14 +770,16 @@ $recinto = $stmt->fetch();
         }
     }
 
-    // Event listeners
+    // Cargar datos iniciales con filtro HOY por defecto
     document.addEventListener('DOMContentLoaded', function() {
-        cargarReservasConRango(30);
+        cargarReservasConRango(0); // 0 = Hoy
     });
 
+    // Actualizar el select para mostrar "Hoy" como seleccionado por defecto
+    document.getElementById('filtroFecha').value = 'hoy';
     document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroFecha').addEventListener('change', function() {
+
         const valor = this.value;
         let rangoDias = 30;
         

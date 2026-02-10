@@ -46,7 +46,12 @@ try {
     echo json_encode(['error' => $e->getMessage()]);
 }
 
-function getReservasDataOptimizada($pdo, $id_recinto, $rango_dias = 30) {
+function getReservasDataOptimizada($pdo, $id_recinto, $rango_dias = 0) {
+    // Por defecto mostrar HOY (rango_dias = 0)
+    if ($rango_dias === 30) {
+        $rango_dias = 0; // Cambiar a "Hoy" por defecto
+    }
+    
     $fecha_inicio = date('Y-m-d');
     $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
     
@@ -82,10 +87,12 @@ function getReservasDataOptimizada($pdo, $id_recinto, $rango_dias = 30) {
             dc.hora_fin,
             dc.estado as estado_disponibilidad,
             r.id_reserva,
-            r.tipo_reserva,
             r.estado as estado_reserva,
             r.estado_pago,
             r.monto_total,
+            r.tipo_reserva,
+            r.id_convenio,
+            r.notas,
             cl.nombre as nombre_club,
             s.alias as nombre_responsable,
             r.telefono_cliente,
