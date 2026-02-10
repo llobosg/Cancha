@@ -1,12 +1,15 @@
 <?php
-// LOG DE ENTRADA - Verificar si se accede al archivo
+// LOG DE ENTRADA
 error_log("🎯 ACCESO A reservar_cancha.php - Inicio de ejecución");
+
+// 🔥 AGREGAR ESTO: Iniciar sesión primero
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
-
-// DEBUG DETALLADO - Eliminar después de resolver
+// DEBUG DETALLADO
 error_log("=== DEBUG RESERVAR CANCHA ===");
 error_log("Sesión completa: " . print_r($_SESSION, true));
 error_log("id_socio en sesión1: " . (isset($_SESSION['id_socio']) ? $_SESSION['id_socio'] : 'NO EXISTE'));
