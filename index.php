@@ -603,6 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
           overlay.style.display = 'none';
       }
   }
+});
 
   // Hacer accesible globalmente
   window.toggleLoginAlternativo = toggleLoginAlternativo;
