@@ -559,42 +559,41 @@ $_SESSION['visited_index'] = true;
       </div>
     </div>
     <!-- Login alternativo por email/contraseña -->
-    <div class="login-alternativo" style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
-      <h3 style="color: #FFD700; margin-bottom: 1rem;">🔐 Login Alternativo</h3>
+    <div class="login-alternativo" style="margin-top: 3rem; padding: 1.5rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+      <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center;">🔐 Login Alternativo</h3>
       
       <?php if (isset($error_login)): ?>
-        <div style="background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem;">
+        <div style="background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.85rem; text-align: center;">
           <?= htmlspecialchars($error_login) ?>
         </div>
       <?php endif; ?>
       
-      <form method="POST" style="display: flex; flex-direction: column; gap: 1rem;">
+      <form method="POST" style="display: flex; flex-direction: column; gap: 1.2rem;">
         <div>
-          <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem;">Email *</label>
+          <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem; text-align: left;">Email *</label>
           <input type="email" id="email_alt" name="email_alt" required 
-                style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px; color: #071289;">
+                style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 6px; color: #071289; font-size: 1rem;">
         </div>
         
         <div>
-          <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem;">Contraseña *</label>
+          <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem; text-align: left;">Contraseña *</label>
           <input type="password" id="password_alt" name="password_alt" required 
-                style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px; color: #071289;">
+                style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 6px; color: #071289; font-size: 1rem;">
         </div>
         
         <div>
-          <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem;">Código del Club *</label>
+          <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem; text-align: left;">Código del Club *</label>
           <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
                 placeholder="Ej: 4d2baa78"
-                style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px; color: #071289;">
+                style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 6px; color: #071289; font-size: 1rem;">
         </div>
         
         <button type="submit" name="login_alternativo" 
-                style="padding: 0.9rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                style="padding: 0.9rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem;">
           Iniciar Sesión
         </button>
       </form>
     </div>
-  </div>
 </div>
 
 <script>
