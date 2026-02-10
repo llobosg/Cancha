@@ -6,8 +6,8 @@ session_start();
 // DEBUG DETALLADO - Eliminar después de resolver
 error_log("=== DEBUG RESERVAR CANCHA ===");
 error_log("Sesión completa: " . print_r($_SESSION, true));
-error_log("id_socio en sesión: " . (isset($_SESSION['id_socio']) ? $_SESSION['id_socio'] : 'NO EXISTE'));
-error_log("club_id en sesión: " . (isset($_SESSION['club_id']) ? $_SESSION['club_id'] : 'NO EXISTE'));
+error_log("id_socio en sesión1: " . (isset($_SESSION['id_socio']) ? $_SESSION['id_socio'] : 'NO EXISTE'));
+error_log("club_id en sesión1: " . (isset($_SESSION['club_id']) ? $_SESSION['club_id'] : 'NO EXISTE'));
 
 // Verificar requisitos mínimos
 if (!isset($_SESSION['id_socio'])) {
