@@ -332,7 +332,7 @@ if (isset($_SESSION['id_socio'])) {
     <div class="actions">
       <h2>Acciones rápidas</h2>
       <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='convocatoria.php?id=<?= $club_slug ?>'">Crear convocatoria</button>
+        <button class="btn-action" onclick="window.location.href='reservar_cancha.php?id=<?= $club_slug ?>'">Crear convocatoria</button>
         <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
         <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
       </div>
