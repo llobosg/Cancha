@@ -13,12 +13,6 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
-
-
-// DEBUG FINAL
-error_log("=== DEBUG DASHBOARD FINAL ===");
-error_log("id_socio: $id_socio, club_id: $club_id");
-error_log("Sesión final: " . print_r($_SESSION, true));
 ?>
 <!DOCTYPE html>
 <html lang="es">
