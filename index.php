@@ -48,6 +48,7 @@ $_SESSION['visited_index'] = true;
   <title>Cancha - Gestión para clubes deportivos</title>
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
   <style>
     * {
       margin: 0;
@@ -706,14 +707,31 @@ $_SESSION['visited_index'] = true;
 <script>
 // Función global para toggle login alternativo
 function toggleLoginAlternativo() {
-    const loginDiv = document.getElementById('loginAlternativo');
-    const overlay = document.getElementById('loginOverlay');
-    
-    if (!loginDiv || !overlay) {
-        console.error('Elementos de login alternativo no encontrados');
-        return;
-    }
-    
+    // Esperar un momento para asegurar que el DOM esté listo
+    setTimeout(() => {
+        const loginDiv = document.getElementById('loginAlternativo');
+        const overlay = document.getElementById('loginOverlay');
+        
+        if (!loginDiv || !overlay) {
+            console.warn('Modales de login no encontrados - intentando nuevamente...');
+            // Intentar una vez más
+            setTimeout(() => {
+                const loginDiv2 = document.getElementById('loginAlternativo');
+                const overlay2 = document.getElementById('loginOverlay');
+                if (loginDiv2 && overlay2) {
+                    toggleModal(loginDiv2, overlay2);
+                } else {
+                    alert('No se pudo abrir el formulario de login. Por favor, recarga la página.');
+                }
+            }, 100);
+            return;
+        }
+        
+        toggleModal(loginDiv, overlay);
+    }, 10);
+}
+
+function toggleModal(loginDiv, overlay) {
     if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
         loginDiv.style.display = 'block';
         overlay.style.display = 'block';
@@ -722,6 +740,9 @@ function toggleLoginAlternativo() {
         overlay.style.display = 'none';
     }
 }
+
+// Hacer accesible globalmente
+window.toggleLoginAlternativo = toggleLoginAlternativo;
 
 // Hacer accesible globalmente
 window.toggleLoginAlternativo = toggleLoginAlternativo;
