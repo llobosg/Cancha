@@ -3,23 +3,41 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-// DEBUG TEMPORAL - Eliminar después
-error_log("DEBUG SESIÓN: " . print_r($_SESSION, true));
-error_log("DEBUG id_socio: " . ($_SESSION['id_socio'] ?? 'NO EXISTE'));
-error_log("DEBUG club_id: " . ($_SESSION['club_id'] ?? 'NO EXISTE'));
+// DEBUG DETALLADO - Eliminar después de resolver
+error_log("=== DEBUG RESERVAR CANCHA ===");
+error_log("Sesión completa: " . print_r($_SESSION, true));
+error_log("id_socio en sesión: " . (isset($_SESSION['id_socio']) ? $_SESSION['id_socio'] : 'NO EXISTE'));
+error_log("club_id en sesión: " . (isset($_SESSION['club_id']) ? $_SESSION['club_id'] : 'NO EXISTE'));
 
-// Verificar que el usuario sea socio de un club (cualquier rol)
-if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
-    error_log("REDIRECCIÓN A INDEX: Sesión incompleta");
+// Verificar requisitos mínimos
+if (!isset($_SESSION['id_socio'])) {
+    error_log("REDIRECCIÓN: Falta id_socio en sesión");
     header('Location: ../index.php');
     exit;
 }
 
-// Verificar que el usuario sea socio de un club (cualquier rol)
-if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+if (!isset($_SESSION['club_id'])) {
+    error_log("REDIRECCIÓN: Falta club_id en sesión");
     header('Location: ../index.php');
     exit;
 }
+
+$id_socio = $_SESSION['id_socio'];
+$id_club = $_SESSION['club_id'];
+
+// Verificar que existan en la base de datos
+$stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+$stmt->execute([$id_socio, $id_club]);
+$socio_valido = $stmt->fetch();
+
+if (!$socio_valido) {
+    error_log("REDIRECCIÓN: Socio no válido o no pertenece al club");
+    error_log("id_socio: $id_socio, id_club: $id_club");
+    header('Location: ../index.php');
+    exit;
+}
+
+error_log("✅ ACCESO PERMITIDO: id_socio=$id_socio, id_club=$id_club");
 
 $id_socio = $_SESSION['id_socio'];
 $id_club = $_SESSION['club_id'];
