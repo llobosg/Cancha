@@ -100,7 +100,7 @@ $_SESSION['current_club'] = $club_slug;
 // Obtener datos del socio actual para verificar si el perfil está completo
 $socio_actual = null;
 if (isset($_SESSION['id_socio'])) {
-    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?")
+    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
     $stmt_socio->execute([$_SESSION['id_socio']]);
     $socio_actual = $stmt_socio->fetch();
 }
