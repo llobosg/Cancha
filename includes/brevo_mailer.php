@@ -1,5 +1,11 @@
 <?php
 // includes/brevo_mailer.php
+// En el método send() de BrevoMailer, agrega al inicio:
+error_log("=== BREVO MAILER SEND ===");
+error_log("API KEY LENGTH: " . strlen(BREVO_API_KEY));
+error_log("API KEY SET: " . (empty(BREVO_API_KEY) ? 'NO' : 'YES'));
+error_log("TO: " . print_r($this->to, true));
+error_log("SUBJECT: " . $this->subject);
 
 class BrevoMailer {
     private $apiKey;
