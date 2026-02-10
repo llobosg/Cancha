@@ -104,6 +104,10 @@ if (isset($_SESSION['id_socio'])) {
     $stmt_socio->execute([$_SESSION['id_socio']]);
     $socio_actual = $stmt_socio->fetch();
 }
+// DEBUG DE SESIÓN EN DASHBOARD
+error_log("=== DEBUG DASHBOARD SESIÓN ===");
+error_log("Session ID: " . session_id());
+error_log("Sesión en dashboard: " . print_r($_SESSION, true));
 ?>
 <!DOCTYPE html>
 <html lang="es">
