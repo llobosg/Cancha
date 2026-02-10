@@ -541,6 +541,11 @@ $_SESSION['visited_index'] = true;
     <button id="btnEnterClub" class="btn-enter" style="display:none;">
       👤 Entrar a mi club
     </button>
+    <div class="option-card" style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 12px; text-align: center; min-width: 200px; transition: transform 0.3s;">
+      <h3 style="color: #FFD700; margin-bottom: 1rem;">👤 Entrar a mi club</h3>
+      <p style="color: white; margin-bottom: 1.5rem;">Accede como socio a tu club deportivo</p>
+      <a href="#login-alternativo" style="display: inline-block; padding: 0.8rem 1.5rem; background: #00cc66; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Entrar al Club</a>
+    </div>
     
     <!-- Google Login (aparece si NO hay sesión) -->
     <div id="googleLoginContainer">
