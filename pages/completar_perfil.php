@@ -327,6 +327,11 @@ $success = '';
             <option value="Avanzada">Avanzada</option>
           </select>
         </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña (opcional)</label>
+          <input type="password" id="password" name="password">
+        </div>
         
         <button type="submit" class="btn-submit">Completar Perfil</button>
       </form>
@@ -347,24 +352,24 @@ $success = '';
       formData.append('id_puesto', document.getElementById('id_puesto').value);
       formData.append('genero', document.getElementById('genero').value);
       formData.append('habilidad', document.getElementById('habilidad').value);
+      formData.append('password', document.getElementById('password').value); // ← NUEVO
       
       fetch('../api/completar_perfil.php', {
-        method: 'POST',
-        body: formData
+          method: 'POST',
+          body: formData
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          // Redirigir al dashboard del club
-          const clubSlug = document.getElementById('clubSlug').value;
-          window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
-        } else {
-          alert('Error: ' + data.message);
-        }
+          if (data.success) {
+              const clubSlug = document.getElementById('clubSlug').value;
+              window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
+          } else {
+              alert('Error: ' + data.message);
+          }
       })
       .catch(error => {
-        console.error('Error:', error);
-        alert('Error al completar el perfil');
+          console.error('Error:', error);
+          alert('Error al completar el perfil');
       });
     }
   </script>

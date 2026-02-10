@@ -385,14 +385,13 @@ $_SESSION['current_club'] = $club_slug;
       </div>
     </div>
 
-    <!-- Acciones -->
-    <div class="actions">
-      <h2>Acciones rápidas</h2>
-      <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
-        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
-      </div>
+    <!-- En dashboard_socio.php, agrega esto en las acciones -->
+    <div class="action-buttons">
+      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+      <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
+      <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
+      <!-- Nuevo botón -->
+      <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
     </div>
 
     <!-- Botones condicionales según datos_completos -->

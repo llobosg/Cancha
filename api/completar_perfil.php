@@ -3,53 +3,75 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
 try {
-    $id_socio = $_POST['id_socio'] ?? null;
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception('Método no permitido');
+    }
     
-    if (!$id_socio) {
-        throw new Exception('ID de socio requerido');
+    // Obtener datos del formulario
+    $id_socio = $_POST['id_socio'] ?? null;
+    $alias = trim($_POST['alias'] ?? '');
+    $fecha_nac = $_POST['fecha_nac'] ?? '';
+    $celular = trim($_POST['celular'] ?? '');
+    $direccion = trim($_POST['direccion'] ?? '');
+    $rol = trim($_POST['rol'] ?? '');
+    $id_puesto = (int)($_POST['id_puesto'] ?? 0);
+    $genero = $_POST['genero'] ?? '';
+    $habilidad = $_POST['habilidad'] ?? '';
+    $password = $_POST['password'] ?? ''; // ← NUEVO: Contraseña opcional
+    
+    // Validaciones
+    if (empty($alias) || empty($fecha_nac) || empty($celular) || empty($direccion) || 
+        empty($rol) || empty($id_puesto) || empty($genero) || empty($habilidad)) {
+        throw new Exception('Todos los campos son requeridos');
     }
     
     // Verificar que el socio existe
-    $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ?");
-    $stmt->execute([$id_socio]);
-    if (!$stmt->fetch()) {
-        throw new Exception('Tu perfil no se encontró en el sistema');
+    if (!$id_socio) {
+        throw new Exception('ID de socio no proporcionado');
     }
     
-    // Validar campos requeridos
-    $campos_requeridos = ['alias', 'fecha_nac', 'celular', 'direccion', 'rol', 'id_puesto', 'genero', 'habilidad'];
-    foreach ($campos_requeridos as $campo) {
-        if (empty($_POST[$campo])) {
-            throw new Exception('El campo ' . $campo . ' es requerido');
-        }
+    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ?");
+    $stmt_check->execute([$id_socio]);
+    if (!$stmt_check->fetch()) {
+        throw new Exception('Socio no encontrado');
     }
     
-    // Actualizar perfil
-    $stmt = $pdo->prepare("
-        UPDATE socios 
-        SET alias = ?, fecha_nac = ?, celular = ?, direccion = ?, rol = ?, 
-            id_puesto = ?, genero = ?, habilidad = ?, datos_completos = 1
-        WHERE id_socio = ?
-    ");
+    // ← NUEVO: Procesar contraseña si se proporciona
+    $password_hash = null;
+    if (!empty($password)) {
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+    }
     
-    $result = $stmt->execute([
-        $_POST['alias'],
-        $_POST['fecha_nac'],
-        $_POST['celular'],
-        $_POST['direccion'],
-        $_POST['rol'],
-        $_POST['id_puesto'],
-        $_POST['genero'],
-        $_POST['habilidad'],
-        $id_socio
-    ]);
-    
-    if ($result && $stmt->rowCount() > 0) {
-        echo json_encode(['success' => true]);
+    // Actualizar el perfil del socio
+    if ($password_hash !== null) {
+        $stmt = $pdo->prepare("
+            UPDATE socios SET 
+                alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, 
+                password_hash = ?, datos_completos = 1
+            WHERE id_socio = ?
+        ");
+        $stmt->execute([
+            $alias, $fecha_nac, $celular, $direccion,
+            $rol, $id_puesto, $genero, $habilidad,
+            $password_hash, $id_socio
+        ]);
     } else {
-        error_log("ADVERTENCIA: Ninguna fila actualizada - socio_id=$id_socio");
-        throw new Exception('No se pudo actualizar tu perfil');
+        $stmt = $pdo->prepare("
+            UPDATE socios SET 
+                alias = ?, fecha_nac = ?, celular = ?, direccion = ?, 
+                rol = ?, id_puesto = ?, genero = ?, habilidad = ?, 
+                datos_completos = 1
+            WHERE id_socio = ?
+        ");
+        $stmt->execute([
+            $alias, $fecha_nac, $celular, $direccion,
+            $rol, $id_puesto, $genero, $habilidad,
+            $id_socio
+        ]);
     }
+    
+    echo json_encode(['success' => true]);
     
 } catch (Exception $e) {
     http_response_code(400);
