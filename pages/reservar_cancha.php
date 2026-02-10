@@ -2,10 +2,25 @@
 // LOG DE ENTRADA
 error_log("🎯 ACCESO A reservar_cancha.php - Inicio de ejecución");
 
-// 🔥 AGREGAR ESTO: Iniciar sesión primero
+// 🔥 CONFIGURACIÓN ROBUSTA DE SESIONES
 if (session_status() === PHP_SESSION_NONE) {
+    // Configurar sesión para Railway
+    session_set_cookie_params([
+        'lifetime' => 86400, // 24 horas
+        'path' => '/',
+        'domain' => '', // Dejar vacío para Railway
+        'secure' => isset($_SERVER['HTTPS']), // HTTPS si está disponible
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
+
+// DEBUG INMEDIATO - Ver qué hay en la sesión
+error_log("=== DEBUG SESIÓN INMEDIATO ===");
+error_log("Session ID: " . session_id());
+error_log("Session Status: " . session_status());
+error_log("Cookies recibidas: " . print_r($_COOKIE, true));
 
 require_once __DIR__ . '/../includes/config.php';
 
