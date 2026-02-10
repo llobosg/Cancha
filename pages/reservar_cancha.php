@@ -3,23 +3,25 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-// Verificar que el usuario sea socio de un club
-if (!isset($_SESSION['id_socio']) || !isset($_SESSION['id_club'])) {
+// Verificar que el usuario sea socio de un club (cualquier rol)
+if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
     header('Location: ../index.php');
     exit;
 }
 
 $id_socio = $_SESSION['id_socio'];
-$id_club = $_SESSION['id_club'];
+$id_club = $_SESSION['club_id'];
 
-// Obtener datos del club y socio
+// Obtener datos del socio y club
 $stmt = $pdo->prepare("
-    SELECT c.nombre as nombre_club, c.logo as logo_club, s.alias, s.email, s.celular
-    FROM clubs c
-    JOIN socios s ON c.id_club = s.id_club
-    WHERE c.id_club = ? AND s.id_socio = ?
+    SELECT 
+        s.alias, s.email, s.celular,
+        c.nombre as nombre_club, c.logo as logo_club
+    FROM socios s
+    JOIN clubs c ON s.id_club = c.id_club
+    WHERE s.id_socio = ? AND c.id_club = ?
 ");
-$stmt->execute([$id_club, $id_socio]);
+$stmt->execute([$id_socio, $id_club]);
 $usuario_data = $stmt->fetch();
 
 if (!$usuario_data) {
