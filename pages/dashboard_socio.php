@@ -13,6 +13,53 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
+// Obtener club desde URL
+$club_slug_from_url = $_GET['id_club'] ?? '';
+
+// Validar slug básico
+if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Buscar todos los clubs verificados
+$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
+$stmt_club->execute();
+$clubs = $stmt_club->fetchAll();
+
+$club_id = null;
+$club_nombre = '';
+$club_logo = '';
+$club_slug = null;
+
+// Encontrar el club que coincide con el slug usando la lógica correcta
+foreach ($clubs as $c) {
+    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+    if ($generated_slug === $club_slug_from_url) {
+        $club_id = (int)$c['id_club'];
+        $club_nombre = $c['nombre'];
+        $club_logo = $c['logo'] ?? '';
+        $club_slug = $generated_slug;
+        break;
+    }
+}
+
+if (!$club_id) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Guardar en sesión
+$_SESSION['current_club'] = $club_slug;
+$_SESSION['club_id'] = $club_id;
+
+// Obtener datos del socio actual para verificar si el perfil está completo
+$socio_actual = null;
+if (isset($_SESSION['id_socio'])) {
+    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
+    $stmt_socio->execute([$_SESSION['id_socio']]);
+    $socio_actual = $stmt_socio->fetch();
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
