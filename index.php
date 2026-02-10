@@ -1,5 +1,59 @@
 <?php
 session_start();
+// Procesar login alternativo
+$error_login = '';
+if (isset($_POST['login_alternativo'])) {
+    $email = trim($_POST['email_alt'] ?? '');
+    $password = $_POST['password_alt'] ?? '';
+    $club_slug = trim($_POST['club_slug_alt'] ?? '');
+    
+    if (empty($email) || empty($password) || empty($club_slug)) {
+        $error_login = 'Todos los campos son requeridos';
+    } elseif (strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
+        $error_login = 'Código de club inválido';
+    } else {
+        // Encontrar el club correspondiente al slug
+        $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
+        $stmt_club->execute();
+        $clubs = $stmt_club->fetchAll();
+        
+        $club_id = null;
+        foreach ($clubs as $c) {
+            $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+            if ($generated_slug === $club_slug) {
+                $club_id = (int)$c['id_club'];
+                break;
+            }
+        }
+        
+        if (!$club_id) {
+            $error_login = 'Club no encontrado';
+        } else {
+            // Verificar credenciales del socio
+            $stmt = $pdo->prepare("
+                SELECT id_socio, password_hash 
+                FROM socios 
+                WHERE email = ? AND id_club = ? AND password_hash IS NOT NULL
+            ");
+            $stmt->execute([$email, $club_id]);
+            $socio = $stmt->fetch();
+            
+            if ($socio && password_verify($password, $socio['password_hash'])) {
+                // Login exitoso
+                $_SESSION['id_socio'] = $socio['id_socio'];
+                $_SESSION['club_id'] = $club_id;
+                $_SESSION['user_email'] = $email;
+                $_SESSION['current_club'] = $club_slug;
+                
+                // Redirigir al dashboard
+                header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
+                exit;
+            } else {
+                $error_login = 'Credenciales incorrectas o contraseña no configurada';
+            }
+        }
+    }
+}
 $show_splash = !isset($_SESSION['visited_index']) || $_SESSION['visited_index'] === false;
 $_SESSION['visited_index'] = true;
 ?>
@@ -503,6 +557,42 @@ $_SESSION['visited_index'] = true;
            data-shape="rectangular"
            data-logo_alignment="left">
       </div>
+    </div>
+    <!-- Login alternativo por email/contraseña -->
+    <div class="login-alternativo" style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+      <h3 style="color: #FFD700; margin-bottom: 1rem;">🔐 Login Alternativo</h3>
+      
+      <?php if (isset($error_login)): ?>
+        <div style="background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem;">
+          <?= htmlspecialchars($error_login) ?>
+        </div>
+      <?php endif; ?>
+      
+      <form method="POST" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem;">Email *</label>
+          <input type="email" id="email_alt" name="email_alt" required 
+                style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px; color: #071289;">
+        </div>
+        
+        <div>
+          <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem;">Contraseña *</label>
+          <input type="password" id="password_alt" name="password_alt" required 
+                style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px; color: #071289;">
+        </div>
+        
+        <div>
+          <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.5rem;">Código del Club *</label>
+          <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
+                placeholder="Ej: 4d2baa78"
+                style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px; color: #071289;">
+        </div>
+        
+        <button type="submit" name="login_alternativo" 
+                style="padding: 0.9rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+          Iniciar Sesión
+        </button>
+      </form>
     </div>
   </div>
 </div>
