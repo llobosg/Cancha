@@ -45,6 +45,8 @@ if (!$club_id) {
 // Guardar en sesión
 $_SESSION['current_club'] = $club_slug;
 $_SESSION['club_id'] = $club_id;
+$_SESSION['id_socio'] = $id_socio;
+
 
 // Obtener datos del socio actual para verificar si el perfil está completo
 $socio_actual = null;
