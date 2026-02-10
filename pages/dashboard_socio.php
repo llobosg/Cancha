@@ -8,9 +8,12 @@ if (session_status() === PHP_SESSION_NONE) {
         'path' => '/',
         'domain' => '',
         'secure' => isset($_SERVER['HTTPS']),
-…    $stmt_socio->execute([$_SESSION['id_socio']]);
-    $socio_actual = $stmt_socio->fetch();
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
 }
+
 
 // DEBUG FINAL
 error_log("=== DEBUG DASHBOARD FINAL ===");
