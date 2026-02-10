@@ -1,81 +1,70 @@
 <?php
 // includes/brevo_mailer.php
-// En el método send() de BrevoMailer, agrega al inicio:
-error_log("=== BREVO MAILER SEND ===");
-error_log("API KEY LENGTH: " . strlen(BREVO_API_KEY));
-error_log("API KEY SET: " . (empty(BREVO_API_KEY) ? 'NO' : 'YES'));
-error_log("TO: " . print_r($this->to, true));
-error_log("SUBJECT: " . $this->subject);
 
 class BrevoMailer {
-    private $apiKey;
-    private $fromEmail;
-    private $fromName;
-    private $toEmail;
-    private $toName;
+    private $to;
     private $subject;
     private $htmlBody;
-
+    
     public function __construct() {
-        // Usa tu correo real como remitente
-        $this->apiKey = getenv('BREVO_API_KEY') ?: $_SERVER['BREVO_API_KEY'] ?? 'clave_no_definida';
-        $this->fromEmail = 'llobos@gltcomex.com'; // ✅ Tu correo verificado
-        $this->fromName = 'Cancha';
+        // Constructor
     }
-
+    
     public function setTo($email, $name = '') {
-        $this->toEmail = $email;
-        $this->toName = $name ?: $email;
+        $this->to = ['email' => $email, 'name' => $name];
     }
-
+    
     public function setSubject($subject) {
         $this->subject = $subject;
     }
-
-    public function setHtmlBody($html) {
-        $this->htmlBody = $html;
+    
+    public function setHtmlBody($htmlBody) {
+        $this->htmlBody = $htmlBody;
     }
-
+    
     public function send() {
-        // Validación crítica
-        if ($this->apiKey === 'clave_no_definida') {
-            error_log("❌ BREVO_API_KEY no configurada");
+        // Lógica de envío usando BREVO_API_KEY
+        $apiKey = BREVO_API_KEY;
+        
+        if (empty($apiKey)) {
+            error_log("BREVO_API_KEY no configurada");
             return false;
         }
-
+        
+        // Configuración de la API de Brevo
         $url = 'https://api.brevo.com/v3/smtp/email';
+        $headers = [
+            'api-key: ' . $apiKey,
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ];
+        
         $data = [
-            'sender' => ['email' => $this->fromEmail, 'name' => $this->fromName],
-            'to' => [['email' => $this->toEmail, 'name' => $this->toName]],
+            'sender' => ['email' => 'noreply@cancha.cl', 'name' => 'Cancha'],
+            'to' => [$this->to],
             'subject' => $this->subject,
             'htmlContent' => $this->htmlBody
         ];
-
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'api-key: ' . $this->apiKey,
-            'Content-Type: application/json',
-            'Accept: application/json'
-        ]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
         curl_close($ch);
-
-        // Logging detallado
+        
         if ($httpCode >= 200 && $httpCode < 300) {
-            error_log("✅ Correo enviado a {$this->toEmail}");
             return true;
         } else {
-            error_log("❌ Brevo error [$httpCode]: " . substr($response, 0, 500));
-            error_log("❌ Datos enviados: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+            error_log("Brevo API Error: HTTP $httpCode, Response: $response, Error: $error");
             return false;
         }
     }
 }
+?>
