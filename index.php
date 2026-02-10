@@ -1,57 +1,39 @@
 <?php
 session_start();
-// Procesar login alternativo
+// Procesar login alternativo - SIMPLIFICADO
 $error_login = '';
 if (isset($_POST['login_alternativo'])) {
     $email = trim($_POST['email_alt'] ?? '');
     $password = $_POST['password_alt'] ?? '';
-    $club_slug = trim($_POST['club_slug_alt'] ?? '');
     
-    if (empty($email) || empty($password) || empty($club_slug)) {
-        $error_login = 'Todos los campos son requeridos';
-    } elseif (strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
-        $error_login = 'Código de club inválido';
+    if (empty($email) || empty($password)) {
+        $error_login = 'Email y contraseña son requeridos';
     } else {
-        // Encontrar el club correspondiente al slug
+        // Verificar credenciales del socio (sin club_slug)
         require_once __DIR__ . '/includes/config.php';
-        $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
-        $stmt_club->execute();
-        $clubs = $stmt_club->fetchAll();
+        $stmt = $pdo->prepare("
+            SELECT s.id_socio, s.id_club, s.password_hash, c.email_responsable
+            FROM socios s
+            JOIN clubs c ON s.id_club = c.id_club
+            WHERE s.email = ? AND s.password_hash IS NOT NULL
+        ");
+        $stmt->execute([$email]);
+        $socio = $stmt->fetch();
         
-        $club_id = null;
-        foreach ($clubs as $c) {
-            $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-            if ($generated_slug === $club_slug) {
-                $club_id = (int)$c['id_club'];
-                break;
-            }
-        }
-        
-        if (!$club_id) {
-            $error_login = 'Club no encontrado';
-        } else {
-            // Verificar credenciales del socio
-            $stmt = $pdo->prepare("
-                SELECT id_socio, password_hash 
-                FROM socios 
-                WHERE email = ? AND id_club = ? AND password_hash IS NOT NULL
-            ");
-            $stmt->execute([$email, $club_id]);
-            $socio = $stmt->fetch();
+        if ($socio && password_verify($password, $socio['password_hash'])) {
+            // Login exitoso
+            $_SESSION['id_socio'] = $socio['id_socio'];
+            $_SESSION['club_id'] = $socio['id_club'];
+            $_SESSION['user_email'] = $email;
             
-            if ($socio && password_verify($password, $socio['password_hash'])) {
-                // Login exitoso
-                $_SESSION['id_socio'] = $socio['id_socio'];
-                $_SESSION['club_id'] = $club_id;
-                $_SESSION['user_email'] = $email;
-                $_SESSION['current_club'] = $club_slug;
-                
-                // Redirigir al dashboard
-                header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
-                exit;
-            } else {
-                $error_login = 'Credenciales incorrectas o contraseña no configurada';
-            }
+            // Generar club_slug para redirección
+            $club_slug = substr(md5($socio['id_club'] . $socio['email_responsable']), 0, 8);
+            $_SESSION['current_club'] = $club_slug;
+            
+            header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
+            exit;
+        } else {
+            $error_login = 'Credenciales incorrectas o contraseña no configurada';
         }
     }
 }
@@ -647,10 +629,9 @@ $_SESSION['visited_index'] = true;
   </div>
 </div>
 
-<!-- Login alternativo modal -->
-<div id="loginOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001;"></div>
+<!-- Login alternativo por email/contraseña - SIMPLIFICADO -->
 <div id="loginAlternativo" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1002; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
-  <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
+  <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Iniciar Sesión</h3>
   
   <?php if (isset($error_login)): ?>
     <div style="background: #ffebee; color: #c62828; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center; border: 1px solid #ffcdd2;">
@@ -671,17 +652,17 @@ $_SESSION['visited_index'] = true;
             style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
     </div>
     
-    <div>
-      <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
-      <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
-            placeholder="Ej: 4d2baa78"
-            style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-    </div>
-    
     <button type="submit" name="login_alternativo" 
             style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
       Iniciar Sesión
     </button>
+    
+    <div style="text-align: center; margin-top: 1rem;">
+      <a href="#" onclick="mostrarRecuperarPassword(); return false;" 
+         style="color: #FFD700; text-decoration: underline; font-size: 0.9rem;">
+        ¿Olvidaste tu contraseña?
+      </a>
+    </div>
     
     <button type="button" onclick="toggleLoginAlternativo()" 
             style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">
@@ -689,6 +670,38 @@ $_SESSION['visited_index'] = true;
     </button>
   </form>
 </div>
+
+<!-- Modal Recuperar Contraseña -->
+<div id="recuperarPasswordModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1003; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
+  <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Recuperar Contraseña</h3>
+  
+  <form id="recuperarPasswordForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <div>
+      <label for="email_recuperar" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
+      <input type="email" id="email_recuperar" name="email_recuperar" required 
+             style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+    </div>
+    
+    <div>
+      <label for="club_slug_recuperar" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
+      <input type="text" id="club_slug_recuperar" name="club_slug_recuperar" required maxlength="8"
+             placeholder="Ej: 4d2baa78"
+             style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+    </div>
+    
+    <button type="submit" 
+            style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
+      Enviar enlace de recuperación
+    </button>
+    
+    <button type="button" onclick="cerrarRecuperarPassword()" 
+            style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">
+      Cancelar
+    </button>
+  </form>
+</div>
+
+<div id="recuperarPasswordOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1002;"></div>
 
 <script>
 // Función global para toggle login alternativo
@@ -1009,6 +1022,51 @@ window.onclick = function(event) {
     cerrarRegisterModal();
   }
 }
+
+function mostrarRecuperarPassword() {
+    document.getElementById('loginAlternativo').style.display = 'none';
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('recuperarPasswordModal').style.display = 'block';
+    document.getElementById('recuperarPasswordOverlay').style.display = 'block';
+}
+
+function cerrarRecuperarPassword() {
+    document.getElementById('recuperarPasswordModal').style.display = 'none';
+    document.getElementById('recuperarPasswordOverlay').style.display = 'none';
+}
+
+// Manejar el formulario de recuperación
+document.getElementById('recuperarPasswordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('email_recuperar').value;
+    const clubSlug = document.getElementById('club_slug_recuperar').value;
+    
+    if (!email || !clubSlug) {
+        alert('Completa todos los campos');
+        return;
+    }
+    
+    // Enviar solicitud a la API
+    fetch('api/recuperar_password.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: email, club_slug: clubSlug})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Se ha enviado un enlace de recuperación a tu correo electrónico');
+            cerrarRecuperarPassword();
+        } else {
+            alert('❌ ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al procesar la solicitud');
+    });
+});
 </script>
 
 <!-- GOOGLE LOGIN SCRIPT -->
