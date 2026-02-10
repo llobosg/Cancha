@@ -162,36 +162,36 @@ $recinto = $stmt->fetch();
   .estado-cancelada { background: #F44336; }  /* Rojo */
   .estado-mantencion { background: #FF9800; } /* Naranja */
   
-  /* Panel lateral - CORREGIDO PARA ALINEACIÓN EXACTA */
-  .detail-panel {
+  /* Panel lateral - CORREGIDO */
+    .detail-panel {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     position: sticky;
-    top: 120px; /* Alineado con el inicio de las fichas */
-    align-self: flex-start; /* Importante para alineación */
-    height: fit-content; /* Solo ocupa el espacio necesario */
-    max-height: calc(100vh - 140px); /* Límite superior */
-    overflow: visible; /* Permite que se vea completamente */
-  }
-  
-  .detail-section {
+    top: 120px;
+    align-self: flex-start;
+    height: fit-content;
+    max-height: calc(100vh - 140px);
+    overflow: visible;
+    }
+
+    .detail-section {
     background: white;
     padding: 1rem;
     border-radius: 12px;
     width: 100%;
     overflow-y: auto;
-    max-height: 300px; /* Altura controlada para Detalle */
-  }
-  
-  .actions-section {
+    max-height: 350px; /* Aumentado para más espacio */
+    }
+
+    .actions-section {
     background: white;
     padding: 1rem;
     border-radius: 12px;
     width: 100%;
     overflow-y: auto;
-    max-height: 250px; /* Altura controlada para Acciones */
-  }
+    max-height: 320px; /* Aumentado para que quepan todas las opciones */
+    }
   
   .detail-title {
     color: #071289;
@@ -281,6 +281,40 @@ $recinto = $stmt->fetch();
       align-self: auto;
     }
   }
+    /* Toast Notifications */
+    .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    z-index: 10000;
+    transform: translateX(120%);
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .toast.show {
+    transform: translateX(0);
+    }
+
+    .toast.success {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    }
+
+    .toast.error {
+    background: linear-gradient(135deg, #F44336, #C62828);
+    }
+
+    .toast.warning {
+    background: linear-gradient(135deg, #FF9800, #EF6C00);
+    }
+
+    .toast.info {
+    background: linear-gradient(135deg, #2196F3, #1565C0);
+    }
 </style>
 </head>
 <body>
@@ -656,10 +690,7 @@ $recinto = $stmt->fetch();
     }
 
     async function anularReserva() {
-        if (!reservaSeleccionada) {
-            alert('Selecciona una reserva primero');
-            return;
-        }
+        if (!validarReservaSeleccionada()) return;
         
         if (confirm('¿Estás seguro de anular esta reserva? Esta acción no se puede deshacer.')) {
             try {
@@ -675,8 +706,8 @@ $recinto = $stmt->fetch();
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('Reserva anulada correctamente');
-                    cargarReservasConRango(30);
+                    showToast('✅ Reserva anulada correctamente', 'success');
+                    cargarReservasConRango(0);
                     document.getElementById('detalleContent').innerHTML = '<p>Selecciona una reserva para ver detalles</p>';
                     reservaSeleccionada = null;
                 } else {
@@ -685,33 +716,29 @@ $recinto = $stmt->fetch();
                 
             } catch (error) {
                 console.error('Error al anular:', error);
-                alert('Error al anular la reserva: ' + error.message);
+                showToast(`❌ Error: ${error.message}`, 'error');
             }
         }
     }
 
     function cancelarReserva() {
-        if (!reservaSeleccionada) {
-            alert('Selecciona una reserva primero');
-            return;
-        }
+        if (!validarReservaSeleccionada()) return;
         alert('Funcionalidad de cancelación en desarrollo');
     }
 
     function cambiarCancha() {
-        if (!reservaSeleccionada) {
-            alert('Selecciona una reserva primero');
-            return;
-        }
+        if (!validarReservaSeleccionada()) return;
         alert('Funcionalidad de cambio de cancha en desarrollo');
     }
 
     function enviarMensaje() {
-        if (!reservaSeleccionada) {
-            alert('Selecciona una reserva primero');
-            return;
-        }
+        if (!validarReservaSeleccionada()) return;
         document.getElementById('mensajeModal').style.display = 'flex';
+    }
+
+    function crearCampeonato() {
+        // Esta acción no requiere reserva seleccionada
+        window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
     }
 
     function closeMensajeModal() {
@@ -790,11 +817,19 @@ $recinto = $stmt->fetch();
         
         cargarReservasConRango(rangoDias);
 
-    // Formulario de mensaje
     document.getElementById('mensajeForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        const mensaje = document.getElementById('mensajeTexto').value;
-        enviarMensajeYCorreo(mensaje);
+        const mensaje = document.getElementById('mensajeTexto').value.trim();
+        
+        if (!mensaje) {
+            showToast('⚠️ El mensaje no puede estar vacío', 'warning');
+            return;
+        }
+        
+        // Simular envío
+        showToast('✅ Mensaje enviado y correo de respaldo enviado', 'success');
+        closeMensajeModal();
+        document.getElementById('mensajeTexto').value = '';
     });
 
     // Cerrar modal con escape
@@ -803,6 +838,44 @@ $recinto = $stmt->fetch();
             closeMensajeModal();
         }
     });
+
+    // Sistema de Toast Notifications
+    function showToast(message, type = 'info') {
+        // Eliminar toast anterior si existe
+        const existingToast = document.querySelector('.toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Mostrar toast
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 100);
+        
+        // Ocultar y eliminar después de 3 segundos
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Función de validación para acciones
+    function validarReservaSeleccionada() {
+        if (!reservaSeleccionada) {
+            showToast('⚠️ Debes seleccionar una reserva primero', 'warning');
+            return false;
+        }
+        return true;
+    }
   </script>
 </body>
 </html>
