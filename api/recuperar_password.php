@@ -1,9 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
-
-// Incluir la clase Brevo
-require_once __DIR__ . '/../includes/BrevoMail.php';
+require_once __DIR__ . '/../includes/brevo_mailer.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -17,7 +15,7 @@ try {
         throw new Exception('Email es requerido');
     }
     
-    // Verificar que el socio exista
+    // Verificar socio
     $stmt = $pdo->prepare("
         SELECT s.id_socio, s.alias, c.nombre as club_nombre
         FROM socios s
@@ -28,31 +26,29 @@ try {
     $socio = $stmt->fetch();
     
     if (!$socio) {
-        // No revelar si el email existe o no (seguridad)
+        // Respuesta genérica por seguridad
         echo json_encode(['success' => true, 'message' => 'Si el email está registrado, recibirás un enlace de recuperación']);
         exit;
     }
     
-    // Generar token de recuperación
+    // Generar token
     $token = bin2hex(random_bytes(32));
     $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
     
-    // Guardar en base de datos
     $stmt = $pdo->prepare("
         INSERT INTO password_reset_tokens (id_socio, token, expires_at, used) 
         VALUES (?, ?, ?, 0)
     ");
     $stmt->execute([$socio['id_socio'], $token, $expires]);
     
-    // URL de reseteo
+    // Enviar correo con Brevo
     $reset_link = "https://cancha-web.up.railway.app/pages/reset_password.php?token=" . $token;
     
-    // === ENVIAR CORREO CON BREVO ===
     try {
-        $mail = new BrevoMail();
+        $mail = new BrevoMailer();
         $mail->setTo($email, $socio['alias']);
         $mail->setSubject('Recupera tu contraseña en Cancha');
-        $mail->setHtmlContent("
+        $mail->setHtmlBody("
             <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                 <div style='background: #003366; color: white; padding: 20px; text-align: center;'>
                     <h2>⚽ Cancha</h2>
@@ -78,16 +74,12 @@ try {
             </div>
         ");
         
-        $result = $mail->send();
-        
-        if (!$result) {
-            error_log("Error al enviar correo Brevo: " . json_encode($mail->getLastError()));
-            throw new Exception('Error al enviar el correo de recuperación');
+        if (!$mail->send()) {
+            error_log("Error al enviar correo: " . json_encode($mail->getLastError()));
         }
         
     } catch (Exception $e) {
         error_log("Excepción Brevo: " . $e->getMessage());
-        // Continuar igual - no revelar errores internos
     }
     
     echo json_encode(['success' => true, 'message' => 'Si el email está registrado, recibirás un enlace de recuperación']);
