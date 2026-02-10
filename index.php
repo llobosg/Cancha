@@ -538,13 +538,11 @@ $_SESSION['visited_index'] = true;
     </button>
     
     <!-- Botón Entrar a mi club (aparece si hay sesión) -->
-    <button id="btnEnterClub" class="btn-enter" style="display:none;">
-      👤 Entrar a mi club
-    </button>
     <div class="option-card" style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 12px; text-align: center; min-width: 200px; transition: transform 0.3s;">
       <h3 style="color: #FFD700; margin-bottom: 1rem;">👤 Entrar a mi club</h3>
       <p style="color: white; margin-bottom: 1.5rem;">Accede como socio a tu club deportivo</p>
-      <a href="#login-alternativo" style="display: inline-block; padding: 0.8rem 1.5rem; background: #00cc66; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Entrar al Club</a>
+      <a href="#" onclick="toggleLoginAlternativo(); return false;" 
+        style="display: inline-block; padding: 0.8rem 1.5rem; background: #00cc66; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Entrar al Club</a>
     </div>
     
     <!-- Google Login (aparece si NO hay sesión) -->
@@ -565,7 +563,7 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
     <!-- Login alternativo por email/contraseña -->
-    <div class="login-alternativo" style="margin-top: 4rem; padding: 2rem; background: rgba(255,255,255,0.15); border-radius: 12px; max-width: 400px; margin-left: auto; margin-right: auto;">
+    <div class="login-alternativo" style="display:none; margin-top: 4rem; padding: 2rem; background: rgba(255,255,255,0.15); border-radius: 12px; max-width: 400px; margin-left: auto; margin-right: auto;">
       <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
       
       <?php if (isset($error_login)): ?>
@@ -1070,6 +1068,17 @@ document.addEventListener('DOMContentLoaded', function() {
   function subscribeToPush() {
     // Aquí integrarías con Firebase Cloud Messaging o similar
     console.log('Usuario suscrito a notificaciones');
+  }
+
+  function toggleLoginAlternativo() {
+      const loginDiv = document.getElementById('loginAlternativo');
+      if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
+          loginDiv.style.display = 'block';
+          // Scroll suave hasta el formulario
+          loginDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+          loginDiv.style.display = 'none';
+      }
   }
 </script>
 </body>
