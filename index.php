@@ -630,7 +630,8 @@ $_SESSION['visited_index'] = true;
   </div>
 </div>
 
-<!-- Login alternativo por email/contraseña - SIMPLIFICADO -->
+<!-- Login alternativo modal - SIEMPRE PRESENTE -->
+<div id="loginOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001;"></div>
 <div id="loginAlternativo" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1002; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
   <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Iniciar Sesión</h3>
   
@@ -672,7 +673,8 @@ $_SESSION['visited_index'] = true;
   </form>
 </div>
 
-<!-- Modal Recuperar Contraseña -->
+<!-- Modal Recuperar Contraseña - SIEMPRE PRESENTE -->
+<div id="recuperarPasswordOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1002;"></div>
 <div id="recuperarPasswordModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1003; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
   <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Recuperar Contraseña</h3>
   
@@ -680,13 +682,6 @@ $_SESSION['visited_index'] = true;
     <div>
       <label for="email_recuperar" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
       <input type="email" id="email_recuperar" name="email_recuperar" required 
-             style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-    </div>
-    
-    <div>
-      <label for="club_slug_recuperar" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
-      <input type="text" id="club_slug_recuperar" name="club_slug_recuperar" required maxlength="8"
-             placeholder="Ej: 4d2baa78"
              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
     </div>
     
@@ -702,33 +697,25 @@ $_SESSION['visited_index'] = true;
   </form>
 </div>
 
-<div id="recuperarPasswordOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1002;"></div>
-
 <script>
-// Función global para toggle login alternativo
+// Funciones robustas para modales
 function toggleLoginAlternativo() {
-    // Esperar un momento para asegurar que el DOM esté listo
-    setTimeout(() => {
-        const loginDiv = document.getElementById('loginAlternativo');
-        const overlay = document.getElementById('loginOverlay');
-        
-        if (!loginDiv || !overlay) {
-            console.warn('Modales de login no encontrados - intentando nuevamente...');
-            // Intentar una vez más
-            setTimeout(() => {
-                const loginDiv2 = document.getElementById('loginAlternativo');
-                const overlay2 = document.getElementById('loginOverlay');
-                if (loginDiv2 && overlay2) {
-                    toggleModal(loginDiv2, overlay2);
-                } else {
-                    alert('No se pudo abrir el formulario de login. Por favor, recarga la página.');
-                }
-            }, 100);
-            return;
-        }
-        
-        toggleModal(loginDiv, overlay);
-    }, 10);
+    const loginDiv = document.getElementById('loginAlternativo');
+    const overlay = document.getElementById('loginOverlay');
+    
+    if (!loginDiv || !overlay) {
+        console.error('❌ Modales de login no encontrados en el DOM');
+        alert('Error: No se pudo cargar el formulario de login. Por favor, recarga la página.');
+        return;
+    }
+    
+    if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
+        loginDiv.style.display = 'block';
+        overlay.style.display = 'block';
+    } else {
+        loginDiv.style.display = 'none';
+        overlay.style.display = 'none';
+    }
 }
 
 function toggleModal(loginDiv, overlay) {
@@ -1045,48 +1032,73 @@ window.onclick = function(event) {
 }
 
 function mostrarRecuperarPassword() {
-    document.getElementById('loginAlternativo').style.display = 'none';
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('recuperarPasswordModal').style.display = 'block';
-    document.getElementById('recuperarPasswordOverlay').style.display = 'block';
+    const loginDiv = document.getElementById('loginAlternativo');
+    const loginOverlay = document.getElementById('loginOverlay');
+    const recoverDiv = document.getElementById('recuperarPasswordModal');
+    const recoverOverlay = document.getElementById('recuperarPasswordOverlay');
+    
+    if (loginDiv && loginOverlay) {
+        loginDiv.style.display = 'none';
+        loginOverlay.style.display = 'none';
+    }
+    
+    if (recoverDiv && recoverOverlay) {
+        recoverDiv.style.display = 'block';
+        recoverOverlay.style.display = 'block';
+    } else {
+        alert('Error: No se pudo cargar el formulario de recuperación.');
+    }
 }
 
 function cerrarRecuperarPassword() {
-    document.getElementById('recuperarPasswordModal').style.display = 'none';
-    document.getElementById('recuperarPasswordOverlay').style.display = 'none';
+    const recoverDiv = document.getElementById('recuperarPasswordModal');
+    const recoverOverlay = document.getElementById('recuperarPasswordOverlay');
+    
+    if (recoverDiv && recoverOverlay) {
+        recoverDiv.style.display = 'none';
+        recoverOverlay.style.display = 'none';
+    }
 }
 
+// Hacer funciones accesibles globalmente
+window.toggleLoginAlternativo = toggleLoginAlternativo;
+window.mostrarRecuperarPassword = mostrarRecuperarPassword;
+window.cerrarRecuperarPassword = cerrarRecuperarPassword;
+
 // Manejar el formulario de recuperación
-document.getElementById('recuperarPasswordForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const email = document.getElementById('email_recuperar').value;
-    const clubSlug = document.getElementById('club_slug_recuperar').value;
-    
-    if (!email || !clubSlug) {
-        alert('Completa todos los campos');
-        return;
+document.addEventListener('DOMContentLoaded', function() {
+    const recoverForm = document.getElementById('recuperarPasswordForm');
+    if (recoverForm) {
+        recoverForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email_recuperar').value;
+            
+            if (!email) {
+                alert('Completa el campo de email');
+                return;
+            }
+            
+            fetch('api/recuperar_password.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    cerrarRecuperarPassword();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al procesar la solicitud');
+            });
+        });
     }
-    
-    // Enviar solicitud a la API
-    fetch('api/recuperar_password.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: email, club_slug: clubSlug})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('✅ Se ha enviado un enlace de recuperación a tu correo electrónico');
-            cerrarRecuperarPassword();
-        } else {
-            alert('❌ ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error al procesar la solicitud');
-    });
 });
 </script>
 
