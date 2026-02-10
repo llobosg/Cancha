@@ -3,60 +3,42 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-// DEBUG DETALLADO - Eliminar después de resolver
-error_log("=== DEBUG RESERVAR CANCHA ===");
-error_log("Sesión completa: " . print_r($_SESSION, true));
-error_log("id_socio en sesión: " . (isset($_SESSION['id_socio']) ? $_SESSION['id_socio'] : 'NO EXISTE'));
-error_log("club_id en sesión: " . (isset($_SESSION['club_id']) ? $_SESSION['club_id'] : 'NO EXISTE'));
+// Intentar reconstruir la sesión si falta algo
+if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+    // Buscar en cookies o reconstruir desde URL
+    if (isset($_COOKIE['cancha_socio_id']) && isset($_COOKIE['cancha_club_id'])) {
+        $_SESSION['id_socio'] = $_COOKIE['cancha_socio_id'];
+        $_SESSION['club_id'] = $_COOKIE['cancha_club_id'];
+    }
+}
 
-// Verificar requisitos mínimos
-if (!isset($_SESSION['id_socio'])) {
-    error_log("REDIRECCIÓN: Falta id_socio en sesión");
+// Validación final
+if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+    error_log("Acceso denegado: sesión incompleta");
     header('Location: ../index.php');
     exit;
 }
 
-if (!isset($_SESSION['club_id'])) {
-    error_log("REDIRECCIÓN: Falta club_id en sesión");
-    header('Location: ../index.php');
-    exit;
-}
-
+// Verificar en base de datos
 $id_socio = $_SESSION['id_socio'];
 $id_club = $_SESSION['club_id'];
 
-// Verificar que existan en la base de datos
 $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
 $stmt->execute([$id_socio, $id_club]);
-$socio_valido = $stmt->fetch();
 
-if (!$socio_valido) {
-    error_log("REDIRECCIÓN: Socio no válido o no pertenece al club");
-    error_log("id_socio: $id_socio, id_club: $id_club");
-    header('Location: ../index.php');
-    exit;
-}
-
-error_log("✅ ACCESO PERMITIDO: id_socio=$id_socio, id_club=$id_club");
-
-$id_socio = $_SESSION['id_socio'];
-$id_club = $_SESSION['club_id'];
-
-// Obtener datos del socio y club
-$stmt = $pdo->prepare("
-    SELECT 
-        s.alias, s.email, s.celular,
-        c.nombre as nombre_club, c.logo as logo_club
-    FROM socios s
-    JOIN clubs c ON s.id_club = c.id_club
-    WHERE s.id_socio = ? AND c.id_club = ?
-");
-$stmt->execute([$id_socio, $id_club]);
-$usuario_data = $stmt->fetch();
-
-if (!$usuario_data) {
-    header('Location: ../index.php');
-    exit;
+if (!$stmt->fetch()) {
+    // Intentar obtener el club_id correcto del socio
+    $stmt_fix = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ?");
+    $stmt_fix->execute([$id_socio]);
+    $correct_club = $stmt_fix->fetch();
+    
+    if ($correct_club) {
+        $_SESSION['club_id'] = $correct_club['id_club'];
+        $id_club = $correct_club['id_club'];
+    } else {
+        header('Location: ../index.php');
+        exit;
+    }
 }
 
 // Obtener recintos deportivos disponibles
