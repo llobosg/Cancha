@@ -53,13 +53,63 @@ if (!$club_id) {
 $_SESSION['current_club'] = $club_slug;
 $_SESSION['club_id'] = $club_id;
 
-// Obtener datos del socio actual para verificar si el perfil está completo
-$socio_actual = null;
+// 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO 🔥
+$id_socio = null;
+
+// Verificar si ya tenemos id_socio en sesión y es válido
 if (isset($_SESSION['id_socio'])) {
-    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
-    $stmt_socio->execute([$_SESSION['id_socio']]);
-    $socio_actual = $stmt_socio->fetch();
+    $id_socio = $_SESSION['id_socio'];
+    
+    // Validar que el socio pertenece al club actual
+    $stmt_validate = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+    $stmt_validate->execute([$id_socio, $club_id]);
+    if (!$stmt_validate->fetch()) {
+        $id_socio = null; // Invalidar si no pertenece al club
+    }
 }
+
+// Si no tenemos id_socio válido, intentar obtenerlo del login
+if (!$id_socio) {
+    $user_email = null;
+    
+    // Obtener email del login (Google o correo)
+    if (isset($_SESSION['google_email'])) {
+        $user_email = $_SESSION['google_email'];
+    } elseif (isset($_SESSION['user_email'])) {
+        $user_email = $_SESSION['user_email'];
+    }
+    
+    if ($user_email) {
+        // Buscar socio existente con este email y club
+        $stmt_socio = $pdo->prepare("
+            SELECT id_socio FROM socios 
+            WHERE email = ? AND id_club = ?
+        ");
+        $stmt_socio->execute([$user_email, $club_id]);
+        $socio_data = $stmt_socio->fetch();
+        
+        if ($socio_data) {
+            // Socio ya existe - guardar en sesión
+            $id_socio = $socio_data['id_socio'];
+            $_SESSION['id_socio'] = $id_socio;
+        } else {
+            // Socio no existe, redirigir a completar perfil
+            header('Location: completar_perfil.php?id=' . $club_slug);
+            exit;
+        }
+    } else {
+        // No hay email en sesión, redirigir a login
+        header('Location: ../index.php');
+        exit;
+    }
+} else {
+    // Ya tenemos id_socio válido, asegurarnos de guardarlo en sesión
+    $_SESSION['id_socio'] = $id_socio;
+}
+
+// Guardar en sesión (asegurar que siempre estén presentes)
+$_SESSION['club_id'] = $club_id;
+$_SESSION['current_club'] = $club_slug;
 ?>
 <!DOCTYPE html>
 <html lang="es">
