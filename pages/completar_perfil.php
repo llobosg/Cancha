@@ -1,13 +1,45 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Iniciar sesión si no está iniciada
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+session_start();
+
+if (!isset($_SESSION['google_email']) && !isset($_SESSION['user_email'])) {
+    header('Location: ../index.php');
+    exit;
 }
 
+$user_email = $_SESSION['google_email'] ?? $_SESSION['user_email'];
+
 // Obtener club desde URL
-$club_slug_from_url = $_GET['club'] ?? '';
+$club_slug_from_url = $_GET['id'] ?? '';
+if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Encontrar club
+$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre FROM clubs WHERE email_verified = 1");
+$stmt_club->execute();
+$clubs = $stmt_club->fetchAll();
+
+$club_id = null;
+$club_nombre = '';
+$club_slug = null;
+
+foreach ($clubs as $c) {
+    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+    if ($generated_slug === $club_slug_from_url) {
+        $club_id = (int)$c['id_club'];
+        $club_nombre = $c['nombre'];
+        $club_slug = $generated_slug;
+        break;
+    }
+}
+
+if (!$club_id) {
+    header('Location: ../index.php');
+    exit;
+}
 
 // Validar slug básico
 if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
@@ -40,11 +72,24 @@ if (!$club_id) {
 }
 
 // Verificar que el socio esté en sesión
+// 🔥 Buscar o crear socio 🔥
 $id_socio = null;
 
-if (isset($_SESSION['id_socio'])) {
-    // Caso normal: socio ya en sesión
-    $id_socio = $_SESSION['id_socio'];
+// Verificar si ya existe un socio con este email y club
+$stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
+$stmt_check->execute([$user_email, $club_id]);
+$existing_socio = $stmt_check->fetch();
+
+if ($existing_socio) {
+    // Socio ya existe - guardar en sesión
+    $id_socio = $existing_socio['id_socio'];
+    $_SESSION['id_socio'] = $id_socio;
+    $_SESSION['club_id'] = $club_id;
+    $_SESSION['current_club'] = $club_slug;
+    
+    // Redirigir directamente al dashboard (perfil ya completado)
+    header('Location: dashboard_socio.php?id_club=' . $club_slug);
+    exit;
 } else {
     // Caso especial: responsable que acaba de registrar club
     // Buscar al responsable del club actual

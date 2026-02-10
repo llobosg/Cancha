@@ -24,9 +24,8 @@ $club_id = null;
 $club_nombre = '';
 $club_logo = '';
 $club_slug = null;
-$id_socio = $_SESSION['id_socio'] ?? null;
 
-// Encontrar el club que coincide con el slug usando la lógica correcta
+// Encontrar el club que coincide con el slug
 foreach ($clubs as $c) {
     $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
     if ($generated_slug === $club_slug_from_url) {
@@ -43,15 +42,65 @@ if (!$club_id) {
     exit;
 }
 
-// Guardar en sesión
-$_SESSION['current_club'] = $club_slug;
-$_SESSION['club_id'] = $club_id;
+// 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO 🔥
+$id_socio = null;
 
+// Verificar si ya tenemos id_socio en sesión
+if (isset($_SESSION['id_socio'])) {
+    $id_socio = $_SESSION['id_socio'];
+    
+    // Validar que el socio pertenece al club actual
+    $stmt_validate = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+    $stmt_validate->execute([$id_socio, $club_id]);
+    if (!$stmt_validate->fetch()) {
+        $id_socio = null; // Invalidar si no pertenece al club
+    }
+}
+
+// Si no tenemos id_socio válido, intentar obtenerlo del login
+if (!$id_socio) {
+    $user_email = null;
+    
+    // Obtener email del login (Google o correo)
+    if (isset($_SESSION['google_email'])) {
+        $user_email = $_SESSION['google_email'];
+    } elseif (isset($_SESSION['user_email'])) {
+        $user_email = $_SESSION['user_email'];
+    }
+    
+    if ($user_email) {
+        // Buscar socio existente con este email y club
+        $stmt_socio = $pdo->prepare("
+            SELECT id_socio FROM socios 
+            WHERE email = ? AND id_club = ?
+        ");
+        $stmt_socio->execute([$user_email, $club_id]);
+        $socio_data = $stmt_socio->fetch();
+        
+        if ($socio_data) {
+            // Socio ya existe
+            $id_socio = $socio_data['id_socio'];
+        } else {
+            // Socio no existe, redirigir a completar perfil
+            header('Location: completar_perfil.php?id=' . $club_slug);
+            exit;
+        }
+    } else {
+        // No hay email en sesión, redirigir a login
+        header('Location: ../index.php');
+        exit;
+    }
+}
+
+// Guardar en sesión
+$_SESSION['id_socio'] = $id_socio;
+$_SESSION['club_id'] = $club_id;
+$_SESSION['current_club'] = $club_slug;
 
 // Obtener datos del socio actual para verificar si el perfil está completo
 $socio_actual = null;
 if (isset($_SESSION['id_socio'])) {
-    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?");
+    $stmt_socio = $pdo->prepare("SELECT datos_completos FROM socios WHERE id_socio = ?")
     $stmt_socio->execute([$_SESSION['id_socio']]);
     $socio_actual = $stmt_socio->fetch();
 }

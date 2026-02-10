@@ -761,6 +761,8 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .then(r => r.json())
       .then(data => {
+          $_SESSION['google_email'] = $google_user_email;
+          $_SESSION['logged_in'] = true;
           if (data.success && data.action === 'redirect_existing') {
               // Usuario existente - ir directo al dashboard
               const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
