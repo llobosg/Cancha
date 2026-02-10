@@ -531,37 +531,34 @@ $_SESSION['visited_index'] = true;
   </div>
 
   <div class="google-login-container">
-    <!-- Botón Registrar club -->
-    <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
-      <span class="flag-icon"></span>
-      <span class="register-text">Registrar un club</span>
-    </button>
-    
-    <!-- Botón Entrar a mi club (aparece si hay sesión) -->
-    <div class="option-card" style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 12px; text-align: center; min-width: 200px; transition: transform 0.3s;">
-      <h3 style="color: #FFD700; margin-bottom: 1rem;">👤 Entrar a mi club</h3>
-      <p style="color: white; margin-bottom: 1.5rem;">Accede como socio a tu club deportivo</p>
-      <a href="#" onclick="toggleLoginAlternativo(); return false;" 
-        style="display: inline-block; padding: 0.8rem 1.5rem; background: #00cc66; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Entrar al Club</a>
+  <!-- Botón Registrar club -->
+  <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
+    <span class="flag-icon"></span>
+    <span class="register-text">Registrar un club</span>
+  </button>
+  
+  <!-- Botón Entrar a mi club -->
+  <button class="btn-enter" onclick="toggleLoginAlternativo()">
+    👤 Entrar a mi club
+  </button>
+  
+  <!-- Google Login -->
+  <div id="googleLoginContainer">
+    <div id="g_id_onload"
+         data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_select="false">
     </div>
-    
-    <!-- Google Login (aparece si NO hay sesión) -->
-    <div id="googleLoginContainer">
-      <div id="g_id_onload"
-           data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
-           data-callback="handleCredentialResponse"
-           data-auto_select="false">
-      </div>
-      <div class="g_id_signin"
-           data-type="standard"
-           data-size="medium"
-           data-theme="outline"
-           data-text="continue_with"
-           data-shape="rectangular"
-           data-logo_alignment="left">
-      </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="medium"
+         data-theme="outline"
+         data-text="continue_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
     </div>
   </div>
+</div>
     <!-- Login alternativo por email/contraseña -->
     <div id="loginAlternativo" class="login-alternativo" style="display: none; margin-top: 2rem; padding: 2rem; background: rgba(255,255,255,0.15); border-radius: 12px; max-width: 400px; margin-left: auto; margin-right: auto;">
       <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
@@ -1086,17 +1083,6 @@ document.addEventListener('DOMContentLoaded', function() {
   function subscribeToPush() {
     // Aquí integrarías con Firebase Cloud Messaging o similar
     console.log('Usuario suscrito a notificaciones');
-  }
-
-  function toggleLoginAlternativo() {
-      const loginDiv = document.getElementById('loginAlternativo');
-      if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
-          loginDiv.style.display = 'block';
-          // Scroll suave hasta el formulario
-          loginDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-          loginDiv.style.display = 'none';
-      }
   }
 </script>
 </body>
