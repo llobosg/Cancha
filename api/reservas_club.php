@@ -2,11 +2,30 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
-try {
-    session_start();
-    
-    if (!isset($_SESSION['id_socio']) || !isset($_SESSION['id_club'])) {
-        throw new Exception('Acceso no autorizado', 401);
+    // Configuración robusta de sesiones para APIs
+    if (session_status() === PHP_SESSION_NONE) {
+        session_set_cookie_params([
+            'lifetime' => 86400,
+            'path' => '/',
+            'domain' => '',
+            'secure' => isset($_SERVER['HTTPS']),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        session_start();
+    }
+
+    // Validación mejorada
+    if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+        // Intentar con cookies como fallback
+        if (isset($_COOKIE['cancha_id_socio']) && isset($_COOKIE['cancha_club_id'])) {
+            $_SESSION['id_socio'] = $_COOKIE['cancha_id_socio'];
+            $_SESSION['club_id'] = $_COOKIE['cancha_club_id'];
+        } else {
+            http_response_code(401);
+            echo json_encode(['error' => 'Acceso no autorizado']);
+            exit;
+        }
     }
     
     $id_socio = $_SESSION['id_socio'];
@@ -25,11 +44,6 @@ try {
         default:
             throw new Exception('Acción no válida');
     }
-    
-} catch (Exception $e) {
-    http_response_code($e->getCode() ?: 400);
-    echo json_encode(['error' => $e->getMessage()]);
-}
 
 function getDisponibilidad($post, $pdo) {
     $deporte = $post['deporte'] ?? '';

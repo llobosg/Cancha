@@ -469,31 +469,36 @@ $deportes = [
     let reservasData = [];
 
     async function cargarDisponibilidad(filtros = {}) {
-        try {
-            const formData = new FormData();
-            formData.append('deporte', filtros.deporte || '');
-            formData.append('recinto', filtros.recinto || '');
-            formData.append('rango', filtros.rango || 'semana');
-            
-            const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            reservasData = data;
-            renderizarDisponibilidad(reservasData);
-            
-        } catch (error) {
-            console.error('Error al cargar disponibilidad:', error);
-            document.getElementById('reservasGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Error al cargar la disponibilidad</div>';
-        }
-    }
+      try {
+          const formData = new FormData();
+          formData.append('deporte', filtros.deporte || '');
+          formData.append('recinto', filtros.recinto || '');
+          formData.append('rango', filtros.rango || 'semana');
+          
+          // Agregar datos de sesión para la API
+          formData.append('id_socio', userData.id_socio || '');
+          formData.append('club_id', userData.club_id || '');
+          
+          const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+              method: 'POST',
+              body: formData,
+              credentials: 'include' // ← Importante para cookies/sesiones
+          });
+          
+          const data = await response.json();
+          
+          if (data.error) {
+              throw new Error(data.error);
+          }
+          
+          reservasData = data;
+          renderizarDisponibilidad(reservasData);
+          
+      } catch (error) {
+          console.error('Error al cargar disponibilidad:', error);
+          document.getElementById('reservasGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Error al cargar la disponibilidad</div>';
+      }
+  }
 
     function renderizarDisponibilidad(disponibilidad) {
         const grid = document.getElementById('reservasGrid');
