@@ -41,8 +41,7 @@ $recinto = $stmt->fetch();
     max-width: 1400px;
     margin: 0 auto;
     padding: 1rem;
-    height: calc(100vh - 140px);
-    min-height: calc(100vh - 140px);
+    /* Eliminamos height fija para permitir alineación natural */
   }
   
   .header {
@@ -110,7 +109,6 @@ $recinto = $stmt->fetch();
     gap: 1rem;
     overflow-y: auto;
     padding-right: 0.5rem;
-    height: 100%;
   }
   
   .reserva-card {
@@ -164,24 +162,35 @@ $recinto = $stmt->fetch();
   .estado-cancelada { background: #F44336; }  /* Rojo */
   .estado-mantencion { background: #FF9800; } /* Naranja */
   
-  /* Panel lateral fijo - CORREGIDO */
+  /* Panel lateral - CORREGIDO PARA ALINEACIÓN EXACTA */
   .detail-panel {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    height: calc(100vh - 140px);
-    max-height: calc(100vh - 140px);
     position: sticky;
-    top: 70px;
+    top: 120px; /* Alineado con el inicio de las fichas */
+    align-self: flex-start; /* Importante para alineación */
+    height: fit-content; /* Solo ocupa el espacio necesario */
+    max-height: calc(100vh - 140px); /* Límite superior */
+    overflow: visible; /* Permite que se vea completamente */
   }
   
   .detail-section {
     background: white;
     padding: 1rem;
     border-radius: 12px;
+    width: 100%;
     overflow-y: auto;
-    flex: 1;
-    min-height: 0;
+    max-height: 300px; /* Altura controlada para Detalle */
+  }
+  
+  .actions-section {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    width: 100%;
+    overflow-y: auto;
+    max-height: 250px; /* Altura controlada para Acciones */
   }
   
   .detail-title {
@@ -259,9 +268,7 @@ $recinto = $stmt->fetch();
   @media (max-width: 768px) {
     .dashboard-container {
       grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr auto;
-      height: auto;
-      min-height: calc(100vh - 120px);
+      padding-top: 80px;
     }
     
     .reservas-grid {
@@ -270,8 +277,8 @@ $recinto = $stmt->fetch();
     
     .detail-panel {
       position: static;
-      height: auto;
-      max-height: none;
+      top: auto;
+      align-self: auto;
     }
   }
 </style>
@@ -326,27 +333,26 @@ $recinto = $stmt->fetch();
     </div>
     
     <div class="detail-panel">
-      <div class="detail-section" id="detalleReserva">
-        <h3 class="detail-title">📋 Detalle de Reserva</h3>
-        <div id="detalleContent">
-          <p>Selecciona una reserva para ver detalles</p>
+        <div class="detail-section" id="detalleReserva">
+            <h3 class="detail-title">📋 Detalle de Reserva</h3>
+            <div id="detalleContent">
+            <p>Selecciona una reserva para ver detalles</p>
+            </div>
         </div>
-      </div>
-      
-      <div class="detail-section">
-        <h3 class="detail-title">⚙️ Acciones</h3>
-        <div class="actions-grid">
-          <button class="action-btn btn-anular" onclick="anularReserva()">🗑️ Anular</button>
-          <button class="action-btn btn-cancelar" onclick="cancelarReserva()">❌ Cancelar Reserva</button>
-          <button class="action-btn btn-cambiar" onclick="cambiarCancha()">🔄 Cambiar de Cancha</button>
-          <button class="action-btn btn-mensaje" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
-          <button class="action-btn btn-campeonato" onclick="crearCampeonato()">
-            🏆 Crear Campeonato
-          </button>
+        
+        <div class="actions-section">
+            <h3 class="detail-title">⚙️ Acciones</h3>
+            <div class="actions-grid">
+                <button class="action-btn btn-anular" onclick="anularReserva()">🗑️ Anular</button>
+                <button class="action-btn btn-cancelar" onclick="cancelarReserva()">❌ Cancelar Reserva</button>
+                <button class="action-btn btn-cambiar" onclick="cambiarCancha()">🔄 Cambiar de Cancha</button>
+                <button class="action-btn btn-mensaje" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
+                <button class="action-btn btn-campeonato" onclick="crearCampeonato()">
+                    🏆 Crear Campeonato
+                </button>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
     <!-- Submodal para mensaje - CORREGIDO -->
     <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
