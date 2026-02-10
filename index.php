@@ -13,6 +13,7 @@ if (isset($_POST['login_alternativo'])) {
         $error_login = 'Código de club inválido';
     } else {
         // Encontrar el club correspondiente al slug
+        require_once __DIR__ . '/includes/config.php';
         $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
         $stmt_club->execute();
         $clubs = $stmt_club->fetchAll();
@@ -63,7 +64,7 @@ $_SESSION['visited_index'] = true;
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cancha - Gestión para clubes deportivos</title>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * {
@@ -74,7 +75,7 @@ $_SESSION['visited_index'] = true;
     body {
       background:
         linear-gradient(rgba(0,20,10,.40), rgba(0,30,15,.50)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+        url('assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       font-family: 'Poppins', sans-serif;
       min-height: 100vh;
       color: #fff;
@@ -432,38 +433,38 @@ $_SESSION['visited_index'] = true;
     }
 
     /* Estilos para hover en desktop */
-  .dropdown-menu:hover .dropdown-content {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-
-  /* Responsive mobile */
-  @media (max-width: 768px) {
-    .menu-container {
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    .dropdown-menu {
-      width: 100%;
-      max-width: 300px;
-    }
-    
-    .menu-btn, .menu-option {
-      width: 100%;
-      justify-content: center;
-    }
-    
-    .dropdown-content {
-      position: static;
+    .dropdown-menu:hover .dropdown-content {
       opacity: 1;
       visibility: visible;
-      transform: none;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transform: translateY(0);
     }
-  }
+
+    /* Responsive mobile */
+    @media (max-width: 768px) {
+      .menu-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+      
+      .dropdown-menu {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .menu-btn, .menu-option {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .dropdown-content {
+        position: static;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
+    }
   </style>
 </head>
 <body>
@@ -531,83 +532,35 @@ $_SESSION['visited_index'] = true;
   </div>
 
   <div class="google-login-container">
-  <!-- Botón Registrar club -->
-  <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
-    <span class="flag-icon"></span>
-    <span class="register-text">Registrar un club</span>
-  </button>
-  
-  <!-- Botón Entrar a mi club -->
-  <button class="btn-enter" onclick="toggleLoginAlternativo()">
-    👤 Entrar a mi club
-  </button>
-  
-  <!-- Google Login -->
-  <div id="googleLoginContainer">
-    <div id="g_id_onload"
-         data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
-         data-callback="handleCredentialResponse"
-         data-auto_select="false">
-    </div>
-    <div class="g_id_signin"
-         data-type="standard"
-         data-size="medium"
-         data-theme="outline"
-         data-text="continue_with"
-         data-shape="rectangular"
-         data-logo_alignment="left">
+    <!-- Botón Registrar club -->
+    <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
+      <span class="flag-icon"></span>
+      <span class="register-text">Registrar un club</span>
+    </button>
+    
+    <!-- Botón Entrar a mi club -->
+    <button class="btn-enter" onclick="toggleLoginAlternativo()">
+      👤 Entrar a mi club
+    </button>
+    
+    <!-- Google Login -->
+    <div id="googleLoginContainer">
+      <div id="g_id_onload"
+           data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
+           data-callback="handleCredentialResponse"
+           data-auto_select="false">
+      </div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-size="medium"
+           data-theme="outline"
+           data-text="continue_with"
+           data-shape="rectangular"
+           data-logo_alignment="left">
+      </div>
     </div>
   </div>
 </div>
-<script>
-// Funcionalidad del menú desplegable
-document.addEventListener('DOMContentLoaded', function() {
-  const dropdown = document.getElementById('recintosDropdown');
-  const btn = document.getElementById('recintosBtn');
-  const content = document.getElementById('dropdownContent');
-  
-  // Abrir/cerrar con clic (funciona en todos los dispositivos)
-  btn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (content.style.display === 'block') {
-      content.style.display = 'none';
-    } else {
-      content.style.display = 'block';
-    }
-  });
-  
-  // Cerrar al hacer clic fuera
-  document.addEventListener('click', function(e) {
-    if (!dropdown.contains(e.target)) {
-      content.style.display = 'none';
-    }
-  });
-
-  // Función global para toggle login alternativo
-  function toggleLoginAlternativo() {
-      const loginDiv = document.getElementById('loginAlternativo');
-      const overlay = document.getElementById('loginOverlay');
-      
-      if (!loginDiv || !overlay) {
-          console.error('Elementos de login alternativo no encontrados');
-          return;
-      }
-      
-      if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
-          loginDiv.style.display = 'block';
-          overlay.style.display = 'block';
-          // Asegurar que esté visible
-          loginDiv.style.opacity = '1';
-      } else {
-          loginDiv.style.display = 'none';
-          overlay.style.display = 'none';
-      }
-  }
-});
-
-  // Hacer accesible globalmente
-  window.toggleLoginAlternativo = toggleLoginAlternativo;
-</script>
 
 <!-- Contenido principal -->
 <div class="hero">
@@ -621,28 +574,28 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="carousel-track" id="carouselTrack">
         <!-- Feature 1 -->
         <div class="carousel-item" data-feature="socios">
-          <img src="../assets/img/feature1.jpg" alt="Gestión de socios">
+          <img src="assets/img/feature1.jpg" alt="Gestión de socios">
           <div class="item-overlay">
             <h4>👥 Gestión de Socios</h4>
           </div>
         </div>
         <!-- Feature 2 -->
         <div class="carousel-item" data-feature="convocatorias">
-          <img src="../assets/img/feature2.jpg" alt="Convocatorias">
+          <img src="assets/img/feature2.jpg" alt="Convocatorias">
           <div class="item-overlay">
             <h4>📢 Convocatorias</h4>
           </div>
         </div>
         <!-- Feature 3 -->
         <div class="carousel-item" data-feature="finanzas">
-          <img src="../assets/img/feature3.jpg" alt="Finanzas">
+          <img src="assets/img/feature3.jpg" alt="Finanzas">
           <div class="item-overlay">
             <h4>💰 Finanzas</h4>
           </div>
         </div>
         <!-- Feature 4 -->
         <div class="carousel-item" data-feature="estadisticas">
-          <img src="../assets/img/feature4.jpg" alt="Estadísticas">
+          <img src="assets/img/feature4.jpg" alt="Estadísticas">
           <div class="item-overlay">
             <h4>📊 Estadísticas</h4>
           </div>
@@ -694,9 +647,95 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<!-- GOOGLE LOGIN SCRIPT -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Login alternativo modal -->
+<div id="loginOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001;"></div>
+<div id="loginAlternativo" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1002; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
+  <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
+  
+  <?php if (isset($error_login)): ?>
+    <div style="background: #ffebee; color: #c62828; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center; border: 1px solid #ffcdd2;">
+      <?= htmlspecialchars($error_login) ?>
+    </div>
+  <?php endif; ?>
+  
+  <form method="POST" style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <div>
+      <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
+      <input type="email" id="email_alt" name="email_alt" required 
+            style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+    </div>
+    
+    <div>
+      <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Contraseña *</label>
+      <input type="password" id="password_alt" name="password_alt" required 
+            style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+    </div>
+    
+    <div>
+      <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
+      <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
+            placeholder="Ej: 4d2baa78"
+            style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
+    </div>
+    
+    <button type="submit" name="login_alternativo" 
+            style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
+      Iniciar Sesión
+    </button>
+    
+    <button type="button" onclick="toggleLoginAlternativo()" 
+            style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">
+      Cerrar
+    </button>
+  </form>
+</div>
+
 <script>
+// Función global para toggle login alternativo
+function toggleLoginAlternativo() {
+    const loginDiv = document.getElementById('loginAlternativo');
+    const overlay = document.getElementById('loginOverlay');
+    
+    if (!loginDiv || !overlay) {
+        console.error('Elementos de login alternativo no encontrados');
+        return;
+    }
+    
+    if (loginDiv.style.display === 'none' || loginDiv.style.display === '') {
+        loginDiv.style.display = 'block';
+        overlay.style.display = 'block';
+    } else {
+        loginDiv.style.display = 'none';
+        overlay.style.display = 'none';
+    }
+}
+
+// Hacer accesible globalmente
+window.toggleLoginAlternativo = toggleLoginAlternativo;
+
+// Funcionalidad del menú desplegable
+document.addEventListener('DOMContentLoaded', function() {
+  const dropdown = document.getElementById('recintosDropdown');
+  const btn = document.getElementById('recintosBtn');
+  const content = document.getElementById('dropdownContent');
+  
+  if (btn && content) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (content.style.display === 'block') {
+        content.style.display = 'none';
+      } else {
+        content.style.display = 'block';
+      }
+    });
+    
+    document.addEventListener('click', function(e) {
+      if (!dropdown.contains(e.target)) {
+        content.style.display = 'none';
+      }
+    });
+  }
+
   // === CARRUSEL MEJORADO CON TOUCH Y CONTROLES ===
   let currentIndex = 0;
   const track = document.getElementById('carouselTrack');
@@ -809,13 +848,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.innerWidth > 768) return;
     
     const diff = touchStartX - touchEndX;
-    const threshold = 30; // Umbral más sensible
+    const threshold = 30;
     
     if (Math.abs(diff) > threshold) {
       if (diff > 0) {
-        moveCarousel(1); // Siguiente
+        moveCarousel(1);
       } else {
-        moveCarousel(-1); // Anterior
+        moveCarousel(-1);
       }
     }
   }
@@ -828,193 +867,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Google Login con manejo de flujos diferenciados
-  function handleCredentialResponse(response) {
-      fetch('../api/login_google.php', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({token: response.credential})
-      })
-      .then(r => r.json())
-      .then(data => {
-          $_SESSION['google_email'] = $google_user_email;
-          $_SESSION['logged_in'] = true;
-          if (data.success && data.action === 'redirect_existing') {
-              // Usuario existente - ir directo al dashboard
-              const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
-              localStorage.setItem('cancha_device', deviceId);
-              localStorage.setItem('cancha_session', 'active');
-              localStorage.setItem('cancha_club', data.club_slug);
-              
-              window.location.href = data.redirect;
-              
-          } else if (!data.success && data.action === 'welcome_new') {
-              // Usuario nuevo - mostrar submodal de bienvenida
-              mostrarWelcomeModal(data.email);
-              
-          } else {
-              alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
-          }
-      })
-      .catch(err => {
-          console.error('Login error:', err);
-          alert('Error de conexión');
-      });
-  }
-
-  // Submodal de bienvenida para usuarios nuevos
-  function mostrarWelcomeModal(email = '') {
-      // Crear el submodal si no existe
-      let modal = document.getElementById('welcomeModal');
-      if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'welcomeModal';
-          modal.className = 'submodal';
-          modal.innerHTML = `
-              <div class="submodal-content">
-                  <span class="close-modal" onclick="cerrarWelcomeModal()">&times;</span>
-                  <div class="modal-header">
-                      <h3>⚽ ¡Hola! Bienvenido a Cancha</h3>
-                  </div>
-                  <div class="modal-body">
-                      <p style="text-align: center; margin-bottom: 1.5rem;">
-                          <strong>¿Ya perteneces a un club?</strong><br>
-                          Si es así, pide a tu responsable que te envíe el enlace de invitación.
-                      </p>
-                      
-                      <div class="register-options">
-                          <button class="btn-primary" onclick="window.location.href='pages/buscar_club.php'">
-                              🔍 Buscar mi club
-                          </button>
-                          
-                          <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
-                              ¿Eres responsable de un club?<br>
-                              <a href="pages/registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
-                          </p>
-                      </div>
-                  </div>
-              </div>
-          `;
-          document.body.appendChild(modal);
-      }
-      
-      modal.style.display = 'flex';
-      
-      if (email) {
-          localStorage.setItem('google_email', email);
-      }
-  }
-
-  function cerrarWelcomeModal() {
-      const modal = document.getElementById('welcomeModal');
-      if (modal) {
-          modal.style.display = 'none';
-      }
-  }
-
-  // Manejar clic fuera del modal
-  document.addEventListener('click', function(event) {
-      const modal = document.getElementById('welcomeModal');
-      if (modal && event.target === modal) {
-          cerrarWelcomeModal();
-      }
-  });
-
-  function mostrarRegisterModal(email = '') {
-    document.getElementById('registerModal').style.display = 'flex';
-    if (email) {
-      localStorage.setItem('google_email', email);
-    }
-  }
-
-  function cerrarRegisterModal() {
-    document.getElementById('registerModal').style.display = 'none';
-  }
-
-  window.onclick = function(event) {
-    const modal = document.getElementById('registerModal');
-    if (event.target === modal) {
-      cerrarRegisterModal();
-    }
-  }
-
-  // Función mejorada para detectar sesión
-  function checkUserSession() {
-      return new Promise((resolve) => {
-          // Esperar un momento para asegurar que localStorage esté listo
-          setTimeout(() => {
-              try {
-                  const savedClub = localStorage.getItem('cancha_club');
-                  const hasSession = localStorage.getItem('cancha_session') === 'active';
-                  
-                  // Validar que el club sea válido
-                  const isValidClub = savedClub && 
-                                    savedClub !== 'null' && 
-                                    savedClub !== 'undefined' && 
-                                    savedClub.trim() !== '' && 
-                                    savedClub.length === 8;
-                  
-                  resolve({
-                      hasValidSession: hasSession && isValidClub,
-                      clubSlug: isValidClub ? savedClub : null
-                  });
-              } catch (error) {
-                  console.error('Error checking session:', error);
-                  resolve({ hasValidSession: false, clubSlug: null });
-              }
-          }, 100);
-      });
-  }
-
   // Inicialización mejorada
-  document.addEventListener('DOMContentLoaded', async () => {
-    adjustForMobile();
-    window.addEventListener('resize', adjustForMobile);
-      
-    // Verificar sesión con la función mejorada
-    const session = await checkUserSession();
-    const btnEnter = document.getElementById('btnEnterClub');
-    const googleContainer = document.getElementById('googleLoginContainer');
-      
-    if (session.hasValidSession) {
-      btnEnter.style.display = 'block';
-      googleContainer.style.display = 'none';
-          
-      btnEnter.onclick = () => {
-        window.location.href = `pages/dashboard_socio.php?id_club=${session.clubSlug}`;
-      };
-    } else {
-      // Limpiar sesión inválida
-      localStorage.removeItem('cancha_club');
-      localStorage.removeItem('cancha_session');
-      localStorage.removeItem('cancha_device');
-          
-      btnEnter.style.display = 'none';
-      googleContainer.style.display = 'block';
-    }
+  adjustForMobile();
+  window.addEventListener('resize', adjustForMobile);
     
-    // Carrusel
-    if (track && items.length > 0) {
-      updateDescription();
-      startAutoSlide();
-      
-      // Eventos touch
-      const carousel = document.querySelector('.carousel-horizontal');
-      if (carousel) {
-        carousel.addEventListener('touchstart', handleTouchStart, { passive: true });
-        carousel.addEventListener('touchmove', handleTouchMove, { passive: true });
-        carousel.addEventListener('touchend', handleTouchEnd, { passive: true });
+  // Carrusel
+  if (track && items.length > 0) {
+    updateDescription();
+    startAutoSlide();
+    
+    // Eventos touch
+    const carousel = document.querySelector('.carousel-horizontal');
+    if (carousel) {
+      carousel.addEventListener('touchstart', handleTouchStart, { passive: true });
+      carousel.addEventListener('touchmove', handleTouchMove, { passive: true });
+      carousel.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+  }
+  
+  // Ajustar en resize
+  window.addEventListener('resize', () => {
+    setTimeout(() => {
+      if (track && items.length > 0) {
+        moveCarousel(0);
       }
-    }
-    
-    // Ajustar en resize
-    window.addEventListener('resize', () => {
-      setTimeout(() => {
-        if (track && items.length > 0) {
-          moveCarousel(0);
-        }
-      }, 100);
-    });
+    }, 100);
   });
 
   // Registrar PWA
@@ -1029,73 +906,112 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
   }
+});
 
-  // Solicitar permiso para notificaciones
-  function requestNotificationPermission() {
-    if (!('Notification' in window)) {
-      return;
-    }
-    
-    if (Notification.permission === 'granted') {
-      subscribeToPush();
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          subscribeToPush();
+// Google Login con manejo de flujos diferenciados
+function handleCredentialResponse(response) {
+    fetch('api/login_google.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: response.credential})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.action === 'redirect_existing') {
+            const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+            localStorage.setItem('cancha_device', deviceId);
+            localStorage.setItem('cancha_session', 'active');
+            localStorage.setItem('cancha_club', data.club_slug);
+            window.location.href = data.redirect;
+        } else if (!data.success && data.action === 'welcome_new') {
+            mostrarWelcomeModal(data.email);
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo iniciar sesión'));
         }
-      });
+    })
+    .catch(err => {
+        console.error('Login error:', err);
+        alert('Error de conexión');
+    });
+}
+
+// Submodal de bienvenida para usuarios nuevos
+function mostrarWelcomeModal(email = '') {
+    let modal = document.getElementById('welcomeModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'welcomeModal';
+        modal.className = 'submodal';
+        modal.innerHTML = `
+            <div class="submodal-content">
+                <span class="close-modal" onclick="cerrarWelcomeModal()">&times;</span>
+                <div class="modal-header">
+                    <h3>⚽ ¡Hola! Bienvenido a Cancha</h3>
+                </div>
+                <div class="modal-body">
+                    <p style="text-align: center; margin-bottom: 1.5rem;">
+                        <strong>¿Ya perteneces a un club?</strong><br>
+                        Si es así, pide a tu responsable que te envíe el enlace de invitación.
+                    </p>
+                    
+                    <div class="register-options">
+                        <button class="btn-primary" onclick="window.location.href='pages/buscar_club.php'">
+                            🔍 Buscar mi club
+                        </button>
+                        
+                        <p style="margin: 1.2rem 0; color: #666; font-style: italic;">
+                            ¿Eres responsable de un club?<br>
+                            <a href="pages/registro_club.php" style="color: #071289; text-decoration: underline;">Registra tu club aquí</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
-  }
+    
+    modal.style.display = 'flex';
+    
+    if (email) {
+        localStorage.setItem('google_email', email);
+    }
+}
 
-  // Suscribir al servicio de push
-  function subscribeToPush() {
-    // Aquí integrarías con Firebase Cloud Messaging o similar
-    console.log('Usuario suscrito a notificaciones');
+function cerrarWelcomeModal() {
+    const modal = document.getElementById('welcomeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Manejar clic fuera del modal
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('welcomeModal');
+    if (modal && event.target === modal) {
+        cerrarWelcomeModal();
+    }
+});
+
+function mostrarRegisterModal(email = '') {
+  document.getElementById('registerModal').style.display = 'flex';
+  if (email) {
+    localStorage.setItem('google_email', email);
   }
+}
+
+function cerrarRegisterModal() {
+  document.getElementById('registerModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById('registerModal');
+  if (event.target === modal) {
+    cerrarRegisterModal();
+  }
+}
 </script>
-  <!-- Login alternativo por email/contraseña - AL FINAL DEL BODY -->
-  <div id="loginAlternativo" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1002; background: rgba(255,255,255,0.15); padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%;">
-    <h3 style="color: #FFD700; margin-bottom: 1.5rem; text-align: center; font-size: 1.3rem;">🔐 Login Alternativo</h3>
-    
-    <?php if (isset($error_login)): ?>
-      <div style="background: #ffebee; color: #c62828; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center; border: 1px solid #ffcdd2;">
-        <?= htmlspecialchars($error_login) ?>
-      </div>
-    <?php endif; ?>
-    
-    <form method="POST" style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div>
-        <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
-        <input type="email" id="email_alt" name="email_alt" required 
-              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-      </div>
-      
-      <div>
-        <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Contraseña *</label>
-        <input type="password" id="password_alt" name="password_alt" required 
-              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-      </div>
-      
-      <div>
-        <label for="club_slug_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Código del Club *</label>
-        <input type="text" id="club_slug_alt" name="club_slug_alt" required maxlength="8"
-              placeholder="Ej: 4d2baa78"
-              style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-      </div>
-      
-      <button type="submit" name="login_alternativo" 
-              style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
-        Iniciar Sesión
-      </button>
-      
-      <button type="button" onclick="toggleLoginAlternativo()" 
-              style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">
-        Cerrar
-      </button>
-    </form>
-  </div>
 
-  <!-- Overlay para el modal -->
-  <div id="loginOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001;"></div>
+<!-- GOOGLE LOGIN SCRIPT -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
