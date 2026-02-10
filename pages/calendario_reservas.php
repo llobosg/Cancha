@@ -221,6 +221,7 @@ $recinto = $stmt->fetch();
     font-weight: bold;
     cursor: pointer;
     text-align: left;
+    color: black;
     transition: background 0.2s;
   }
   
