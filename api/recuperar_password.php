@@ -33,18 +33,18 @@ try {
         throw new Exception('Correo electrónico inválido');
     }
     
-    // Verificar que el socio exista
+    // Verificar que el socio exista (permitir recuperación para todos los socios)
     error_log("BUSCANDO SOCIO CON EMAIL: $email");
     $stmt = $pdo->prepare("
         SELECT s.id_socio, s.alias, c.nombre as club_nombre
         FROM socios s
         JOIN clubs c ON s.id_club = c.id_club
-        WHERE s.email = ? AND s.password_hash IS NOT NULL
+        WHERE s.email = ?
     ");
     $stmt->execute([$email]);
     $socio = $stmt->fetch();
     error_log("RESULTADO SOCIO: " . print_r($socio, true));
-    
+
     if (!$socio) {
         error_log("SOCIO NO ENCONTRADO - RESPUESTA GENÉRICA");
         echo json_encode(['success' => true, 'message' => 'Si el email está registrado, recibirás un enlace de recuperación']);
