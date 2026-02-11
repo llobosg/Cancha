@@ -1,9 +1,15 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-function generarDisponibilidad($pdo, $dias_adelantados = 30) {
+function generarDisponibilidad($pdo, $forzar = false, $dias_adelantados = 30) {
     try {
-        // Obtener todas las canchas activas con su configuración
+        // Asegurar que $dias_adelantados sea un número válido
+        $dias_adelantados = (int)$dias_adelantados;
+        if ($dias_adelantados <= 0) {
+            $dias_adelantados = 30;
+        }
+        
+        // Obtener canchas con rango de fechas definido
         $stmt = $pdo->prepare("
             SELECT 
                 c.id_cancha,
@@ -11,20 +17,22 @@ function generarDisponibilidad($pdo, $dias_adelantados = 30) {
                 c.hora_fin, 
                 c.duracion_bloque,
                 c.dias_disponibles,
+                c.fecha_desde,
+                c.fecha_hasta,
                 c.id_recinto
             FROM canchas c
-            WHERE c.activa = 1 AND c.estado = 'operativa'
+            WHERE c.activa = 1 
+            AND c.estado = 'operativa'
+            AND c.fecha_desde IS NOT NULL 
+            AND c.fecha_hasta IS NOT NULL
+            AND c.fecha_hasta >= CURDATE()
         ");
         $stmt->execute();
         $canchas = $stmt->fetchAll();
         
         if (empty($canchas)) {
-            return ['success' => true, 'message' => 'No hay canchas activas'];
+            return ['success' => true, 'message' => 'No hay canchas con fechas definidas'];
         }
-        
-        $hoy = new DateTime();
-        $fecha_fin = clone $hoy;
-        $fecha_fin->modify("+$dias_adelantados days");
         
         $total_generados = 0;
         
@@ -34,29 +42,37 @@ function generarDisponibilidad($pdo, $dias_adelantados = 30) {
                 continue;
             }
             
-            // Mapeo de días en español
+            // Usar fechas desde/hasta de la cancha (prioridad)
+            $fecha_inicio_cancha = new DateTime($cancha['fecha_desde']);
+            $fecha_fin_cancha = new DateTime($cancha['fecha_hasta']);
+            
+            // Limitar el rango si es muy largo
+            $hoy = new DateTime();
+            $fecha_limite_max = clone $hoy;
+            $fecha_limite_max->modify("+$dias_adelantados days");
+            
+            $fecha_inicio = $fecha_inicio_cancha > $hoy ? $fecha_inicio_cancha : $hoy;
+            $fecha_fin = $fecha_fin_cancha < $fecha_limite_max ? $fecha_fin_cancha : $fecha_limite_max;
+            
+            // Mapeo de días
             $dias_espanol = [
-                1 => 'lunes',
-                2 => 'martes', 
-                3 => 'miercoles',
-                4 => 'jueves',
-                5 => 'viernes',
-                6 => 'sabado',
-                7 => 'domingo'
+                1 => 'lunes', 2 => 'martes', 3 => 'miercoles',
+                4 => 'jueves', 5 => 'viernes', 6 => 'sabado', 7 => 'domingo'
             ];
             
-            $fecha_actual = clone $hoy;
+            $fecha_actual = clone $fecha_inicio;
             while ($fecha_actual <= $fecha_fin) {
-                $dia_numero = (int)$fecha_actual->format('N'); // 1=lunes, 7=domingo
+                $dia_numero = (int)$fecha_actual->format('N');
                 $dia_actual = $dias_espanol[$dia_numero];
                 
                 if (in_array($dia_actual, $dias_disponibles)) {
-                    $bloques_generados = generarBloquesParaFecha(
+                    $bloques = generarBloquesParaFecha(
                         $pdo, 
                         $cancha, 
-                        $fecha_actual->format('Y-m-d')
+                        $fecha_actual->format('Y-m-d'),
+                        $forzar
                     );
-                    $total_generados += $bloques_generados;
+                    $total_generados += $bloques;
                 }
                 
                 $fecha_actual->modify('+1 day');
