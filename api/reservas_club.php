@@ -31,39 +31,87 @@ try {
         throw new Exception('Socio no válido', 401);
     }
     
-    // ✅ CONSULTA BÁSICA: Obtener todas las canchas activas
-    $stmt = $pdo->prepare("
+    // Calcular rango de fechas
+    $fecha_inicio = date('Y-m-d');
+    $fecha_fin = date('Y-m-d', strtotime('+7 days'));
+
+    switch ($_POST['rango'] ?? 'semana') {
+        case 'hoy':
+            $fecha_fin = $fecha_inicio;
+            break;
+        case 'mañana':
+            $fecha_inicio = date('Y-m-d', strtotime('+1 day'));
+            $fecha_fin = $fecha_inicio;
+            break;
+        case 'mes':
+            $fecha_fin = date('Y-m-d', strtotime('+30 days'));
+            break;
+    }
+
+    // Construir consulta base
+    $sql = "
         SELECT 
-            c.id_cancha,
+            dc.id_disponibilidad,
+            dc.id_cancha,
             c.nombre_cancha as nro_cancha,
             c.id_deporte,
             c.valor_arriendo,
-            r.nombre as recinto_nombre
-        FROM canchas c
+            dc.fecha,
+            dc.hora_inicio,
+            dc.hora_fin,
+            r.nombre as recinto_nombre,
+            dc.estado
+        FROM disponibilidad_canchas dc
+        JOIN canchas c ON dc.id_cancha = c.id_cancha
         JOIN recintos_deportivos r ON c.id_recinto = r.id_recinto
-        WHERE c.activa = 1 AND c.estado = 'operativa'
-        ORDER BY c.id_cancha
-    ");
-    $stmt->execute();
-    $canchas = $stmt->fetchAll();
-    
-    // ✅ SIMULAR DISPONIBILIDAD PARA HOY
-    $disponibilidad = [];
-    foreach ($canchas as $cancha) {
-        $disponibilidad[] = [
-            'id_cancha' => $cancha['id_cancha'],
-            'nro_cancha' => $cancha['nro_cancha'],
-            'id_deporte' => $cancha['id_deporte'],
-            'valor_arriendo' => $cancha['valor_arriendo'],
-            'fecha' => date('Y-m-d'),
-            'hora_inicio' => '19:00',
-            'hora_fin' => '20:00',
-            'recinto_nombre' => $cancha['recinto_nombre'],
-            'estado' => 'disponible'
-        ];
+        WHERE dc.fecha BETWEEN ? AND ?
+        AND dc.estado = 'disponible'
+    ";
+
+    $params = [$fecha_inicio, $fecha_fin];
+    $where_conditions = [];
+
+    // Filtros adicionales
+    if (!empty($_POST['deporte'])) {
+        $where_conditions[] = "c.id_deporte = ?";
+        $params[] = $_POST['deporte'];
     }
-    
+
+    if (!empty($_POST['recinto'])) {
+        $where_conditions[] = "r.id_recinto = ?";
+        $params[] = $_POST['recinto'];
+    }
+
+    if (!empty($where_conditions)) {
+        $sql .= " AND " . implode(" AND ", $where_conditions);
+    }
+
+    $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $disponibilidad = $stmt->fetchAll();
+
     echo json_encode($disponibilidad);
+
+    // Manejar diferentes acciones
+    $action = $_GET['action'] ?? '';
+
+    switch ($action) {
+        case 'get_disponibilidad':
+            // ... código de disponibilidad anterior ...
+            break;
+            
+        case 'regenerar_disponibilidad':
+            // Solo para admins o debugging
+            require_once __DIR__ . '/generar_disponibilidad.php';
+            $resultado = generarDisponibilidad($pdo, 30);
+            echo json_encode($resultado);
+            return;
+            
+        default:
+            throw new Exception('Acción no válida');
+    }
     
 } catch (Exception $e) {
     if (ob_get_level() > 0) {
