@@ -19,6 +19,7 @@ try {
     }
     
     require_once __DIR__ . '/../includes/config.php';
+    require_once __DIR__ . '/../includes/disponibilidad.php';
     
     if (!isset($pdo) || !$pdo instanceof PDO) {
         throw new Exception('Error de conexión a la base de datos', 500);
@@ -92,6 +93,7 @@ try {
     $stmt->execute($params);
     $disponibilidad = $stmt->fetchAll();
 
+    $disponibilidad = getDisponibilidad($pdo, $fecha_inicio, $fecha_fin);
     echo json_encode($disponibilidad);
 
     // Manejar diferentes acciones
