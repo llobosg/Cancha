@@ -490,7 +490,7 @@ $deportes = [
               </div>
           `;
       }
-  }
+    }
 
     function renderizarDisponibilidad(disponibilidad) {
         const grid = document.getElementById('reservasGrid');

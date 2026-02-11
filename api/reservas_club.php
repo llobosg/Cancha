@@ -236,7 +236,4 @@ function enviarNotificaciones($pdo, $id_club, $id_cancha, $codigo_reserva) {
     // Simular envío de correos y notificaciones
     return true;
 }
-if (ob_get_level() > 0) {
-    ob_end_flush();
-}
 ?>
