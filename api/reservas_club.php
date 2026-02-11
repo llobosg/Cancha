@@ -53,57 +53,68 @@
     }
 
 function getDisponibilidad($post, $pdo) {
-    $deporte = $post['deporte'] ?? '';
-    $recinto = $post['recinto'] ?? '';
-    $rango = $post['rango'] ?? 'semana';
-    
-    // Determinar fechas
+    // Obtener disponibilidad real
+    $filtros = [
+        'deporte' => $_POST['deporte'] ?? '',
+        'recinto' => $_POST['recinto'] ?? '',
+        'rango' => $_POST['rango'] ?? 'semana'
+    ];
+
     $fecha_inicio = date('Y-m-d');
-    $fecha_fin = date('Y-m-d', strtotime('+6 days')); // Semana por defecto
-    
-    if ($rango === 'hoy') {
+    $fecha_fin = date('Y-m-d', strtotime('+7 days'));
+
+    if ($filtros['rango'] === 'hoy') {
         $fecha_fin = $fecha_inicio;
-    } elseif ($rango === 'mañana') {
+    } elseif ($filtros['rango'] === 'mañana') {
         $fecha_inicio = date('Y-m-d', strtotime('+1 day'));
         $fecha_fin = $fecha_inicio;
-    } elseif ($rango === 'mes') {
+    } elseif ($filtros['rango'] === 'mes') {
         $fecha_fin = date('Y-m-d', strtotime('+30 days'));
     }
-    
-    // Construir consulta
-    $where_conditions = ['c.activa = 1', 'dc.estado = "disponible"'];
-    $params = [$fecha_inicio, $fecha_fin];
-    
-    if ($deporte) {
-        $where_conditions[] = 'c.id_deporte = ?';
-        $params[] = $deporte;
-    }
-    
-    if ($recinto) {
-        $where_conditions[] = 'rd.id_recinto = ?';
-        $params[] = $recinto;
-    }
-    
-    $where_clause = implode(' AND ', $where_conditions);
-    
-    $stmt = $pdo->prepare("
+
+    $sql = "
         SELECT 
-            c.id_cancha,
-            c.nro_cancha,
+            dc.id_disponibilidad,
+            dc.id_cancha,
+            c.nombre_cancha as nro_cancha,
             c.id_deporte,
             c.valor_arriendo,
             dc.fecha,
             dc.hora_inicio,
             dc.hora_fin,
-            rd.nombre as recinto_nombre
-        FROM canchas c
-        JOIN recintos_deportivos rd ON c.id_recinto = rd.id_recinto
-        JOIN disponibilidad_canchas dc ON c.id_cancha = dc.id_cancha
-        WHERE dc.fecha BETWEEN ? AND ? AND $where_clause
-        ORDER BY dc.fecha, dc.hora_inicio, c.id_deporte
-    ");
+            r.nombre as recinto_nombre,
+            dc.estado
+        FROM disponibilidad_canchas dc
+        JOIN canchas c ON dc.id_cancha = c.id_cancha
+        JOIN recintos_deportivos r ON c.id_recinto = r.id_recinto
+        WHERE dc.fecha BETWEEN ? AND ?
+        AND dc.estado = 'disponible'
+    ";
+
+    $params = [$fecha_inicio, $fecha_fin];
+    $conditions = [];
+
+    if ($filtros['deporte']) {
+        $conditions[] = "c.id_deporte = ?";
+        $params[] = $filtros['deporte'];
+    }
+
+    if ($filtros['recinto']) {
+        $conditions[] = "r.id_recinto = ?";
+        $params[] = $filtros['recinto'];
+    }
+
+    if (!empty($conditions)) {
+        $sql .= " AND " . implode(" AND ", $conditions);
+    }
+
+    $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
+
+    $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $disponibilidad = $stmt->fetchAll();
+
+    echo json_encode($disponibilidad);
 }
 
 function crearReserva($post, $pdo, $id_club, $id_socio) {
