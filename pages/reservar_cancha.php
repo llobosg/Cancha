@@ -447,41 +447,39 @@ $deportes = [
     let reservasData = [];
 
     async function cargarDisponibilidad(filtros = {}) {
-        try {
-            const formData = new FormData();
-            formData.append('deporte', filtros.deporte || '');
-            formData.append('recinto', filtros.recinto || '');
-            formData.append('rango', filtros.rango || 'semana');
-            
-            const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-            
-            // Verificar si la respuesta es JSON válido
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('La API no devolvió JSON válido');
-            }
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            reservasData = data;
-            renderizarDisponibilidad(reservasData);
-            
-        } catch (error) {
-            console.error('Error al cargar disponibilidad:', error);
-            document.getElementById('reservasGrid').innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
-                    Error al cargar la disponibilidad: ${error.message}
-                </div>
-            `;
-        }
+      try {
+          const formData = new FormData();
+          formData.append('deporte', filtros.deporte || '');
+          formData.append('recinto', filtros.recinto || '');
+          formData.append('rango', filtros.rango || 'semana');
+          
+          // ✅ ENVIAR DATOS DE SESIÓN EN CADA SOLICITUD
+          formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
+          formData.append('club_id', '<?= $_SESSION['club_id'] ?? '' ?>');
+          
+          const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+              method: 'POST',
+              body: formData,
+              credentials: 'include'
+          });
+          
+          const data = await response.json();
+          
+          if (data.error) {
+              throw new Error(data.error);
+          }
+          
+          reservasData = data;
+          renderizarDisponibilidad(reservasData);
+          
+      } catch (error) {
+          console.error('Error al cargar disponibilidad:', error);
+          document.getElementById('reservasGrid').innerHTML = `
+              <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
+                  Error: ${error.message}
+              </div>
+          `;
+      }
     }
 
     function renderizarDisponibilidad(disponibilidad) {
