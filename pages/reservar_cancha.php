@@ -452,8 +452,6 @@ $deportes = [
           formData.append('deporte', filtros.deporte || '');
           formData.append('recinto', filtros.recinto || '');
           formData.append('rango', filtros.rango || 'semana');
-          
-          // ✅ ENVIAR DATOS DE SESIÓN EN CADA SOLICITUD
           formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
           formData.append('club_id', '<?= $_SESSION['club_id'] ?? '' ?>');
           
@@ -463,7 +461,19 @@ $deportes = [
               credentials: 'include'
           });
           
-          const data = await response.json();
+          // Leer como texto y limpiar
+          const textResponse = await response.text();
+          console.log('Respuesta cruda:', textResponse); // Para debug
+          
+          // Eliminar espacios en blanco al inicio y final
+          const cleanText = textResponse.trim();
+          
+          // Verificar si es JSON válido
+          if (!cleanText.startsWith('[') && !cleanText.startsWith('{')) {
+              throw new Error('Respuesta no es JSON válido');
+          }
+          
+          const data = JSON.parse(cleanText);
           
           if (data.error) {
               throw new Error(data.error);
@@ -480,7 +490,7 @@ $deportes = [
               </div>
           `;
       }
-    }
+  }
 
     function renderizarDisponibilidad(disponibilidad) {
         const grid = document.getElementById('reservasGrid');

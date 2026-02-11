@@ -1,4 +1,7 @@
 <?php
+    if (ob_get_level() === 0) {
+        ob_start();
+    }
     header('Content-Type: application/json; charset=utf-8');
 
     // Configuración robusta de sesiones para APIs
@@ -232,5 +235,8 @@ function enviarNotificaciones($pdo, $id_club, $id_cancha, $codigo_reserva) {
     
     // Simular envío de correos y notificaciones
     return true;
+}
+if (ob_get_level() > 0) {
+    ob_end_flush();
 }
 ?>
