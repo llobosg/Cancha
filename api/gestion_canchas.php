@@ -266,8 +266,8 @@ function generarBloquesParaFechaEspecifica($pdo, $cancha, $fecha) {
         }
         
     } catch (Exception $e) {
-        http_response_code(400);
         error_log("Error generando bloques para fecha $fecha: " . $e->getMessage());
+        // No hacer nada más - dejar que el flujo continúe
     }
 }
 ?>
