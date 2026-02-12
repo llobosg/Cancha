@@ -200,40 +200,64 @@ function generarDisponibilidadParaCancha($pdo, $id_cancha) {
         $stmt->execute([$id_cancha]);
         $cancha = $stmt->fetch();
         
-        if (!$cancha) return;
+        if (!$cancha) {
+            error_log("Cancha $id_cancha no encontrada");
+            return;
+        }
         
-        // Eliminar disponibilidad existente para esta cancha
+        error_log("Generando disponibilidad para cancha $id_cancha");
+        error_log("Fechas: {$cancha['fecha_desde']} - {$cancha['fecha_hasta']}");
+        error_log("Días: {$cancha['dias_disponibles']}");
+        
+        // Eliminar disponibilidad existente
         $stmt_delete = $pdo->prepare("DELETE FROM disponibilidad_canchas WHERE id_cancha = ?");
-        $stmt_delete->execute([$id_cancha]);
+        $affected = $stmt_delete->execute([$id_cancha]);
+        error_log("Registros eliminados: " . ($affected ? 'sí' : 'no'));
         
-        // Generar nueva disponibilidad
         $dias_disponibles = json_decode($cancha['dias_disponibles'], true);
-        if (!$dias_disponibles) return;
+        if (!$dias_disponibles) {
+            error_log("Días no válidos para cancha $id_cancha");
+            return;
+        }
         
         $fecha_inicio = new DateTime($cancha['fecha_desde']);
         $fecha_fin = new DateTime($cancha['fecha_hasta']);
         $hoy = new DateTime();
         
+        error_log("Fecha inicio calculada: " . $fecha_inicio->format('Y-m-d'));
+        error_log("Fecha fin calculada: " . $fecha_fin->format('Y-m-d'));
+        error_log("Hoy: " . $hoy->format('Y-m-d'));
+        
         if ($fecha_inicio < $hoy) {
             $fecha_inicio = $hoy;
+            error_log("Ajustando fecha inicio a hoy");
         }
         
         $dias_espanol = [1 => 'lunes', 2 => 'martes', 3 => 'miercoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sabado', 7 => 'domingo'];
         
         $fecha_actual = clone $fecha_inicio;
+        $bloques_generados = 0;
+        
         while ($fecha_actual <= $fecha_fin) {
             $dia_numero = (int)$fecha_actual->format('N');
             $dia_actual = $dias_espanol[$dia_numero];
             
+            error_log("Procesando fecha: " . $fecha_actual->format('Y-m-d') . " ({$dia_actual})");
+            
             if (in_array($dia_actual, $dias_disponibles)) {
+                error_log("Generando bloques para " . $fecha_actual->format('Y-m-d'));
                 generarBloquesParaFechaEspecifica($pdo, $cancha, $fecha_actual->format('Y-m-d'));
+                $bloques_generados++;
             }
             
             $fecha_actual->modify('+1 day');
         }
         
+        error_log("Total bloques generados: $bloques_generados");
+        
     } catch (Exception $e) {
         error_log("Error generando disponibilidad para cancha $id_cancha: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
     }
 }
 
