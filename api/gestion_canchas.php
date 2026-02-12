@@ -132,9 +132,23 @@ try {
                     ");
                     $update_result = $update_stmt->execute([$id_cancha]);
                     
-                    // Agregar logging para verificar
-                    error_log("Actualización de fechas para cancha $id_cancha: " . ($update_result ? 'éxito' : 'falló'));
+                    // Logging detallado
+                    error_log("=== DIAGNÓSTICO CANCHA ===");
+                    error_log("ID Cancha creada: $id_cancha");
+                    error_log("Actualización fechas resultado: " . ($update_result ? 'ÉXITO' : 'FALLO'));
+                    
+                    // Verificar las fechas guardadas
+                    $verify_stmt = $pdo->prepare("SELECT fecha_desde, fecha_hasta FROM canchas WHERE id_cancha = ?");
+                    $verify_stmt->execute([$id_cancha]);
+                    $fechas_guardadas = $verify_stmt->fetch();
+                    
+                    if ($fechas_guardadas) {
+                        error_log("Fechas guardadas en BD: {$fechas_guardadas['fecha_desde']} - {$fechas_guardadas['fecha_hasta']}");
+                    } else {
+                        error_log("ERROR: No se pudieron verificar las fechas guardadas");
+                    }
                 }
+                
             } else {
                 $id_cancha = (int)($_POST['id_cancha'] ?? 0);
                 if (!$id_cancha) {
@@ -191,6 +205,7 @@ try {
         }
         
         if ($id_cancha) {
+            error_log("Iniciando generación de disponibilidad para cancha: $id_cancha");
             generarDisponibilidadSimple($pdo, $id_cancha);
         }
     }
@@ -216,9 +231,12 @@ if (ob_get_level() > 0) {
     ob_end_flush();
 }
 
-// === FUNCIÓN SIMPLE DE GENERACIÓN ===
+// === FUNCIÓN SIMPLE DE GENERACIÓN CON LOGGING DETALLADO ===
 function generarDisponibilidadSimple($pdo, $id_cancha) {
     try {
+        error_log("=== INICIANDO GENERACIÓN DISPONIBILIDAD ===");
+        error_log("Procesando cancha ID: $id_cancha");
+        
         // Obtener datos de la cancha
         $stmt = $pdo->prepare("
             SELECT 
@@ -230,22 +248,31 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
         $cancha = $stmt->fetch();
         
         if (!$cancha) {
-            error_log("Cancha $id_cancha no encontrada en generación");
+            error_log("ERROR: Cancha $id_cancha no encontrada en generación");
             return;
         }
         
-        error_log("Cancha $id_cancha - Fechas: {$cancha['fecha_desde']} - {$cancha['fecha_hasta']}");
+        error_log("Datos cancha recuperados:");
+        error_log("  Hora inicio: {$cancha['hora_inicio']}");
+        error_log("  Hora fin: {$cancha['hora_fin']}");
+        error_log("  Duración: {$cancha['duracion_bloque']}");
+        error_log("  Fecha desde: {$cancha['fecha_desde']}");
+        error_log("  Fecha hasta: {$cancha['fecha_hasta']}");
+        error_log("  Días: {$cancha['dias_disponibles']}");
         
         // Eliminar disponibilidad existente
-        $pdo->prepare("DELETE FROM disponibilidad_canchas WHERE id_cancha = ?")
+        $delete_result = $pdo->prepare("DELETE FROM disponibilidad_canchas WHERE id_cancha = ?")
             ->execute([$id_cancha]);
+        error_log("Registros anteriores eliminados: " . ($delete_result ? 'SÍ' : 'NO'));
         
         // Parsear días
         $dias_disponibles = json_decode($cancha['dias_disponibles'], true);
         if (!$dias_disponibles || !is_array($dias_disponibles)) {
-            error_log("Días no válidos para cancha $id_cancha");
+            error_log("ERROR: Días no válidos para cancha $id_cancha");
             return;
         }
+        
+        error_log("Días parseados: " . implode(', ', $dias_disponibles));
         
         // Fechas
         $fecha_inicio = $cancha['fecha_desde'] ?: date('Y-m-d');
@@ -254,9 +281,13 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
         
         if ($fecha_inicio < $hoy) {
             $fecha_inicio = $hoy;
+            error_log("Ajustando fecha inicio a hoy: $hoy");
         }
         
-        error_log("Rango generación: $fecha_inicio - $fecha_fin");
+        error_log("Rango de generación calculado:");
+        error_log("  Desde: $fecha_inicio");
+        error_log("  Hasta: $fecha_fin");
+        error_log("  Hoy: $hoy");
         
         // Mapeo de días
         $dias_semana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
@@ -265,23 +296,49 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
         $fecha_actual = $fecha_inicio;
         $fecha_limite = min($fecha_fin, date('Y-m-d', strtotime('+365 days')));
         
+        error_log("Fecha límite final: $fecha_limite");
+        
         $bloques_generados = 0;
+        $dias_procesados = 0;
+        
         while ($fecha_actual <= $fecha_limite) {
-            $dia_semana_num = date('N', strtotime($fecha_actual));
+            $dia_semana_num = date('N', strtotime($fecha_actual)); // 1=lunes, 7=domingo
             $dia_nombre = $dias_semana[$dia_semana_num - 1];
             
+            $dias_procesados++;
+            if ($dias_procesados <= 5) { // Solo loguear los primeros 5 días para no saturar
+                error_log("Procesando fecha: $fecha_actual ({$dia_nombre})");
+            }
+            
             if (in_array($dia_nombre, $dias_disponibles)) {
+                if ($dias_procesados <= 5) {
+                    error_log("  ✓ Generando bloques para $fecha_actual");
+                }
                 generarBloquesSimple($pdo, $cancha, $fecha_actual);
                 $bloques_generados++;
+            } else {
+                if ($dias_procesados <= 5) {
+                    error_log("  ✗ Saltando $fecha_actual (no está en días disponibles)");
+                }
             }
             
             $fecha_actual = date('Y-m-d', strtotime($fecha_actual . ' +1 day'));
+            
+            // Safety break para evitar loops infinitos
+            if ($dias_procesados > 400) {
+                error_log("BREAK DE SEGURIDAD: Más de 400 días procesados");
+                break;
+            }
         }
         
-        error_log("Total bloques generados para cancha $id_cancha: $bloques_generados");
+        error_log("=== RESUMEN GENERACIÓN ===");
+        error_log("Total días procesados: $dias_procesados");
+        error_log("Total bloques generados: $bloques_generados");
+        error_log("=== FIN GENERACIÓN ===");
         
     } catch (Exception $e) {
-        error_log("Error generación simple cancha $id_cancha: " . $e->getMessage());
+        error_log("ERROR CRÍTICO en generación simple cancha $id_cancha: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
     }
 }
 
@@ -292,6 +349,8 @@ function generarBloquesSimple($pdo, $cancha, $fecha) {
         $duracion = max(60, (int)$cancha['duracion_bloque']) * 60;
         
         $hora_actual = $hora_inicio;
+        $bloques_del_dia = 0;
+        
         while ($hora_actual < $hora_fin) {
             $hora_inicio_str = date('H:i:s', $hora_actual);
             $hora_fin_str = date('H:i:s', $hora_actual + $duracion);
@@ -302,11 +361,15 @@ function generarBloquesSimple($pdo, $cancha, $fecha) {
                 VALUES (?, ?, ?, ?, 'disponible')
             ")->execute([$cancha['id_cancha'], $fecha, $hora_inicio_str, $hora_fin_str]);
             
+            $bloques_del_dia++;
             $hora_actual += $duracion;
         }
         
+        // Solo loguear para depuración si es necesario
+        // error_log("Generados $bloques_del_dia bloques para fecha $fecha");
+        
     } catch (Exception $e) {
-        error_log("Error bloques simple fecha $fecha: " . $e->getMessage());
+        error_log("Error en bloques simple fecha $fecha: " . $e->getMessage());
     }
 }
 ?>
