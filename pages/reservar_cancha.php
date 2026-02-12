@@ -536,14 +536,20 @@ $deportes = [
                     'otro': '🏟️'
                 };
                 
+                // Formatear valor con separador de miles
+                const valorFormateado = parseInt(item.valor_arriendo).toLocaleString('es-CL');
+                
                 card.innerHTML = `
                     <div class="deporte-icon">${iconos[item.id_deporte] || '🏟️'}</div>
                     <div class="cancha-nombre">${item.nro_cancha || 'Sin nombre'}</div>
                     <div class="fecha-hora">
                         ${item.hora_inicio.substring(0, 5)}<br>
-                        ${item.recinto_nombre}
+                        <small style="color: #aaa; font-size: 0.8rem;">${item.recinto_nombre}</small>
                     </div>
                     <div class="estado-indicator estado-disponible"></div>
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                        $${valorFormateado}
+                    </div>
                 `;
                 
                 grid.appendChild(card);

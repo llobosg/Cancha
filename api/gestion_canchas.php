@@ -158,6 +158,75 @@ try {
             $stmt->execute([$id_cancha]);
             break;
     }
+
+    // Creación automática de disponibilidad para la cancha modificada o creada
+    $stmt->execute($params);
+
+    // Obtener el ID de la cancha guardada
+    $id_cancha = $pdo->lastInsertId();
+
+    // Generar disponibilidad para esta cancha específica
+    require_once __DIR__ . '/../includes/disponibilidad.php';
+    generarDisponibilidadParaCancha($pdo, $id_cancha);
+
+    // Función específica para una cancha
+    function generarDisponibilidadParaCancha($pdo, $id_cancha) {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    c.id_cancha,
+                    c.hora_inicio,
+                    c.hora_fin, 
+                    c.duracion_bloque,
+                    c.dias_disponibles,
+                    c.fecha_desde,
+                    c.fecha_hasta
+                FROM canchas c
+                WHERE c.id_cancha = ?
+            ");
+            $stmt->execute([$id_cancha]);
+            $cancha = $stmt->fetch();
+            
+            if (!$cancha) return;
+            
+            // Eliminar disponibilidad existente para esta cancha
+            $stmt_delete = $pdo->prepare("DELETE FROM disponibilidad_canchas WHERE id_cancha = ?");
+            $stmt_delete->execute([$id_cancha]);
+            
+            // Generar nueva disponibilidad
+            $dias_disponibles = json_decode($cancha['dias_disponibles'], true);
+            if (!$dias_disponibles) return;
+            
+            $fecha_inicio = new DateTime($cancha['fecha_desde']);
+            $fecha_fin = new DateTime($cancha['fecha_hasta']);
+            $hoy = new DateTime();
+            
+            if ($fecha_inicio < $hoy) {
+                $fecha_inicio = $hoy;
+            }
+            
+            $dias_espanol = [1 => 'lunes', 2 => 'martes', 3 => 'miercoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sabado', 7 => 'domingo'];
+            
+            $fecha_actual = clone $fecha_inicio;
+            while ($fecha_actual <= $fecha_fin) {
+                $dia_numero = (int)$fecha_actual->format('N');
+                $dia_actual = $dias_espanol[$dia_numero];
+                
+                if (in_array($dia_actual, $dias_disponibles)) {
+                    generarBloquesParaFechaEspecifica($pdo, $cancha, $fecha_actual->format('Y-m-d'));
+                }
+                
+                $fecha_actual->modify('+1 day');
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error generando disponibilidad para cancha $id_cancha: " . $e->getMessage());
+        }
+    }
+
+    function generarBloquesParaFechaEspecifica($pdo, $cancha, $fecha) {
+        // Lógica de generación de bloques (similar a la existente)
+    }
     
     echo json_encode(['success' => true]);
     
