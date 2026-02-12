@@ -32,20 +32,35 @@ try {
         throw new Exception('Socio no válido', 401);
     }
     
-    // Calcular rango de fechas
+    // Calcular rango de fechas y horarios
     $fecha_inicio = date('Y-m-d');
     $fecha_fin = date('Y-m-d', strtotime('+7 days'));
+    $hora_actual = date('H:i:s'); // Hora actual en formato HH:MM:SS
 
     switch ($_POST['rango'] ?? 'semana') {
         case 'hoy':
             $fecha_fin = $fecha_inicio;
+            // Para hoy, filtrar solo horarios futuros
+            $condicion_hora = "AND dc.hora_inicio > ?";
+            $params_hora = [$hora_actual];
             break;
+            
         case 'mañana':
             $fecha_inicio = date('Y-m-d', strtotime('+1 day'));
             $fecha_fin = $fecha_inicio;
+            $condicion_hora = "";
+            $params_hora = [];
             break;
+            
         case 'mes':
             $fecha_fin = date('Y-m-d', strtotime('+30 days'));
+            $condicion_hora = "";
+            $params_hora = [];
+            break;
+            
+        default: // semana
+            $condicion_hora = "";
+            $params_hora = [];
             break;
     }
 
@@ -70,15 +85,21 @@ try {
     ";
 
     $params = [$fecha_inicio, $fecha_fin];
+
+    // Agregar condición de hora para "hoy"
+    if (!empty($condicion_hora)) {
+        $sql .= " " . $condicion_hora;
+        $params = array_merge($params, $params_hora);
+    }
+
     $where_conditions = [];
 
-    // Filtro por deporte - CORREGIDO
+    // Filtros adicionales
     if (!empty($_POST['deporte']) && $_POST['deporte'] !== '') {
         $where_conditions[] = "c.id_deporte = ?";
         $params[] = $_POST['deporte'];
     }
 
-    // Filtro por recinto
     if (!empty($_POST['recinto']) && $_POST['recinto'] !== '') {
         $where_conditions[] = "r.id_recinto = ?";
         $params[] = $_POST['recinto'];
@@ -90,15 +111,13 @@ try {
 
     $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
 
-    // Agregar logging para depurar
-    error_log("Consulta SQL: " . $sql);
-    error_log("Parámetros: " . json_encode($params));
-
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $disponibilidad = $stmt->fetchAll();
 
     echo json_encode($disponibilidad);
+
+   
     // Manejar diferentes acciones
     $action = $_GET['action'] ?? '';
 
