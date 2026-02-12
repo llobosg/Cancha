@@ -121,14 +121,20 @@ try {
                 // Obtener el ID de la cancha recién insertada
                 $id_cancha = $pdo->lastInsertId();
                 
-                // Actualizar fechas después de la inserción
-                $pdo->prepare("
-                    UPDATE canchas 
-                    SET fecha_desde = CURDATE(), 
-                        fecha_hasta = DATE_ADD(CURDATE(), INTERVAL 1 YEAR)
-                    WHERE id_cancha = ?
-                ")->execute([$id_cancha]);
-                
+                // Verificar que el ID sea válido
+                if ($id_cancha) {
+                    // Actualizar fechas después de la inserción
+                    $update_stmt = $pdo->prepare("
+                        UPDATE canchas 
+                        SET fecha_desde = CURDATE(), 
+                            fecha_hasta = DATE_ADD(CURDATE(), INTERVAL 1 YEAR)
+                        WHERE id_cancha = ?
+                    ");
+                    $update_result = $update_stmt->execute([$id_cancha]);
+                    
+                    // Agregar logging para verificar
+                    error_log("Actualización de fechas para cancha $id_cancha: " . ($update_result ? 'éxito' : 'falló'));
+                }
             } else {
                 $id_cancha = (int)($_POST['id_cancha'] ?? 0);
                 if (!$id_cancha) {
@@ -223,7 +229,12 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
         $stmt->execute([$id_cancha]);
         $cancha = $stmt->fetch();
         
-        if (!$cancha) return;
+        if (!$cancha) {
+            error_log("Cancha $id_cancha no encontrada en generación");
+            return;
+        }
+        
+        error_log("Cancha $id_cancha - Fechas: {$cancha['fecha_desde']} - {$cancha['fecha_hasta']}");
         
         // Eliminar disponibilidad existente
         $pdo->prepare("DELETE FROM disponibilidad_canchas WHERE id_cancha = ?")
@@ -232,6 +243,7 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
         // Parsear días
         $dias_disponibles = json_decode($cancha['dias_disponibles'], true);
         if (!$dias_disponibles || !is_array($dias_disponibles)) {
+            error_log("Días no válidos para cancha $id_cancha");
             return;
         }
         
@@ -244,6 +256,8 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
             $fecha_inicio = $hoy;
         }
         
+        error_log("Rango generación: $fecha_inicio - $fecha_fin");
+        
         // Mapeo de días
         $dias_semana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
         
@@ -251,16 +265,20 @@ function generarDisponibilidadSimple($pdo, $id_cancha) {
         $fecha_actual = $fecha_inicio;
         $fecha_limite = min($fecha_fin, date('Y-m-d', strtotime('+365 days')));
         
+        $bloques_generados = 0;
         while ($fecha_actual <= $fecha_limite) {
-            $dia_semana_num = date('N', strtotime($fecha_actual)); // 1=lunes, 7=domingo
+            $dia_semana_num = date('N', strtotime($fecha_actual));
             $dia_nombre = $dias_semana[$dia_semana_num - 1];
             
             if (in_array($dia_nombre, $dias_disponibles)) {
                 generarBloquesSimple($pdo, $cancha, $fecha_actual);
+                $bloques_generados++;
             }
             
             $fecha_actual = date('Y-m-d', strtotime($fecha_actual . ' +1 day'));
         }
+        
+        error_log("Total bloques generados para cancha $id_cancha: $bloques_generados");
         
     } catch (Exception $e) {
         error_log("Error generación simple cancha $id_cancha: " . $e->getMessage());
