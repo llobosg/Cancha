@@ -625,6 +625,17 @@ $deportes = [
     document.addEventListener('DOMContentLoaded', function() {
         cargarDisponibilidad({ rango: 'semana' });
     });
+
+    function aplicarFiltros() {
+        const filtros = {
+            deporte: document.getElementById('filtroDeporte').value || '',
+            recinto: document.getElementById('filtroRecinto').value || '',
+            rango: document.getElementById('filtroFecha').value
+        };
+        
+        console.log('Filtros enviados:', filtros);
+        cargarDisponibilidad(filtros);
+    }
   </script>
 </body>
 </html>

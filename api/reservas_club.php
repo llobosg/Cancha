@@ -72,13 +72,14 @@ try {
     $params = [$fecha_inicio, $fecha_fin];
     $where_conditions = [];
 
-    // Filtros adicionales
-    if (!empty($_POST['deporte'])) {
+    // Filtro por deporte - CORREGIDO
+    if (!empty($_POST['deporte']) && $_POST['deporte'] !== '') {
         $where_conditions[] = "c.id_deporte = ?";
         $params[] = $_POST['deporte'];
     }
 
-    if (!empty($_POST['recinto'])) {
+    // Filtro por recinto
+    if (!empty($_POST['recinto']) && $_POST['recinto'] !== '') {
         $where_conditions[] = "r.id_recinto = ?";
         $params[] = $_POST['recinto'];
     }
@@ -89,13 +90,15 @@ try {
 
     $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
 
+    // Agregar logging para depurar
+    error_log("Consulta SQL: " . $sql);
+    error_log("Parámetros: " . json_encode($params));
+
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $disponibilidad = $stmt->fetchAll();
 
-    $disponibilidad = getDisponibilidad($pdo, $fecha_inicio, $fecha_fin);
     echo json_encode($disponibilidad);
-
     // Manejar diferentes acciones
     $action = $_GET['action'] ?? '';
 
