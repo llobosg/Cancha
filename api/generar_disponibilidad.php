@@ -23,7 +23,7 @@ function generarDisponibilidad($pdo, $forzar = false, $dias_adelantados = 30) {
             AND c.estado = 'operativa'
             AND c.fecha_desde IS NOT NULL 
             AND c.fecha_hasta IS NOT NULL
-            AND c.fecha_hasta >= CURDATE()
+            AND c.fecha_hasta >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
         ");
         $stmt->execute();
         $canchas = $stmt->fetchAll();
