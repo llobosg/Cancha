@@ -740,7 +740,7 @@ $deportes = [
                 
                 <div class="opcion-reserva" onclick="seleccionarOpcion('simple')">
                     <input type="radio" id="reservaSimple" name="tipoReserva" value="simple" checked>
-                    <label style="color: #333;" for="reservaSimple">Reservar este bloque único</label>
+                    <label style="color: #333;" for="reservaSimple">Reservar sólo esta fecha y hora</label>
                 </div>
                 
                 <div class="opcion-reserva" onclick="seleccionarOpcion('patron')">
@@ -749,7 +749,7 @@ $deportes = [
                     
                     <div id="panelPatron" class="panel-patron">
                         <div style="margin-bottom: 10px;">
-                            <label><strong>Frecuencia:</strong></label><br>
+                            <label style="color: #2b0646ff;" ><strong>Frecuencia:</strong></label><br>
                             <select id="frecuenciaPatron" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
                                 <option style="color: #333;" value="semanal">Semanal (mismo día)</option>
                                 <option style="color: #333;" value="quincenal">Quincenal</option>
@@ -758,7 +758,7 @@ $deportes = [
                         </div>
                         
                         <div style="margin-bottom: 10px;">
-                            <label><strong>Rango de fechas:</strong></label><br>
+                            <label style="color: #2b0646ff;"><strong>Rango de fechas:</strong></label><br>
                             <input type="date" id="fechaDesdePatron" style="width: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${item.fecha}">
                             <span style="display: inline-block; width: 8%; text-align: center;">→</span>
                             <input type="date" id="fechaHastaPatron" style="width: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${sumarDias(item.fecha, 30)}">
