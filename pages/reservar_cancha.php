@@ -366,10 +366,10 @@ $deportes = [
         </select>
         
         <select class="control-select" id="filtroFecha">
-          <option value="semana" selected>Esta semana</option>
-          <option value="hoy">Hoy</option>
-          <option value="mañana">Mañana</option>
-          <option value="mes">Este mes</option>
+            <option value="hoy">Hoy</option>
+            <option value="mañana">Mañana</option>
+            <option value="semana" selected>Semana</option>
+            <option value="mes">Mes</option>
         </select>
       </div>
       
@@ -447,50 +447,63 @@ $deportes = [
     let reservasData = [];
 
     async function cargarDisponibilidad(filtros = {}) {
-      try {
-          const formData = new FormData();
-          formData.append('deporte', filtros.deporte || '');
-          formData.append('recinto', filtros.recinto || '');
-          formData.append('rango', filtros.rango || 'semana');
-          formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
-          formData.append('club_id', '<?= $_SESSION['club_id'] ?? '' ?>');
-          
-          const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
-              method: 'POST',
-              body: formData,
-              credentials: 'include'
-          });
-          
-          // Leer como texto y limpiar
-          const textResponse = await response.text();
-          console.log('Respuesta cruda:', textResponse); // Para debug
-          
-          // Eliminar espacios en blanco al inicio y final
-          const cleanText = textResponse.trim();
-          
-          // Verificar si es JSON válido
-          if (!cleanText.startsWith('[') && !cleanText.startsWith('{')) {
-              throw new Error('Respuesta no es JSON válido');
-          }
-          
-          const data = JSON.parse(cleanText);
-          
-          if (data.error) {
-              throw new Error(data.error);
-          }
-          
-          reservasData = data;
-          renderizarDisponibilidad(reservasData);
-          
-      } catch (error) {
-          console.error('Error al cargar disponibilidad:', error);
-          document.getElementById('reservasGrid').innerHTML = `
-              <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
-                  Error: ${error.message}
-              </div>
-          `;
-      }
+        try {
+            const formData = new FormData();
+            formData.append('deporte', filtros.deporte || '');
+            formData.append('recinto', filtros.recinto || '');
+            formData.append('rango', filtros.rango || 'semana');
+            
+            // ✅ ENVIAR DATOS DE SESIÓN EN CADA SOLICITUD
+            formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
+            formData.append('club_id', '<?= $_SESSION['club_id'] ?? '' ?>');
+            
+            const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            reservasData = data;
+            renderizarDisponibilidad(reservasData);
+            
+        } catch (error) {
+            console.error('Error al cargar disponibilidad:', error);
+            document.getElementById('reservasGrid').innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
+                    Error: ${error.message}
+                </div>
+            `;
+        }
     }
+
+    // ✅ Función para establecer el rango inicial correcto
+    function establecerRangoInicial() {
+        // Por defecto, mostrar "hoy" al cargar la página
+        document.getElementById('filtroFecha').value = 'hoy';
+        cargarDisponibilidad({ rango: 'hoy' });
+    }
+
+    // ✅ Llamar al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        establecerRangoInicial();
+        
+        // Event listeners para los filtros
+        document.getElementById('filtroDeporte').addEventListener('change', function() {
+            aplicarFiltros();
+        });
+        document.getElementById('filtroRecinto').addEventListener('change', function() {
+            aplicarFiltros();
+        });
+        document.getElementById('filtroFecha').addEventListener('change', function() {
+            aplicarFiltros();
+        });
+    });
 
     function renderizarDisponibilidad(disponibilidad) {
         const grid = document.getElementById('reservasGrid');

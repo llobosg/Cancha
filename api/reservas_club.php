@@ -35,7 +35,7 @@ try {
     // Calcular rango de fechas y horarios
     $fecha_inicio = date('Y-m-d');
     $fecha_fin = date('Y-m-d', strtotime('+7 days'));
-    $hora_actual = date('H:i:s'); // Hora actual en formato HH:MM:SS
+    $hora_actual = date('H:i:s'); // Hora actual del servidor
 
     switch ($_POST['rango'] ?? 'semana') {
         case 'hoy':
@@ -59,6 +59,8 @@ try {
             break;
             
         default: // semana
+            // Para "semana", mostrar desde hoy (no desde ayer)
+            $fecha_inicio = date('Y-m-d');
             $condicion_hora = "";
             $params_hora = [];
             break;
