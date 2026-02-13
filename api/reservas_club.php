@@ -19,7 +19,6 @@ try {
     }
     
     require_once __DIR__ . '/../includes/config.php';
-    require_once __DIR__ . '/../includes/disponibilidad.php';
     
     if (!isset($pdo) || !$pdo instanceof PDO) {
         throw new Exception('Error de conexión a la base de datos', 500);
@@ -36,37 +35,41 @@ try {
     $fecha_inicio = date('Y-m-d');
     $fecha_fin = date('Y-m-d', strtotime('+7 days'));
     $hora_actual = date('H:i:s'); // Hora actual del servidor
-
-    switch ($_POST['rango'] ?? 'semana') {
+    
+    $rango = $_POST['rango'] ?? 'semana';
+    error_log("Rango recibido: $rango");
+    
+    switch ($rango) {
         case 'hoy':
-            $fecha_fin = $fecha_inicio;
-            // Para hoy, filtrar solo horarios futuros
-            $condicion_hora = "AND dc.hora_inicio > ?";
-            $params_hora = [$hora_actual];
+            $fecha_inicio = date('Y-m-d');
+            $fecha_fin = date('Y-m-d');
+            $filtrar_hora = true;
             break;
             
         case 'mañana':
             $fecha_inicio = date('Y-m-d', strtotime('+1 day'));
-            $fecha_fin = $fecha_inicio;
-            $condicion_hora = "";
-            $params_hora = [];
+            $fecha_fin = date('Y-m-d', strtotime('+1 day'));
+            $filtrar_hora = false;
             break;
             
         case 'mes':
+            $fecha_inicio = date('Y-m-d');
             $fecha_fin = date('Y-m-d', strtotime('+30 days'));
-            $condicion_hora = "";
-            $params_hora = [];
+            $filtrar_hora = false;
             break;
             
         default: // semana
-            // Para "semana", mostrar desde HOY (no desde ayer)
             $fecha_inicio = date('Y-m-d');
             $fecha_fin = date('Y-m-d', strtotime('+7 days'));
-            $condicion_hora = "";
-            $params_hora = [];
+            $filtrar_hora = false;
             break;
     }
-
+    
+    error_log("Fechas calculadas: $fecha_inicio - $fecha_fin");
+    if ($filtrar_hora) {
+        error_log("Filtrando por hora: $hora_actual");
+    }
+    
     // Construir consulta base
     $sql = "
         SELECT 
@@ -86,62 +89,39 @@ try {
         WHERE dc.fecha BETWEEN ? AND ?
         AND dc.estado = 'disponible'
     ";
-
+    
     $params = [$fecha_inicio, $fecha_fin];
-
+    
     // Agregar condición de hora para "hoy"
-    if (!empty($condicion_hora)) {
-        $sql .= " " . $condicion_hora;
-        $params = array_merge($params, $params_hora);
+    if ($filtrar_hora) {
+        $sql .= " AND dc.hora_inicio > ?";
+        $params[] = $hora_actual;
+        error_log("Agregando condición de hora a la consulta");
     }
-
-    $where_conditions = [];
+    
     // Filtros adicionales
     if (!empty($_POST['deporte']) && $_POST['deporte'] !== '') {
-        $where_conditions[] = "c.id_deporte = ?";
+        $sql .= " AND c.id_deporte = ?";
         $params[] = $_POST['deporte'];
     }
-
+    
     if (!empty($_POST['recinto']) && $_POST['recinto'] !== '') {
-        $where_conditions[] = "r.id_recinto = ?";
+        $sql .= " AND r.id_recinto = ?";
         $params[] = $_POST['recinto'];
     }
-
-    if (!empty($where_conditions)) {
-        $sql .= " AND " . implode(" AND ", $where_conditions);
-    }
-
+    
     $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
-
+    
+    error_log("Consulta SQL final: " . $sql);
+    error_log("Parámetros: " . json_encode($params));
+    
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $disponibilidad = $stmt->fetchAll();
-
+    
+    error_log("Registros encontrados: " . count($disponibilidad));
+    
     echo json_encode($disponibilidad);
-
-   
-    // Manejar diferentes acciones
-    $action = $_GET['action'] ?? '';
-
-    switch ($action) {
-        case 'get_disponibilidad':
-            // ... código de disponibilidad anterior ...
-            break;
-            
-        case 'regenerar_disponibilidad':
-        // Solo para admins
-        if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
-            throw new Exception('Acceso no autorizado', 403);
-        }
-        
-        require_once __DIR__ . '/generar_disponibilidad.php';
-        $resultado = generarDisponibilidad($pdo, 30);
-        echo json_encode($resultado);
-        break;
-            
-        default:
-            throw new Exception('Acción no válida');
-    }
     
 } catch (Exception $e) {
     if (ob_get_level() > 0) {
