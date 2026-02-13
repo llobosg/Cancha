@@ -740,20 +740,20 @@ $deportes = [
                 
                 <div class="opcion-reserva" onclick="seleccionarOpcion('simple')">
                     <input type="radio" id="reservaSimple" name="tipoReserva" value="simple" checked>
-                    <label for="reservaSimple">Reservar este bloque único</label>
+                    <label style="color: #333;" for="reservaSimple">Reservar este bloque único</label>
                 </div>
                 
                 <div class="opcion-reserva" onclick="seleccionarOpcion('patron')">
                     <input type="radio" id="reservaPatron" name="tipoReserva" value="patron">
-                    <label for="reservaPatron">Crear patrón de reserva recurrente</label>
+                    <label style="color: #333;" for="reservaPatron">Crear patrón de reserva recurrente</label>
                     
                     <div id="panelPatron" class="panel-patron">
                         <div style="margin-bottom: 10px;">
                             <label><strong>Frecuencia:</strong></label><br>
                             <select id="frecuenciaPatron" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option value="semanal">Semanal (mismo día)</option>
-                                <option value="quincenal">Quincenal</option>
-                                <option value="mensual">Mensual (mismo día del mes)</option>
+                                <option style="color: #333;" value="semanal">Semanal (mismo día)</option>
+                                <option style="color: #333;" value="quincenal">Quincenal</option>
+                                <option style="color: #333;" value="mensual">Mensual (mismo día del mes)</option>
                             </select>
                         </div>
                         
