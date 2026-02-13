@@ -532,7 +532,12 @@ $deportes = [
             fechaDiv.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
             fechaDiv.style.color = '#FFD700';
             fechaDiv.style.fontWeight = 'bold';
-            fechaDiv.textContent = new Date(fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+            
+            // ✅ Mostrar la fecha REAL + nombre del día
+            const fechaReal = new Date(fecha);
+            const nombreDia = fechaReal.toLocaleDateString('es-ES', { weekday: 'long' });
+            fechaDiv.textContent = `${fecha} (${nombreDia})`;
+            
             grid.appendChild(fechaDiv);
             
             porFecha[fecha].forEach(item => {
