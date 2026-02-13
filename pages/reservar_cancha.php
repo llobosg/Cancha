@@ -533,10 +533,18 @@ $deportes = [
             fechaDiv.style.color = '#FFD700';
             fechaDiv.style.fontWeight = 'bold';
             
-            // ✅ Mostrar la fecha REAL + nombre del día
-            const fechaReal = new Date(fecha);
-            const nombreDia = fechaReal.toLocaleDateString('es-ES', { weekday: 'long' });
-            fechaDiv.textContent = `${fecha} (${nombreDia})`;
+            // ✅ Formato dd-mm-yyyy y día correcto usando la fecha del servidor
+            const partes = fecha.split('-'); // YYYY-MM-DD
+            const fechaFormateada = `${partes[2]}-${partes[1]}-${partes[0]}`; // DD-MM-YYYY
+            
+            // Crear fecha en UTC para evitar problemas de zona horaria
+            const fechaUTC = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2]));
+            const nombreDia = fechaUTC.toLocaleDateString('es-ES', { 
+                weekday: 'long',
+                timeZone: 'UTC'
+            });
+            
+            fechaDiv.textContent = `${fechaFormateada} (${nombreDia})`;
             
             grid.appendChild(fechaDiv);
             
@@ -573,7 +581,7 @@ $deportes = [
             });
         });
     }
-
+    
     function selectDisponibilidad(item) {
         document.querySelectorAll('.reserva-card').forEach(card => {
             card.classList.remove('selected');
