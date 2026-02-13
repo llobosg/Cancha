@@ -13,7 +13,6 @@ $user_email = $_SESSION['google_email'] ?? $_SESSION['user_email'];
 // Obtener club desde URL
 $club_slug_from_url = $_GET['id'] ?? '';
 if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-    console.error('Error:', 'sale de Obtener club desde URL');
     alert('Error sale de Obtener club desde URL');
     header('Location: ../index.php');
     exit;
