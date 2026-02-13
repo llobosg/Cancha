@@ -140,12 +140,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Redirigir al dashboard con mensaje de éxito
         $_SESSION['mensaje_exito'] = 'Perfil completado exitosamente';
 
-        // Determinar la URL de redirección correcta
-        $dashboard_url = '../pages/dashboard_socio.php';
+        // Obtener el club_slug correcto (8 caracteres)
+        $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE id_club = ?");
+        $stmt_club->execute([$club_id]);
+        $club_data = $stmt_club->fetch();
 
-        // Si tu dashboard_socio.php necesita el ID del club
-        if (isset($club_id) && $club_id > 0) {
-            $dashboard_url .= '?id=' . $club_id;
+        if ($club_data) {
+            $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
+            $dashboard_url = '../pages/dashboard_socio.php?id_club=' . $club_slug;
+        } else {
+            // Fallback si hay algún error
+            $dashboard_url = '../index.php';
         }
 
         header('Location: ' . $dashboard_url);
