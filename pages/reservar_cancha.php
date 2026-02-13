@@ -335,6 +335,73 @@ $deportes = [
         align-self: auto;
       }
     }
+  .modal-reserva-inteligente {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+  }
+
+  .modal-reserva-inteligente-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+  }
+
+  .opcion-reserva {
+      margin: 15px 0;
+      padding: 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      cursor: pointer;
+  }
+
+  .opcion-reserva input[type="radio"] {
+      margin-right: 10px;
+  }
+
+  .opcion-reserva:hover {
+      border-color: #007bff;
+  }
+
+  .panel-patron {
+      display: none;
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #007bff;
+  }
+
+  .preview-patron {
+      margin-top: 10px;
+      padding: 10px;
+      background: #e9f7ef;
+      border-radius: 6px;
+      font-size: 0.9em;
+  }
+
+  .btn-primary {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+  }
+
+  .btn-primary:hover {
+      background: #0056b3;
+  }
   </style>
 </head>
 <body>
@@ -583,13 +650,8 @@ $deportes = [
     }
     
     function selectDisponibilidad(item) {
-        document.querySelectorAll('.reserva-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-        
-        event.currentTarget.classList.add('selected');
-        reservaSeleccionada = item;
-        mostrarDetalleDisponibilidad(item);
+        // Mostrar modal de reserva inteligente en lugar del comportamiento anterior
+        mostrarModalReservaInteligente(item);
     }
 
     function mostrarDetalleDisponibilidad(item) {
@@ -657,6 +719,180 @@ $deportes = [
         
         console.log('Filtros enviados:', filtros);
         cargarDisponibilidad(filtros);
+    }
+
+    // Variables globales para la reserva actual
+    let reservaActual = null;
+
+    // Función para mostrar el modal de reserva inteligente
+    function mostrarModalReservaInteligente(item) {
+        reservaActual = item;
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-reserva-inteligente';
+        modal.id = 'modalReservaInteligente';
+        modal.innerHTML = `
+            <div class="modal-reserva-inteligente-content">
+                <h3 style="margin-top: 0; color: #333;">Reservar Cancha: ${item.nro_cancha}</h3>
+                <p><strong>Recinto:</strong> ${item.recinto_nombre}</p>
+                <p><strong>Hora:</strong> ${formatFechaEspanol(item.fecha)}, ${item.hora_inicio.substring(0, 5)} - ${item.hora_fin.substring(0, 5)}</p>
+                <p><strong>Valor:</strong> $${parseInt(item.valor_arriendo).toLocaleString('es-CL')}</p>
+                
+                <div class="opcion-reserva" onclick="seleccionarOpcion('simple')">
+                    <input type="radio" id="reservaSimple" name="tipoReserva" value="simple" checked>
+                    <label for="reservaSimple">Reservar este bloque único</label>
+                </div>
+                
+                <div class="opcion-reserva" onclick="seleccionarOpcion('patron')">
+                    <input type="radio" id="reservaPatron" name="tipoReserva" value="patron">
+                    <label for="reservaPatron">Crear patrón de reserva recurrente</label>
+                    
+                    <div id="panelPatron" class="panel-patron">
+                        <div style="margin-bottom: 10px;">
+                            <label><strong>Frecuencia:</strong></label><br>
+                            <select id="frecuenciaPatron" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                                <option value="semanal">Semanal (mismo día)</option>
+                                <option value="quincenal">Quincenal</option>
+                                <option value="mensual">Mensual (mismo día del mes)</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 10px;">
+                            <label><strong>Rango de fechas:</strong></label><br>
+                            <input type="date" id="fechaDesdePatron" style="width: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${item.fecha}">
+                            <span style="display: inline-block; width: 8%; text-align: center;">→</span>
+                            <input type="date" id="fechaHastaPatron" style="width: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${sumarDias(item.fecha, 30)}">
+                        </div>
+                        
+                        <div id="previewPatron" class="preview-patron">
+                            <!-- Preview dinámico -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: right;">
+                    <button onclick="cerrarModalReserva()" style="margin-right: 10px; padding: 10px 20px; border: 1px solid #ccc; border-radius: 6px; background: white; cursor: pointer;">Cancelar</button>
+                    <button onclick="confirmarReservaInteligente()" class="btn-primary">Confirmar Reserva</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+        
+        // Agregar eventos
+        document.getElementById('reservaPatron').addEventListener('change', function() {
+            document.getElementById('panelPatron').style.display = this.checked ? 'block' : 'none';
+            if (this.checked) actualizarPreview();
+        });
+        
+        ['frecuenciaPatron', 'fechaDesdePatron', 'fechaHastaPatron'].forEach(id => {
+            document.getElementById(id).addEventListener('change', actualizarPreview);
+        });
+        
+        actualizarPreview();
+    }
+
+    function seleccionarOpcion(tipo) {
+        document.getElementById('reservaSimple').checked = (tipo === 'simple');
+        document.getElementById('reservaPatron').checked = (tipo === 'patron');
+        document.getElementById('panelPatron').style.display = (tipo === 'patron') ? 'block' : 'none';
+        if (tipo === 'patron') actualizarPreview();
+    }
+
+    function cerrarModalReserva() {
+        const modal = document.getElementById('modalReservaInteligente');
+        if (modal) modal.remove();
+    }
+
+    function confirmarReservaInteligente() {
+        const tipoReserva = document.getElementById('reservaPatron').checked ? 'patron' : 'simple';
+        
+        let tipoPatronAPI = 'simple';
+        if (tipoReserva === 'patron') {
+            const frecuencia = document.getElementById('frecuenciaPatron').value;
+            // Mapear a los valores de tu tabla
+            if (frecuencia === 'semanal') tipoPatronAPI = 'semanal';
+            else if (frecuencia === 'quincenal') tipoPatronAPI = 'semanal'; // o crear nuevo tipo
+            else if (frecuencia === 'mensual') tipoPatronAPI = 'mensual';
+        }
+        
+        const datos = {
+            id_cancha: reservaActual.id_cancha,
+            fecha_base: reservaActual.fecha,
+            hora_inicio: reservaActual.hora_inicio,
+            hora_fin: reservaActual.hora_fin,
+            tipo_patron: tipoPatronAPI
+        };
+        
+        if (tipoReserva === 'patron') {
+            datos.fecha_desde = document.getElementById('fechaDesdePatron').value;
+            datos.fecha_hasta = document.getElementById('fechaHastaPatron').value;
+        }
+        
+        // Enviar a la API
+        fetch('../api/crear_reserva_recurrente.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(datos)
+        })
+        .then(response => response.json())
+        .then(data => {
+            cerrarModalReserva();
+            if (data.success) {
+                mostrarToast('✅ ' + data.message + ` (${data.total_reservas} reservas creadas)`);
+                // Recargar disponibilidad
+                cargarDisponibilidad();
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        })
+        .catch(error => {
+            cerrarModalReserva();
+            mostrarToast('❌ Error al crear la reserva: ' + error.message);
+        });
+    }
+
+    function actualizarPreview() {
+        const frecuencia = document.getElementById('frecuenciaPatron').value;
+        const desde = document.getElementById('fechaDesdePatron').value;
+        const hasta = document.getElementById('fechaHastaPatron').value;
+        
+        // Cálculo aproximado de ocurrencias
+        let ocurrencias = 1;
+        const diasTotales = (new Date(hasta) - new Date(desde)) / (1000 * 60 * 60 * 24);
+        
+        if (frecuencia === 'semanal') {
+            ocurrencias = Math.ceil(diasTotales / 7);
+        } else if (frecuencia === 'quincenal') {
+            ocurrencias = Math.ceil(diasTotales / 15);
+        } else if (frecuencia === 'mensual') {
+            ocurrencias = Math.ceil(diasTotales / 30);
+        }
+        
+        const valorTotal = ocurrencias * parseInt(reservaActual.valor_arriendo);
+        document.getElementById('previewPatron').innerHTML = 
+            `📅 Se reservarán aproximadamente <strong>${ocurrencias}</strong> bloques<br>
+            💰 Total estimado: $${valorTotal.toLocaleString('es-CL')}`;
+    }
+
+    // Funciones auxiliares
+    function formatFechaEspanol(fecha) {
+        const partes = fecha.split('-');
+        return `${partes[2]}-${partes[1]}-${partes[0]}`;
+    }
+
+    function sumarDias(fecha, dias) {
+        const date = new Date(fecha);
+        date.setDate(date.getDate() + dias);
+        return date.toISOString().split('T')[0];
+    }
+
+    function mostrarToast(mensaje) {
+        // Implementa tu sistema de toast notifications
+        alert(mensaje); // Temporal
     }
   </script>
 </body>
