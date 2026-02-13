@@ -44,8 +44,8 @@ if (!$club) {
     exit;
 }
 
-// Verificar que el socio pertenezca a este club
-$stmt = $pdo->prepare("SELECT s.*, p.nombre as puesto_nombre FROM socios s LEFT JOIN puestos p ON s.id_puesto = p.id_puesto WHERE s.id_socio = ? AND s.id_club = ?");
+// Verificar que el socio pertenezca a este club (con JOIN correcto)
+$stmt = $pdo->prepare("SELECT s.*, p.puesto as puesto_nombre FROM socios s LEFT JOIN puestos p ON s.id_puesto = p.id_puesto WHERE s.id_socio = ? AND s.id_club = ?");
 $stmt->execute([$id_socio, $club_id]);
 $socio = $stmt->fetch();
 
@@ -55,7 +55,7 @@ if (!$socio) {
 }
 
 // Obtener puestos disponibles
-$stmt_puestos = $pdo->prepare("SELECT id_puesto, nombre FROM puestos WHERE activo = 1 ORDER BY nombre");
+$stmt_puestos = $pdo->prepare("SELECT id_puesto, puesto FROM puestos WHERE 1=1 ORDER BY puesto");
 $stmt_puestos->execute();
 $puestos = $stmt_puestos->fetchAll();
 
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($id_puesto > 0) {
             // Verificar que el puesto exista
-            $stmt_check = $pdo->prepare("SELECT id_puesto FROM puestos WHERE id_puesto = ? AND activo = 1");
+            $stmt_check = $pdo->prepare("SELECT id_puesto FROM puestos WHERE id_puesto = ?");
             $stmt_check->execute([$id_puesto]);
             if (!$stmt_check->fetch()) {
                 throw new Exception('Puesto no válido');
@@ -361,13 +361,13 @@ $datos_completos = (bool)$socio['datos_completos'];
                     <?php foreach ($puestos as $puesto): ?>
                         <option value="<?= $puesto['id_puesto'] ?>" 
                                 <?= $puesto['id_puesto'] == $id_puesto_actual ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($puesto['nombre']) ?>
+                            <?= htmlspecialchars($puesto['puesto']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
             
-            <div class="btn-container">
+            <div class "btn-container">
                 <button type="button" class="btn btn-secondary" onclick="window.history.back()">
                     Cancelar
                 </button>
