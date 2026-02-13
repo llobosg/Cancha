@@ -103,6 +103,8 @@ try {
                 throw new Exception('Estado no válido');
             }
             
+            $id_cancha_generar = null; // Variable para guardar el ID
+
             if ($action === 'insert') {
                 // Primera inserción sin fechas
                 $stmt = $pdo->prepare("
@@ -118,8 +120,9 @@ try {
                     $hora_inicio, $hora_fin, $dias_json, $activa, $estado
                 ]);
                 
-                // Obtener el ID de la cancha recién insertada
+                // Obtener el ID INMEDIATAMENTE después del INSERT
                 $id_cancha = $pdo->lastInsertId();
+                $id_cancha_generar = $id_cancha; // ✅ Guardar para usar después
                 
                 // Verificar que el ID sea válido
                 if ($id_cancha) {
@@ -132,21 +135,9 @@ try {
                     ");
                     $update_result = $update_stmt->execute([$id_cancha]);
                     
-                    // Logging detallado
                     error_log("=== DIAGNÓSTICO CANCHA ===");
                     error_log("ID Cancha creada: $id_cancha");
                     error_log("Actualización fechas resultado: " . ($update_result ? 'ÉXITO' : 'FALLO'));
-                    
-                    // Verificar las fechas guardadas
-                    $verify_stmt = $pdo->prepare("SELECT fecha_desde, fecha_hasta FROM canchas WHERE id_cancha = ?");
-                    $verify_stmt->execute([$id_cancha]);
-                    $fechas_guardadas = $verify_stmt->fetch();
-                    
-                    if ($fechas_guardadas) {
-                        error_log("Fechas guardadas en BD: {$fechas_guardadas['fecha_desde']} - {$fechas_guardadas['fecha_hasta']}");
-                    } else {
-                        error_log("ERROR: No se pudieron verificar las fechas guardadas");
-                    }
                 }
                 
             } else {
@@ -177,7 +168,7 @@ try {
                 ]);
             }
             break;
-            
+            $id_cancha_generar = (int)($_POST['id_cancha'] ?? 0);    
         case 'delete':
             $id_cancha = (int)($_POST['id_cancha'] ?? 0);
             if (!$id_cancha) {
@@ -198,15 +189,9 @@ try {
     
     // Generar disponibilidad solo si es necesario
     if ($action === 'insert' || $action === 'update') {
-        if ($action === 'insert') {
-            $id_cancha = $pdo->lastInsertId();
-        } else {
-            $id_cancha = (int)($_POST['id_cancha'] ?? 0);
-        }
-        
-        if ($id_cancha) {
-            error_log("Iniciando generación de disponibilidad para cancha: $id_cancha");
-            generarDisponibilidadSimple($pdo, $id_cancha);
+        if ($id_cancha_generar) { // ✅ Usar la variable guardada
+            error_log("Iniciando generación de disponibilidad para cancha: $id_cancha_generar");
+            generarDisponibilidadSimple($pdo, $id_cancha_generar);
         }
     }
     
