@@ -59,8 +59,9 @@ try {
             break;
             
         default: // semana
-            // Para "semana", mostrar desde hoy (no desde ayer)
+            // Para "semana", mostrar desde HOY (no desde ayer)
             $fecha_inicio = date('Y-m-d');
+            $fecha_fin = date('Y-m-d', strtotime('+7 days'));
             $condicion_hora = "";
             $params_hora = [];
             break;
@@ -95,7 +96,6 @@ try {
     }
 
     $where_conditions = [];
-
     // Filtros adicionales
     if (!empty($_POST['deporte']) && $_POST['deporte'] !== '') {
         $where_conditions[] = "c.id_deporte = ?";
@@ -129,11 +129,15 @@ try {
             break;
             
         case 'regenerar_disponibilidad':
-            // Solo para admins o debugging
-            require_once __DIR__ . '/generar_disponibilidad.php';
-            $resultado = generarDisponibilidad($pdo, 30);
-            echo json_encode($resultado);
-            return;
+        // Solo para admins
+        if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+            throw new Exception('Acceso no autorizado', 403);
+        }
+        
+        require_once __DIR__ . '/generar_disponibilidad.php';
+        $resultado = generarDisponibilidad($pdo, 30);
+        echo json_encode($resultado);
+        break;
             
         default:
             throw new Exception('Acción no válida');

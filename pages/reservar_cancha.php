@@ -482,27 +482,26 @@ $deportes = [
         }
     }
 
-    // ✅ Función para establecer el rango inicial correcto
+    // Función para establecer rango inicial
     function establecerRangoInicial() {
-        // Por defecto, mostrar "hoy" al cargar la página
+        // Establecer el valor del select a "hoy"
         document.getElementById('filtroFecha').value = 'hoy';
-        cargarDisponibilidad({ rango: 'hoy' });
+        
+        // Aplicar los filtros inmediatamente
+        aplicarFiltros();
     }
 
-    // ✅ Llamar al cargar la página
+    // Ejecutar al cargar la página
     document.addEventListener('DOMContentLoaded', function() {
-        establecerRangoInicial();
+        // Asegurar que el DOM esté listo
+        setTimeout(function() {
+            establecerRangoInicial();
+        }, 100);
         
         // Event listeners para los filtros
-        document.getElementById('filtroDeporte').addEventListener('change', function() {
-            aplicarFiltros();
-        });
-        document.getElementById('filtroRecinto').addEventListener('change', function() {
-            aplicarFiltros();
-        });
-        document.getElementById('filtroFecha').addEventListener('change', function() {
-            aplicarFiltros();
-        });
+        document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroRecinto').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroFecha').addEventListener('change', aplicarFiltros);
     });
 
     function renderizarDisponibilidad(disponibilidad) {
@@ -626,15 +625,6 @@ $deportes = [
     function reservarCancha() {
         if (!validarReservaSeleccionada()) return;
         alert('Funcionalidad de reserva en desarrollo');
-    }
-
-    function aplicarFiltros() {
-        const filtros = {
-            deporte: document.getElementById('filtroDeporte').value,
-            recinto: document.getElementById('filtroRecinto').value,
-            rango: document.getElementById('filtroFecha').value
-        };
-        cargarDisponibilidad(filtros);
     }
 
     document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
