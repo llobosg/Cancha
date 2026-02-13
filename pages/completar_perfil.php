@@ -45,7 +45,7 @@ if (!$club) {
 }
 
 // Verificar que el socio pertenezca a este club
-$stmt = $pdo->prepare("SELECT id_socio, nombre, email, celular, datos_completos FROM socios WHERE id_socio = ? AND id_club = ?");
+$stmt = $pdo->prepare("SELECT s.*, p.nombre as puesto_nombre FROM socios s LEFT JOIN puestos p ON s.id_puesto = p.id_puesto WHERE s.id_socio = ? AND s.id_club = ?");
 $stmt->execute([$id_socio, $club_id]);
 $socio = $stmt->fetch();
 
@@ -54,16 +54,37 @@ if (!$socio) {
     exit;
 }
 
-// Guardar en sesión
-$_SESSION['club_id'] = $club_id;
+// Obtener puestos disponibles
+$stmt_puestos = $pdo->prepare("SELECT id_puesto, nombre FROM puestos WHERE activo = 1 ORDER BY nombre");
+$stmt_puestos->execute();
+$puestos = $stmt_puestos->fetchAll();
 
 // Procesar formulario POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $fecha_nac = trim($_POST['fecha_nac'] ?? '');
         $celular = trim($_POST['celular'] ?? '');
         $direccion = trim($_POST['direccion'] ?? '');
+        $foto_url = trim($_POST['foto_url'] ?? '');
+        $id_puesto = (int)($_POST['id_puesto'] ?? 0);
         
         // Validaciones
+        if (empty($fecha_nac)) {
+            throw new Exception('La fecha de nacimiento es requerida');
+        }
+        
+        $fecha_nac_obj = DateTime::createFromFormat('Y-m-d', $fecha_nac);
+        if (!$fecha_nac_obj || $fecha_nac_obj->format('Y-m-d') !== $fecha_nac) {
+            throw new Exception('Formato de fecha de nacimiento inválido (YYYY-MM-DD)');
+        }
+        
+        // Verificar que sea mayor de edad (opcional)
+        $hoy = new DateTime();
+        $edad = $hoy->diff($fecha_nac_obj)->y;
+        if ($edad < 13) {
+            throw new Exception('Debes tener al menos 13 años');
+        }
+        
         if (empty($celular)) {
             throw new Exception('El número de celular es requerido');
         }
@@ -80,13 +101,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('La dirección debe tener al menos 5 caracteres');
         }
         
+        if (!empty($foto_url) && !filter_var($foto_url, FILTER_VALIDATE_URL)) {
+            throw new Exception('URL de foto inválida');
+        }
+        
+        if ($id_puesto > 0) {
+            // Verificar que el puesto exista
+            $stmt_check = $pdo->prepare("SELECT id_puesto FROM puestos WHERE id_puesto = ? AND activo = 1");
+            $stmt_check->execute([$id_puesto]);
+            if (!$stmt_check->fetch()) {
+                throw new Exception('Puesto no válido');
+            }
+        }
+        
         // Actualizar perfil
         $stmt = $pdo->prepare("
             UPDATE socios 
-            SET celular = ?, direccion = ?, datos_completos = 1, updated_at = NOW()
+            SET 
+                fecha_nac = ?, 
+                celular = ?, 
+                direccion = ?, 
+                foto_url = ?, 
+                id_puesto = ?,
+                datos_completos = 1, 
+                updated_at = NOW()
             WHERE id_socio = ? AND id_club = ?
         ");
-        $stmt->execute([$celular, $direccion, $id_socio, $club_id]);
+        $stmt->execute([
+            $fecha_nac, 
+            $celular, 
+            $direccion, 
+            $foto_url ?: null, 
+            $id_puesto ?: null,
+            $id_socio, 
+            $club_id
+        ]);
         
         // Redirigir al dashboard con mensaje de éxito
         $_SESSION['mensaje_exito'] = 'Perfil completado exitosamente';
@@ -99,8 +148,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Obtener datos actuales
+$fecha_nac_actual = $socio['fecha_nac'] ?? '';
 $celular_actual = $socio['celular'] ?? '';
 $direccion_actual = $socio['direccion'] ?? '';
+$foto_url_actual = $socio['foto_url'] ?? '';
+$id_puesto_actual = $socio['id_puesto'] ?? 0;
 $datos_completos = (bool)$socio['datos_completos'];
 ?>
 <!DOCTYPE html>
@@ -133,6 +185,8 @@ $datos_completos = (bool)$socio['datos_completos'];
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             width: 100%;
             max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         
         .header {
@@ -163,7 +217,8 @@ $datos_completos = (bool)$socio['datos_completos'];
             font-size: 14px;
         }
         
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e1e5e9;
@@ -172,7 +227,8 @@ $datos_completos = (bool)$socio['datos_completos'];
             transition: border-color 0.3s;
         }
         
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -253,6 +309,17 @@ $datos_completos = (bool)$socio['datos_completos'];
         
         <form method="POST" action="">
             <div class="form-group">
+                <label for="fecha_nac">Fecha de Nacimiento *</label>
+                <input 
+                    type="date" 
+                    id="fecha_nac" 
+                    name="fecha_nac" 
+                    value="<?= htmlspecialchars($fecha_nac_actual) ?>"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
                 <label for="celular">Número de Celular *</label>
                 <input 
                     type="tel" 
@@ -276,6 +343,30 @@ $datos_completos = (bool)$socio['datos_completos'];
                 >
             </div>
             
+            <div class="form-group">
+                <label for="foto_url">URL de Foto (opcional)</label>
+                <input 
+                    type="url" 
+                    id="foto_url" 
+                    name="foto_url" 
+                    value="<?= htmlspecialchars($foto_url_actual) ?>"
+                    placeholder="https://ejemplo.com/foto.jpg"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="id_puesto">Puesto en el Club</label>
+                <select id="id_puesto" name="id_puesto">
+                    <option value="">Seleccionar puesto</option>
+                    <?php foreach ($puestos as $puesto): ?>
+                        <option value="<?= $puesto['id_puesto'] ?>" 
+                                <?= $puesto['id_puesto'] == $id_puesto_actual ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($puesto['nombre']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
             <div class="btn-container">
                 <button type="button" class="btn btn-secondary" onclick="window.history.back()">
                     Cancelar
@@ -290,8 +381,15 @@ $datos_completos = (bool)$socio['datos_completos'];
     <script>
         // Validación adicional en frontend
         document.querySelector('form').addEventListener('submit', function(e) {
+            const fecha_nac = document.getElementById('fecha_nac').value;
             const celular = document.getElementById('celular').value.trim();
             const direccion = document.getElementById('direccion').value.trim();
+            
+            if (!fecha_nac) {
+                e.preventDefault();
+                alert('La fecha de nacimiento es requerida');
+                return;
+            }
             
             if (celular.length < 8) {
                 e.preventDefault();
