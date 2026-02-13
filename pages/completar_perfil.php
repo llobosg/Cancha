@@ -139,7 +139,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Redirigir al dashboard con mensaje de éxito
         $_SESSION['mensaje_exito'] = 'Perfil completado exitosamente';
-        header('Location: ../pages/dashboard.php');
+
+        // Determinar la URL de redirección correcta
+        $dashboard_url = '../pages/dashboard_socio.php';
+
+        // Si tu dashboard_socio.php necesita el ID del club
+        if (isset($club_id) && $club_id > 0) {
+            $dashboard_url .= '?id=' . $club_id;
+        }
+
+        header('Location: ' . $dashboard_url);
         exit;
         
     } catch (Exception $e) {
