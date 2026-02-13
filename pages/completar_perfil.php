@@ -10,43 +10,41 @@ if (!isset($_SESSION['google_email']) && !isset($_SESSION['user_email'])) {
 
 $user_email = $_SESSION['google_email'] ?? $_SESSION['user_email'];
 
-// Obtener club desde URL
-$club_slug_from_url = $_GET['id'] ?? '';
-if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-    alert('Error sale de Obtener club desde URL');
-    header('Location: ../index.php');
-    exit;
-}
+// Obtener club desde URL - ahora acepta ID numérico
+$club_id_from_url = $_GET['id'] ?? '';
 
-// Encontrar club
-$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre FROM clubs WHERE email_verified = 1");
-$stmt_club->execute();
-$clubs = $stmt_club->fetchAll();
-
-$club_id = null;
-$club_nombre = '';
-$club_slug = null;
-
-foreach ($clubs as $c) {
-    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    if ($generated_slug === $club_slug_from_url) {
-        $club_id = (int)$c['id_club'];
-        $club_nombre = $c['nombre'];
-        $club_slug = $generated_slug;
-        break;
+// Validar que sea un número entero positivo
+if (!$club_id_from_url || !is_numeric($club_id_from_url) || (int)$club_id_from_url <= 0) {
+    // Si no hay ID válido, intentar obtener del session
+    if (isset($_SESSION['club_id'])) {
+        $club_id_from_url = $_SESSION['club_id'];
+    } else {
+        // Redirigir a selección de club o dashboard
+        header('Location: ../pages/dashboard.php');
+        exit;
     }
 }
 
-if (!$club_id) {
-    header('Location: ../index.php');
+$club_id = (int)$club_id_from_url;
+
+// Verificar que el club exista y el usuario pertenezca a él
+$stmt = $pdo->prepare("SELECT id_club FROM clubs WHERE id_club = ?");
+$stmt->execute([$club_id]);
+if (!$stmt->fetch()) {
+    header('Location: ../pages/dashboard.php');
     exit;
 }
 
-// Validar slug básico
-if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-    header('Location: ../index.php');
+// Verificar que el socio pertenezca a este club
+$stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+$stmt->execute([$_SESSION['id_socio'] ?? 0, $club_id]);
+if (!$stmt->fetch()) {
+    header('Location: ../pages/dashboard.php');
     exit;
 }
+
+// Guardar en sesión
+$_SESSION['club_id'] = $club_id;
 
 // Buscar el club que coincide con el slug
 $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre FROM clubs WHERE email_verified = 1");
