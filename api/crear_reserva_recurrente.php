@@ -83,23 +83,48 @@ function generarFechasPatron($tipo, $desde, $hasta, $fecha_base) {
     $fecha_fin = new DateTime($hasta);
     $dia_base = (int)(new DateTime($fecha_base))->format('N'); // 1=lunes, 7=domingo
     
-    while ($fecha_actual <= $fecha_fin) {
-        if ($tipo === 'semanal') {
-            // Mismo día de la semana que la fecha base
+    // Asegurar que la fecha_base esté en el rango
+    $fecha_base_obj = new DateTime($fecha_base);
+    if ($fecha_base_obj >= $fecha_actual && $fecha_base_obj <= $fecha_fin) {
+        if ($tipo === 'semanal' && (int)$fecha_base_obj->format('N') === $dia_base) {
+            $fechas[] = $fecha_base_obj->format('Y-m-d');
+        } elseif ($tipo !== 'semanal') {
+            $fechas[] = $fecha_base_obj->format('Y-m-d');
+        }
+    }
+    
+    if ($tipo === 'semanal') {
+        // Encontrar la primera ocurrencia del mismo día de la semana
+        while ((int)$fecha_actual->format('N') !== $dia_base && $fecha_actual <= $fecha_fin) {
+            $fecha_actual->modify('+1 day');
+        }
+        
+        // Generar todas las ocurrencias
+        while ($fecha_actual <= $fecha_fin) {
             if ((int)$fecha_actual->format('N') === $dia_base) {
                 $fechas[] = $fecha_actual->format('Y-m-d');
             }
             $fecha_actual->modify('+1 day');
-            
-        } elseif ($tipo === 'quincenal') {
+        }
+        
+    } elseif ($tipo === 'quincenal') {
+        $fecha_actual = new DateTime($desde);
+        while ($fecha_actual <= $fecha_fin) {
             $fechas[] = $fecha_actual->format('Y-m-d');
             $fecha_actual->modify('+15 days');
-            
-        } elseif ($tipo === 'mensual') {
+        }
+        
+    } elseif ($tipo === 'mensual') {
+        $fecha_actual = new DateTime($desde);
+        while ($fecha_actual <= $fecha_fin) {
             $fechas[] = $fecha_actual->format('Y-m-d');
             $fecha_actual->modify('+1 month');
         }
     }
+    
+    // Eliminar duplicados y ordenar
+    $fechas = array_unique($fechas);
+    sort($fechas);
     
     return $fechas;
 }

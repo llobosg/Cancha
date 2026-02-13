@@ -859,23 +859,76 @@ $deportes = [
         const frecuencia = document.getElementById('frecuenciaPatron').value;
         const desde = document.getElementById('fechaDesdePatron').value;
         const hasta = document.getElementById('fechaHastaPatron').value;
+        const fechaBase = reservaActual.fecha; // La fecha base seleccionada
         
-        // Cálculo aproximado de ocurrencias
-        let ocurrencias = 1;
-        const diasTotales = (new Date(hasta) - new Date(desde)) / (1000 * 60 * 60 * 24);
-        
-        if (frecuencia === 'semanal') {
-            ocurrencias = Math.ceil(diasTotales / 7);
-        } else if (frecuencia === 'quincenal') {
-            ocurrencias = Math.ceil(diasTotales / 15);
-        } else if (frecuencia === 'mensual') {
-            ocurrencias = Math.ceil(diasTotales / 30);
+        // Función para generar fechas reales (igual que el backend)
+        function generarFechasReales(tipo, desde, hasta, fechaBase) {
+            const fechas = [];
+            const fechaActual = new Date(desde);
+            const fechaFin = new Date(hasta);
+            const fechaBaseObj = new Date(fechaBase);
+            const diaBase = fechaBaseObj.getDay(); // 0=domingo, 6=sábado
+            
+            // Ajustar: JavaScript getDay() vs PHP format('N')
+            // PHP: 1=lunes, 7=domingo
+            // JS: 0=domingo, 6=sábado
+            const diaBasePHP = diaBase === 0 ? 7 : diaBase;
+            
+            // Incluir fecha base si está en rango
+            if (fechaBaseObj >= new Date(desde) && fechaBaseObj <= fechaFin) {
+                if (tipo === 'semanal') {
+                    const diaFechaBase = fechaBaseObj.getDay();
+                    const diaFechaBasePHP = diaFechaBase === 0 ? 7 : diaFechaBase;
+                    if (diaFechaBasePHP === diaBasePHP) {
+                        fechas.push(fechaBase);
+                    }
+                } else {
+                    fechas.push(fechaBase);
+                }
+            }
+            
+            if (tipo === 'semanal') {
+                // Encontrar primer día coincidente
+                let fechaTemp = new Date(desde);
+                while (fechaTemp <= fechaFin) {
+                    const diaActual = fechaTemp.getDay();
+                    const diaActualPHP = diaActual === 0 ? 7 : diaActual;
+                    if (diaActualPHP === diaBasePHP) {
+                        const fechaStr = fechaTemp.toISOString().split('T')[0];
+                        if (!fechas.includes(fechaStr)) {
+                            fechas.push(fechaStr);
+                        }
+                    }
+                    fechaTemp.setDate(fechaTemp.getDate() + 1);
+                }
+                
+            } else if (tipo === 'quincenal') {
+                let fechaTemp = new Date(desde);
+                while (fechaTemp <= fechaFin) {
+                    fechas.push(fechaTemp.toISOString().split('T')[0]);
+                    fechaTemp.setDate(fechaTemp.getDate() + 15);
+                }
+                
+            } else if (tipo === 'mensual') {
+                let fechaTemp = new Date(desde);
+                while (fechaTemp <= fechaFin) {
+                    fechas.push(fechaTemp.toISOString().split('T')[0]);
+                    fechaTemp.setMonth(fechaTemp.getMonth() + 1);
+                }
+            }
+            
+            // Eliminar duplicados
+            return [...new Set(fechas)].sort();
         }
         
+        // Generar fechas reales
+        const fechasReales = generarFechasReales(frecuencia, desde, hasta, fechaBase);
+        const ocurrencias = fechasReales.length;
         const valorTotal = ocurrencias * parseInt(reservaActual.valor_arriendo);
+        
         document.getElementById('previewPatron').innerHTML = 
-            `<div style="color: #3e0964ff;">📅 Se reservarán aproximadamente <strong>${ocurrencias}</strong> bloques<br>
-            💰 Total estimado: $${valorTotal.toLocaleString('es-CL')}</div>`;
+            `📅 Se reservarán <strong>${ocurrencias}</strong> bloques<br>
+            💰 Total estimado: $${valorTotal.toLocaleString('es-CL')}`;
     }
 
     // Funciones auxiliares
