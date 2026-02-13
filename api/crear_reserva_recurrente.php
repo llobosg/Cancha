@@ -24,7 +24,7 @@ try {
     }
     
     // Obtener datos del socio y cancha
-    $stmt_socio = $pdo->prepare("SELECT nombre, email, telefono FROM socios WHERE id_socio = ? AND id_club = ?");
+    $stmt_socio = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ? AND id_club = ?");
     $stmt_socio->execute([$id_socio, $id_club]);
     $socio = $stmt_socio->fetch();
     
@@ -179,7 +179,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             $id_socio,
             $socio['nombre'],
             $socio['email'],
-            $socio['telefono'],
+            $socio['celular'],
             $fecha,
             $hora_inicio,
             $hora_fin,
