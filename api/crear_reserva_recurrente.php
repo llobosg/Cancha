@@ -73,7 +73,8 @@ try {
     ]);
     
 } catch (Exception $e) {
-    http_response_code($e->getCode() ?: 400);
+    // Siempre usar código 400 para errores de aplicación
+    http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
