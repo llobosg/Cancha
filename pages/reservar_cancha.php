@@ -874,8 +874,8 @@ $deportes = [
         
         const valorTotal = ocurrencias * parseInt(reservaActual.valor_arriendo);
         document.getElementById('previewPatron').innerHTML = 
-            `📅 Se reservarán aproximadamente <strong>${ocurrencias}</strong> bloques<br>
-            💰 Total estimado: $${valorTotal.toLocaleString('es-CL')}`;
+            `<div style="color: #3e0964ff;">📅 Se reservarán aproximadamente <strong>${ocurrencias}</strong> bloques<br>
+            💰 Total estimado: $${valorTotal.toLocaleString('es-CL')}</div>`;
     }
 
     // Funciones auxiliares
