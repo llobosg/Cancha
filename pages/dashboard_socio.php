@@ -382,7 +382,7 @@ $_SESSION['current_club'] = $club_slug;
           <?php endif; ?>
         </div>
         <div class="club-info">
-          <h1><?= htmlspecialchars($club_nombre) ?></h1>
+          <h1><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h1>
           <p>Tu cancha está lista</p>
         </div>
       </div>
@@ -438,7 +438,7 @@ $_SESSION['current_club'] = $club_slug;
     <?php else: ?>
       <div style="text-align: center; margin: 2rem 0;">
         <a href="mantenedor_socios.php" class="update-profile-btn">
-          👤 Actualizar mi perfil
+          👤 Actualizar perfil <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?>
         </a>
       </div>
     <?php endif; ?>
