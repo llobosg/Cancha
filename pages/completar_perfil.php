@@ -22,12 +22,10 @@ $club_id_from_url = $_GET['id'] ?? '';
 
 // Validar que sea un número entero positivo
 if (!$club_id_from_url || !is_numeric($club_id_from_url) || (int)$club_id_from_url <= 0) {
-    // Si no hay ID válido en URL, intentar obtener del session
     if (isset($_SESSION['club_id'])) {
         $club_id = (int)$_SESSION['club_id'];
     } else {
-        // Redirigir a dashboard si no hay club
-        header('Location: ../pages/dashboard.php');
+        header('Location: ../pages/dashboard_socio.php');
         exit;
     }
 } else {
@@ -40,17 +38,17 @@ $stmt->execute([$club_id]);
 $club = $stmt->fetch();
 
 if (!$club) {
-    header('Location: ../pages/dashboard.php');
+    header('Location: ../pages/dashboard_socio.php');
     exit;
 }
 
-// Verificar que el socio pertenezca a este club (con JOIN correcto)
+// Verificar que el socio pertenezca a este club
 $stmt = $pdo->prepare("SELECT s.*, p.puesto as puesto_nombre FROM socios s LEFT JOIN puestos p ON s.id_puesto = p.id_puesto WHERE s.id_socio = ? AND s.id_club = ?");
 $stmt->execute([$id_socio, $club_id]);
 $socio = $stmt->fetch();
 
 if (!$socio) {
-    header('Location: ../pages/dashboard.php');
+    header('Location: ../pages/dashboard_socio.php');
     exit;
 }
 
@@ -67,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $direccion = trim($_POST['direccion'] ?? '');
         $foto_url = trim($_POST['foto_url'] ?? '');
         $id_puesto = (int)($_POST['id_puesto'] ?? 0);
+        $genero = trim($_POST['genero'] ?? '');
+        $email = trim($_POST['email'] ?? '');
         
         // Validaciones
         if (empty($fecha_nac)) {
@@ -78,7 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Formato de fecha de nacimiento inválido (YYYY-MM-DD)');
         }
         
-        // Verificar que sea mayor de edad (opcional)
         $hoy = new DateTime();
         $edad = $hoy->diff($fecha_nac_obj)->y;
         if ($edad < 13) {
@@ -106,12 +105,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($id_puesto > 0) {
-            // Verificar que el puesto exista
             $stmt_check = $pdo->prepare("SELECT id_puesto FROM puestos WHERE id_puesto = ?");
             $stmt_check->execute([$id_puesto]);
             if (!$stmt_check->fetch()) {
                 throw new Exception('Puesto no válido');
             }
+        }
+        
+        // Validación de género
+        $generos_validos = ['Femenino', 'Masculino', 'Otro'];
+        if (!in_array($genero, $generos_validos)) {
+            throw new Exception('Género no válido');
+        }
+        
+        // Validación de email
+        if (empty($email)) {
+            throw new Exception('El correo electrónico es requerido');
+        }
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('Formato de correo electrónico inválido');
+        }
+        
+        // Verificar si el email ya existe para otro socio
+        $stmt_check_email = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_socio != ? AND id_club = ?");
+        $stmt_check_email->execute([$email, $id_socio, $club_id]);
+        if ($stmt_check_email->fetch()) {
+            throw new Exception('Este correo electrónico ya está registrado en este club');
         }
         
         // Actualizar perfil
@@ -123,6 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 direccion = ?, 
                 foto_url = ?, 
                 id_puesto = ?,
+                genero = ?,
+                email = ?,
                 datos_completos = 1, 
                 updated_at = NOW()
             WHERE id_socio = ? AND id_club = ?
@@ -133,26 +155,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $direccion, 
             $foto_url ?: null, 
             $id_puesto ?: null,
+            $genero,
+            $email,
             $id_socio, 
             $club_id
         ]);
         
-        // Redirigir al dashboard con mensaje de éxito
-        $_SESSION['mensaje_exito'] = 'Perfil completado exitosamente';
-
-        // Obtener el club_slug correcto (8 caracteres)
+        // Actualizar la sesión con el nuevo email si cambió
+        if ($email !== $socio['email']) {
+            if (isset($_SESSION['google_email'])) {
+                $_SESSION['google_email'] = $email;
+            } else {
+                $_SESSION['user_email'] = $email;
+            }
+        }
+        
+        $_SESSION['mensaje_exito'] = 'Perfil actualizado exitosamente';
+        
+        // Generar club_slug para redirección
         $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE id_club = ?");
         $stmt_club->execute([$club_id]);
         $club_data = $stmt_club->fetch();
-
+        
         if ($club_data) {
             $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
             $dashboard_url = '../pages/dashboard_socio.php?id_club=' . $club_slug;
         } else {
-            // Fallback si hay algún error
-            $dashboard_url = '../index.php';
+            $dashboard_url = '../pages/dashboard_socio.php';
         }
-
+        
         header('Location: ' . $dashboard_url);
         exit;
         
@@ -167,6 +198,8 @@ $celular_actual = $socio['celular'] ?? '';
 $direccion_actual = $socio['direccion'] ?? '';
 $foto_url_actual = $socio['foto_url'] ?? '';
 $id_puesto_actual = $socio['id_puesto'] ?? 0;
+$genero_actual = $socio['genero'] ?? 'Femenino';
+$email_actual = $socio['email'] ?? '';
 $datos_completos = (bool)$socio['datos_completos'];
 ?>
 <!DOCTYPE html>
@@ -174,7 +207,7 @@ $datos_completos = (bool)$socio['datos_completos'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Completar Perfil - <?= htmlspecialchars($club['nombre']) ?></title>
+    <title><?= $datos_completos ? 'Actualizar Perfil' : 'Completar Perfil' ?> - <?= htmlspecialchars($club['nombre']) ?></title>
     <style>
         * {
             margin: 0;
@@ -305,7 +338,7 @@ $datos_completos = (bool)$socio['datos_completos'];
 <body>
     <div class="container">
         <div class="header">
-            <h1>Completar Mi Perfil</h1>
+            <h1><?= $datos_completos ? 'Actualizar Mi Perfil' : 'Completar Mi Perfil' ?></h1>
             <p><?= htmlspecialchars($club['nombre']) ?></p>
         </div>
         
@@ -323,6 +356,18 @@ $datos_completos = (bool)$socio['datos_completos'];
         
         <form method="POST" action="">
             <div class="form-group">
+                <label for="email">Correo Electrónico *</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    value="<?= htmlspecialchars($email_actual) ?>"
+                    placeholder="tu@email.com"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
                 <label for="fecha_nac">Fecha de Nacimiento *</label>
                 <input 
                     type="date" 
@@ -331,6 +376,16 @@ $datos_completos = (bool)$socio['datos_completos'];
                     value="<?= htmlspecialchars($fecha_nac_actual) ?>"
                     required
                 >
+            </div>
+            
+            <div class="form-group">
+                <label for="genero">Género *</label>
+                <select id="genero" name="genero" required>
+                    <option value="">Seleccionar género</option>
+                    <option value="Femenino" <?= $genero_actual === 'Femenino' ? 'selected' : '' ?>>Femenino</option>
+                    <option value="Masculino" <?= $genero_actual === 'Masculino' ? 'selected' : '' ?>>Masculino</option>
+                    <option value="Otro" <?= $genero_actual === 'Otro' ? 'selected' : '' ?>>Otro</option>
+                </select>
             </div>
             
             <div class="form-group">
@@ -381,27 +436,40 @@ $datos_completos = (bool)$socio['datos_completos'];
                 </select>
             </div>
             
-            <div class "btn-container">
+            <div class="btn-container">
                 <button type="button" class="btn btn-secondary" onclick="window.history.back()">
                     Cancelar
                 </button>
                 <button type="submit" class="btn btn-primary">
-                    Guardar Perfil
+                    <?= $datos_completos ? 'Actualizar Perfil' : 'Completar Perfil' ?>
                 </button>
             </div>
         </form>
     </div>
     
     <script>
-        // Validación adicional en frontend
         document.querySelector('form').addEventListener('submit', function(e) {
+            const email = document.getElementById('email').value.trim();
             const fecha_nac = document.getElementById('fecha_nac').value;
+            const genero = document.getElementById('genero').value;
             const celular = document.getElementById('celular').value.trim();
             const direccion = document.getElementById('direccion').value.trim();
+            
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                e.preventDefault();
+                alert('Por favor ingresa un correo electrónico válido');
+                return;
+            }
             
             if (!fecha_nac) {
                 e.preventDefault();
                 alert('La fecha de nacimiento es requerida');
+                return;
+            }
+            
+            if (!genero) {
+                e.preventDefault();
+                alert('Por favor selecciona un género');
                 return;
             }
             
