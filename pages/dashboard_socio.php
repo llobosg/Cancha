@@ -53,18 +53,22 @@ if (!$club_id) {
 $_SESSION['current_club'] = $club_slug;
 $_SESSION['club_id'] = $club_id;
 
-// 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO 🔥
+// 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS 🔥
 $id_socio = null;
+$socio_actual = null;
 
 // Verificar si ya tenemos id_socio en sesión y es válido
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     
-    // Validar que el socio pertenece al club actual
-    $stmt_validate = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+    // Validar que el socio pertenece al club actual Y obtener sus datos completos
+    $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ?");
     $stmt_validate->execute([$id_socio, $club_id]);
-    if (!$stmt_validate->fetch()) {
+    $socio_actual = $stmt_validate->fetch();
+    
+    if (!$socio_actual) {
         $id_socio = null; // Invalidar si no pertenece al club
+        $socio_actual = null;
     }
 }
 
@@ -105,6 +109,13 @@ if (!$id_socio) {
 } else {
     // Ya tenemos id_socio válido, asegurarnos de guardarlo en sesión
     $_SESSION['id_socio'] = $id_socio;
+}
+
+// Asegurar que $socio_actual esté definida (doble verificación)
+if (!$socio_actual) {
+    $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ? LIMIT 1");
+    $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
+    $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario'];
 }
 
 // Guardar en sesión (asegurar que siempre estén presentes)
