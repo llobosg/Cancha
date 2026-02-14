@@ -394,20 +394,28 @@ $_SESSION['current_club'] = $club_slug;
       <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
     </div>
 
-    <!-- Botones condicionales según datos_completos -->
-    <?php if (!$socio_actual || !$socio_actual['datos_completos']): ?>
-      <div class="welcome-message">
-        <h3>👋 ¡Bienvenido!</h3>
-        <p>Te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
-        <ul>
-          <li>📞 Teléfono de contacto</li>
-          <li>🏠 Dirección completa</li>
-          <li>👤 Información adicional</li>
-        </ul>
-        <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
-          Completar mi perfil ahora
-        </a>
-      </div>
+    <?php
+      // Asegurar que $socio_actual esté definida
+      if (!isset($socio_actual)) {
+          $stmt_socio = $pdo->prepare("SELECT nombre, email, genero FROM socios WHERE id_socio = ? AND id_club = ?");
+          $stmt_socio->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
+          $socio_actual = $stmt_socio->fetch() ?: ['nombre' => 'Usuario', 'email' => '', 'genero' => ''];
+      }
+
+      //-- Botones condicionales según datos_completos -->
+      if (!$socio_actual || !$socio_actual['datos_completos']): ?>
+        <div class="welcome-message">
+          <h3>👋 ¡Bienvenido!</h3>
+          <p>Te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+          <ul>
+            <li>📞 Teléfono de contacto</li>
+            <li>🏠 Dirección completa</li>
+            <li>👤 Información adicional</li>
+          </ul>
+          <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
+            Completar mi perfil ahora
+          </a>
+        </div>
     <?php else: ?>
       <div style="text-align: center; margin: 2rem 0;">
         <a href="mantenedor_socios.php" class="update-profile-btn">
