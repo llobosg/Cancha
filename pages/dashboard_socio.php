@@ -120,7 +120,7 @@ $_SESSION['current_club'] = $club_slug;
 ?>
 
 <?php
-// Mostrar cualquier reserva confirmada como evento
+// 🔥 CONSULTA PARA PRÓXIMO EVENTO 🔥
 $stmt_evento = $pdo->prepare("
     SELECT 
         r.id_reserva,
@@ -132,7 +132,8 @@ $stmt_evento = $pdo->prepare("
         te.players,
         te.tipoevento AS tipo_evento,
         COUNT(i.id_inscrito) AS inscritos_actuales,
-        c.nombre_cancha
+        c.nombre_cancha,
+        r.tipo_reserva  -- ← ¡AGREGAR ESTA LÍNEA!
     FROM reservas r
     JOIN canchas c ON r.id_cancha = c.id_cancha
     JOIN tipoeventos te ON c.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
@@ -141,7 +142,6 @@ $stmt_evento = $pdo->prepare("
         r.id_club = ? 
         AND r.fecha >= CURDATE()
         AND r.estado = 'confirmada'
-        -- Eliminar el filtro de tipo_reserva
     GROUP BY 
         r.id_reserva,
         r.id_club,
@@ -151,7 +151,8 @@ $stmt_evento = $pdo->prepare("
         c.id_deporte,
         te.players,
         te.tipoevento,
-        c.nombre_cancha
+        c.nombre_cancha,
+        r.tipo_reserva  -- ← ¡Y AGREGAR ESTA LÍNEA!
     ORDER BY r.fecha ASC, r.hora_inicio ASC
     LIMIT 1
 ");
