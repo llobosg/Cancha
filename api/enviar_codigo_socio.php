@@ -167,7 +167,12 @@ try {
         error_log("Correo fallido para socio $id_socio");
     }
 
-    echo json_encode(['success' => true, 'id_socio' => $id_socio, 'club_slug' => $club_slug]);
+    $response_data = [
+        'success' => true,
+        'id_socio' => $id_socio,
+        'club_slug' => $club_slug
+    ];
+    echo json_encode($response_data);
 
     if (data.success) {
         console.log('Datos recibidos:', data); // ← Agregar esta línea
