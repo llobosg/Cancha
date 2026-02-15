@@ -347,8 +347,21 @@ if ($is_ceo) {
         
         <div class="form-group">
           <label for="socioRol">Rol</label>
-          <input type="text" id="socioRol" name="rol">
+          <select id="socioRol" name="rol" required>
+              <option value="">Seleccionar</option>
+              <option value="Jugador">Jugador</option>
+              <option value="Galleta">Galleta</option>
+              <option value="Amigo del club">Amigo del club</option>
+              <option value="Tesorero">Tesorero</option>
+              <option value="Director">Director</option>
+              <option value="Delegado">Delegado</option>
+              <option value="Profe">Profe</option>
+              <option value="Kine">Kine</option>
+              <option value="Preparador Físico">Preparador Físico</option>
+              <option value="Utilero">Utilero</option>
+          </select>
         </div>
+        
         
         <div class="form-group">
           <label for="socioFoto">Foto de Perfil</label>
@@ -378,11 +391,17 @@ if ($is_ceo) {
         <div class="form-group">
           <label for="socioHabilidad">Habilidad</label>
           <select id="socioHabilidad" name="habilidad">
-            <option value="">Seleccionar</option>
-            <option value="Principiante">Principiante</option>
-            <option value="Intermedia">Intermedia</option>
-            <option value="Avanzada">Avanzada</option>
-          </select>
+              <option value="">Seleccionar</option>
+              <option value="Básica">Malo</option>
+              <option value="Intermedia">Más o Menos</option>
+              <option value="Avanzada">Crack</option>
+              <option value="Pádel-Sexta">Pádel-Sexta</option>
+              <option value="Pádel-Quinta">Pádel-Quinta</option>
+              <option value="Pádel-Cuarta">Pádel-Cuarta</option>
+              <option value="Pádel-Tercera">Pádel-Tercera</option>
+              <option value="Pádel-Segunda">Pádel-Segunda</option>
+              <option value="Pádel-Primera">Pádel-Primera</option>
+        </select>
         </div>
         
         <button type="submit" class="btn-submit">Guardar Cambios</button>

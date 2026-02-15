@@ -206,7 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     type="text" 
                     id="codigo" 
                     name="codigo" 
-                    placeholder="1234"
+                    placeholder="0000"
                     maxlength="4"
                     required
                     oninput="this.value = this.value.replace(/[^0-9]/g, '')"

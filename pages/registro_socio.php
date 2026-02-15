@@ -599,8 +599,8 @@ $club_logo = $club['logo'] ?? '';
                 edad--;
             }
             
-            if (edad < 6) {
-                mostrarToast('❌ ohh lo sentimos...la edad mínima para CanchaSport es de 6 años');
+            if (edad < 14) {
+                mostrarToast('❌ ohh lo sentimos...la edad mínima para CanchaSport es de 14 años');
                 return;
             }
         } else {
