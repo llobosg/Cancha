@@ -147,7 +147,7 @@ try {
     require_once __DIR__ . '/../includes/brevo_mailer.php';
     $mail = new BrevoMailer();
     $mail->setTo($email, $nombre);
-    $mail->setSubject('🔐 Código de inscripción - Cancha');
+    $mail->setSubject('🔐 Código de inscripción - CanchaSport');
 
     // Obtener nombre del club
     $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
@@ -155,7 +155,7 @@ try {
     $club_nombre = $stmt->fetchColumn() ?: 'tu club';
 
     $mail->setHtmlBody("
-        <h2>¡Bienvenido a Cancha!</h2>
+        <h2>¡Bienvenido a CanchaSport!</h2>
         <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
         <h1 style='color:#009966;'>{$verification_code}</h1>
         <p>Ingresa este código para confirmar tu inscripción.</p>
@@ -173,16 +173,6 @@ try {
         'club_slug' => $club_slug
     ];
     echo json_encode($response_data);
-
-    if (data.success) {
-        console.log('Datos recibidos:', data); // ← Agregar esta línea
-        mostrarToast('✅ Código enviado a tu correo');
-        setTimeout(() => {
-            window.location.href = 'verificar_socio.php?club=' + data.club_slug;
-        }, 2000);
-    } else {
-        mostrarToast('❌ ' + data.message);
-    }
 
 } catch (Exception $e) {
     error_log("Registro socio error: " . $e->getMessage());

@@ -585,10 +585,7 @@ $club_logo = $club['logo'] ?? '';
             const data = await response.json();
             
             if (data.success) {
-                // Mostrar mensaje de éxito
                 mostrarToast('✅ Código enviado a tu correo');
-                
-                // Redirigir a verificar_socio.php con el club_slug
                 setTimeout(() => {
                     window.location.href = 'verificar_socio.php?club=' + data.club_slug;
                 }, 2000);
