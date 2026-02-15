@@ -27,25 +27,26 @@ $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM
 $stmt_club->execute();
 $clubs = $stmt_club->fetchAll();
 
-$club_id = null;
-$club_nombre = '';
-$club_logo = '';
+$club = null; // ← Variable principal
 
 // Encontrar el club usando MD5 en PHP (no en SQL)
 foreach ($clubs as $c) {
     $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
     if ($generated_slug === $club_slug_from_url) {
-        $club_id = (int)$c['id_club'];
-        $club_nombre = $c['nombre'];
-        $club_logo = $c['logo'] ?? '';
+        $club = $c;
         break;
     }
 }
 
-if (!$club_id) {
+if (!$club) {
     header('Location: ../index.php');
     exit;
 }
+
+// Variables individuales (por si las usas en otros lugares)
+$club_id = (int)$club['id_club'];
+$club_nombre = $club['nombre'];
+$club_logo = $club['logo'] ?? '';
 ?>
 
 <!DOCTYPE html>
@@ -404,7 +405,7 @@ if (!$club_id) {
             ⚽
           <?php endif; ?>
         </div>
-        <div class="club-name"><?= htmlspecialchars($club['nombre']) ?></div>
+        <div class="club-name"><?= htmlspecialchars($club_nombre) ?></div>
       </div>
     </div>
 
