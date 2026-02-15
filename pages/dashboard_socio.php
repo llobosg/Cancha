@@ -434,7 +434,7 @@ $proximo_evento = $stmt_evento->fetch();
             <strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?> 
             <span style="font-size: 0.8em; opacity: 0.7;">
                 (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
-                    $proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot' ?>)
+                    ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
             </span>
             </strong>
             <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
