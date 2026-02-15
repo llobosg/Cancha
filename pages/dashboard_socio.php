@@ -49,10 +49,6 @@ if (!$club_id) {
     exit;
 }
 
-// Guardar en sesión
-$_SESSION['current_club'] = $club_slug;
-$_SESSION['club_id'] = $club_id;
-
 // 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS 🔥
 $id_socio = null;
 $socio_actual = null;
@@ -121,6 +117,37 @@ if (!$socio_actual) {
 // Guardar en sesión (asegurar que siempre estén presentes)
 $_SESSION['club_id'] = $club_id;
 $_SESSION['current_club'] = $club_slug;
+?>
+
+<?php
+// 🔥 CONSULTA PARA PRÓXIMO EVENTO 🔥
+$stmt_evento = $pdo->prepare("
+    SELECT 
+        r.id_reserva,
+        r.id_club,
+        r.fecha,
+        r.hora_inicio,
+        r.id_cancha,
+        c.id_deporte,
+        te.players,
+        te.tipoevento AS tipo_evento,
+        COUNT(i.id_inscrito) AS inscritos_actuales,
+        c.nombre_cancha
+    FROM reservas r
+    JOIN canchas c ON r.id_cancha = c.id_cancha
+    JOIN tipoeventos te ON c.id_deporte = te.tipoevento
+    LEFT JOIN inscritos i ON r.id_reserva = i.id_evento
+    WHERE 
+        r.id_club = ? 
+        AND r.fecha >= CURDATE()
+        AND r.estado = 'confirmada'
+        AND r.tipo_reserva = 'evento'
+    GROUP BY r.id_reserva
+    ORDER BY r.fecha ASC, r.hora_inicio ASC
+    LIMIT 1
+");
+$stmt_evento->execute([$_SESSION['club_id']]);
+$proximo_evento = $stmt_evento->fetch();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -389,20 +416,48 @@ $_SESSION['current_club'] = $club_slug;
     </div>
 
     <!-- Estadísticas -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <h3>Socios activos</h3>
-        <div class="number">24</div>
-      </div>
-      <div class="stat-card">
-        <h3>Eventos</h3>
-        <div class="number">8</div>
-      </div>
-      <div class="stat-card">
-        <h3>Próximo partido</h3>
-        <div class="number">Sáb 15:00</div>
-      </div>
+    <!-- Próximo Evento -->
+    <?php if ($proximo_evento): ?>
+    <div class="stat-card">
+        <h3>Próximo Evento</h3>
+        <div style="margin: 1rem 0; font-size: 0.9rem;">
+            <strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong><br>
+            <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
+            <?= substr($proximo_evento['hora_inicio'], 0, 5) ?><br>
+            Cancha: <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
+        </div>
+        
+        <?php 
+        $inscritos = (int)$proximo_evento['inscritos_actuales'];
+        $players = (int)$proximo_evento['players']; // Asegurar que sea INT
+        $deporte = $proximo_evento['id_deporte'];
+        $id_reserva = $proximo_evento['id_reserva'];
+        
+        // Deportes que requieren validación de cupo
+        $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
+        $validar_cupo = in_array($deporte, $deportes_con_cupo);
+        ?>
+        
+        <?php if ($validar_cupo && $inscritos >= $players): ?>
+            <!-- Cupo lleno -->
+            <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem;">
+                Inscripciones cerradas
+            </div>
+        <?php else: ?>
+            <!-- Botones de acción -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <button class="btn-action" style="flex: 1; background: #4ECDC4;" 
+                        onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>)">
+                    <?= $inscritos > 0 ? 'Bajarse' : 'Anotarse' ?>
+                </button>
+                <button class="btn-action" style="flex: 1; background: #FF6B6B;" 
+                        onclick="pasoEvento(<?= $id_reserva ?>)">
+                    Paso
+                </button>
+            </div>
+        <?php endif; ?>
     </div>
+    <?php endif; ?>
 
     <!-- En dashboard_socio.php, agrega esto en las acciones -->
     <div class="action-buttons">
