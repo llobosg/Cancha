@@ -472,9 +472,15 @@ $club_logo = $club['logo'] ?? '';
       <div class="form-group">
         <select id="habilidad" name="habilidad">
           <option value="">Seleccionar</option>
-          <option value="Básica">Básica</option>
-          <option value="Intermedia">Intermedia</option>
-          <option value="Avanzada">Avanzada</option>
+          <option value="Básica">Malo</option>
+          <option value="Intermedia">Más o Menos</option>
+          <option value="Avanzada">Crack</option>
+          <option value="Pádel-Sexta">Pádel-Sexta</option>
+          <option value="Pádel-Quinta">Pádel-Quinta</option>
+          <option value="Pádel-Cuarta">Pádel-Cuarta</option>
+          <option value="Pádel-Tercera">Pádel-Tercera</option>
+          <option value="Pádel-Segunda">Pádel-Segunda</option>
+          <option value="Pádel-Primera">Pádel-Primera</option>
         </select>
       </div>
 
