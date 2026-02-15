@@ -407,19 +407,16 @@ $proximo_evento = $stmt_evento->fetch();
     <div class="header">
       <div style="display: flex; align-items: center; gap: 1.2rem;">
         <div class="club-logo">
-          <?php if ($club_logo): ?>
-            <?php 
-            $logo_path = __DIR__ . '/../public/uploads/logos/' . $club_logo;
-            if (file_exists($logo_path)): 
-            ?>
-              <img src="/public/uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+            <?php if ($club_logo): ?>
+              <!-- Forzar la carga del logo incluso si no se puede verificar file_exists -->
+              <img src="/uploads/logos/<?= htmlspecialchars($club_logo) ?>" 
+                  alt="Logo" 
+                  style="width:100%;height:100%;border-radius:12px;"
+                  onerror="this.parentElement.innerHTML='⚽'">
             <?php else: ?>
-              ⚽ <!-- Logo no encontrado -->
+              ⚽
             <?php endif; ?>
-          <?php else: ?>
-            ⚽
-          <?php endif; ?>
-        </div>
+          </div>
         <div class="club-info">
           <h1><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h1>
           <p>Tu cancha está lista</p>
