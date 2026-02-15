@@ -629,6 +629,60 @@ $club_logo = $club['logo'] ?? '';
           console.warn('No se pudieron cargar los puestos');
         });
     });
-  </script>
+
+    function mostrarToast(mensaje) {
+        // Crear contenedor de toast si no existe
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Crear toast
+        const toast = document.createElement('div');
+        toast.textContent = mensaje;
+        toast.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+            font-size: 14px;
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Eliminar toast después de 3 segundos
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+
+    // Animaciones CSS para toasts
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+</script>
 </body>
 </html>
