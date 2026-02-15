@@ -422,20 +422,22 @@ $club_logo = $club['logo'] ?? '';
       <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
       <div class="form-group"><label for="alias">Alias</label></div>
       <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-      <div class="form-group"><label for="rol">Rol en el Club *</label></div>
-          <select id="rol" name="rol" required>
-              <option value="">Seleccionar rol</option>
+      <div class="form-group"><label for="rol">Rol</label></div>
+      <div class="form-group">
+            <select id="rol" name="rol" required>
+              <option value="">Seleccionar</option>
               <option value="Jugador">Jugador</option>
-              <option value="Galleta">Galleta</option>
+              <option value="Capitán">Galleta</option>
+              <option value="Entrenador">Amigo del club</option>
               <option value="Tesorero">Tesorero</option>
               <option value="Director">Director</option>
               <option value="Delegado">Delegado</option>
-              <option value="Profe">Profesor</option>
-              <option value="Kine">Kinesiólogo</option>
+              <option value="Profe">Profe</option>
+              <option value="Kine">Kine</option>
               <option value="Preparador Físico">Preparador Físico</option>
               <option value="Utilero">Utilero</option>
-          </select>
-      </div>
+            </select>
+          </div>
 
       <!-- Fila 2 -->
       <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
