@@ -20,16 +20,17 @@ try {
         $players_max = (int)$_POST['players_max'];
         
         // Verificar que la reserva existe y pertenece al club
+        // ¡ELIMINAR el filtro de tipo_reserva = 'evento'!
         $stmt = $pdo->prepare("
-            SELECT r.id_reserva, r.id_club, r.fecha, r.hora_inicio, r.id_cancha
+            SELECT r.id_reserva, r.id_club, r.fecha, r.hora_inicio, r.id_cancha, r.monto_total
             FROM reservas r 
-            WHERE r.id_reserva = ? AND r.id_club = ? AND r.tipo_reserva = 'evento'
+            WHERE r.id_reserva = ? AND r.id_club = ? AND r.estado = 'confirmada'
         ");
         $stmt->execute([$id_reserva, $id_club]);
         $reserva = $stmt->fetch();
         
         if (!$reserva) {
-            throw new Exception('Evento no encontrado');
+            throw new Exception('Reserva no encontrada o no pertenece a tu club');
         }
         
         // Verificar si ya está inscrito
@@ -56,11 +57,6 @@ try {
                 throw new Exception('Cupo lleno para este evento');
             }
         }
-        
-        // Obtener puesto del socio
-        $stmt_puesto = $pdo->prepare("SELECT id_puesto FROM socios WHERE id_socio = ?");
-        $stmt_puesto->execute([$id_socio]);
-        $puesto = $stmt_puesto->fetch()['id_puesto'] ?? null;
         
         // Insertar en inscritos
         $pdo->prepare("
