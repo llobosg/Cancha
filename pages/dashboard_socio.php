@@ -142,7 +142,16 @@ $stmt_evento = $pdo->prepare("
         AND r.fecha >= CURDATE()
         AND r.estado = 'confirmada'
         AND r.tipo_reserva = 'evento'
-    GROUP BY r.id_reserva
+    GROUP BY 
+        r.id_reserva,
+        r.id_club,
+        r.fecha,
+        r.hora_inicio,
+        r.id_cancha,
+        c.id_deporte,
+        te.players,
+        te.tipoevento,
+        c.nombre_cancha
     ORDER BY r.fecha ASC, r.hora_inicio ASC
     LIMIT 1
 ");
