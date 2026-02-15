@@ -636,6 +636,118 @@ $proximo_evento = $stmt_evento->fetch();
 
     // Solicitar notificaciones al cargar
     requestNotificationPermission();
-  </script>
+
+    // Función para anotarse a un evento
+    function anotarseEvento(idReserva, deporte, playersMax, montoTotal) {
+        const formData = new FormData();
+        formData.append('action', 'anotarse');
+        formData.append('id_reserva', idReserva);
+        formData.append('deporte', deporte);
+        formData.append('players_max', playersMax);
+        formData.append('monto_total', montoTotal);
+        
+        fetch('../api/gestion_eventos.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mostrar toast personalizado
+                mostrarToast(data.message);
+                // Recargar la página para actualizar la ficha
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        })
+        .catch(error => {
+            mostrarToast('❌ Error al procesar la inscripción');
+            console.error('Error:', error);
+        });
+    }
+
+    // Función para marcar "Paso"
+    function pasoEvento(idReserva) {
+        const card = event.target.closest('.stat-card');
+        if (card) {
+            card.innerHTML = `
+                <h3>Próximo Evento</h3>
+                <div style="margin: 1rem 0; font-size: 0.9rem; text-align: center;">
+                    <strong>Paso esta semana</strong>
+                </div>
+            `;
+        }
+    }
+
+    // Función para notificar a galletas
+    function notificarGalletas(idReserva) {
+        // Abrir modal o implementar notificación
+        alert('Función "Notificar a galletas" en desarrollo');
+    }
+
+    // Función para invitar un cancha
+    function invitarCancha(idReserva) {
+        // Implementar lógica de invitación
+        alert('Función "Invitar un Cancha" en desarrollo');
+    }
+
+    // Función para mostrar toast notifications
+    function mostrarToast(mensaje) {
+        // Crear contenedor de toast si no existe
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Crear toast
+        const toast = document.createElement('div');
+        toast.textContent = mensaje;
+        toast.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+            font-size: 14px;
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Eliminar toast después de 3 segundos
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+
+    // Animaciones CSS para toasts
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+</script>
 </body>
 </html>
