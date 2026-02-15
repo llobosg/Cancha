@@ -478,52 +478,52 @@ $proximo_evento = $stmt_evento->fetch();
       
       <!-- Mostrar Botones según estado de inscripción y cupo del partido -->
       <?php if ($cupo_lleno): ?>
-      <!-- Cupo lleno -->
-      <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
-          Inscripciones cerradas
-      </div>
+        <!-- Cupo lleno -->
+        <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
+            Inscripciones cerradas
+        </div>
       <?php else: ?>
-          <!-- Verificar si el usuario ya está inscrito -->
-          <?php 
-          $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
-          $stmt_check_inscrito->execute([$id_reserva, $_SESSION['id_socio']]);
-          $ya_inscrito = $stmt_check_inscrito->fetch();
-          ?>
-          
-          <?php if ($ya_inscrito): ?>
-              <!-- Ya está inscrito -->
-              <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #E74C3C;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Bajarse
+              <!-- Verificar si el usuario ya está inscrito -->
+              <?php 
+              $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
+              $stmt_check_inscrito->execute([$id_reserva, $_SESSION['id_socio']]);
+              $ya_inscrito = $stmt_check_inscrito->fetch();
+              ?>
+              
+              <?php if ($ya_inscrito): ?>
+                  <!-- Ya está inscrito -->
+                  <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                      <button class="btn-action" style="flex: 1; min-width: 120px; background: #E74C3C;" 
+                              onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                          Bajarse
+                      </button>
+                      <!-- Botón "Paso" oculto cuando está inscrito -->
+                  </div>
+                <?php else: ?>
+                    <!-- No está inscrito -->
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                        <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
+                                onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                            Anotarse
+                        </button>
+                        <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
+                                onclick="pasoEvento(<?= $id_reserva ?>)">
+                            Paso
+                        </button>
+                    </div>
+              <?php endif; ?>
+              
+              <!-- Botones adicionales (siempre visibles para todos) -->
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
+                          onclick="notificarGalletas(<?= $id_reserva ?>)">
+                      Notificar a galletas
                   </button>
-                  <!-- Botón "Paso" oculto cuando está inscrito -->
+                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
+                          onclick="invitarCancha(<?= $id_reserva ?>)">
+                      Invitar un Cancha
+                  </button>
               </div>
-          <?php else: ?>
-              <!-- No está inscrito -->
-              <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Anotarse
-                  </button>
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
-                          onclick="pasoEvento(<?= $id_reserva ?>)">
-                      Paso
-                  </button>
-              </div>
-          <?php endif; ?>
-          
-          <!-- Botones adicionales (siempre visibles para todos) -->
-          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-              <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
-                      onclick="notificarGalletas(<?= $id_reserva ?>)">
-                  Notificar a galletas
-              </button>
-              <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
-                      onclick="invitarCancha(<?= $id_reserva ?>)">
-                  Invitar un Cancha
-              </button>
-          </div>
       <?php endif; ?>
 
       <!-- En dashboard_socio.php, agrega esto en las acciones -->
