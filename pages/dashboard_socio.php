@@ -135,7 +135,7 @@ $stmt_evento = $pdo->prepare("
         c.nombre_cancha
     FROM reservas r
     JOIN canchas c ON r.id_cancha = c.id_cancha
-    JOIN tipoeventos te ON c.id_deporte = te.tipoevento
+    JOIN tipoeventos te ON c.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
     LEFT JOIN inscritos i ON r.id_reserva = i.id_evento
     WHERE 
         r.id_club = ? 
