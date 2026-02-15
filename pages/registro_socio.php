@@ -488,17 +488,27 @@ $club_logo = $club['logo'] ?? '';
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
       <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
+      <div></div>
+      <div></div>
+      <div></div>
 
-      <!-- Campos de contraseña -->
-      <div class="form-group">
-          <label for="password">Contraseña *</label>
-          <input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres">
-      </div>
+      <!-- Fila 5 -->
+      <!-- contraseña -->
+      <div class="form-group"><label for="password">Contraseña *</label></div>
+      <div class="form-group"><input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
 
-      <div class="form-group">
-          <label for="password_confirm">Confirmar Contraseña *</label>
-          <input type="password" id="password_confirm" name="password_confirm" required>
-      </div>
+      <!-- Fila 6 -->
+      <!-- confirmar contraseña -->
+      <div class="form-group"><label for="password_confirm">Confirmar Contraseña *</label></div>
+      <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
 
       <!-- Agregar validación JavaScript -->
       <script>
