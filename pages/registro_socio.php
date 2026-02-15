@@ -7,20 +7,44 @@ if (!$slug) {
     exit;
 }
 
-// Obtener datos del club
-$stmt = $pdo->prepare("
-    SELECT id_club, nombre, logo, email_responsable 
-    FROM clubs 
-    WHERE email_verified = 1 
-    AND (
-        SUBSTRING(MD5(CONCAT(id_club, email_responsable)), 1, 8) = ? 
-        OR id_club = ?
-    )
-");
-$stmt->execute([$slug, $slug]);
-$club = $stmt->fetch();
-if (!$club) {
-    die('Club no encontrado');
+// Evitar problemas de headers
+ob_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Obtener club desde URL
+$club_slug_from_url = $_GET['club'] ?? '';
+
+if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Obtener todos los clubs verificados
+$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
+$stmt_club->execute();
+$clubs = $stmt_club->fetchAll();
+
+$club_id = null;
+$club_nombre = '';
+$club_logo = '';
+
+// Encontrar el club usando MD5 en PHP (no en SQL)
+foreach ($clubs as $c) {
+    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+    if ($generated_slug === $club_slug_from_url) {
+        $club_id = (int)$c['id_club'];
+        $club_nombre = $c['nombre'];
+        $club_logo = $c['logo'] ?? '';
+        break;
+    }
+}
+
+if (!$club_id) {
+    header('Location: ../index.php');
+    exit;
 }
 ?>
 
