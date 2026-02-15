@@ -422,22 +422,20 @@ $club_logo = $club['logo'] ?? '';
       <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
       <div class="form-group"><label for="alias">Alias</label></div>
       <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-      <div class="form-group"><label for="rol">Rol</label></div>
-      <div class="form-group">
-            <select id="rol" name="rol" required>
-              <option value="">Seleccionar</option>
+      <div class="form-group"><label for="rol">Rol en el Club *</label></div>
+          <select id="rol" name="rol" required>
+              <option value="">Seleccionar rol</option>
               <option value="Jugador">Jugador</option>
-              <option value="Capitán">Galleta</option>
-              <option value="Entrenador">Amigo del club</option>
+              <option value="Galleta">Galleta</option>
               <option value="Tesorero">Tesorero</option>
               <option value="Director">Director</option>
               <option value="Delegado">Delegado</option>
-              <option value="Profe">Profe</option>
-              <option value="Kine">Kine</option>
+              <option value="Profe">Profesor</option>
+              <option value="Kine">Kinesiólogo</option>
               <option value="Preparador Físico">Preparador Físico</option>
               <option value="Utilero">Utilero</option>
-            </select>
-          </div>
+          </select>
+      </div>
 
       <!-- Fila 2 -->
       <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
@@ -503,7 +501,7 @@ $club_logo = $club['logo'] ?? '';
 
       <!-- Fila 6 -->
       <!-- confirmar contraseña -->
-      <div class="form-group"><label for="password_confirm">Confirmar Contraseña *</label></div>
+      <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
       <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
       <div></div>
       <div></div>
@@ -579,6 +577,23 @@ $club_logo = $club['logo'] ?? '';
     document.getElementById('registroForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const fechaNac = document.getElementById('fecha_nac').value;
+        if (fechaNac) {
+            const hoy = new Date();
+            const nacimiento = new Date(fechaNac);
+            const edad = hoy.getFullYear() - nacimiento.getFullYear();
+            const mes = hoy.getMonth() - nacimiento.getMonth();
+            
+            if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+                edad--;
+            }
+            
+            if (edad < 6) {
+                mostrarToast('❌ ohh lo sentimos...la edad mínima para CanchaSport es de 6 años');
+                return;
+            }
+        }
+
         const formData = new FormData(e.target);
         const btn = e.submitter;
         const originalText = btn.innerHTML;

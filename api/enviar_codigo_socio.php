@@ -66,6 +66,21 @@ try {
     $stmt->execute([$email, $id_club]);
     if ($stmt->fetch()) throw new Exception('Ya estás inscrito en este club');
 
+    // Validar fecha de nacimiento y edad mínima
+    if (!empty($fecha_nac)) {
+        $fecha_nac_obj = DateTime::createFromFormat('Y-m-d', $fecha_nac);
+        if (!$fecha_nac_obj || $fecha_nac_obj->format('Y-m-d') !== $fecha_nac) {
+            throw new Exception('Formato de fecha de nacimiento inválido');
+        }
+        
+        $hoy = new DateTime();
+        $edad = $hoy->diff($fecha_nac_obj)->y;
+        
+        if ($edad < 6) {
+            throw new Exception('La edad mínima para CanchaSport es de 6 años');
+        }
+    }
+
     // === Manejar subida de foto ===
     $foto_url = null;
     if (!empty($_FILES['foto']['name'])) {
