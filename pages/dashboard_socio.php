@@ -412,7 +412,7 @@ $proximo_evento = $stmt_evento->fetch();
             $logo_path = __DIR__ . '/../public/uploads/logos/' . $club_logo;
             if (file_exists($logo_path)): 
             ?>
-              <img src="/uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+              <img src="/public/uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
             <?php else: ?>
               ⚽ <!-- Logo no encontrado -->
             <?php endif; ?>
