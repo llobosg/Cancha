@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     // Validar campos básicos
-    $required = ['club_slug', 'nombre', 'alias', 'email', 'genero', 'rol'];
+    $required = ['club_slug', 'nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm'];
     foreach ($required as $field) {
         if (empty($_POST[$field])) {
             throw new Exception("El campo '$field' es obligatorio");
@@ -31,6 +31,18 @@ try {
     $direccion = trim($_POST['direccion'] ?? '');
     $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : null;
     $habilidad = $_POST['habilidad'] ?? null;
+    
+    // Validar contraseña
+    $password = $_POST['password'];
+    $password_confirm = $_POST['password_confirm'];
+    
+    if ($password !== $password_confirm) {
+        throw new Exception('Las contraseñas no coinciden');
+    }
+    
+    if (strlen($password) < 6) {
+        throw new Exception('La contraseña debe tener al menos 6 caracteres');
+    }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         throw new Exception('Correo electrónico inválido');
@@ -83,20 +95,50 @@ try {
         }
     }
 
-    // Generar código
-    $codigo = rand(1000, 9999);
+    // Hashear contraseña
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-    // Insertar socio
+    // Generar código de verificación
+    $verification_code = rand(1000, 9999);
+
+    // Insertar socio con todos los campos en orden correcto
     $stmt = $pdo->prepare("
         INSERT INTO socios (
-            id_club, nombre, alias, fecha_nac, celular, email, genero, 
-            rol, direccion, foto_url, id_puesto, habilidad,
-            verification_code, email_verified
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+            id_club,
+            nombre,
+            alias,
+            fecha_nac,
+            celular,
+            email,
+            direccion,
+            rol,
+            foto_url,
+            genero,
+            id_puesto,
+            habilidad,
+            activo,
+            email_verified,
+            verification_code,
+            es_responsable,
+            datos_completos,
+            password_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
     ");
     $stmt->execute([
-        $id_club, $nombre, $alias, $fecha_nac, $celular, $email, $genero,
-        $rol, $direccion, $foto_url, $id_puesto, $habilidad, $codigo
+        $id_club,
+        $nombre,
+        $alias,
+        !empty($fecha_nac) ? $fecha_nac : null,
+        !empty($celular) ? $celular : null,
+        $email,
+        !empty($direccion) ? $direccion : null,
+        $rol,
+        $foto_url,
+        $genero,
+        $id_puesto,
+        !empty($habilidad) ? $habilidad : 'Básica',
+        $verification_code,
+        $password_hash
     ]);
 
     $id_socio = $pdo->lastInsertId();
@@ -115,7 +157,7 @@ try {
     $mail->setHtmlBody("
         <h2>¡Bienvenido a Cancha!</h2>
         <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
-        <h1 style='color:#009966;'>$codigo</h1>
+        <h1 style='color:#009966;'>{$verification_code}</h1>
         <p>Ingresa este código para confirmar tu inscripción.</p>
         <p>El código tiene validez de medio tiempo sin alargue</p>
     ");
@@ -125,10 +167,11 @@ try {
         error_log("Correo fallido para socio $id_socio");
     }
 
-    echo json_encode(['success' => true, 'id_socio' => $id_socio]);
+    echo json_encode(['success' => true, 'id_socio' => $id_socio, 'club_slug' => $club_slug]);
 
 } catch (Exception $e) {
     error_log("Registro socio error: " . $e->getMessage());
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+?>

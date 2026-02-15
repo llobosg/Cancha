@@ -37,11 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id_socio]);
             $club_data = $stmt->fetch();
 
-            if ($club_data) {
-                $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
-                header("Location: /pages/dashboard_socio.php?id_club=" . $club_slug);
-                exit;
-            }
+            $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
+            $_SESSION['user_email'] = $email_del_socio;
+            $_SESSION['id_socio'] = $id_socio;
+            $_SESSION['club_id'] = $club_id;
+
+            // Redirigir al dashboard correcto
+            header('Location: ../pages/dashboard_socio.php?id_club=' . $club_slug);
+            exit;
         }
 
         $error = 'Código incorrecto o ha expirado';

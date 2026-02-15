@@ -488,6 +488,37 @@ $club_logo = $club['logo'] ?? '';
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
       <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
+
+      <!-- Campos de contraseña -->
+      <div class="form-group">
+          <label for="password">Contraseña *</label>
+          <input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+      </div>
+
+      <div class="form-group">
+          <label for="password_confirm">Confirmar Contraseña *</label>
+          <input type="password" id="password_confirm" name="password_confirm" required>
+      </div>
+
+      <!-- Agregar validación JavaScript -->
+      <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password_confirm').value;
+            
+            if (password !== passwordConfirm) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+        });
+        </script>
     </div>
 
         <!-- Botón -->
