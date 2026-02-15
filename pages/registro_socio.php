@@ -694,7 +694,7 @@ $club_logo = $club['logo'] ?? '';
             if (toast.parentNode) {
                 toast.parentNode.removeChild(toast);
             }
-        }, 3000);
+        }, 5000);
     }
 
     // Animaciones CSS para toasts
