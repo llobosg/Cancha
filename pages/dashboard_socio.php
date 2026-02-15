@@ -120,7 +120,7 @@ $_SESSION['current_club'] = $club_slug;
 ?>
 
 <?php
-// 🔥 CONSULTA PARA PRÓXIMO EVENTO 🔥
+// Mostrar cualquier reserva confirmada como evento
 $stmt_evento = $pdo->prepare("
     SELECT 
         r.id_reserva,
@@ -141,7 +141,7 @@ $stmt_evento = $pdo->prepare("
         r.id_club = ? 
         AND r.fecha >= CURDATE()
         AND r.estado = 'confirmada'
-        AND r.tipo_reserva = 'evento'
+        -- Eliminar el filtro de tipo_reserva
     GROUP BY 
         r.id_reserva,
         r.id_club,
@@ -430,7 +430,13 @@ $proximo_evento = $stmt_evento->fetch();
     <div class="stat-card">
         <h3>Próximo Evento</h3>
         <div style="margin: 1rem 0; font-size: 0.9rem;">
-            <strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong><br>
+            <!-- En la ficha, mostrar el tipo real de la reserva -->
+            <strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?> 
+            <span style="font-size: 0.8em; opacity: 0.7;">
+                (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
+                    $proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot' ?>)
+            </span>
+            </strong>
             <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
             <?= substr($proximo_evento['hora_inicio'], 0, 5) ?><br>
             Cancha: <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
