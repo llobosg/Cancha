@@ -477,7 +477,7 @@ if ($is_ceo) {
       event.preventDefault();
 
       // Validación de edad
-        const fechaNacInput = document.getElementById('fecha_nac');
+        const fechaNacInput = document.getElementById('socioFechaNac');
         const fechaNac = fechaNacInput.value;
         
         if (fechaNac) {
