@@ -429,114 +429,116 @@ $proximo_evento = $stmt_evento->fetch();
 
     <!-- Estadísticas -->
     <!-- Próximo Evento -->
-<?php if ($proximo_evento): ?>
-<div class="stat-card">
-    <h3>Próximo Evento</h3>
-    
-      <!-- Datos principales -->
-      <div style="margin: 1rem 0; font-size: 0.9rem; text-align: left;">
-          <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
-              <span style="font-size: 0.8em; opacity: 0.7;">
-                  (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
-                      ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
-              </span>
-          </div>
-          
-          <div style="margin: 0.5rem 0;">
-              <strong>📅 Fecha:</strong> <?= date('d/m/Y', strtotime($proximo_evento['fecha'])) ?><br>
-              <strong>⏰ Hora:</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
-          </div>
-          
-          <div style="margin: 0.5rem 0;">
-              <strong>🏟️ Club:</strong> <?= htmlspecialchars($club_nombre) ?> (ID: <?= $_SESSION['club_id'] ?>)<br>
-              <strong>⚽ Cancha:</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?> (ID: <?= $proximo_evento['id_cancha'] ?>)
-          </div>
-          
-          <div style="margin: 0.5rem 0;">
-              <strong>💰 Costo:</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?><br>
-              <strong>👥 Cupo:</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
-              <?php if ((int)$proximo_evento['players'] > 0): ?>
-                  <span style="color: <?= ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['players']) ? '#ff6b6b' : '#4ECDC4' ?>;">
-                      (<?= ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['players']) ? 'Lleno' : 'Disponible' ?>)
-                  </span>
-              <?php endif; ?>
-          </div>
-      </div>
-      
-      <?php 
-      $inscritos = (int)$proximo_evento['inscritos_actuales'];
-      $players = (int)$proximo_evento['players'];
-      $deporte = $proximo_evento['id_deporte'];
-      $id_reserva = $proximo_evento['id_reserva'];
-      $monto_total = (int)$proximo_evento['monto_total'];
-      
-      // Deportes que requieren validación de cupo
-      $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
-      $validar_cupo = in_array($deporte, $deportes_con_cupo);
-      $cupo_lleno = ($validar_cupo && $inscritos >= $players);
-      ?>
-      
-      <!-- Mostrar Botones según estado de inscripción y cupo del partido -->
-      <?php if ($cupo_lleno): ?>
-          <!-- Cupo lleno -->
-          <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
-              Inscripciones cerradas
-          </div>
-      <?php else: ?>
-          <!-- Verificar si el usuario ya está inscrito -->
-          <?php 
-          $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
-          $stmt_check_inscrito->execute([$id_reserva, $_SESSION['id_socio']]);
-          $ya_inscrito = $stmt_check_inscrito->fetch();
-          ?>
-          
-          <?php if ($ya_inscrito): ?>
-              <!-- Ya está inscrito -->
-              <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #E74C3C;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Bajarse
-                  </button>
-                  <!-- Botón "Paso" oculto cuando está inscrito -->
-              </div>
-              
-              <!-- Botones adicionales (siempre visibles para todos) -->
-              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
-                          onclick="notificarGalletas(<?= $id_reserva ?>)">
-                      Notificar a galletas
-                  </button>
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
-                          onclick="invitarCancha(<?= $id_reserva ?>)">
-                      Invitar un Cancha
-                  </button>
-              </div>
-          <?php else: ?>
-              <!-- No está inscrito -->
-              <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Anotarse
-                  </button>
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
-                          onclick="pasoEvento(<?= $id_reserva ?>)">
-                      Paso
-                  </button>
-              </div>
-              
-              <!-- Botones adicionales (siempre visibles para todos) -->
-              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
-                          onclick="notificarGalletas(<?= $id_reserva ?>)">
-                      Notificar a galletas
-                  </button>
-                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
-                          onclick="invitarCancha(<?= $id_reserva ?>)">
-                      Invitar un Cancha
-                  </button>
-              </div>
-          <?php endif; ?>
-      <?php endif; ?>
+    <?php if ($proximo_evento): ?>
+    <div class="stat-card">
+        <h3>Próximo Evento</h3>
+        
+        <!-- Datos principales -->
+        <div style="margin: 1rem 0; font-size: 0.9rem; text-align: left;">
+            <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
+                <span style="font-size: 0.8em; opacity: 0.7;">
+                    (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
+                        ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
+                </span>
+            </div>
+            
+            <div style="margin: 0.5rem 0;">
+                <strong>📅 Fecha:</strong> <?= date('d/m/Y', strtotime($proximo_evento['fecha'])) ?><br>
+                <strong>⏰ Hora:</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
+            </div>
+            
+            <div style="margin: 0.5rem 0;">
+                <strong>🏟️ Club:</strong> <?= htmlspecialchars($club_nombre) ?> (ID: <?= $_SESSION['club_id'] ?>)<br>
+                <strong>⚽ Cancha:</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?> (ID: <?= $proximo_evento['id_cancha'] ?>)
+            </div>
+            
+            <div style="margin: 0.5rem 0;">
+                <strong>💰 Costo:</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?><br>
+                <strong>👥 Cupo:</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
+                <?php if ((int)$proximo_evento['players'] > 0): ?>
+                    <span style="color: <?= ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['players']) ? '#ff6b6b' : '#4ECDC4' ?>;">
+                        (<?= ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['players']) ? 'Lleno' : 'Disponible' ?>)
+                    </span>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <?php 
+        $inscritos = (int)$proximo_evento['inscritos_actuales'];
+        $players = (int)$proximo_evento['players'];
+        $deporte = $proximo_evento['id_deporte'];
+        $id_reserva = $proximo_evento['id_reserva'];
+        $monto_total = (int)$proximo_evento['monto_total'];
+        
+        // Deportes que requieren validación de cupo
+        $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
+        $validar_cupo = in_array($deporte, $deportes_con_cupo);
+        $cupo_lleno = ($validar_cupo && $inscritos >= $players);
+        ?>
+        
+        <!-- Mostrar Botones según estado de inscripción y cupo del partido -->
+        <?php if ($cupo_lleno): ?>
+            <!-- Cupo lleno -->
+            <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
+                Inscripciones cerradas
+            </div>
+        <?php else: ?>
+            <!-- Verificar si el usuario ya está inscrito -->
+            <?php 
+            $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
+            $stmt_check_inscrito->execute([$id_reserva, $_SESSION['id_socio']]);
+            $ya_inscrito = $stmt_check_inscrito->fetch();
+            ?>
+            
+            <?php if ($ya_inscrito): ?>
+                <!-- Ya está inscrito -->
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #E74C3C;" 
+                            onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                        Bajarse
+                    </button>
+                    <!-- Botón "Paso" oculto cuando está inscrito -->
+                </div>
+                
+                <!-- Botones adicionales (siempre visibles para todos) -->
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
+                            onclick="notificarGalletas(<?= $id_reserva ?>)">
+                        Notificar a galletas
+                    </button>
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
+                            onclick="invitarCancha(<?= $id_reserva ?>)">
+                        Invitar un Cancha
+                    </button>
+                </div>
+            <?php else: ?>
+                <!-- No está inscrito -->
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
+                            onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                        Anotarse
+                    </button>
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
+                            onclick="pasoEvento(<?= $id_reserva ?>)">
+                        Paso
+                    </button>
+                </div>
+                
+                <!-- Botones adicionales (siempre visibles para todos) -->
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
+                            onclick="notificarGalletas(<?= $id_reserva ?>)">
+                        Notificar a galletas
+                    </button>
+                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
+                            onclick="invitarCancha(<?= $id_reserva ?>)">
+                        Invitar un Cancha
+                    </button>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>  <!-- ¡ESTE ES EL CIERRE QUE FALTABA! -->
 
       <!-- En dashboard_socio.php, agrega esto en las acciones -->
       <div class="action-buttons">
