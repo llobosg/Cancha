@@ -427,8 +427,8 @@ $club_logo = $club['logo'] ?? '';
             <select id="rol" name="rol" required>
               <option value="">Seleccionar</option>
               <option value="Jugador">Jugador</option>
-              <option value="Capitán">Galleta</option>
-              <option value="Entrenador">Amigo del club</option>
+              <option value="Galleta">Galleta</option>
+              <option value="Amigo del club">Amigo del club</option>
               <option value="Tesorero">Tesorero</option>
               <option value="Director">Director</option>
               <option value="Delegado">Delegado</option>
@@ -585,11 +585,14 @@ $club_logo = $club['logo'] ?? '';
     document.getElementById('registroForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const fechaNac = document.getElementById('fecha_nac').value;
+        // Validación de edad
+        const fechaNacInput = document.getElementById('fecha_nac');
+        const fechaNac = fechaNacInput.value;
+        
         if (fechaNac) {
             const hoy = new Date();
-            const nacimiento = new Date(fechaNac);
-            const edad = hoy.getFullYear() - nacimiento.getFullYear();
+            const nacimiento = new Date(fechaNac); // ✅ 'Date' con mayúscula
+            let edad = hoy.getFullYear() - nacimiento.getFullYear(); // ✅ 'let' no 'const'
             const mes = hoy.getMonth() - nacimiento.getMonth();
             
             if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
@@ -600,6 +603,30 @@ $club_logo = $club['logo'] ?? '';
                 mostrarToast('❌ ohh lo sentimos...la edad mínima para CanchaSport es de 6 años');
                 return;
             }
+        } else {
+            // Si no hay fecha, remover el atributo name para que no se envíe
+            fechaNacInput.removeAttribute('name');
+        }
+        
+        // Validación de contraseña
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('password_confirm').value;
+        
+        if (password !== passwordConfirm) {
+            mostrarToast('❌ Las contraseñas no coinciden');
+            return;
+        }
+        
+        if (password.length < 6) {
+            mostrarToast('❌ La contraseña debe tener al menos 6 caracteres');
+            return;
+        }
+        
+        // Validación de rol
+        const rolSelect = document.getElementById('rol');
+        if (!rolSelect.value) {
+            mostrarToast('❌ Por favor selecciona un rol en el club');
+            return;
         }
 
         const formData = new FormData(e.target);
