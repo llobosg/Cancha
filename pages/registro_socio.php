@@ -567,36 +567,43 @@ $club_logo = $club['logo'] ?? '';
 
     // Manejo del formulario
     document.getElementById('registroForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(e.target);
-      const btn = e.submitter;
-      const originalText = btn.innerHTML;
-      
-      btn.innerHTML = 'Enviando...';
-      btn.disabled = true;
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const btn = e.submitter;
+        const originalText = btn.innerHTML;
+        
+        btn.innerHTML = 'Enviando...';
+        btn.disabled = true;
 
-      try {
-        const response = await fetch('../api/enviar_codigo_socio.php', {
-          method: 'POST',
-          body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          exito('Código enviado a tu correo');
-          setTimeout(() => window.location.href = `verificar_socio.php?id=${data.id_socio}`, 1500);
-        } else {
-          error(data.message || 'Error al enviar código');
+        try {
+            const response = await fetch('../api/enviar_codigo_socio.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Mostrar mensaje de éxito
+                mostrarToast('✅ Código enviado a tu correo');
+                
+                // Redirigir a verificar_socio.php con el club_slug
+                setTimeout(() => {
+                    window.location.href = 'verificar_socio.php?club=' + data.club_slug;
+                }, 2000);
+            } else {
+                mostrarToast('❌ ' + data.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarToast('❌ Error al enviar el código');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
-      } catch (err) {
-        console.error('Error:', err);
-        error('Error de conexión. Revisa la consola.');
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
     });
 
     // Registrar Service Worker

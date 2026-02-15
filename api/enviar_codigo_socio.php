@@ -169,6 +169,16 @@ try {
 
     echo json_encode(['success' => true, 'id_socio' => $id_socio, 'club_slug' => $club_slug]);
 
+    if (data.success) {
+        console.log('Datos recibidos:', data); // ← Agregar esta línea
+        mostrarToast('✅ Código enviado a tu correo');
+        setTimeout(() => {
+            window.location.href = 'verificar_socio.php?club=' + data.club_slug;
+        }, 2000);
+    } else {
+        mostrarToast('❌ ' + data.message);
+    }
+
 } catch (Exception $e) {
     error_log("Registro socio error: " . $e->getMessage());
     http_response_code(400);
