@@ -167,6 +167,7 @@ $proximo_evento = $stmt_evento->fetch();
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | Cancha</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
   <link rel="stylesheet" href="../styles.css">
   <link rel="manifest" href="/manifest.json">
   <style>
@@ -408,11 +409,10 @@ $proximo_evento = $stmt_evento->fetch();
         <div class="club-logo">
           <?php if ($club_logo): ?>
             <?php 
-            // Verificar que el archivo exista - RUTA CORRECTA
-            $logo_path = __DIR__ . '/../uploads/logos/' . $club_logo;
+            $logo_path = __DIR__ . '/../public/uploads/logos/' . $club_logo;
             if (file_exists($logo_path)): 
             ?>
-              <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
+              <img src="/uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
             <?php else: ?>
               ⚽ <!-- Logo no encontrado -->
             <?php endif; ?>
