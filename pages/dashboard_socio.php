@@ -476,25 +476,44 @@ $proximo_evento = $stmt_evento->fetch();
       $cupo_lleno = ($validar_cupo && $inscritos >= $players);
       ?>
       
+      <!-- Mostrar Botones según estado de inscripción y cupo del partido -->
       <?php if ($cupo_lleno): ?>
-          <!-- Cupo lleno -->
-          <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
-              Inscripciones cerradas
-          </div>
+      <!-- Cupo lleno -->
+      <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
+          Inscripciones cerradas
+      </div>
       <?php else: ?>
-          <!-- Botones de acción -->
-          <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-              <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
-                      onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                  <?= $inscritos > 0 ? 'Bajarse' : 'Anotarse' ?>
-              </button>
-              <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
-                      onclick="pasoEvento(<?= $id_reserva ?>)">
-                  Paso
-              </button>
-          </div>
+          <!-- Verificar si el usuario ya está inscrito -->
+          <?php 
+          $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
+          $stmt_check_inscrito->execute([$id_reserva, $_SESSION['id_socio']]);
+          $ya_inscrito = $stmt_check_inscrito->fetch();
+          ?>
           
-          <!-- Botones adicionales -->
+          <?php if ($ya_inscrito): ?>
+              <!-- Ya está inscrito -->
+              <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #E74C3C;" 
+                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                      Bajarse
+                  </button>
+                  <!-- Botón "Paso" oculto cuando está inscrito -->
+              </div>
+          <?php else: ?>
+              <!-- No está inscrito -->
+              <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
+                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                      Anotarse
+                  </button>
+                  <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
+                          onclick="pasoEvento(<?= $id_reserva ?>)">
+                      Paso
+                  </button>
+              </div>
+          <?php endif; ?>
+          
+          <!-- Botones adicionales (siempre visibles para todos) -->
           <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
               <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
                       onclick="notificarGalletas(<?= $id_reserva ?>)">
@@ -506,47 +525,45 @@ $proximo_evento = $stmt_evento->fetch();
               </button>
           </div>
       <?php endif; ?>
-  </div>
-  <?php endif; ?>
 
-    <!-- En dashboard_socio.php, agrega esto en las acciones -->
-    <div class="action-buttons">
-      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-      <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
-      <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
-      <!-- Nuevo botón -->
-      <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
-    </div>
+      <!-- En dashboard_socio.php, agrega esto en las acciones -->
+      <div class="action-buttons">
+        <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
+        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
+        <!-- Nuevo botón -->
+        <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
+      </div>
 
-    <?php
-      // Asegurar que $socio_actual esté definida
-      if (!isset($socio_actual)) {
-          $stmt_socio = $pdo->prepare("SELECT nombre, email, genero FROM socios WHERE id_socio = ? AND id_club = ?");
-          $stmt_socio->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
-          $socio_actual = $stmt_socio->fetch() ?: ['nombre' => 'Usuario', 'email' => '', 'genero' => ''];
-      }
+      <?php
+        // Asegurar que $socio_actual esté definida
+        if (!isset($socio_actual)) {
+            $stmt_socio = $pdo->prepare("SELECT nombre, email, genero FROM socios WHERE id_socio = ? AND id_club = ?");
+            $stmt_socio->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
+            $socio_actual = $stmt_socio->fetch() ?: ['nombre' => 'Usuario', 'email' => '', 'genero' => ''];
+        }
 
-      //-- Botones condicionales según datos_completos -->
-      if (!$socio_actual || !$socio_actual['datos_completos']): ?>
-        <div class="welcome-message">
-          <h3>👋 ¡Bienvenido! <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?></h3>
-          <p>Te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
-          <ul>
-            <li>📞 Teléfono de contacto</li>
-            <li>🏠 Dirección completa</li>
-            <li>👤 Información adicional</li>
-          </ul>
-          <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
-            Completar mi perfil ahora
+        //-- Botones condicionales según datos_completos -->
+        if (!$socio_actual || !$socio_actual['datos_completos']): ?>
+          <div class="welcome-message">
+            <h3>👋 ¡Bienvenido! <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?></h3>
+            <p>Te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
+            <ul>
+              <li>📞 Teléfono de contacto</li>
+              <li>🏠 Dirección completa</li>
+              <li>👤 Información adicional</li>
+            </ul>
+            <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
+              Completar mi perfil ahora
+            </a>
+          </div>
+      <?php else: ?>
+        <div style="text-align: center; margin: 2rem 0;">
+          <a href="mantenedor_socios.php" class="update-profile-btn">
+            👤 Actualizar perfil <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?>
           </a>
         </div>
-    <?php else: ?>
-      <div style="text-align: center; margin: 2rem 0;">
-        <a href="mantenedor_socios.php" class="update-profile-btn">
-          👤 Actualizar perfil <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?>
-        </a>
-      </div>
-    <?php endif; ?>
+      <?php endif; ?>
 
     <!-- Share section -->
     <div class="share-section">

@@ -58,15 +58,42 @@ try {
             }
         }
         
-        // Insertar en inscritos
+        // Obtener puesto del socio para determinar posición por defecto
+        $stmt_puesto = $pdo->prepare("SELECT rol, genero FROM socios WHERE id_socio = ?");
+        $stmt_puesto->execute([$id_socio]);
+        $socio_info = $stmt_puesto->fetch();
+
+        // Determinar posición por defecto según el rol
+        $posicion_default = null;
+        if ($socio_info) {
+            $rol = $socio_info['rol'];
+            if (strpos($rol, 'Arquero') !== false || strpos($rol, 'Portero') !== false) {
+                $posicion_default = 'arquero';
+            } elseif (strpos($rol, 'Defensa') !== false) {
+                $posicion_default = 'defensa';
+            } elseif (strpos($rol, 'Delantero') !== false) {
+                $posicion_default = 'delantero';
+            } elseif (strpos($rol, 'Medio') !== false || strpos($rol, 'Central') !== false) {
+                $posicion_default = 'medio';
+            }
+        }
+
+        // Determinar equipo por defecto (alternar según número de inscritos)
+        $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM inscritos WHERE id_evento = ?");
+        $stmt_count->execute([$id_reserva]);
+        $total_inscritos = $stmt_count->fetch()['total'];
+
+        $equipo_default = ($total_inscritos % 2 == 0) ? 'blanco' : 'azul';
+
+        // Insertar en inscritos con valores por defecto
         $pdo->prepare("
             INSERT INTO inscritos (id_evento, id_socio, anotado, equipo, posicion_jugador)
-            VALUES (?, ?, 1, NULL, NULL)
-        ")->execute([$id_reserva, $id_socio]);
+            VALUES (?, ?, 1, ?, ?)
+        ")->execute([$id_reserva, $id_socio, $equipo_default, $posicion_default]);
         
         // Mensaje personalizado
         $fecha_formateada = date('d/m', strtotime($reserva['fecha']));
-        $mensaje = "Anotado para {$fecha_formateada} {$reserva['hora_inicio']} Cancha {$reserva['id_cancha']}";
+        $mensaje = "Listo....Anotado para {$fecha_formateada} {$reserva['hora_inicio']} Cancha {$reserva['id_cancha']}";
         
         echo json_encode(['success' => true, 'message' => $mensaje]);
         
