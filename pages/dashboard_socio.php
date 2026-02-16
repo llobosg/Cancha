@@ -172,613 +172,413 @@ $proximo_evento = $stmt_evento->fetch();
   <link rel="manifest" href="/manifest.json">
   <style>
     body {
-      background: 
-        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      background-blend-mode: multiply;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      color: white;
-    }
-    
-    .dashboard-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-      text-align: center;
-    }
-    
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid rgba(255,255,255,0.3);
-      text-align: left;
-    }
-    
-    .club-logo {
-      width: 70px;
-      height: 70px;
-      border-radius: 12px;
-      object-fit: cover;
-      background: rgba(255,255,255,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-    }
-    
-    .club-info h1 {
-      margin: 0;
-      font-size: 2rem;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    /* Mensaje de bienvenida */
-    .welcome-message {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 1.5rem;
-      border-radius: 12px;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    
-    .welcome-message h3 {
-      margin-bottom: 1rem;
-      font-size: 1.3rem;
-    }
-    
-    .welcome-message ul {
-      margin: 1rem 0;
-      padding-left: 1.5rem;
-    }
-    
-    .welcome-message li {
-      margin-bottom: 0.5rem;
-    }
-    
-    .btn-primary {
-      background: #FF6B35;
-      color: white;
-      border: none;
-      padding: 0.6rem 1.2rem;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-      text-decoration: none;
-      display: inline-block;
-    }
-    
-    .btn-primary:hover {
-      background: #E55A2B;
-    }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2.5rem;
-      justify-content: center;
-    }
-    
-    .stat-card {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 1.5rem;
-      border-radius: 14px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    
-    .stat-card h3 {
-      margin-bottom: 0.5rem;
-      opacity: 0.9;
-    }
-    
-    .stat-card .number {
-      font-size: 2rem;
-      font-weight: bold;
-    }
-    
-    .actions {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 2rem;
-      border-radius: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    
-    .actions h2 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-size: 1.5rem;
-    }
-    
-    .action-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    
-    .btn-action {
-      padding: 0.8rem 1.5rem;
-      background: #00cc66;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .btn-action:hover {
-      background: #00aa55;
-      transform: translateY(-2px);
-    }
-    
-    .logout {
-      text-align: center;
-      margin-top: 2.5rem;
-    }
-    
-    .logout a {
-      color: #ffcc00;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    
-    .logout a:hover {
-      text-decoration: underline;
-    }
+  background: 
+    linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+    url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+  background-blend-mode: multiply;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  color: white;
+}
 
-    /* Share section */
-    .share-section {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 1.5rem;
-      border-radius: 14px;
-      margin-top: 2rem;
-      text-align: center;
-    }
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
 
-    .qr-code {
-      margin: 1rem auto;
-      width: 180px;
-      height: 180px;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-    }
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid rgba(255,255,255,0.3);
+  text-align: left;
+}
 
-    .share-link {
-      background: #e9ecef;
-      padding: 0.8rem;
-      border-radius: 6px;
-      margin: 1rem 0;
-      word-break: break-all;
-      font-family: monospace;
-      font-size: 0.9rem;
-    }
+.club-logo {
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
 
-    .copy-btn {
-      background: #071289;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 0.5rem;
-    }
+.club-info h1 {
+  margin: 0;
+  font-size: 2rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
 
-    /* Botón Actualizar Perfil */
-    .update-profile-btn {
-      background: #071289;
-      color: white;
-      border: none;
-      padding: 0.8rem 2rem;
-      border-radius: 8px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-      margin: 2rem auto;
-      display: block;
-      text-decoration: none;
-      width: fit-content;
-    }
+/* NUEVO LAYOUT DIVIDIDO */
+.dashboard-upper {
+  display: flex;
+  height: 65vh;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
 
-    .update-profile-btn:hover {
-      background: #050d6b;
-    }
+.upper-left {
+  flex: 0 0 70%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  overflow-y: auto;
+}
+
+.upper-right {
+  flex: 0 0 30%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  min-height: 120px;
+}
+
+.stat-card h3 {
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.btn-action {
+  padding: 0.8rem 1.5rem;
+  background: #00cc66;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-action:hover {
+  background: #00aa55;
+  transform: translateY(-2px);
+}
+
+/* MITAD INFERIOR */
+.dashboard-lower {
+  height: 35vh;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  overflow-y: auto;
+}
+
+.dashboard-lower h3 {
+  margin-bottom: 1rem;
+  text-align: left;
+  font-size: 1.3rem;
+}
+
+/* FILTROS */
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 0.4rem 0.8rem;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.filter-btn.active {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+/* TABLA DINÁMICA */
+.dynamic-table-container {
+  overflow-x: auto;
+}
+
+.dynamic-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dynamic-table th,
+.dynamic-table td {
+  padding: 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.dynamic-table th {
+  background: rgba(102, 126, 234, 0.3);
+  position: sticky;
+  top: 0;
+}
+
+/* Share section y logout (mantener estilos existentes) */
+.share-section {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  border-radius: 14px;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.qr-code {
+  margin: 1rem auto;
+  width: 180px;
+  height: 180px;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.share-link {
+  background: #e9ecef;
+  padding: 0.8rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  word-break: break-all;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.copy-btn {
+  background: #071289;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.logout {
+  text-align: center;
+  margin-top: 2.5rem;
+}
+
+.logout a {
+  color: #ffcc00;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.logout a:hover {
+  text-decoration: underline;
+}
+
+/* Update profile button */
+.update-profile-btn {
+  background: #071289;
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin: 2rem auto;
+  display: block;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.update-profile-btn:hover {
+  background: #050d6b;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .dashboard-upper {
+    flex-direction: column;
+    height: auto;
+    margin-bottom: 1rem;
+  }
+  
+  .upper-left {
+    flex: 1;
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  
+  .upper-right {
+    flex: 1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    height: auto;
+  }
+  
+  .btn-action {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  .dashboard-lower {
+    height: auto;
+    margin-top: 1rem;
+  }
+  
+  .filters {
+    justify-content: center;
+  }
+}
   </style>
 </head>
-<body>
-  <div class="dashboard-container">
-    <!-- Header -->
-    <div class="header">
-      <div style="display: flex; align-items: center; gap: 1.2rem;">
-        <div class="club-logo">
-          <?php if ($club_logo): ?>
-            <?php 
-            $logo_path = __DIR__ . '/../public/uploads/logos/' . $club_logo;
-            if (file_exists($logo_path)): 
-            ?>
-              <img src="/public/uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
-            <?php else: ?>
-              ⚽ <!-- Logo no encontrado -->
-            <?php endif; ?>
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="header">
+    <div style="display: flex; align-items: center; gap: 1.2rem;">
+      <div class="club-logo">
+        <?php if ($club_logo): ?>
+          <?php 
+          $logo_path = __DIR__ . '/../uploads/logos/' . $club_logo;
+          if (file_exists($logo_path)): 
+          ?>
+            <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
           <?php else: ?>
             ⚽
           <?php endif; ?>
-        </div>
-        <div class="club-info">
-          <h1><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h1>
-          <p>Tu cancha está lista</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estadísticas -->
-    <!-- Próximo Evento -->
-    <?php if ($proximo_evento): ?>
-    <div class="stat-card">
-        <h3>Próximo Evento</h3>
-        
-        <!-- Datos principales -->
-        <div style="margin: 1rem 0; font-size: 0.9rem; text-align: left;">
-            <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
-                <span style="font-size: 0.8em; opacity: 0.7;">
-                    (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
-                        ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
-                </span>
-            </div>
-            
-            <div style="margin: 0.5rem 0;">
-                <strong>📅 Fecha:</strong> <?= date('d/m/Y', strtotime($proximo_evento['fecha'])) ?><br>
-                <strong>⏰ Hora:</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
-            </div>
-            
-            <div style="margin: 0.5rem 0;">
-                <strong>🏟️ Club:</strong> <?= htmlspecialchars($club_nombre) ?> (ID: <?= $_SESSION['club_id'] ?>)<br>
-                <strong>⚽ Cancha:</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?> (ID: <?= $proximo_evento['id_cancha'] ?>)
-            </div>
-            
-            <div style="margin: 0.5rem 0;">
-                <strong>💰 Costo:</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?><br>
-                <strong>👥 Cupo:</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
-                <?php if ((int)$proximo_evento['players'] > 0): ?>
-                    <span style="color: <?= ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['players']) ? '#ff6b6b' : '#4ECDC4' ?>;">
-                        (<?= ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['players']) ? 'Lleno' : 'Disponible' ?>)
-                    </span>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <?php 
-        $inscritos = (int)$proximo_evento['inscritos_actuales'];
-        $players = (int)$proximo_evento['players'];
-        $deporte = $proximo_evento['id_deporte'];
-        $id_reserva = $proximo_evento['id_reserva'];
-        $monto_total = (int)$proximo_evento['monto_total'];
-        
-        // Deportes que requieren validación de cupo
-        $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
-        $validar_cupo = in_array($deporte, $deportes_con_cupo);
-        $cupo_lleno = ($validar_cupo && $inscritos >= $players);
-        ?>
-        
-        <!-- Mostrar Botones según estado de inscripción y cupo del partido -->
-        <?php if ($cupo_lleno): ?>
-            <!-- Cupo lleno -->
-            <div style="background: #ff6b6b; color: white; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
-                Inscripciones cerradas
-            </div>
         <?php else: ?>
-            <!-- Verificar si el usuario ya está inscrito -->
-            <?php 
-            $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
-            $stmt_check_inscrito->execute([$id_reserva, $_SESSION['id_socio']]);
-            $ya_inscrito = $stmt_check_inscrito->fetch();
-            ?>
-            
-            <?php if ($ya_inscrito): ?>
-                <!-- Ya está inscrito -->
-                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #E74C3C;" 
-                            onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                        Bajarse
-                    </button>
-                    <!-- Botón "Paso" oculto cuando está inscrito -->
-                </div>
-                
-                <!-- Botones adicionales (siempre visibles para todos) -->
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
-                            onclick="notificarGalletas(<?= $id_reserva ?>)">
-                        Notificar a galletas
-                    </button>
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
-                            onclick="invitarCancha(<?= $id_reserva ?>)">
-                        Invitar un Cancha
-                    </button>
-                </div>
-            <?php else: ?>
-                <!-- No está inscrito -->
-                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #4ECDC4;" 
-                            onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                        Anotarse
-                    </button>
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #FF6B6B;" 
-                            onclick="pasoEvento(<?= $id_reserva ?>)">
-                        Paso
-                    </button>
-                </div>
-                
-                <!-- Botones adicionales (siempre visibles para todos) -->
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #9B59B6;" 
-                            onclick="notificarGalletas(<?= $id_reserva ?>)">
-                        Notificar a galletas
-                    </button>
-                    <button class="btn-action" style="flex: 1; min-width: 120px; background: #F39C12;" 
-                            onclick="invitarCancha(<?= $id_reserva ?>)">
-                        Invitar un Cancha
-                    </button>
-                </div>
-            <?php endif; ?>
+          ⚽
         <?php endif; ?>
-    </div>
-    <?php endif; ?>  <!-- ¡ESTE ES EL CIERRE QUE FALTABA! -->
-
-      <!-- En dashboard_socio.php, agrega esto en las acciones -->
-      <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
-        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
-        <!-- Nuevo botón -->
-        <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
       </div>
-
-      <?php
-        // Asegurar que $socio_actual esté definida
-        if (!isset($socio_actual)) {
-            $stmt_socio = $pdo->prepare("SELECT nombre, email, genero FROM socios WHERE id_socio = ? AND id_club = ?");
-            $stmt_socio->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
-            $socio_actual = $stmt_socio->fetch() ?: ['nombre' => 'Usuario', 'email' => '', 'genero' => ''];
-        }
-
-        //-- Botones condicionales según datos_completos -->
-        if (!$socio_actual || !$socio_actual['datos_completos']): ?>
-          <div class="welcome-message">
-            <h3>👋 ¡Bienvenido! <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?></h3>
-            <p>Te invitamos a <strong>completar tu perfil</strong> para acceder a todas las funcionalidades:</p>
-            <ul>
-              <li>📞 Teléfono de contacto</li>
-              <li>🏠 Dirección completa</li>
-              <li>👤 Información adicional</li>
-            </ul>
-            <a href="completar_perfil.php?club=<?= htmlspecialchars($club_slug) ?>" class="btn-primary">
-              Completar mi perfil ahora
-            </a>
-          </div>
-      <?php else: ?>
-        <div style="text-align: center; margin: 2rem 0;">
-          <a href="mantenedor_socios.php" class="update-profile-btn">
-            👤 Actualizar perfil <?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?>
-          </a>
-        </div>
-      <?php endif; ?>
-
-    <!-- Share section -->
-    <div class="share-section">
-      <h3>📱 Comparte tu club</h3>
-      <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
-      
-      <?php
-      $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
-      ?>
-      
-      <div class="qr-code" id="qrCode"></div>
-      <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
-      <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
-    </div>
-
-    <!-- Cerrar sesión -->
-    <div class="logout">
-      <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+      <div class="club-info">
+        <h1><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h1>
+        <p>Tu cancha está lista</p>
+      </div>
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script>
-    // Generar QR
-    const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
-    new QRCode(document.getElementById("qrCode"), {
-      text: shareUrl,
-      width: 160,
-      height: 160,
-      colorDark: "#003366",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.H
-    });
-
-    function copyLink() {
-      const link = document.getElementById('shareLink').textContent;
-      navigator.clipboard.writeText(link).then(() => {
-        alert('¡Enlace copiado al portapapeles!');
-      });
-    }
-
-    // Guardar sesión en dispositivo
-    const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
-    localStorage.setItem('cancha_device', deviceId);
-    localStorage.setItem('cancha_session', 'active');
-    localStorage.setItem('cancha_club', '<?= htmlspecialchars($club_slug) ?>');
-
-    function limpiarSesion() {
-      localStorage.removeItem('cancha_session');
-      localStorage.removeItem('cancha_club');
-    }
-
-    // Registrar PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('SW registered: ', registration);
-          })
-          .catch(registrationError => {
-            console.log('SW registration failed: ', registrationError);
-          });
-      });
-    }
-
-    // Solicitar permiso para notificaciones
-    function requestNotificationPermission() {
-      if (!('Notification' in window)) {
-        return;
-      }
+  <!-- MITAD SUPERIOR -->
+  <div class="dashboard-upper">
+    <!-- Sub sección izquierda (70%) -->
+    <div class="upper-left">
+      <!-- Próximo Evento -->
+      <?php if ($proximo_evento): ?>
+      <div class="stat-card">
+        <h3>Próximo Evento</h3>
+        <!-- Contenido del próximo evento -->
+      </div>
+      <?php endif; ?>
       
-      if (Notification.permission === 'granted') {
-        subscribeToPush();
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            subscribeToPush();
-          }
-        });
-      }
-    }
+      <!-- Último Evento -->
+      <div class="stat-card">
+        <h3>Último Evento</h3>
+        <p>Próximamente disponible</p>
+      </div>
+      
+      <!-- Estadísticas -->
+      <div class="stat-card">
+        <h3>Estadísticas</h3>
+        <p>Próximamente disponible</p>
+      </div>
+      
+      <!-- Noticias (solo responsable) -->
+      <?php if ($socio_actual['es_responsable'] == 1): ?>
+      <div class="stat-card">
+        <h3>Noticias</h3>
+        <p>Próximamente disponible</p>
+      </div>
+      <?php endif; ?>
+    </div>
+    
+    <!-- Sub sección derecha (30%) -->
+    <div class="upper-right">
+      <!-- Botones de acción rápida -->
+      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+      
+      <?php if ($socio_actual['es_responsable'] == 1): ?>
+        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
+      <?php endif; ?>
+      
+      <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
+      <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
+      <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil</button>
+    </div>
+  </div>
 
-    // Suscribir al servicio de push
-    function subscribeToPush() {
-      console.log('Usuario suscrito a notificaciones');
-    }
+  <!-- MITAD INFERIOR -->
+  <div class="dashboard-lower">
+    <h3>Detalle Eventos</h3>
+    
+    <!-- Filtros -->
+    <div class="filters">
+      <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
+      <button class="filter-btn" data-filter="reservas">Reservas</button>
+      <button class="filter-btn" data-filter="cuotas">Cuotas</button>
+      <button class="filter-btn" data-filter="eventos">Eventos</button>
+      <button class="filter-btn" data-filter="socios">Socios</button>
+    </div>
+    
+    <!-- Tabla dinámica -->
+    <div class="dynamic-table-container">
+      <table class="dynamic-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Tipo</th>
+            <th>Club</th>
+            <th>Cancha</th>
+            <th>Costo</th>
+            <th>Nombre</th>
+            <th>Pos</th>
+            <th>Monto</th>
+            <th>Pago</th>
+            <th>Comentario</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="12" style="text-align: center; padding: 2rem;">Selecciona un filtro para ver los datos</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    // Solicitar notificaciones al cargar
-    requestNotificationPermission();
-
-    // Función para anotarse a un evento
-    function anotarseEvento(idReserva, deporte, playersMax, montoTotal) {
-        const formData = new FormData();
-        formData.append('action', 'anotarse');
-        formData.append('id_reserva', idReserva);
-        formData.append('deporte', deporte);
-        formData.append('players_max', playersMax);
-        formData.append('monto_total', montoTotal);
-        
-        fetch('../api/gestion_eventos.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Mostrar toast personalizado
-                mostrarToast(data.message);
-                // Recargar la página para actualizar la ficha
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        })
-        .catch(error => {
-            mostrarToast('❌ Error al procesar la inscripción');
-            console.error('Error:', error);
-        });
-    }
-
-    // Función para marcar "Paso"
-    function pasoEvento(idReserva) {
-        const card = event.target.closest('.stat-card');
-        if (card) {
-            card.innerHTML = `
-                <h3>Próximo Evento</h3>
-                <div style="margin: 1rem 0; font-size: 0.9rem; text-align: center;">
-                    <strong>Paso esta semana</strong>
-                </div>
-            `;
-        }
-    }
-
-    // Función para notificar a galletas
-    function notificarGalletas(idReserva) {
-        // Abrir modal o implementar notificación
-        alert('Función "Notificar a galletas" en desarrollo');
-    }
-
-    // Función para invitar un cancha
-    function invitarCancha(idReserva) {
-        // Implementar lógica de invitación
-        alert('Función "Invitar un Cancha" en desarrollo');
-    }
-
-    // Función para mostrar toast notifications
-    function mostrarToast(mensaje) {
-        // Crear contenedor de toast si no existe
-        let toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            toastContainer.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 1000;
-                max-width: 300px;
-            `;
-            document.body.appendChild(toastContainer);
-        }
-        
-        // Crear toast
-        const toast = document.createElement('div');
-        toast.textContent = mensaje;
-        toast.style.cssText = `
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
-            font-size: 14px;
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        // Eliminar toast después de 3 segundos
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 3000);
-    }
-
-    // Animaciones CSS para toasts
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
-</script>
+  <!-- Share section y logout (mantener al final) -->
+  <div class="share-section">
+    <!-- ... contenido existente ... -->
+  </div>
+  
+  <div class="logout">
+    <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
+  </div>
+</div>
 </body>
 </html>
