@@ -244,18 +244,19 @@ $proximo_evento = $stmt_evento->fetch();
       margin-right: 20px;
     }
 
+    /* BOTONES SUPERIOR DERECHA - MÁS CORTOS */
     .btn-action {
-      padding: 0.8rem 1.5rem;
+      padding: 0.6rem 1rem; /* Reducido de 0.8rem */
       background: #00cc66;
       color: white;
       border: none;
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.9rem; /* Reducido ligeramente */
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
       text-align: center;
-      min-width: 180px;
+      min-width: 160px; /* Reducido de 180px */
     }
 
     .btn-action:hover {
@@ -263,16 +264,16 @@ $proximo_evento = $stmt_evento->fetch();
       transform: translateY(-2px);
     }
 
-    /* MITAD INFERIOR */
+    /* SUBIR DETALLE EVENTOS */
     .dashboard-lower {
-      height: 35vh;
+      height: 30vh; /* Reducido de 35vh */
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
       padding: 1.5rem;
       border-radius: 14px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       overflow-y: auto;
-      margin: 0 auto;
+      margin: 1rem auto 2rem auto; /* Margen superior reducido */
       max-width: 1400px;
     }
 
@@ -373,6 +374,27 @@ $proximo_evento = $stmt_evento->fetch();
       margin-top: 0.5rem;
     }
 
+    /* CERRAR SESIÓN EN HEADER */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logout-header {
+      color: #ffcc00;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logout-header:hover {
+      text-decoration: underline;
+    }
+
     .logout {
       text-align: center;
       margin-top: 2.5rem;
@@ -432,11 +454,6 @@ $proximo_evento = $stmt_evento->fetch();
         margin-right: 0;
       }
       
-      .btn-action {
-        flex: 1;
-        min-width: 120px;
-      }
-      
       .dashboard-lower {
         height: auto;
         margin-top: 1rem;
@@ -447,7 +464,7 @@ $proximo_evento = $stmt_evento->fetch();
       }
     }
 
-    /* FICHAS COMPACTAS */
+    /* ALTURA FIJA PARA FICHAS */
     .stat-card {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
@@ -455,15 +472,20 @@ $proximo_evento = $stmt_evento->fetch();
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      min-height: auto; /* Eliminar altura mínima fija */
-      height: fit-content; /* Ajustar al contenido */
-      max-height: none;
+      height: 180px; /* Altura fija para todas las fichas */
+      display: flex;
+      flex-direction: column;
     }
 
     .stat-card h3 {
-          margin-bottom: 0.5rem;
-          opacity: 0.9;
-        }
+      margin-bottom: 0.5rem;
+      opacity: 0.9;
+    }
+
+    .stat-card-content {
+      flex: 1;
+      overflow-y: auto;
+    }
 
     /* BOTONES DENTRO DE FICHA - LAYOUT EN PARES */
     .ficha-buttons {
@@ -512,130 +534,145 @@ $proximo_evento = $stmt_evento->fetch();
         <p>Tu cancha está lista</p>
       </div>
     </div>
+    
+    <!-- Cerrar sesión en header -->
+    <div class="header-right">
+      <a href="../index.php" onclick="limpiarSesion()" class="logout-header">
+        🏳️ Cerrar sesión
+      </a>
+    </div>
   </div>
 
   <!-- MITAD SUPERIOR -->
   <div class="dashboard-upper">
-    <!-- Sub sección izquierda (70%) - 3 fichas en horizontal -->
+    <!-- Sub sección izquierda (70%) - 4 fichas en grid -->
     <div class="upper-left">
       <!-- Próximo Evento -->
       <?php if ($proximo_evento): ?>
       <div class="stat-card">
         <h3>Próximo Evento</h3>
-        <div style="margin: 0.5rem 0; font-size: 0.85rem; text-align: left;">
-          <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
-            <span style="font-size: 0.7em; opacity: 0.7;">
-              (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
-                  ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
-            </span>
-          </div>
-          
-          <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-            <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
-            <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
-          </div>
-          
-          <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-            <strong>⚽</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
-          </div>
-          
-          <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-            <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> ·
-            <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
-          </div>
-        </div>
-        
-        <?php 
-        // Verificar si el usuario ya está inscrito
-        $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
-        $stmt_check_inscrito->execute([$proximo_evento['id_reserva'], $_SESSION['id_socio']]);
-        $ya_inscrito = $stmt_check_inscrito->fetch();
-        
-        $inscritos = (int)$proximo_evento['inscritos_actuales'];
-        $players = (int)$proximo_evento['players'];
-        $deporte = $proximo_evento['id_deporte'];
-        $id_reserva = $proximo_evento['id_reserva'];
-        $monto_total = (int)$proximo_evento['monto_total'];
-        
-        $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
-        $validar_cupo = in_array($deporte, $deportes_con_cupo);
-        $cupo_lleno = ($validar_cupo && $inscritos >= $players);
-        ?>
-        
-        <?php if ($cupo_lleno): ?>
-          <div style="background: #ff6b6b; color: white; padding: 0.3rem; border-radius: 4px; font-size: 0.75rem; margin-top: 0.5rem;">
-            Inscripciones cerradas
-          </div>
-        <?php else: ?>
-          <div class="ficha-buttons">
-            <?php if ($ya_inscrito): ?>
-              <button class="btn-action" style="background: #E74C3C;" 
-                      onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                Bajarse
-              </button>
-            <?php else: ?>
-              <button class="btn-action" style="background: #4ECDC4;" 
-                      onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                Anotarse
-              </button>
-              <button class="btn-action" style="background: #FF6B6B;" 
-                      onclick="pasoEvento(<?= $id_reserva ?>)">
-                Paso
-              </button>
-            <?php endif; ?>
+        <div class="stat-card-content">
+          <div style="margin: 0.5rem 0; font-size: 0.85rem; text-align: left;">
+            <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
+              <span style="font-size: 0.7em; opacity: 0.7;">
+                (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
+                    ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
+              </span>
+            </div>
             
-            <!-- Botones solo para responsable -->
-            <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-              <button class="btn-action" style="background: #9B59B6;" 
-                      onclick="invitarGalletas(<?= $id_reserva ?>)">
-                Invitar Galletas
-              </button>
-              <button class="btn-action" style="background: #F39C12;" 
-                      onclick="invitarCancha(<?= $id_reserva ?>)">
-                Invitar un Cancha
-              </button>
-              <button class="btn-action" style="background: #3498DB;" 
-                      onclick="pagarCuota(<?= $id_reserva ?>)">
-                Pagar cuota
-              </button>
-            <?php endif; ?>
+            <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+              <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
+              <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
+            </div>
+            
+            <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+              <strong>⚽</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
+            </div>
+            
+            <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+              <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> ·
+              <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
+            </div>
           </div>
-        <?php endif; ?>
+          
+          <?php 
+          // Verificar si el usuario ya está inscrito
+          $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
+          $stmt_check_inscrito->execute([$proximo_evento['id_reserva'], $_SESSION['id_socio']]);
+          $ya_inscrito = $stmt_check_inscrito->fetch();
+          
+          $inscritos = (int)$proximo_evento['inscritos_actuales'];
+          $players = (int)$proximo_evento['players'];
+          $deporte = $proximo_evento['id_deporte'];
+          $id_reserva = $proximo_evento['id_reserva'];
+          $monto_total = (int)$proximo_evento['monto_total'];
+          
+          $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
+          $validar_cupo = in_array($deporte, $deportes_con_cupo);
+          $cupo_lleno = ($validar_cupo && $inscritos >= $players);
+          ?>
+          
+          <?php if ($cupo_lleno): ?>
+            <div style="background: #ff6b6b; color: white; padding: 0.3rem; border-radius: 4px; font-size: 0.75rem; margin-top: 0.5rem;">
+              Inscripciones cerradas
+            </div>
+          <?php else: ?>
+            <div class="ficha-buttons">
+              <?php if ($ya_inscrito): ?>
+                <button class="btn-action" style="background: #E74C3C; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                  Bajarse
+                </button>
+                <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="pagarCuota(<?= $id_reserva ?>)">
+                  Pagar cuota
+                </button>
+              <?php else: ?>
+                <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                  Anotarse
+                </button>
+                <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="pasoEvento(<?= $id_reserva ?>)">
+                  Paso
+                </button>
+                <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="pagarCuota(<?= $id_reserva ?>)">
+                  Pagar cuota
+                </button>
+              <?php endif; ?>
+              
+              <!-- Botones solo para responsable -->
+              <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
+                <button class="btn-action" style="background: #9B59B6; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="invitarGalletas(<?= $id_reserva ?>)">
+                  Invitar Galletas
+                </button>
+                <button class="btn-action" style="background: #F39C12; padding: 0.4rem; font-size: 0.8rem;" 
+                        onclick="invitarCancha(<?= $id_reserva ?>)">
+                  Invitar un Cancha
+                </button>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+        </div>
       </div>
       <?php endif; ?>
       
       <!-- Último Evento -->
       <div class="stat-card">
         <h3>Último Evento</h3>
-        <p>Próximamente disponible</p>
+        <div class="stat-card-content">
+          <p style="margin-top: 2rem;">Próximamente disponible</p>
+        </div>
       </div>
       
       <!-- Estadísticas -->
       <div class="stat-card">
         <h3>Estadísticas</h3>
-        <p>Próximamente disponible</p>
+        <div class="stat-card-content">
+          <p style="margin-top: 2rem;">Próximamente disponible</p>
+        </div>
       </div>
       
-      <!-- Noticias (solo responsable) -->
-      <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-      <div class="stat-card" style="grid-column: span 3;">
+      <!-- Noticias -->
+      <div class="stat-card">
         <h3>Noticias</h3>
-        <p>Próximamente disponible</p>
+        <div class="stat-card-content">
+          <div style="text-align: left; font-size: 0.85rem; line-height: 1.4;">
+            <div>• Bienvenidos a la temporada 2026</div>
+            <div>• Nuevas reglas para inscripciones</div>
+            <div>• Torneo interno próximamente</div>
+            <div>• Actualización de horarios</div>
+            <div>• Nuevo sistema de cuotas</div>
+            <div>• Eventos especiales</div>
+            <div>• Capacitación para capitanes</div>
+            <div>• Mantención de canchas</div>
+            <div>• Seguro deportivo obligatorio</div>
+            <div>• Más novedades pronto...</div>
+          </div>
+        </div>
       </div>
-      <?php endif; ?>
-    </div>
-    
-    <!-- Sub sección derecha (30%) -->
-    <div class="upper-right">
-      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-      
-      <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
-      <?php endif; ?>
-      
-      <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= $club_slug ?>'">Eventos</button>
-      <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= $club_slug ?>'">Login Alternativo</button>
-      <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil</button>
     </div>
   </div>
 
@@ -690,11 +727,6 @@ $proximo_evento = $stmt_evento->fetch();
     <div class="qr-code" id="qrCode"></div>
     <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
     <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
-  </div>
-
-  <!-- Cerrar sesión -->
-  <div class="logout">
-    <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
   </div>
 </div>
 
