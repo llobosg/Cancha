@@ -111,7 +111,7 @@ if (!$id_socio) {
 if (!$socio_actual) {
     $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ? LIMIT 1");
     $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
-    $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario'];
+    $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
 }
 
 // Guardar en sesión (asegurar que siempre estén presentes)
@@ -134,7 +134,7 @@ $stmt_evento = $pdo->prepare("
         COUNT(i.id_inscrito) AS inscritos_actuales,
         c.nombre_cancha,
         r.tipo_reserva,
-        r.monto_total  -- ← ¡AGREGAR ESTE CAMPO!
+        r.monto_total
     FROM reservas r
     JOIN canchas c ON r.id_cancha = c.id_cancha
     JOIN tipoeventos te ON c.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
@@ -154,7 +154,7 @@ $stmt_evento = $pdo->prepare("
         te.tipoevento,
         c.nombre_cancha,
         r.tipo_reserva,
-        r.monto_total  -- ← ¡Y EN EL GROUP BY!
+        r.monto_total
     ORDER BY r.fecha ASC, r.hora_inicio ASC
     LIMIT 1
 ");
@@ -167,228 +167,303 @@ $proximo_evento = $stmt_evento->fetch();
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | Cancha</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+  <link rel="icon" href="image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
   <link rel="stylesheet" href="../styles.css">
   <link rel="manifest" href="/manifest.json">
   <style>
     body {
-  background: 
-    linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-    url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-  background-blend-mode: multiply;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  min-height: 100vh;
-  color: white;
-}
+      background: 
+        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+      background-blend-mode: multiply;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      color: white;
+    }
 
-.club-logo {
-  width: 70px;
-  height: 70px;
-  border-radius: 12px;
-  object-fit: cover;
-  background: rgba(255,255,255,0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-}
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
 
-.club-info h1 {
-  margin: 0;
-  font-size: 2rem;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid rgba(255,255,255,0.3);
+      text-align: left;
+    }
 
-/* CONTENEDOR PRINCIPAL AMPLIADO */
-.dashboard-container {
-  max-width: 1400px; /* Aumentado de 1200px a 1400px */
-  margin: 0 auto;
-  padding: 2rem 1.5rem; /* Padding lateral reducido para más ancho */
-  text-align: center;
-}
+    .club-logo {
+      width: 70px;
+      height: 70px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
 
-/* HEADER - mantener centrado */
-.header {
-…  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  overflow-y: auto;
-  margin: 0 auto; /* Centrar la sección inferior */
-  max-width: 1400px; /* Mismo ancho que el contenedor */
-}
+    .club-info h1 {
+      margin: 0;
+      font-size: 2rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
 
-.dashboard-lower h3 {
-  margin-bottom: 1rem;
-  text-align: left;
-  font-size: 1.3rem;
-}
+    /* NUEVO LAYOUT DIVIDIDO */
+    .dashboard-upper {
+      display: flex;
+      height: 65vh;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
 
-/* FILTROS */
-.filters {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
+    .upper-left {
+      flex: 0 0 70%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      overflow-y: auto;
+      margin-left: 20px;
+    }
 
-.filter-btn {
-  padding: 0.4rem 0.8rem;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+    .upper-right {
+      flex: 0 0 30%;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+      margin-right: 20px;
+    }
 
-.filter-btn:hover {
-  background: rgba(255,255,255,0.3);
-}
+    .stat-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      min-height: 120px;
+    }
 
-.filter-btn.active {
-  background: #667eea;
-  border-color: #667eea;
-}
+    .stat-card h3 {
+      margin-bottom: 0.5rem;
+      opacity: 0.9;
+    }
 
-/* TABLA DINÁMICA */
-.dynamic-table-container {
-  overflow-x: auto;
-}
+    .btn-action {
+      padding: 0.8rem 1.5rem;
+      background: #00cc66;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      min-width: 180px;
+    }
 
-.dynamic-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
+    .btn-action:hover {
+      background: #00aa55;
+      transform: translateY(-2px);
+    }
 
-.dynamic-table th,
-.dynamic-table td {
-  padding: 0.6rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-}
+    /* MITAD INFERIOR */
+    .dashboard-lower {
+      height: 35vh;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      margin: 0 auto;
+      max-width: 1400px;
+    }
 
-.dynamic-table th {
-  background: rgba(102, 126, 234, 0.3);
-  position: sticky;
-  top: 0;
-}
+    .dashboard-lower h3 {
+      margin-bottom: 1rem;
+      text-align: left;
+      font-size: 1.3rem;
+    }
 
-/* Share section y logout (mantener estilos existentes) */
-.share-section {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem;
-  border-radius: 14px;
-  margin-top: 2rem;
-  text-align: center;
-}
+    /* FILTROS */
+    .filters {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
 
-.qr-code {
-  margin: 1rem auto;
-  width: 180px;
-  height: 180px;
-  background: white;
-  padding: 10px;
-  border-radius: 8px;
-}
+    .filter-btn {
+      padding: 0.4rem 0.8rem;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-.share-link {
-  background: #e9ecef;
-  padding: 0.8rem;
-  border-radius: 6px;
-  margin: 1rem 0;
-  word-break: break-all;
-  font-family: monospace;
-  font-size: 0.9rem;
-}
+    .filter-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
 
-.copy-btn {
-  background: #071289;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 0.5rem;
-}
+    .filter-btn.active {
+      background: #667eea;
+      border-color: #667eea;
+    }
 
-.logout {
-  text-align: center;
-  margin-top: 2.5rem;
-}
+    /* TABLA DINÁMICA */
+    .dynamic-table-container {
+      overflow-x: auto;
+    }
 
-.logout a {
-  color: #ffcc00;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 1.1rem;
-}
+    .dynamic-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
 
-.logout a:hover {
-  text-decoration: underline;
-}
+    .dynamic-table th,
+    .dynamic-table td {
+      padding: 0.6rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
 
-/* Update profile button */
-.update-profile-btn {
-  background: #071289;
-  color: white;
-  border: none;
-  padding: 0.8rem 2rem;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin: 2rem auto;
-  display: block;
-  text-decoration: none;
-  width: fit-content;
-}
+    .dynamic-table th {
+      background: rgba(102, 126, 234, 0.3);
+      position: sticky;
+      top: 0;
+    }
 
-.update-profile-btn:hover {
-  background: #050d6b;
-}
+    /* Share section y logout */
+    .share-section {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 14px;
+      margin-top: 2rem;
+      text-align: center;
+    }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .dashboard-upper {
-    flex-direction: column;
-    height: auto;
-    margin-bottom: 1rem;
-  }
-  
-  .upper-left {
-    flex: 1;
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-  
-  .upper-right {
-    flex: 1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    height: auto;
-  }
-  
-  .btn-action {
-    flex: 1;
-    min-width: 120px;
-  }
-  
-  .dashboard-lower {
-    height: auto;
-    margin-top: 1rem;
-  }
-  
-  .filters {
-    justify-content: center;
-  }
-}
+    .qr-code {
+      margin: 1rem auto;
+      width: 180px;
+      height: 180px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .share-link {
+      background: #e9ecef;
+      padding: 0.8rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    .copy-btn {
+      background: #071289;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    .logout {
+      text-align: center;
+      margin-top: 2.5rem;
+    }
+
+    .logout a {
+      color: #ffcc00;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .logout a:hover {
+      text-decoration: underline;
+    }
+
+    .update-profile-btn {
+      background: #071289;
+      color: white;
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 2rem auto;
+      display: block;
+      text-decoration: none;
+      width: fit-content;
+    }
+
+    .update-profile-btn:hover {
+      background: #050d6b;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .dashboard-upper {
+        flex-direction: column;
+        height: auto;
+        margin-bottom: 1rem;
+      }
+      
+      .upper-left {
+        flex: 1;
+        grid-template-columns: 1fr;
+        height: auto;
+        margin-left: 0;
+      }
+      
+      .upper-right {
+        flex: 1;
+        flex-direction: row;
+        flex-wrap: wrap;
+        height: auto;
+        margin-right: 0;
+      }
+      
+      .btn-action {
+        flex: 1;
+        min-width: 120px;
+      }
+      
+      .dashboard-lower {
+        height: auto;
+        margin-top: 1rem;
+      }
+      
+      .filters {
+        justify-content: center;
+      }
+    }
   </style>
 </head>
+<body>
 <div class="dashboard-container">
   <!-- Header -->
   <div class="header">
@@ -422,7 +497,29 @@ $proximo_evento = $stmt_evento->fetch();
       <?php if ($proximo_evento): ?>
       <div class="stat-card">
         <h3>Próximo Evento</h3>
-        <!-- Contenido del próximo evento -->
+        <div style="margin: 1rem 0; font-size: 0.9rem; text-align: left;">
+          <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
+            <span style="font-size: 0.8em; opacity: 0.7;">
+              (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
+                  ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
+            </span>
+          </div>
+          
+          <div style="margin: 0.5rem 0;">
+            <strong>📅 Fecha:</strong> <?= date('d/m/Y', strtotime($proximo_evento['fecha'])) ?><br>
+            <strong>⏰ Hora:</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
+          </div>
+          
+          <div style="margin: 0.5rem 0;">
+            <strong>🏟️ Club:</strong> <?= htmlspecialchars($club_nombre) ?> (ID: <?= $_SESSION['club_id'] ?>)<br>
+            <strong>⚽ Cancha:</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?> (ID: <?= $proximo_evento['id_cancha'] ?>)
+          </div>
+          
+          <div style="margin: 0.5rem 0;">
+            <strong>💰 Costo:</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?><br>
+            <strong>👥 Cupo:</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
+          </div>
+        </div>
       </div>
       <?php endif; ?>
       
@@ -438,9 +535,9 @@ $proximo_evento = $stmt_evento->fetch();
         <p>Próximamente disponible</p>
       </div>
       
-      <!-- Noticias (solo responsable) - en nueva fila si es necesario -->
-      <?php if ($socio_actual['es_responsable'] == 1): ?>
-      <div class="stat-card" style="grid-column: span 3;"> <!-- Ocupa toda la fila -->
+      <!-- Noticias (solo responsable) -->
+      <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
+      <div class="stat-card" style="grid-column: span 3;">
         <h3>Noticias</h3>
         <p>Próximamente disponible</p>
       </div>
@@ -449,10 +546,9 @@ $proximo_evento = $stmt_evento->fetch();
     
     <!-- Sub sección derecha (30%) -->
     <div class="upper-right">
-      <!-- Botones de acción rápida -->
       <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
       
-      <?php if ($socio_actual['es_responsable'] == 1): ?>
+      <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
         <button class="btn-action" onclick="window.location.href='socios.php?id=<?= $club_slug ?>'">Gestionar socios</button>
       <?php endif; ?>
       
@@ -466,7 +562,6 @@ $proximo_evento = $stmt_evento->fetch();
   <div class="dashboard-lower">
     <h3>Detalle Eventos</h3>
     
-    <!-- Filtros -->
     <div class="filters">
       <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
       <button class="filter-btn" data-filter="reservas">Reservas</button>
@@ -475,7 +570,6 @@ $proximo_evento = $stmt_evento->fetch();
       <button class="filter-btn" data-filter="socios">Socios</button>
     </div>
     
-    <!-- Tabla dinámica -->
     <div class="dynamic-table-container">
       <table class="dynamic-table">
         <thead>
@@ -503,14 +597,92 @@ $proximo_evento = $stmt_evento->fetch();
     </div>
   </div>
 
-  <!-- Share section y logout (mantener al final) -->
+  <!-- Share section -->
   <div class="share-section">
-    <!-- ... contenido existente ... -->
+    <h3>📱 Comparte tu club</h3>
+    <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
+    
+    <?php
+    $share_url = "https://cancha-web.up.railway.app/pages/registro_socio.php?club=" . $club_slug;
+    ?>
+    
+    <div class="qr-code" id="qrCode"></div>
+    <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
+    <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
   </div>
-  
+
+  <!-- Cerrar sesión -->
   <div class="logout">
     <a href="../index.php" onclick="limpiarSesion()">Cerrar sesión</a>
   </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  // Generar QR
+  const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
+  new QRCode(document.getElementById("qrCode"), {
+    text: shareUrl,
+    width: 160,
+    height: 160,
+    colorDark: "#003366",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  function copyLink() {
+    const link = document.getElementById('shareLink').textContent;
+    navigator.clipboard.writeText(link).then(() => {
+      alert('¡Enlace copiado al portapapeles!');
+    });
+  }
+
+  // Guardar sesión en dispositivo
+  const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
+  localStorage.setItem('cancha_device', deviceId);
+  localStorage.setItem('cancha_session', 'active');
+  localStorage.setItem('cancha_club', '<?= htmlspecialchars($club_slug) ?>');
+
+  function limpiarSesion() {
+    localStorage.removeItem('cancha_session');
+    localStorage.removeItem('cancha_club');
+  }
+
+  // Registrar PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('SW registered: ', registration);
+        })
+        .catch(registrationError => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+
+  // Solicitar permiso para notificaciones
+  function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      return;
+    }
+    
+    if (Notification.permission === 'granted') {
+      subscribeToPush();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          subscribeToPush();
+        }
+      });
+    }
+  }
+
+  function subscribeToPush() {
+    console.log('Usuario suscrito a notificaciones');
+  }
+
+  requestNotificationPermission();
+</script>
 </body>
 </html>
