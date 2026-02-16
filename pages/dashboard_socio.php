@@ -183,23 +183,6 @@ $proximo_evento = $stmt_evento->fetch();
   color: white;
 }
 
-.dashboard-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid rgba(255,255,255,0.3);
-  text-align: left;
-}
-
 .club-logo {
   width: 70px;
   height: 70px;
@@ -218,72 +201,21 @@ $proximo_evento = $stmt_evento->fetch();
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
-/* NUEVO LAYOUT DIVIDIDO */
-.dashboard-upper {
-  display: flex;
-  height: 65vh;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.upper-left {
-  flex: 0 0 70%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  overflow-y: auto;
-}
-
-.upper-right {
-  flex: 0 0 30%;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  overflow-y: auto;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem;
-  border-radius: 14px;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  min-height: 120px;
-}
-
-.stat-card h3 {
-  margin-bottom: 0.5rem;
-  opacity: 0.9;
-}
-
-.btn-action {
-  padding: 0.8rem 1.5rem;
-  background: #00cc66;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
+/* CONTENEDOR PRINCIPAL AMPLIADO */
+.dashboard-container {
+  max-width: 1400px; /* Aumentado de 1200px a 1400px */
+  margin: 0 auto;
+  padding: 2rem 1.5rem; /* Padding lateral reducido para más ancho */
   text-align: center;
 }
 
-.btn-action:hover {
-  background: #00aa55;
-  transform: translateY(-2px);
-}
-
-/* MITAD INFERIOR */
-.dashboard-lower {
-  height: 35vh;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem;
-  border-radius: 14px;
+/* HEADER - mantener centrado */
+.header {
+…  border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   overflow-y: auto;
+  margin: 0 auto; /* Centrar la sección inferior */
+  max-width: 1400px; /* Mismo ancho que el contenedor */
 }
 
 .dashboard-lower h3 {
@@ -484,7 +416,7 @@ $proximo_evento = $stmt_evento->fetch();
 
   <!-- MITAD SUPERIOR -->
   <div class="dashboard-upper">
-    <!-- Sub sección izquierda (70%) -->
+    <!-- Sub sección izquierda (70%) - 3 fichas en horizontal -->
     <div class="upper-left">
       <!-- Próximo Evento -->
       <?php if ($proximo_evento): ?>
@@ -506,9 +438,9 @@ $proximo_evento = $stmt_evento->fetch();
         <p>Próximamente disponible</p>
       </div>
       
-      <!-- Noticias (solo responsable) -->
+      <!-- Noticias (solo responsable) - en nueva fila si es necesario -->
       <?php if ($socio_actual['es_responsable'] == 1): ?>
-      <div class="stat-card">
+      <div class="stat-card" style="grid-column: span 3;"> <!-- Ocupa toda la fila -->
         <h3>Noticias</h3>
         <p>Próximamente disponible</p>
       </div>
