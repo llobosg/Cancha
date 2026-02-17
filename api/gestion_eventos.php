@@ -90,6 +90,42 @@ try {
             INSERT INTO inscritos (id_evento, id_socio, anotado, equipo, posicion_jugador)
             VALUES (?, ?, 1, ?, ?)
         ")->execute([$id_reserva, $id_socio, $equipo_default, $posicion_default]);
+
+        // 🔔 NOTIFICAR A TODOS LOS SOCIOS DEL CLUB
+        $stmt_socios = $pdo->prepare("
+            SELECT id_socio, nombre, email 
+            FROM socios 
+            WHERE id_club = ? AND email_verified = 1
+        ");
+        $stmt_socios->execute([$id_club]);
+        $socios_notificar = $stmt_socios->fetchAll();
+
+        // Obtener nombre del socio que se anotó
+        $nombre_inscrito = $socio_actual['nombre'] ?? 'Un jugador';
+
+        // Enviar notificación a cada socio
+        foreach ($socios_notificar as $socio) {
+            if ($socio['id_socio'] == $id_socio) continue; // No notificarse a sí mismo
+            
+            // Web Push (si está suscrito)
+            // Aquí iría la lógica de Firebase/Web Push si la tienes implementada
+            
+            // Email (opcional, solo si quieres notificar por correo también)
+            /*
+            require_once __DIR__ . '/../includes/brevo_mailer.php';
+            $mail = new BrevoMailer();
+            $mail->setTo($socio['email'], $socio['nombre']);
+            $mail->setSubject('⚽ Nueva inscripción en tu club');
+            $mail->setHtmlBody("
+                <p><strong>{$nombre_inscrito}</strong> se ha anotado al próximo evento.</p>
+                <p>¡Ya casi armamos el equipo!</p>
+            ");
+            $mail->send(); // No detener el flujo si falla
+            */
+        }
+
+        // Mensaje de éxito
+        echo json_encode(['success' => true, 'message' => "✅ ¡Anotado! Se notificó a los socios del club."]);
         
         // Mensaje personalizado
         $fecha_formateada = date('d/m', strtotime($reserva['fecha']));

@@ -815,33 +815,6 @@ $proximo_evento = $stmt_evento->fetch();
     console.log('Usuario suscrito a notificaciones');
   }
 
-  // Funciones para nuevos botones
-  function invitarGalletas(idReserva) {
-      alert('Función "Invitar Galletas" en desarrollo');
-  }
-
-  function invitarCancha(idReserva) {
-      alert('Función "Invitar un Cancha" en desarrollo');
-  }
-
-  function pagarCuota(idReserva) {
-      alert('Función "Pagar cuota" en desarrollo');
-  }
-
-  // Función pasoEvento actualizada
-  function pasoEvento(idReserva) {
-      const card = event.target.closest('.stat-card');
-      if (card) {
-          // Solo cambiar el botón "Paso", mantener el resto
-          const pasoBtn = event.target;
-          pasoBtn.textContent = 'Paso esta semana';
-          pasoBtn.disabled = true;
-          pasoBtn.style.opacity = '0.7';
-      }
-  }
-
-  requestNotificationPermission();
-
   // Función para anotarse a un evento
   function anotarseEvento(idReserva, deporte, playersMax, montoTotal) {
       const formData = new FormData();
@@ -928,6 +901,101 @@ $proximo_evento = $stmt_evento->fetch();
       }
   `;
   document.head.appendChild(style);
+
+  // Funciones para nuevos botones
+  function invitarGalletas(idReserva) {
+      alert('Función "Invitar Galletas" en desarrollo');
+  }
+
+  function invitarCancha(idReserva) {
+      alert('Función "Invitar un Cancha" en desarrollo');
+  }
+
+  function pagarCuota(idReserva) {
+      alert('Función "Pagar cuota" en desarrollo');
+  }
+
+  // Función pasoEvento actualizada
+  function pasoEvento(idReserva) {
+      const card = event.target.closest('.stat-card');
+      if (card) {
+          // Solo cambiar el botón "Paso", mantener el resto
+          const pasoBtn = event.target;
+          pasoBtn.textContent = 'Paso esta semana';
+          pasoBtn.disabled = true;
+          pasoBtn.style.opacity = '0.7';
+      }
+  }
+
+  requestNotificationPermission();
+
+  // Cargar tabla de detalle eventos
+  function cargarDetalleEventos(filtro = 'inscritos') {
+      fetch(`../api/cargar_detalle_eventos.php?filtro=${filtro}`)
+          .then(response => response.json())
+          .then(data => {
+              const tbody = document.querySelector('.dynamic-table tbody');
+              if (data.error) {
+                  tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">${data.error}</td></tr>`;
+                  return;
+              }
+
+              if (data.length === 0) {
+                  tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:1.5rem;">Sin datos para mostrar</td></tr>`;
+                  return;
+              }
+
+              let html = '';
+              data.forEach(row => {
+                  html += `
+                      <tr>
+                          <td>${formatDate(row.fecha)}</td>
+                          <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                          <td>${row.id_tipoevento || '-'}</td>
+                          <td>${row.id_club}</td>
+                          <td>${row.id_cancha}</td>
+                          <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                          <td>${row.nombre || '-'}</td>
+                          <td>${row.posicion_jugador || '-'}</td>
+                          <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                          <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                          <td>${row.comentario || '-'}</td>
+                          <td>
+                              <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>
+                          </td>
+                      </tr>
+                  `;
+              });
+              tbody.innerHTML = html;
+          })
+          .catch(err => {
+              console.error('Error al cargar eventos:', err);
+              document.querySelector('.dynamic-table tbody').innerHTML = 
+                  `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al cargar datos</td></tr>`;
+          });
+  }
+
+  // Formatear fecha YYYY-MM-DD → DD/MM
+  function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}`;
+  }
+
+  // Inicializar al cargar la página
+  document.addEventListener('DOMContentLoaded', () => {
+      cargarDetalleEventos('inscritos');
+
+      // Manejar clics en filtros
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+              document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              const filtro = btn.getAttribute('data-filter');
+              cargarDetalleEventos(filtro);
+          });
+      });
+  });
 </script>
 </body>
 </html>
