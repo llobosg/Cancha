@@ -471,7 +471,7 @@ $proximo_evento = $stmt_evento->fetch();
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 220px; /* Altura fija para todas las fichas */
+      height: 300px; /* Altura fija para todas las fichas */
       display: flex;
       flex-direction: column;
     }
