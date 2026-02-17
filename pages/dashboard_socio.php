@@ -218,7 +218,7 @@ $proximo_evento = $stmt_evento->fetch();
       text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* NUEVO LAYOUT DIVIDIDO */
+    /* Ajustar proporción: más espacio para fichas, menos para botones */
     .dashboard-upper {
       display: flex;
       height: 65vh;
@@ -227,16 +227,16 @@ $proximo_evento = $stmt_evento->fetch();
     }
 
     .upper-left {
-      flex: 0 0 70%;
+      flex: 0 0 75%; /* Aumentado de 70% a 75% */
       display: grid;
-      grid-template-columns: repeat(4, 1fr); /* Cambiado de 3 a 4 */
+      grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
       overflow-y: auto;
       margin-left: 20px;
     }
 
     .upper-right {
-      flex: 0 0 30%;
+      flex: 0 0 25%; /* Reducido de 30% a 25% */
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -545,12 +545,97 @@ $proximo_evento = $stmt_evento->fetch();
 
   <!-- MITAD SUPERIOR -->
   <div class="dashboard-upper">
-    <!-- Sub sección izquierda (70%) - 4 fichas en grid -->
+      <!-- Sub sección izquierda (70%) - 4 fichas en grid -->
       <div class="upper-left">
         <!-- Próximo Evento -->
         <?php if ($proximo_evento): ?>
         <div class="stat-card">
-          <!-- contenido del próximo evento -->
+          <h3>Próximo Evento</h3>
+          <div class="stat-card-content">
+            <div style="margin: 0.5rem 0; font-size: 0.85rem; text-align: left;">
+              <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
+                <span style="font-size: 0.7em; opacity: 0.7;">
+                  (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
+                      ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
+                </span>
+              </div>
+              
+              <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+                <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
+                <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
+              </div>
+              
+              <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+                <strong>⚽</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
+              </div>
+              
+              <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+                <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> ·
+                <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
+              </div>
+            </div>
+            
+            <?php 
+            // Verificar si el usuario ya está inscrito
+            $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
+            $stmt_check_inscrito->execute([$proximo_evento['id_reserva'], $_SESSION['id_socio']]);
+            $ya_inscrito = $stmt_check_inscrito->fetch();
+            
+            $inscritos = (int)$proximo_evento['inscritos_actuales'];
+            $players = (int)$proximo_evento['players'];
+            $deporte = $proximo_evento['id_deporte'];
+            $id_reserva = $proximo_evento['id_reserva'];
+            $monto_total = (int)$proximo_evento['monto_total'];
+            
+            $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
+            $validar_cupo = in_array($deporte, $deportes_con_cupo);
+            $cupo_lleno = ($validar_cupo && $inscritos >= $players);
+            ?>
+            
+            <?php if ($cupo_lleno): ?>
+              <div style="background: #ff6b6b; color: white; padding: 0.3rem; border-radius: 4px; font-size: 0.75rem; margin-top: 0.5rem;">
+                Inscripciones cerradas
+              </div>
+            <?php else: ?>
+              <div class="ficha-buttons">
+                <?php if ($ya_inscrito): ?>
+                  <button class="btn-action" style="background: #E74C3C; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                    Bajarse
+                  </button>
+                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="pagarCuota(<?= $id_reserva ?>)">
+                    Pagar cuota
+                  </button>
+                <?php else: ?>
+                  <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                    Anotarse
+                  </button>
+                  <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="pasoEvento(<?= $id_reserva ?>)">
+                    Paso
+                  </button>
+                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="pagarCuota(<?= $id_reserva ?>)">
+                    Pagar cuota
+                  </button>
+                <?php endif; ?>
+                
+                <!-- Botones solo para responsable -->
+                <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
+                  <button class="btn-action" style="background: #9B59B6; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="invitarGalletas(<?= $id_reserva ?>)">
+                    Invitar Galletas
+                  </button>
+                  <button class="btn-action" style="background: #F39C12; padding: 0.4rem; font-size: 0.8rem;" 
+                          onclick="invitarCancha(<?= $id_reserva ?>)">
+                    Invitar un Cancha
+                  </button>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+          </div>
         </div>
         <?php else: ?>
         <div class="stat-card">
