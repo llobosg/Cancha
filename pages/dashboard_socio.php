@@ -227,7 +227,7 @@ $proximo_evento = $stmt_evento->fetch();
     }
 
     .upper-left {
-      flex: 0 0 75%; /* Aumentado de 70% a 75% */
+      flex: 0 0 80%; /* Aumentado de 70% a 75% */
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
@@ -236,7 +236,7 @@ $proximo_evento = $stmt_evento->fetch();
     }
 
     .upper-right {
-      flex: 0 0 25%; /* Reducido de 30% a 25% */
+      flex: 0 0 20%; /* Reducido de 30% a 25% */
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -246,7 +246,7 @@ $proximo_evento = $stmt_evento->fetch();
 
     /* BOTONES SUPERIOR DERECHA - MÁS CORTOS */
     .btn-action {
-      padding: 0.6rem 1rem; /* Reducido de 0.8rem */
+      padding: 0.4rem 1rem; /* Reducido de 0.8rem */
       background: #00cc66;
       color: white;
       border: none;
@@ -266,7 +266,7 @@ $proximo_evento = $stmt_evento->fetch();
 
     /* SUBIR DETALLE EVENTOS */
     .dashboard-lower {
-      height: 30vh; /* Reducido de 35vh */
+      height: 25vh; /* Reducido de 35vh */
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
       padding: 1.5rem;
@@ -472,7 +472,7 @@ $proximo_evento = $stmt_evento->fetch();
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 180px; /* Altura fija para todas las fichas */
+      height: 220px; /* Altura fija para todas las fichas */
       display: flex;
       flex-direction: column;
     }
