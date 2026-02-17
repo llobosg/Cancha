@@ -221,13 +221,13 @@ $proximo_evento = $stmt_evento->fetch();
     /* Ajustar proporción: más espacio para fichas, menos para botones */
     .dashboard-upper {
       display: flex;
-      height: 75vh;
+      height: auto; /* ← Cambiado de 75vh a auto */
       gap: 2rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem; /* ← Reducido de 2rem a 1.5rem */
     }
 
     .upper-left {
-      flex: 0 0 85%; /* Aumentado de 70% a 75% */
+      flex: 0 0 85%;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
@@ -236,7 +236,7 @@ $proximo_evento = $stmt_evento->fetch();
     }
 
     .upper-right {
-      flex: 0 0 15%; /* Reducido de 30% a 25% */
+      flex: 0 0 15%;
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -246,33 +246,34 @@ $proximo_evento = $stmt_evento->fetch();
 
     /* BOTONES SUPERIOR DERECHA - MÁS CORTOS */
     .btn-action {
-      padding: 0.4rem 1rem; /* Reducido de 0.8rem */
+      padding: 0.4rem 1rem;
       background: #00cc66;
       color: white;
       border: none;
       border-radius: 8px;
-      font-size: 0.9rem; /* Reducido ligeramente */
+      font-size: 0.9rem;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
       text-align: center;
-      min-width: 110px; /* Reducido de 180px */
+      min-width: 110px;
     }
+
     .btn-action:hover {
       background: #00aa55;
       transform: translateY(-2px);
     }
 
-    /* SUBIR DETALLE EVENTOS */
+    /* SUBIR DETALLE EVENTOS - POSICIÓN CERCANA A FICHAS */
     .dashboard-lower {
-      height: 20vh; /* Reducido de 35vh */
+      height: 20vh;
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
       padding: 1.5rem;
       border-radius: 14px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       overflow-y: auto;
-      margin: 1rem auto 2rem auto; /* Margen superior reducido */
+      margin: 0 auto 2rem auto; /* ← Margen superior = 0 */
       max-width: 1400px;
     }
 
@@ -471,7 +472,7 @@ $proximo_evento = $stmt_evento->fetch();
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 300px; /* Altura fija para todas las fichas */
+      height: 260px; /* Altura fija para todas las fichas */
       display: flex;
       flex-direction: column;
     }
