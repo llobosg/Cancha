@@ -36,7 +36,7 @@ try {
                 JOIN socios s ON i.id_socio = s.id_socio
                 LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio
                 JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                JOIN tipoeventos te ON ca.id_deporte = te.tipoevento
+                JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                 WHERE r.id_club = ?
                 ORDER BY r.fecha DESC, r.hora_inicio DESC
                 LIMIT 50
@@ -60,7 +60,7 @@ try {
                     r.id_reserva as id_evento
                 FROM reservas r
                 JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                JOIN tipoeventos te ON ca.id_deporte = te.tipoevento
+                JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                 WHERE r.id_club = ?
                 ORDER BY r.fecha DESC
                 LIMIT 50
