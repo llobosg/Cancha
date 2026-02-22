@@ -458,7 +458,7 @@ if ($modo_individual) {
               <option value="Preparador Físico">Preparador Físico</option>
               <option value="Utilero">Utilero</option>
             </select>
-          </div>
+      </div>
 
       <!-- Fila 2 -->
       <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
@@ -483,6 +483,7 @@ if ($modo_individual) {
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
       <div class="form-group"><label for="deporte">Deporte *</label>
+      <div class="form-group">
         <select id="deporte" name="deporte" required>
           <option value="">Seleccionar</option>
           <?php foreach ($deportes_disponibles as $dep): ?>
