@@ -13,7 +13,17 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Determinar modo: individual o club
 $modo_individual = !isset($_GET['club']) || empty($_GET['club']);
+
+// Cargar deportes según el modo
+if ($modo_individual) {
+    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '1' ORDER BY deporte");
+} else {
+    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '2' ORDER BY deporte");
+}
+$stmt_deportes->execute();
+$deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
 
 // Obtener club desde URL
 $club_slug_from_url = $_GET['club'] ?? '';
@@ -467,28 +477,14 @@ $club_logo = $club['logo'] ?? '';
       <!-- Fila 3 -->
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
-      <div class="form-group"><label for="deporte">Deporte</label></div>
-      <select name="deporte" required>
-        <?php
-        $deportes_individuales = ['tenis', 'padel', 'volleyball', 'gimnasio', 'piscina', 'clases_particulares'];
-        $todos_los_deportes = ['futbolito', 'futsal', 'tenis', 'padel', 'volleyball', 'gimnasio', 'piscina', 'clases_particulares'];
-        $deportes_disponibles = $modo_individual ? $deportes_individuales : $todos_los_deportes;
-        foreach ($deportes_disponibles as $dep):
-          $nombre = match($dep) {
-            'tenis' => 'Tenis',
-            'padel' => 'Pádel',
-            'volleyball' => 'Vóleibol',
-            'gimnasio' => 'Gimnasio',
-            'piscina' => 'Piscina',
-            'clases_particulares' => 'Clases Particulares',
-            'futbolito' => 'Fútbolito',
-            'futsal' => 'Futsal',
-            default => ucfirst($dep)
-          };
-        ?>
-          <option value="<?= $dep ?>"><?= $nombre ?></option>
-        <?php endforeach; ?>
-      </select>
+      <div class="form-group"><label for="deporte">Deporte *</label>
+        <select id="deporte" name="deporte" required>
+          <option value="">Seleccionar</option>
+          <?php foreach ($deportes_disponibles as $dep): ?>
+            <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
       <div class="form-group"><label for="id_puesto">Puesto</label></div>
       <div class="form-group">
         <select id="id_puesto" name="id_puesto">
