@@ -57,6 +57,13 @@ if ($modo_individual) {
     $stmt_deportes->execute();
     $deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
 }
+
+// Cargar regiones de Chile
+$stmt_regiones = $pdo->query("SELECT DISTINCT codigo_region, nombre_region FROM regiones_chile ORDER BY nombre_region");
+$regiones_chile = [];
+while ($row = $stmt_regiones->fetch()) {
+    $regiones_chile[$row['codigo_region']] = $row['nombre_region'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -88,55 +95,16 @@ if ($modo_individual) {
       color: white;
     }
 
-    /* Submodal en web */
+    /* Formulario más ancho */
     .form-container {
       width: 95%;
-      max-width: 900px;
+      max-width: 1200px;
       background: white;
       padding: 2rem;
       border-radius: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
       position: relative;
       margin: 0 auto;
-    }
-
-    /* Submodal en web */
-    .form-container {
-      width: 95%;
-      max-width: 900px;
-      background: white;
-      padding: 2rem;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      position: relative;
-      margin: 0 auto;
-    }
-
-    /* En móvil: pantalla completa sin submodal */
-    @media (max-width: 768px) {
-      body {
-        background: white !important; /* Fondo blanco en móvil */
-        color: #333 !important;
-      }
-      
-      .form-container {
-        width: 100%;
-        max-width: none;
-        height: auto;
-        min-height: 100vh;
-        border-radius: 0;
-        box-shadow: none;
-        margin: 0;
-        padding: 1.5rem;
-        background: white !important;
-        position: relative;
-      }
-      
-      /* Ocultar fondo corporativo en móvil */
-      .form-container::before,
-      .form-container::after {
-        display: none;
-      }
     }
 
     /* Logo ⚽ en esquinas */
@@ -152,43 +120,6 @@ if ($modo_individual) {
     .form-container::before { top: 22px; left: 22px; }
     .form-container::after { bottom: 22px; right: 22px; }
 
-    h2 {
-      text-align: center;
-      color: #003366;
-      margin-bottom: 1.8rem;
-      font-weight: 700;
-      font-size: 1.6rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .club-header {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .club-logo {
-      width: 50px;
-      height: 50px;
-      border-radius: 8px;
-      object-fit: cover;
-      background: #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #666;
-      font-size: 1.2rem;
-    }
-
-    .club-name {
-      font-size: 1.1rem;
-      color: #333;
-    }
-
     /* Botón de cierre */
     .close-btn {
       position: absolute;
@@ -201,157 +132,9 @@ if ($modo_individual) {
       transition: opacity 0.2s;
       z-index: 10;
     }
+    .close-btn:hover { opacity: 1; }
 
-    .close-btn:hover {
-      opacity: 1;
-    }
-
-    /* Formulario */
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 0.8rem 1.2rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group {
-      margin: 0;
-    }
-
-    .form-group label {
-      text-align: right;
-      padding-right: 0.5rem;
-      display: block;
-      font-size: 0.85rem;
-      color: #333;
-      font-weight: normal;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 0.85rem;
-      color: #071289;
-      background: #fafcff;
-    }
-
-    /* === MOBILE: 2 columnas (label + campo) === */
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 2fr; /* label + input */
-        gap: 0.8rem;
-      }
-      
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-        font-weight: bold;
-      }
-      
-      /* Campos que ocupan toda la fila en móvil */
-      .full-width-mobile {
-        grid-column: span 2 !important;
-      }
-      
-      /* Ajuste para selects y inputs */
-      .form-group input,
-      .form-group select {
-        min-height: 40px;
-      }
-    }
-  
-    .col-span-2 {
-      grid-column: span 2;
-    }
-
-    .submit-section {
-      grid-column: 1 / -1;
-      text-align: center;
-      margin-top: 1.8rem;
-    }
-
-    .btn-submit {
-      width: auto;
-      min-width: 220px;
-      padding: 0.65rem 1.8rem;
-      background: #071289;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn-submit:hover {
-      background: #050d66;
-    }
-
-    .error {
-      background: #ffebee;
-      color: #c62828;
-      padding: 0.7rem;
-      border-radius: 6px;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      font-size: 0.85rem;
-    }
-
-    /* Mobile layout: 4 columnas x 7 filas */
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.7rem;
-      }
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-      }
-      .col-span-2 {
-        grid-column: span 2;
-      }
-      .logo-section,
-      .submit-section {
-        grid-column: 1 / -1;
-      }
-      .form-group {
-        margin: 0.5rem 0;
-      }
-      .form-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0.5rem;
-      }
-      .form-group {
-        grid-column: span 2;
-      }
-      .form-group:nth-child(1),
-      .form-group:nth-child(2) { grid-column: span 2; }
-      .form-group:nth-child(3),
-      .form-group:nth-child(4) { grid-column: span 2; }
-      .form-group:nth-child(5),
-      .form-group:nth-child(6) { grid-column: span 2; }
-      .form-group:nth-child(7),
-      .form-group:nth-child(8) { grid-column: span 2; }
-      .form-group:nth-child(9),
-      .form-group:nth-child(10) { grid-column: span 2; }
-      .form-group:nth-child(12) { grid-column: span 4; }
-      .submit-section {
-        grid-column: span 4;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .mobile-full {
-        grid-column: span 2 !important;
-      }
-    }
-
-    /* Encabezado centrado */
+    /* Encabezado */
     .header-container {
       display: flex;
       flex-direction: column;
@@ -360,7 +143,6 @@ if ($modo_individual) {
       margin-bottom: 1.8rem;
       position: relative;
     }
-
     .header-container h2 {
       text-align: center;
       color: #003366;
@@ -368,7 +150,6 @@ if ($modo_individual) {
       font-size: 1.4rem;
       margin: 0;
     }
-
     .club-header {
       display: flex;
       align-items: center;
@@ -378,7 +159,6 @@ if ($modo_individual) {
       border-radius: 12px;
       border: 1px solid rgba(0, 51, 102, 0.1);
     }
-
     .club-logo {
       width: 45px;
       height: 45px;
@@ -392,7 +172,6 @@ if ($modo_individual) {
       color: #666;
       font-size: 1.1rem;
     }
-
     .club-name {
       font-size: 1.2rem;
       font-weight: 600;
@@ -400,23 +179,115 @@ if ($modo_individual) {
       white-space: nowrap;
     }
 
-    /* En móviles */
+    /* Formulario - DESKTOP */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .form-group { margin: 0; }
+    .form-group label {
+      text-align: right;
+      padding-right: 0.5rem;
+      display: block;
+      font-size: 0.85rem;
+      color: #333;
+      font-weight: normal;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      color: #071289;
+      background: #fafcff;
+    }
+    .col-span-2 { grid-column: span 2; }
+
+    /* Submit button */
+    .submit-section {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-top: 1.8rem;
+    }
+    .btn-submit {
+      width: auto;
+      min-width: 220px;
+      padding: 0.65rem 1.8rem;
+      background: #071289;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover { background: #050d66; }
+
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 0.7rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    /* === MOBILE: Layout limpio === */
     @media (max-width: 768px) {
-      .header-container h2 {
-        font-size: 1.3rem;
+      body {
+        background: white !important;
+        color: #333 !important;
       }
       
-      .club-name {
-        font-size: 1.1rem;
+      .form-container {
+        width: 100%;
+        max-width: none;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 1.5rem;
+        background: white !important;
       }
       
-      .club-logo {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
+      .form-container::before,
+      .form-container::after {
+        display: none;
+      }
+      
+      .header-container h2 { font-size: 1.3rem; }
+      .club-name { font-size: 1.1rem; }
+      .club-logo { width: 40px; height: 40px; font-size: 1rem; }
+      
+      /* MOBILE: 2 columnas (label + input) */
+      .form-grid {
+        grid-template-columns: 1fr 2fr;
+        gap: 0.8rem;
+      }
+      
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-weight: bold;
+      }
+      
+      /* Campos que ocupan toda la fila */
+      .full-width-mobile {
+        grid-column: span 2 !important;
+      }
+      
+      .form-group input,
+      .form-group select {
+        min-height: 40px;
       }
     }
-  </style>
+</style>
 </head>
 <body>
   <div class="form-container">
@@ -456,110 +327,124 @@ if ($modo_individual) {
       <?php endif; ?>
 
       <div class="form-grid">
-        <!-- Fila 1 -->
-        <div class="form-group"><label for="nombre">Nombre</label></div>
-        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
-        
-        <div class="form-group"><label for="alias">Alias</label></div>
-        <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-        
-        <div class="form-group"><label for="rol">Rol</label></div>
-        <div class="form-group">
-          <select id="rol" name="rol" required>
-            <option value="">Seleccionar</option>
-            <option value="Jugador">Jugador</option>
-            <option value="Galleta">Galleta</option>
-            <option value="Amigo del club">Amigo del club</option>
-            <option value="Tesorero">Tesorero</option>
-            <option value="Director">Director</option>
-            <option value="Delegado">Delegado</option>
-            <option value="Profe">Profe</option>
-            <option value="Kine">Kine</option>
-            <option value="Preparador Físico">Preparador Físico</option>
-            <option value="Utilero">Utilero</option>
-          </select>
-        </div>
-
-        <!-- Fila 2 -->
-        <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
-        <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
-        
-        <div class="form-group"><label for="genero">Género</label></div>
-        <div class="form-group">
-          <select id="genero" name="genero" required>
-            <option value="">Seleccionar</option>
-            <option value="Femenino">Femenino</option>
-            <option value="Masculino">Masculino</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-
-        <div class="form-group"><label for="celular">Celular</label></div>
-        <div class="form-group"><input type="tel" id="celular" name="celular"></div>
-
-        <!-- Fila 3 -->
-        <div class="form-group full-width-mobile"><label for="direccion">Dirección</label></div>
-        <div class="form-group full-width-mobile"><input type="text" id="direccion" name="direccion"></div>
-
-        <div class="form-group"><label for="email">Correo</label></div>
-        <div class="form-group"><input type="email" id="email" name="email" required></div>
-
-        <div></div>
-        <div></div>
-        
-         <!-- Fila 4 -->
-        <div class="form-group"><label for="deporte">Deporte *</label></div>
-        <div class="form-group">
-          <select id="deporte" name="deporte" required>
-            <option value="">Seleccionar</option>
-            <?php foreach ($deportes_disponibles as $dep): ?>
-              <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        
-        <div class="form-group"><label for="id_puesto">Puesto</label></div>
-        <div class="form-group">
-          <select id="id_puesto" name="id_puesto">
-            <option value="">Seleccionar</option>
-            <!-- Se cargará dinámicamente -->
-          </select>
-        </div>
-
-        <div class="form-group"><label for="habilidad">Habilidad</label></div>
-        <div class="form-group">
-          <select id="habilidad" name="habilidad">
-            <option value="">Seleccionar</option>
-            <option value="Básica">Malo</option>
-            <option value="Intermedia">Más o Menos</option>
-            <option value="Avanzada">Crack</option>
-            <option value="Pádel-Sexta">Pádel-Sexta</option>
-            <option value="Pádel-Quinta">Pádel-Quinta</option>
-            <option value="Pádel-Cuarta">Pádel-Cuarta</option>
-            <option value="Pádel-Tercera">Pádel-Tercera</option>
-            <option value="Pádel-Segunda">Pádel-Segunda</option>
-            <option value="Pádel-Primera">Pádel-Primera</option>
-          </select>
-        </div>
-
-        <!-- Fila 5 -->
-        <div class="form-group full-width-mobile"><label for="foto">Foto</label></div>
-        <div class="form-group full-width-mobile"><input type="file" id="foto" name="foto" accept="image/*"></div>
-
-        <!-- Fila 6 -->
-        <div class="form-group"><label for="password">Contraseña *</label></div>
-        <div class="form-group"><input type="password" id="password" name="password" required minlength="6"></div>
-        
-        <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
-        <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
-        
-        <div></div>
-        <div></div>
-        <!-- Botón -->
-        <div class="submit-section">
-          <button type="submit" class="btn-submit">Enviar código de verificación</button>
-        </div>
+      <!-- Fila 1 -->
+      <div class="form-group"><label for="nombre">Nombre</label></div>
+      <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
+      <div class="form-group"><label for="alias">Alias</label></div>
+      <div class="form-group"><input type="text" id="alias" name="alias" required></div>
+      <div class="form-group"><label for="rol">Rol</label></div>
+      <div class="form-group">
+        <select id="rol" name="rol" required>
+          <option value="">Seleccionar</option>
+          <option value="Jugador">Jugador</option>
+          <option value="Galleta">Galleta</option>
+          <option value="Amigo del club">Amigo del club</option>
+          <option value="Tesorero">Tesorero</option>
+          <option value="Director">Director</option>
+          <option value="Delegado">Delegado</option>
+          <option value="Profe">Profe</option>
+          <option value="Kine">Kine</option>
+          <option value="Preparador Físico">Preparador Físico</option>
+          <option value="Utilero">Utilero</option>
+        </select>
       </div>
+
+      <!-- Fila 2 -->
+      <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
+      <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
+      <div class="form-group"><label for="genero">Género</label></div>
+      <div class="form-group">
+        <select id="genero" name="genero" required>
+          <option value="">Seleccionar</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label for="celular">Celular</label></div>
+      <div class="form-group"><input type="tel" id="celular" name="celular"></div>
+
+      <!-- Fila 3 -->
+      <div class="form-group"><label for="pais">País</label></div>
+      <div class="form-group">
+        <select id="pais" name="pais">
+          <option value="Chile" selected>Chile</option>
+          <!-- Agrega otros países si lo deseas -->
+        </select>
+      </div>
+      <div class="form-group"><label for="region">Región *</label></div>
+      <div class="form-group">
+        <select id="region" name="region" required onchange="actualizarCiudades()">
+          <option value="">Seleccionar región</option>
+          <?php foreach ($regiones_chile as $codigo => $nombre): ?>
+            <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group"><label for="ciudad">Ciudad *</label></div>
+      <div class="form-group">
+        <select id="ciudad" name="ciudad" required disabled>
+          <option value="">Seleccionar región primero</option>
+        </select>
+      </div>
+
+      <!-- Fila 4 -->
+      <div class="form-group"><label for="comuna">Comuna *</label></div>
+      <div class="form-group">
+        <select id="comuna" name="comuna" required disabled>
+          <option value="">Seleccionar ciudad primero</option>
+        </select>
+      </div>
+      <div class="form-group"><label for="direccion">Dirección</label></div>
+      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" placeholder="Ej: Villaseca 750, depto 355"></div>
+      <div class="form-group"><label for="email">Correo</label></div>
+      <div class="form-group"><input type="email" id="email" name="email" required></div>
+
+      <!-- Fila 5 -->
+      <div class="form-group"><label for="deporte">Deporte *</label></div>
+      <div class="form-group">
+        <select id="deporte" name="deporte" required>
+          <option value="">Seleccionar</option>
+          <?php foreach ($deportes_disponibles as $dep): ?>
+            <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group"><label for="id_puesto">Puesto</label></div>
+      <div class="form-group">
+        <select id="id_puesto" name="id_puesto">
+          <option value="">Seleccionar</option>
+          <!-- Se cargará dinámicamente -->
+        </select>
+      </div>
+      <div class="form-group"><label for="habilidad">Habilidad</label></div>
+      <div class="form-group">
+        <select id="habilidad" name="habilidad">
+          <option value="">Seleccionar</option>
+          <option value="Básica">Malo</option>
+          <option value="Intermedia">Más o Menos</option>
+          <option value="Avanzada">Crack</option>
+          <option value="Pádel-Sexta">Pádel-Sexta</option>
+          <option value="Pádel-Quinta">Pádel-Quinta</option>
+          <option value="Pádel-Cuarta">Pádel-Cuarta</option>
+          <option value="Pádel-Tercera">Pádel-Tercera</option>
+          <option value="Pádel-Segunda">Pádel-Segunda</option>
+          <option value="Pádel-Primera">Pádel-Primera</option>
+        </select>
+      </div>
+
+      <!-- Fila 6 -->
+      <div class="form-group"><label for="foto">Foto</label></div>
+      <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
+      <div></div><div></div><div></div><div></div>
+
+      <!-- Fila 7 -->
+      <div class="form-group"><label for="password">Contraseña *</label></div>
+      <div class="form-group"><input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
+      <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
+      <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
+      <div></div><div></div>
+    </div>
 
       <!-- Agregar validación JavaScript -->
       <script>
@@ -781,6 +666,54 @@ if ($modo_individual) {
         }
     `;
     document.head.appendChild(style);
+
+    <!-- SCRIPTS DINÁMICOS DE REGIONES -->
+    let datosChile = {};
+    
+    fetch('../api/get_regiones.php')
+      .then(response => response.json())
+      .then(data => { datosChile = data; })
+      .catch(error => console.error('Error al cargar regiones:', error));
+
+    function actualizarCiudades() {
+      const region = document.getElementById('region').value;
+      const ciudadSelect = document.getElementById('ciudad');
+      const comunaSelect = document.getElementById('comuna');
+      
+      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      ciudadSelect.disabled = !region;
+      comunaSelect.disabled = true;
+      
+      if (region && datosChile[region]) {
+        Object.entries(datosChile[region].ciudades).forEach(([codigo, nombre]) => {
+          const option = document.createElement('option');
+          option.value = codigo;
+          option.textContent = nombre;
+          ciudadSelect.appendChild(option);
+        });
+        ciudadSelect.disabled = false;
+      }
+    }
+
+    document.getElementById('ciudad')?.addEventListener('change', function() {
+      const region = document.getElementById('region').value;
+      const ciudad = this.value;
+      const comunaSelect = document.getElementById('comuna');
+      
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
+      
+      if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
+        datosChile[region].comunas[ciudad].forEach(comuna => {
+          const option = document.createElement('option');
+          option.value = comuna.toLowerCase().replace(/\s+/g, '_');
+          option.textContent = comuna;
+          comunaSelect.appendChild(option);
+        });
+        comunaSelect.disabled = false;
+      }
+    });
 </script>
 </body>
 </html>

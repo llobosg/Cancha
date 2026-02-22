@@ -127,44 +127,43 @@ try {
         }
     }
 
+    // Validar campos de ubicación
+    $pais = $_POST['pais'] ?? 'Chile';
+    $region = $_POST['region'] ?? null;
+    $ciudad = $_POST['ciudad'] ?? null;
+    $comuna = $_POST['comuna'] ?? null;
+
+    // Validar que si se selecciona región, también se seleccione ciudad y comuna
+    if ($region && (!$ciudad || !$comuna)) {
+        throw new Exception('Debes seleccionar región, ciudad y comuna completos');
+    }
+
     // Hashear contraseña
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
     // Generar código de verificación
     $verification_code = rand(1000, 9999);
 
-    // Insertar socio
     $stmt = $pdo->prepare("
-        INSERT INTO socios (
-            id_club,
-            nombre,
-            alias,
-            fecha_nac,
-            celular,
-            email,
-            direccion,
-            rol,
-            foto_url,
-            genero,
-            deporte,
-            id_puesto,
-            habilidad,
-            activo,
-            email_verified,
-            verification_code,
-            es_responsable,
-            datos_completos,
-            password_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
+    INSERT INTO socios (
+        id_club, nombre, alias, fecha_nac, celular, email, direccion, 
+        pais, region, ciudad, comuna,  -- ← NUEVOS CAMPOS
+        rol, foto_url, genero, deporte, id_puesto, habilidad,
+        activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
     ");
     $stmt->execute([
-        $id_club, // puede ser null
+        $id_club,
         $nombre,
         $alias,
         !empty($fecha_nac) ? $fecha_nac : null,
         !empty($celular) ? $celular : null,
         $email,
         !empty($direccion) ? $direccion : null,
+        $pais,
+        $region, 
+        $ciudad,
+        $comuna,
         $rol,
         $foto_url,
         $genero,
