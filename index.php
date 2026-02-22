@@ -541,14 +541,17 @@ $_SESSION['visited_index'] = true;
 
   <div class="google-login-container">
     <!-- Botón Registrar club -->
-    <button class="btn-register" onclick="window.location.href='pages/registro_club.php'">
-      <span class="flag-icon"></span>
-      <span class="register-text">Registrar un club</span>
-    </button>
+    <div class="card">
+      <h3>¿Quieres unirte a Cancha?</h3>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+          <a href="pages/registro_club.php" class="btn">Crear club</a>
+          <a href="pages/registro_socio.php" class="btn" style="background:#9B59B6;">Individual</a>
+        </div>
+    </div>
     
     <!-- Botón Entrar a mi club -->
     <button class="btn-enter" onclick="toggleLoginAlternativo()">
-      👤 Entrar a mi club
+      👤 Ingresar
     </button>
     
     <!-- Google Login -->
@@ -572,8 +575,8 @@ $_SESSION['visited_index'] = true;
 
 <!-- Contenido principal -->
 <div class="hero">
-  <h1 class="title-cancha">CANCHA <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
-  <p class="subtitle">Tu club a un click</p>
+  <h1 style="color: #e3d7f3ff; class="title-cancha">CANCHA <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
+  <p class="subtitle">Tu deporte a un click</p>
 
   <!-- Sección multimedia principal -->
   <div class="media-main">

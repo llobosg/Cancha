@@ -20,6 +20,23 @@ try {
         }
     }
 
+    // Validar deporte
+    $deporte = $_POST['deporte'] ?? '';
+    if (empty($deporte)) {
+        throw new Exception('El deporte es obligatorio');
+    }
+
+    // Verificar que el deporte sea válido según el modo
+    if ($modo_individual) {
+        $stmt_check = $pdo->prepare("SELECT 1 FROM deportes WHERE deporte = ? AND tipo_deporte = '1'");
+    } else {
+        $stmt_check = $pdo->prepare("SELECT 1 FROM deportes WHERE deporte = ? AND tipo_deporte = '2'");
+    }
+    $stmt_check->execute([$deporte]);
+    if (!$stmt_check->fetch()) {
+        throw new Exception('Deporte no válido para este tipo de registro');
+    }
+
     $club_slug = $_POST['club_slug'];
     $nombre = trim($_POST['nombre']);
     $alias = trim($_POST['alias']);
@@ -116,7 +133,7 @@ try {
     // Generar código de verificación
     $verification_code = rand(1000, 9999);
 
-    // Insertar socio con todos los campos en orden correcto
+    // Insertar socio
     $stmt = $pdo->prepare("
         INSERT INTO socios (
             id_club,
@@ -129,6 +146,7 @@ try {
             rol,
             foto_url,
             genero,
+            deporte,
             id_puesto,
             habilidad,
             activo,
@@ -137,10 +155,10 @@ try {
             es_responsable,
             datos_completos,
             password_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
     ");
     $stmt->execute([
-        $id_club,
+        $id_club, // puede ser null
         $nombre,
         $alias,
         !empty($fecha_nac) ? $fecha_nac : null,
@@ -150,8 +168,9 @@ try {
         $rol,
         $foto_url,
         $genero,
-        $id_puesto,
-        !empty($habilidad) ? $habilidad : 'Básica',
+        $deporte,
+        $id_puesto ?: null,
+        $habilidad ?: 'Básica',
         $verification_code,
         $password_hash
     ]);

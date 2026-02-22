@@ -13,6 +13,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$modo_individual = !isset($_GET['club']) || empty($_GET['club']);
+
 // Obtener club desde URL
 $club_slug_from_url = $_GET['club'] ?? '';
 
@@ -415,6 +417,10 @@ $club_logo = $club['logo'] ?? '';
     <form id="registroForm" enctype="multipart/form-data">
       <input type="hidden" name="club_slug" value="<?= htmlspecialchars($slug) ?>">
       <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
+      <!-- Si es modo individual, ocultar campos de club -->
+      <?php if (!$modo_individual): ?>
+        <input type="hidden" name="club_slug" value="<?= htmlspecialchars($_GET['club']) ?>">
+      <?php endif; ?>
 
       <div class="form-grid">
       <!-- Fila 1 -->
@@ -461,6 +467,28 @@ $club_logo = $club['logo'] ?? '';
       <!-- Fila 3 -->
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
+      <div class="form-group"><label for="deporte">Deporte</label></div>
+      <select name="deporte" required>
+        <?php
+        $deportes_individuales = ['tenis', 'padel', 'volleyball', 'gimnasio', 'piscina', 'clases_particulares'];
+        $todos_los_deportes = ['futbolito', 'futsal', 'tenis', 'padel', 'volleyball', 'gimnasio', 'piscina', 'clases_particulares'];
+        $deportes_disponibles = $modo_individual ? $deportes_individuales : $todos_los_deportes;
+        foreach ($deportes_disponibles as $dep):
+          $nombre = match($dep) {
+            'tenis' => 'Tenis',
+            'padel' => 'Pádel',
+            'volleyball' => 'Vóleibol',
+            'gimnasio' => 'Gimnasio',
+            'piscina' => 'Piscina',
+            'clases_particulares' => 'Clases Particulares',
+            'futbolito' => 'Fútbolito',
+            'futsal' => 'Futsal',
+            default => ucfirst($dep)
+          };
+        ?>
+          <option value="<?= $dep ?>"><?= $nombre ?></option>
+        <?php endforeach; ?>
+      </select>
       <div class="form-group"><label for="id_puesto">Puesto</label></div>
       <div class="form-group">
         <select id="id_puesto" name="id_puesto">
@@ -483,6 +511,7 @@ $club_logo = $club['logo'] ?? '';
           <option value="Pádel-Primera">Pádel-Primera</option>
         </select>
       </div>
+      <div></div>
 
       <!-- Fila 4 -->
       <div class="form-group"><label for="direccion">Dirección</label></div>
