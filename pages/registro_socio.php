@@ -390,7 +390,7 @@ while ($row = $stmt_regiones->fetch()) {
 
       <!-- Fila 4 -->
       <div class="form-group"><label for="direccion">Dirección</label></div>
-      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" placeholder="Ej: Villaseca 750, depto 355"></div>
+      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" placeholder="Ej: Av. Grecia 2001, Ñuñoa"></div>
       <div></div>
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
@@ -425,6 +425,9 @@ while ($row = $stmt_regiones->fetch()) {
           <option value="Pádel-Tercera">Pádel-Tercera</option>
           <option value="Pádel-Segunda">Pádel-Segunda</option>
           <option value="Pádel-Primera">Pádel-Primera</option>
+          <option value="Volley-Atacante">Volley-Atacante</option>
+          <option value="Volley-Defensor">Volley-Defensor</option>
+          <option value="Volley-Bloqueo">Volley-Bloqueo</option>
         </select>
       </div>
 
@@ -460,6 +463,10 @@ while ($row = $stmt_regiones->fetch()) {
             }
         });
       </script>
+      <!-- Botón -->
+        <div class="submit-section">
+          <button type="submit" class="btn-submit">Enviar código de verificación</button>
+        </div>
     </form>
   </div>
 
