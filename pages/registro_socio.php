@@ -47,10 +47,10 @@ if ($modo_individual) {
         exit;
     }
 
-    // Variables del club
-    $club_id = (int)$club['id_club'];
-    $club_nombre = $club['nombre'];
-    $club_logo = $club['logo'] ?? '';
+    // Variables para el template
+    $club_id = $modo_individual ? null : (int)$club['id_club'];
+    $club_nombre = $modo_individual ? 'Registro Individual' : $club['nombre'];
+    $club_logo = $modo_individual ? null : ($club['logo'] ?? null);
 
     // Cargar deportes grupales
     $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '2' ORDER BY deporte");
@@ -69,8 +69,8 @@ if ($modo_individual) {
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#003366">
   <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-status-bar-style" content="default">
   <style>
     /* Fondo corporativo */
     body {
@@ -409,13 +409,19 @@ if ($modo_individual) {
       <h2>Inscríbete a:</h2>
       <div class="club-header">
         <div class="club-logo">
-          <?php if ($club['logo']): ?>
-            <img src="../uploads/logos/<?= htmlspecialchars($club['logo']) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
-          <?php else: ?>
+          <?php if ($modo_individual): ?>
             ⚽
+          <?php else: ?>
+            <?php if ($club_logo): ?>
+              <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
+            <?php else: ?>
+              ⚽
+            <?php endif; ?>
           <?php endif; ?>
         </div>
-        <div class="club-name"><?= htmlspecialchars($club_nombre) ?></div>
+        <div class="club-name">
+          <?= htmlspecialchars($modo_individual ? 'Registro Individual' : $club_nombre) ?>
+        </div>
       </div>
     </div>
 
