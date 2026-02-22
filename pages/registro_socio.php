@@ -406,12 +406,12 @@ if ($modo_individual) {
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <div class="header-container">
-      <h2>Inscríbete a:</h2>
       <div class="club-header">
         <div class="club-logo">
           <?php if ($modo_individual): ?>
             ⚽
           <?php else: ?>
+            <h2>Inscríbete a:</h2>
             <?php if ($club_logo): ?>
               <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
             <?php else: ?>

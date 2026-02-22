@@ -128,7 +128,7 @@ $_SESSION['visited_index'] = true;
       font-size: 3.8rem;
       margin: 2rem 0 1rem 0;
       color: white;
-      text-shadow: 0 3px 6px rgba(0,0,0,.5);
+      text-shadow: 0 3px 6px rgba(245, 243, 247, 0.84);
     }
     .subtitle {
       font-size: 1.25rem;
@@ -659,7 +659,7 @@ $_SESSION['visited_index'] = true;
 
 <!-- Contenido principal -->
 <div class="hero">
-  <h1 style="color: #e3d7f3ff; class="title-cancha">CANCHA <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
+  <h1 class="title-cancha">CANCHA <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
   <p class="subtitle">Tu deporte a un click</p>
 
   <!-- Sección multimedia principal -->
