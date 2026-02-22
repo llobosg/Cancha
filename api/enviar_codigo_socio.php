@@ -20,6 +20,10 @@ try {
         }
     }
 
+    // Debug temporal - ELIMINAR DESPUÉS
+    error_log("DEPORTE RECIBIDO: '" . $deporte . "'");
+    error_log("HEX RECIBIDO: " . bin2hex($deporte));
+
     // Validar deporte
     $deporte = $_POST['deporte'] ?? '';
     if (empty($deporte)) {
