@@ -1,16 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-$slug = $_GET['club'] ?? '';
-$modo_individual = empty($slug);
-
-// Si es modo individual, NO redirigir
-if (!$modo_individual) {
-    // Validar slug como antes
-    if (strlen($slug) !== 8 || !ctype_alnum($slug)) {
-        header('Location: buscar_club.php');
-        exit;
-    }
-}
 
 // Evitar problemas de headers
 ob_start();
@@ -19,51 +8,55 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Determinar modo: individual o club
-$modo_individual = !isset($_GET['club']) || empty($_GET['club']);
-
-// Cargar deportes según el modo
-if ($modo_individual) {
-    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '1' ORDER BY deporte");
-} else {
-    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '2' ORDER BY deporte");
-}
-$stmt_deportes->execute();
-$deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
-
-// Obtener club desde URL
+// Determinar modo
 $club_slug_from_url = $_GET['club'] ?? '';
+$modo_individual = empty($club_slug_from_url);
 
-if (!$club_slug_from_url || strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// Obtener todos los clubs verificados
-$stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
-$stmt_club->execute();
-$clubs = $stmt_club->fetchAll();
-
-$club = null; // ← Variable principal
-
-// Encontrar el club usando MD5 en PHP (no en SQL)
-foreach ($clubs as $c) {
-    $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    if ($generated_slug === $club_slug_from_url) {
-        $club = $c;
-        break;
+if ($modo_individual) {
+    // Modo individual: no hay club, cargar deportes individuales
+    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '1' ORDER BY deporte");
+    $stmt_deportes->execute();
+    $deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
+    
+    // No hay club, así que no definimos $club, $club_id, etc.
+    $club = null;
+    $club_nombre = 'Registro Individual';
+    $club_logo = null;
+} else {
+    // Modo club: validar y cargar club
+    if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+        header('Location: ../index.php');
+        exit;
     }
-}
 
-if (!$club) {
-    header('Location: ../index.php');
-    exit;
-}
+    $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
+    $stmt_club->execute();
+    $clubs = $stmt_club->fetchAll();
 
-// Variables individuales (por si las usas en otros lugares)
-$club_id = (int)$club['id_club'];
-$club_nombre = $club['nombre'];
-$club_logo = $club['logo'] ?? '';
+    $club = null;
+    foreach ($clubs as $c) {
+        $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+        if ($generated_slug === $club_slug_from_url) {
+            $club = $c;
+            break;
+        }
+    }
+
+    if (!$club) {
+        header('Location: ../index.php');
+        exit;
+    }
+
+    // Variables del club
+    $club_id = (int)$club['id_club'];
+    $club_nombre = $club['nombre'];
+    $club_logo = $club['logo'] ?? '';
+
+    // Cargar deportes grupales
+    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '2' ORDER BY deporte");
+    $stmt_deportes->execute();
+    $deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
+}
 ?>
 
 <!DOCTYPE html>

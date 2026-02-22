@@ -614,26 +614,47 @@ $_SESSION['visited_index'] = true;
 
 <!-- Script para los dropdowns -->
 <script>
-  // Dropdown Recintos
-  document.getElementById('recintosBtn').addEventListener('click', function() {
-    const dropdown = document.getElementById('dropdownContentRecintos');
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  const recintosBtn = document.getElementById('recintosBtn');
+  const registroBtn = document.getElementById('registroBtn');
+  const recintosDropdown = document.getElementById('dropdownContentRecintos');
+  const registroDropdown = document.getElementById('dropdownContentRegistro');
+
+  // Función para cerrar todos los dropdowns
+  function closeAllDropdowns() {
+    recintosDropdown.style.display = 'none';
+    registroDropdown.style.display = 'none';
+  }
+
+  // Recintos - hover
+  recintosBtn.addEventListener('mouseenter', () => {
+    closeAllDropdowns();
+    recintosDropdown.style.display = 'block';
   });
 
-  // Dropdown Registrarse
-  document.getElementById('registroBtn').addEventListener('click', function() {
-    const dropdown = document.getElementById('dropdownContentRegistro');
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  // Registro - hover  
+  registroBtn.addEventListener('mouseenter', () => {
+    closeAllDropdowns();
+    registroDropdown.style.display = 'block';
   });
 
-  // Cerrar dropdowns al hacer clic fuera
-  window.onclick = function(event) {
-    if (!event.target.matches('#recintosBtn') && !event.target.matches('#registroBtn')) {
-      document.querySelectorAll('.dropdown-content').forEach(el => {
-        el.style.display = 'none';
-      });
+  // Cerrar al salir de cualquier dropdown o botón
+  [recintosBtn, recintosDropdown, registroBtn, registroDropdown].forEach(el => {
+    el.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        if (!recintosDropdown.matches(':hover') && !recintosBtn.matches(':hover') &&
+            !registroDropdown.matches(':hover') && !registroBtn.matches(':hover')) {
+          closeAllDropdowns();
+        }
+      }, 100);
+    });
+  });
+
+  // Cerrar al hacer clic fuera
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#recintosDropdown') && !e.target.closest('#registroDropdown')) {
+      closeAllDropdowns();
     }
-  };
+  });
 </script>
 
 <!-- Contenido principal -->
