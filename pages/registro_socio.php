@@ -399,7 +399,7 @@ while ($row = $stmt_regiones->fetch()) {
       <div class="form-group"><label for="deporte">Deporte *</label></div>
       <div class="form-group">
         <select id="deporte" name="deporte" required>
-          <option value="">Seleccionar</option>
+          <option value="">Seleccionar deporte..</option>
           <?php foreach ($deportes_disponibles as $dep): ?>
             <option value="<?= $dep ?>"><?= htmlspecialchars($dep) ?></option>
           <?php endforeach; ?>
