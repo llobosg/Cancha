@@ -321,6 +321,7 @@ while ($row = $stmt_regiones->fetch()) {
     <form id="registroForm" enctype="multipart/form-data">
       <input type="hidden" name="club_slug" value="<?= htmlspecialchars($slug) ?>">
       <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
+      <input type="hidden" name="pais" value="Chile">
       <!-- Si es modo individual, ocultar campos de club -->
       <?php if (!$modo_individual): ?>
         <input type="hidden" name="club_slug" value="<?= htmlspecialchars($_GET['club']) ?>">
@@ -365,13 +366,6 @@ while ($row = $stmt_regiones->fetch()) {
       <div class="form-group"><input type="tel" id="celular" name="celular"></div>
 
       <!-- Fila 3 -->
-      <div class="form-group"><label for="pais">País</label></div>
-      <div class="form-group">
-        <select id="pais" name="pais">
-          <option value="Chile" selected>Chile</option>
-          <!-- Agrega otros países si lo deseas -->
-        </select>
-      </div>
       <div class="form-group"><label for="region">Región *</label></div>
       <div class="form-group">
         <select id="region" name="region" required onchange="actualizarCiudades()">
@@ -387,16 +381,17 @@ while ($row = $stmt_regiones->fetch()) {
           <option value="">Seleccionar región primero</option>
         </select>
       </div>
-
-      <!-- Fila 4 -->
       <div class="form-group"><label for="comuna">Comuna *</label></div>
       <div class="form-group">
         <select id="comuna" name="comuna" required disabled>
           <option value="">Seleccionar ciudad primero</option>
         </select>
       </div>
+
+      <!-- Fila 4 -->
       <div class="form-group"><label for="direccion">Dirección</label></div>
       <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion" placeholder="Ej: Villaseca 750, depto 355"></div>
+      <div></div>
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
 
