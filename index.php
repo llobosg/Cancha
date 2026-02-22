@@ -568,20 +568,7 @@ $_SESSION['visited_index'] = true;
       </div>
     </div>
   </div>
-  <div class="qr-section">
-    <h3 class="qr-title">Comparte tu club con un QR</h3>
-    <div class="qr-container">
-      <!-- QR generado dinámicamente -->
-      <div id="qrCode" class="qr-code"></div>
-    </div>
-    <p style="margin-top: 1rem; font-size: 0.9rem;">
-      Escanea este código para registrarte en el club.
-    </p>
-  </div>
 </div>
-<footer>
-  &copy; <?= date('Y') ?> CanchaSport • Todos los derechos reservados
-</footer>
 
 <!-- Contenido principal -->
 <div class="hero">
