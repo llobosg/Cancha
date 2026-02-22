@@ -239,13 +239,31 @@ if ($modo_individual) {
       background: #fafcff;
     }
 
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: #071289;
-      box-shadow: 0 0 0 2px rgba(7, 18, 137, 0.15);
+    /* === MOBILE: 2 columnas (label + campo) === */
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr 2fr; /* label + input */
+        gap: 0.8rem;
+      }
+      
+      .form-group label {
+        text-align: left;
+        padding-right: 0;
+        font-weight: bold;
+      }
+      
+      /* Campos que ocupan toda la fila en móvil */
+      .full-width-mobile {
+        grid-column: span 2 !important;
+      }
+      
+      /* Ajuste para selects y inputs */
+      .form-group input,
+      .form-group select {
+        min-height: 40px;
+      }
     }
-
+  
     .col-span-2 {
       grid-column: span 2;
     }
@@ -438,109 +456,107 @@ if ($modo_individual) {
       <?php endif; ?>
 
       <div class="form-grid">
-      <!-- Fila 1 -->
-      <div class="form-group"><label for="nombre">Nombre</label></div>
-      <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
-      <div class="form-group"><label for="alias">Alias</label></div>
-      <div class="form-group"><input type="text" id="alias" name="alias" required></div>
-      <div class="form-group"><label for="rol">Rol</label></div>
-      <div class="form-group">
-            <select id="rol" name="rol" required>
-              <option value="">Seleccionar</option>
-              <option value="Jugador">Jugador</option>
-              <option value="Galleta">Galleta</option>
-              <option value="Amigo del club">Amigo del club</option>
-              <option value="Tesorero">Tesorero</option>
-              <option value="Director">Director</option>
-              <option value="Delegado">Delegado</option>
-              <option value="Profe">Profe</option>
-              <option value="Kine">Kine</option>
-              <option value="Preparador Físico">Preparador Físico</option>
-              <option value="Utilero">Utilero</option>
-            </select>
-      </div>
+        <!-- Fila 1 -->
+        <div class="form-group"><label for="nombre">Nombre</label></div>
+        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
+        
+        <div class="form-group"><label for="alias">Alias</label></div>
+        <div class="form-group"><input type="text" id="alias" name="alias" required></div>
+        
+        <div class="form-group"><label for="rol">Rol</label></div>
+        <div class="form-group">
+          <select id="rol" name="rol" required>
+            <option value="">Seleccionar</option>
+            <option value="Jugador">Jugador</option>
+            <option value="Galleta">Galleta</option>
+            <option value="Amigo del club">Amigo del club</option>
+            <option value="Tesorero">Tesorero</option>
+            <option value="Director">Director</option>
+            <option value="Delegado">Delegado</option>
+            <option value="Profe">Profe</option>
+            <option value="Kine">Kine</option>
+            <option value="Preparador Físico">Preparador Físico</option>
+            <option value="Utilero">Utilero</option>
+          </select>
+        </div>
 
-      <!-- Fila 2 -->
-      <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
-      <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
-      <div class="form-group"><label for="celular">Celular</label></div>
-      <div class="form-group"><input type="tel" id="celular" name="celular"></div>
+        <!-- Fila 2 -->
+        <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
+        <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
+        
+        <div class="form-group"><label for="celular">Celular</label></div>
+        <div class="form-group"><input type="tel" id="celular" name="celular"></div>
+        
+        <div class="form-group"><label for="genero">Género</label></div>
+        <div class="form-group">
+          <select id="genero" name="genero" required>
+            <option value="">Seleccionar</option>
+            <option value="Femenino">Femenino</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
 
-      <!-- Género en su propia fila en móviles -->
-      <div class="form-group mobile-full">
-        <label for="genero">Género</label>
-      </div>
-      <div class="form-group mobile-full">
-        <select id="genero" name="genero" required>
-          <option value="">Seleccionar</option>
-          <option value="Femenino">Femenino</option>
-          <option value="Masculino">Masculino</option>
-          <option value="Otro">Otro</option>
-        </select>
-      </div>
+        <!-- Fila 3 -->
+        <div class="form-group"><label for="email">Correo</label></div>
+        <div class="form-group"><input type="email" id="email" name="email" required></div>
+        
+        <div class="form-group"><label for="deporte">Deporte *</label></div>
+        <div class="form-group">
+          <select id="deporte" name="deporte" required>
+            <option value="">Seleccionar</option>
+            <?php foreach ($deportes_disponibles as $dep): ?>
+              <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        
+        <div class="form-group"><label for="id_puesto">Puesto</label></div>
+        <div class="form-group">
+          <select id="id_puesto" name="id_puesto">
+            <option value="">Seleccionar</option>
+            <!-- Se cargará dinámicamente -->
+          </select>
+        </div>
 
-      <!-- Fila 3 -->
-      <div class="form-group"><label for="direccion">Dirección</label></div>
-      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
-      <div></div>
-      <div class="form-group"><label for="email">Correo</label></div>
-      <div class="form-group"><input type="email" id="email" name="email" required></div>
-      
-      <!-- Fila 4 -->
-      <div class="form-group"><label for="deporte">Deporte *</label></div>
-      <div class="form-group">
-        <select id="deporte" name="deporte" required>
-          <option value="">Seleccionar</option>
-          <?php foreach ($deportes_disponibles as $dep): ?>
-            <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
-          <?php endforeach; ?>
-        </select>
+        <!-- Fila 4 -->
+        <div class="form-group full-width-mobile"><label for="direccion">Dirección</label></div>
+        <div class="form-group full-width-mobile"><input type="text" id="direccion" name="direccion"></div>
+        
+        <div class="form-group"><label for="habilidad">Habilidad</label></div>
+        <div class="form-group">
+          <select id="habilidad" name="habilidad">
+            <option value="">Seleccionar</option>
+            <option value="Básica">Malo</option>
+            <option value="Intermedia">Más o Menos</option>
+            <option value="Avanzada">Crack</option>
+            <option value="Pádel-Sexta">Pádel-Sexta</option>
+            <option value="Pádel-Quinta">Pádel-Quinta</option>
+            <option value="Pádel-Cuarta">Pádel-Cuarta</option>
+            <option value="Pádel-Tercera">Pádel-Tercera</option>
+            <option value="Pádel-Segunda">Pádel-Segunda</option>
+            <option value="Pádel-Primera">Pádel-Primera</option>
+          </select>
+        </div>
+
+        <!-- Fila 5 -->
+        <div class="form-group full-width-mobile"><label for="foto">Foto</label></div>
+        <div class="form-group full-width-mobile"><input type="file" id="foto" name="foto" accept="image/*"></div>
+
+        <!-- Fila 6 -->
+        <div class="form-group"><label for="password">Contraseña *</label></div>
+        <div class="form-group"><input type="password" id="password" name="password" required minlength="6"></div>
+        
+        <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
+        <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
       </div>
-      <div class="form-group"><label for="id_puesto">Puesto</label></div>
-      <div class="form-group">
-        <select id="id_puesto" name="id_puesto">
-          <option value="">Seleccionar</option>
-          <!-- Los valores se cargarán dinámicamente -->
-        </select>
-      </div>
-      <div class="form-group"><label for="habilidad">Habilidad</label></div>
-      <div class="form-group">
-        <select id="habilidad" name="habilidad">
-          <option value="">Seleccionar</option>
-          <option value="Básica">Malo</option>
-          <option value="Intermedia">Más o Menos</option>
-          <option value="Avanzada">Crack</option>
-          <option value="Pádel-Sexta">Pádel-Sexta</option>
-          <option value="Pádel-Quinta">Pádel-Quinta</option>
-          <option value="Pádel-Cuarta">Pádel-Cuarta</option>
-          <option value="Pádel-Tercera">Pádel-Tercera</option>
-          <option value="Pádel-Segunda">Pádel-Segunda</option>
-          <option value="Pádel-Primera">Pádel-Primera</option>
-        </select>
-      </div>
-      
-      <!-- Fila 5 -->
-      <div class="form-group"><label for="foto">Foto</label></div>
-      <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
-      <div></div>
-      <div></div>
-      <div></div>
 
       <!-- Fila 6 -->
       <!-- contraseña -->
       <div class="form-group"><label for="password">Contraseña *</label></div>
       <div class="form-group"><input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-
-      <!-- Fila 6 -->
-      <!-- confirmar contraseña -->
       <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
       <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
-      <div></div>
-      <div></div>
       <div></div>
       <div></div>
 
