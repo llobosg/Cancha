@@ -487,7 +487,7 @@ if ($modo_individual) {
       <div class="form-group"><input type="email" id="email" name="email" required></div>
       
       <!-- Fila 4 -->
-      <div class="form-group"><label for="deporte">Deporte *</label>
+      <div class="form-group"><label for="deporte">Deporte *</label></div>
       <div class="form-group">
         <select id="deporte" name="deporte" required>
           <option value="">Seleccionar</option>
