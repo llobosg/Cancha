@@ -505,55 +505,94 @@ $_SESSION['visited_index'] = true;
   <div style="display: flex; align-items: center; gap: 1rem;">
     <!-- Menú Recintos Deportivos (desplegable) -->
     <div id="recintosDropdown" style="position: relative; display: inline-block;">
-      <button id="recintosBtn" class="btn-register" style="background: transparent !important; border: 2px solid white !important; color: white !important; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+      <button id="recintosBtn" class="btn-register" style="
+        background: transparent !important;
+        border: 2px solid white !important;
+        color: white !important;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+      ">
         Gestión Recintos
       </button>
-      <div id="dropdownContent" style="
-        position: absolute; 
-        top: 100%; 
-        left: 0; 
-        background: white; 
-        min-width: 200px; 
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2); 
-        border-radius: 12px; 
-        z-index: 1001; 
+      <div id="dropdownContentRecintos" style="
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        min-width: 200px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        border-radius: 12px;
+        z-index: 1001;
         display: none;
         margin-top: 5px;
       ">
         <a href="pages/login_recintos.php" style="
-          display: block; 
-          padding: 0.8rem 1.5rem; 
-          color: #071289; 
-          text-decoration: none; 
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #071289;
+          text-decoration: none;
           font-weight: bold;
           border-bottom: 1px solid #eee;
         ">🔐 Entrar a tu Recinto</a>
         <a href="pages/registro_recinto.php" style="
-          display: block; 
-          padding: 0.8rem 1.5rem; 
-          color: #071289; 
-          text-decoration: none; 
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #071289;
+          text-decoration: none;
           font-weight: bold;
         ">Registra tu Recinto</a>
       </div>
     </div>
+
+    <!-- Menú "Registrarse" (desplegable) -->
+    <div id="registroDropdown" style="position: relative; display: inline-block;">
+      <button id="registroBtn" class="btn-register" style="
+        background: transparent !important;
+        border: 2px solid white !important;
+        color: white !important;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+      ">
+        Registrarse
+      </button>
+      <div id="dropdownContentRegistro" style="
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        min-width: 200px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        border-radius: 12px;
+        z-index: 1001;
+        display: none;
+        margin-top: 5px;
+      ">
+        <a href="pages/registro_club.php" style="
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #071289;
+          text-decoration: none;
+          font-weight: bold;
+          border-bottom: 1px solid #eee;
+        ">⚽ Crear club</a>
+        <a href="pages/registro_socio.php" style="
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #9B59B6;
+          text-decoration: none;
+          font-weight: bold;
+        ">🎾 Individual</a>
+      </div>
+    </div>
   </div>
 
+  <!-- Botones de login -->
   <div class="google-login-container">
-    <!-- Botón Registrar club -->
-    <div class="card">
-      <h3>¿Quieres unirte a Cancha?</h3>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
-          <a href="pages/registro_club.php" class="btn">Crear club</a>
-          <a href="pages/registro_socio.php" class="btn" style="background:#9B59B6;">Individual</a>
-        </div>
-    </div>
-    
-    <!-- Botón Entrar a mi club -->
+    <!-- Botón Ingresar -->
     <button class="btn-enter" onclick="toggleLoginAlternativo()">
       👤 Ingresar
     </button>
-    
+
     <!-- Google Login -->
     <div id="googleLoginContainer">
       <div id="g_id_onload"
@@ -572,6 +611,30 @@ $_SESSION['visited_index'] = true;
     </div>
   </div>
 </div>
+
+<!-- Script para los dropdowns -->
+<script>
+  // Dropdown Recintos
+  document.getElementById('recintosBtn').addEventListener('click', function() {
+    const dropdown = document.getElementById('dropdownContentRecintos');
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Dropdown Registrarse
+  document.getElementById('registroBtn').addEventListener('click', function() {
+    const dropdown = document.getElementById('dropdownContentRegistro');
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Cerrar dropdowns al hacer clic fuera
+  window.onclick = function(event) {
+    if (!event.target.matches('#recintosBtn') && !event.target.matches('#registroBtn')) {
+      document.querySelectorAll('.dropdown-content').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  };
+</script>
 
 <!-- Contenido principal -->
 <div class="hero">

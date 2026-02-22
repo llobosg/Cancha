@@ -1,9 +1,15 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 $slug = $_GET['club'] ?? '';
-if (!$slug) {
-    header('Location: buscar_club.php');
-    exit;
+$modo_individual = empty($slug);
+
+// Si es modo individual, NO redirigir
+if (!$modo_individual) {
+    // Validar slug como antes
+    if (strlen($slug) !== 8 || !ctype_alnum($slug)) {
+        header('Location: buscar_club.php');
+        exit;
+    }
 }
 
 // Evitar problemas de headers
