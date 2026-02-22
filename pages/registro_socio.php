@@ -175,7 +175,7 @@ while ($row = $stmt_regiones->fetch()) {
     .club-name {
       font-size: 1.2rem;
       font-weight: 600;
-      color: #003366;
+      color: #ba08e7ff;
       white-space: nowrap;
     }
 
@@ -401,7 +401,7 @@ while ($row = $stmt_regiones->fetch()) {
         <select id="deporte" name="deporte" required>
           <option value="">Seleccionar</option>
           <?php foreach ($deportes_disponibles as $dep): ?>
-            <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
+            <option value="<?= $dep ?>"><?= htmlspecialchars($dep) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
