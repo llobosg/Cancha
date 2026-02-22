@@ -484,9 +484,6 @@ if ($modo_individual) {
         <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
         <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
         
-        <div class="form-group"><label for="celular">Celular</label></div>
-        <div class="form-group"><input type="tel" id="celular" name="celular"></div>
-        
         <div class="form-group"><label for="genero">Género</label></div>
         <div class="form-group">
           <select id="genero" name="genero" required>
@@ -497,10 +494,20 @@ if ($modo_individual) {
           </select>
         </div>
 
+        <div class="form-group"><label for="celular">Celular</label></div>
+        <div class="form-group"><input type="tel" id="celular" name="celular"></div>
+
         <!-- Fila 3 -->
+        <div class="form-group full-width-mobile"><label for="direccion">Dirección</label></div>
+        <div class="form-group full-width-mobile"><input type="text" id="direccion" name="direccion"></div>
+
         <div class="form-group"><label for="email">Correo</label></div>
         <div class="form-group"><input type="email" id="email" name="email" required></div>
+
+        <div></div>
+        <div></div>
         
+         <!-- Fila 4 -->
         <div class="form-group"><label for="deporte">Deporte *</label></div>
         <div class="form-group">
           <select id="deporte" name="deporte" required>
@@ -519,10 +526,6 @@ if ($modo_individual) {
           </select>
         </div>
 
-        <!-- Fila 4 -->
-        <div class="form-group full-width-mobile"><label for="direccion">Dirección</label></div>
-        <div class="form-group full-width-mobile"><input type="text" id="direccion" name="direccion"></div>
-        
         <div class="form-group"><label for="habilidad">Habilidad</label></div>
         <div class="form-group">
           <select id="habilidad" name="habilidad">
@@ -550,15 +553,6 @@ if ($modo_individual) {
         <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
         <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
       </div>
-
-      <!-- Fila 6 -->
-      <!-- contraseña -->
-      <div class="form-group"><label for="password">Contraseña *</label></div>
-      <div class="form-group"><input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
-      <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
-      <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
-      <div></div>
-      <div></div>
 
       <!-- Agregar validación JavaScript -->
       <script>
