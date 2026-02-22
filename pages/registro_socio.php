@@ -552,6 +552,13 @@ if ($modo_individual) {
         
         <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
         <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
+        
+        <div></div>
+        <div></div>
+        <!-- Botón -->
+        <div class="submit-section">
+          <button type="submit" class="btn-submit">Enviar código de verificación</button>
+        </div>
       </div>
 
       <!-- Agregar validación JavaScript -->
@@ -572,14 +579,7 @@ if ($modo_individual) {
                 return;
             }
         });
-        </script>
-    </div>
-
-        <!-- Botón -->
-        <div class="submit-section">
-          <button type="submit" class="btn-submit">Enviar código de verificación</button>
-        </div>
-      </div>
+      </script>
     </form>
   </div>
 
