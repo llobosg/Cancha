@@ -20,17 +20,32 @@ try {
         }
     }
 
-    // Debug temporal - ELIMINAR DESPUÉS
-    error_log("DEPORTE RECIBIDO: '" . $deporte . "'");
-    error_log("HEX RECIBIDO: " . bin2hex($deporte));
-
-    // Validar deporte
+    // ✅ DEFINIR VARIABLES ANTES DE USARLAS
+    $club_slug = $_POST['club_slug'];
+    $nombre = trim($_POST['nombre']);
+    $alias = trim($_POST['alias']);
+    $email = trim($_POST['email']);
+    $genero = $_POST['genero'];
+    $rol = $_POST['rol'];
+    $fecha_nac = $_POST['fecha_nac'] ?? null;
+    $celular = trim($_POST['celular'] ?? '');
+    $direccion = trim($_POST['direccion'] ?? '');
+    $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : null;
+    $habilidad = $_POST['habilidad'] ?? null;
+    
+    // ✅ VALIDAR DEPORTE (aquí sí existe $_POST)
     $deporte = $_POST['deporte'] ?? '';
     if (empty($deporte)) {
         throw new Exception('El deporte es obligatorio');
     }
 
+    // Debug temporal - ahora sí funciona
+    error_log("DEPORTE RECIBIDO: '" . $deporte . "'");
+    error_log("HEX RECIBIDO: " . bin2hex($deporte));
+
     // Verificar que el deporte sea válido según el modo
+    $modo_individual = empty($club_slug); // ← ¡Asegúrate de tener esta línea!
+    
     if ($modo_individual) {
         $stmt_check = $pdo->prepare("SELECT 1 FROM deportes WHERE deporte = ? AND tipo_deporte = '1'");
     } else {
