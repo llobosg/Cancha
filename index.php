@@ -448,6 +448,31 @@ $_SESSION['visited_index'] = true;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       }
     }
+
+    qr-section {
+      margin-top: 3rem;
+      background: rgba(255,255,255,0.1);
+      padding: 2rem;
+      border-radius: 16px;
+    }
+
+    .qr-title {
+      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+      color: #4ECDC4;
+    }
+
+    .qr-container {
+      display: inline-block;
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .qr-code {
+      width: 180px;
+      height: 180px;
+    }
   </style>
 </head>
 <body>
@@ -543,7 +568,20 @@ $_SESSION['visited_index'] = true;
       </div>
     </div>
   </div>
+  <div class="qr-section">
+    <h3 class="qr-title">Comparte tu club con un QR</h3>
+    <div class="qr-container">
+      <!-- QR generado dinámicamente -->
+      <div id="qrCode" class="qr-code"></div>
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.9rem;">
+      Escanea este código para registrarte en el club.
+    </p>
+  </div>
 </div>
+<footer>
+  &copy; <?= date('Y') ?> CanchaSport • Todos los derechos reservados
+</footer>
 
 <!-- Contenido principal -->
 <div class="hero">

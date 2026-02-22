@@ -1,5 +1,6 @@
 <?php
 // includes/config.php
+header("Access-Control-Allow-Origin: https://canchasport.com");
 
 // ✅ USAR VARIABLES DE ENTORNO
 define('BREVO_API_KEY', $_ENV['BREVO_API_KEY'] ?? '');
