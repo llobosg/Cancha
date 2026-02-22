@@ -71,7 +71,7 @@ $_SESSION['visited_index'] = true;
       left: 0;
       width: 100%;
       height: 60px;
-      background: rgba(0, 51, 102, 0.95);
+      background: rgba(143, 6, 189, 0.95);
       backdrop-filter: blur(10px);
       display: flex;
       justify-content: space-between;

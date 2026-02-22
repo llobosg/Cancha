@@ -480,8 +480,13 @@ if ($modo_individual) {
       </div>
 
       <!-- Fila 3 -->
+      <div class="form-group"><label for="direccion">Dirección</label></div>
+      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
+      <div></div>
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
+      
+      <!-- Fila 4 -->
       <div class="form-group"><label for="deporte">Deporte *</label>
       <div class="form-group">
         <select id="deporte" name="deporte" required>
@@ -513,14 +518,6 @@ if ($modo_individual) {
           <option value="Pádel-Primera">Pádel-Primera</option>
         </select>
       </div>
-      <div></div>
-
-      <!-- Fila 4 -->
-      <div class="form-group"><label for="direccion">Dirección</label></div>
-      <div class="form-group col-span-2"><input type="text" id="direccion" name="direccion"></div>
-      <div></div>
-      <div></div>
-      <div></div>
       
       <!-- Fila 5 -->
       <div class="form-group"><label for="foto">Foto</label></div>
@@ -529,7 +526,7 @@ if ($modo_individual) {
       <div></div>
       <div></div>
 
-      <!-- Fila 5 -->
+      <!-- Fila 6 -->
       <!-- contraseña -->
       <div class="form-group"><label for="password">Contraseña *</label></div>
       <div class="form-group"><input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
