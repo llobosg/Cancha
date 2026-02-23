@@ -12,6 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+    error_log("=== INICIO REGISTRO SOCIO ===");
+    error_log("POST recibido: " . print_r($_POST, true));
+
     // Validar campos comunes
     $required_common = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
     foreach ($required_common as $field) {
@@ -23,14 +26,14 @@ try {
     // Obtener club_slug (puede estar vacío para modo individual)
     $club_slug = $_POST['club_slug'] ?? '';
     $modo_individual = empty($club_slug);
+    
+    error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
+    error_log("CLUB_SLUG: '" . $club_slug . "'");
 
     // Validar deporte
     $deporte = $_POST['deporte'];
-    
-    // Debug
     error_log("DEPORTE RECIBIDO: '" . $deporte . "'");
     error_log("HEX RECIBIDO: " . bin2hex($deporte));
-    error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
 
     // Verificar que el deporte sea válido según el modo
     $stmt_check = $pdo->prepare("
@@ -43,6 +46,7 @@ try {
     if (!$stmt_check->fetch()) {
         throw new Exception('Deporte no válido para este tipo de registro');
     }
+    error_log("✓ Deporte validado correctamente");
 
     // Definir otras variables
     $nombre = trim($_POST['nombre']);
@@ -75,7 +79,7 @@ try {
     // Lógica de club (solo si no es modo individual)
     $id_club = null;
     if (!$modo_individual) {
-        // Validar club_slug
+        error_log("Validando club...");
         if (strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
             throw new Exception('Club no encontrado');
         }
@@ -91,11 +95,15 @@ try {
             }
         }
         if (!$id_club) throw new Exception('Club no encontrado');
+        error_log("✓ Club validado: ID " . $id_club);
 
         // Verificar duplicados
         $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
         $stmt->execute([$email, $id_club]);
         if ($stmt->fetch()) throw new Exception('Ya estás inscrito en este club');
+        error_log("✓ No hay duplicados");
+    } else {
+        error_log("✓ Modo individual: sin validación de club");
     }
 
     // Validar fecha de nacimiento y edad mínima
@@ -111,11 +119,13 @@ try {
         if ($edad < 6) {
             throw new Exception('La edad mínima para CanchaSport es de 6 años');
         }
+        error_log("✓ Edad validada: " . $edad . " años");
     }
 
     // === Manejar subida de foto ===
     $foto_url = null;
     if (!empty($_FILES['foto']['name'])) {
+        error_log("Procesando subida de foto...");
         if ($_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
             throw new Exception('Error al subir la foto. Intenta con una imagen más pequeña.');
         }
@@ -136,6 +146,7 @@ try {
 
         if (move_uploaded_file($_FILES['foto']['tmp_name'], $filepath)) {
             $foto_url = $filename;
+            error_log("✓ Foto guardada: " . $filename);
         } else {
             throw new Exception('No se pudo guardar la imagen. Contacta al administrador.');
         }
@@ -150,21 +161,24 @@ try {
     if ($region && (!$ciudad || !$comuna)) {
         throw new Exception('Debes seleccionar región, ciudad y comuna completos');
     }
+    error_log("✓ Ubicación validada");
 
     // Hashear contraseña
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
+    error_log("✓ Contraseña hasheada");
 
     // Generar código de verificación
     $verification_code = rand(1000, 9999);
+    error_log("Código de verificación generado: " . $verification_code);
 
     // Insertar socio
     $stmt = $pdo->prepare("
-    INSERT INTO socios (
-        id_club, nombre, alias, fecha_nac, celular, email, direccion, 
-        pais, region, ciudad, comuna,
-        rol, foto_url, genero, deporte, id_puesto, habilidad,
-        activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO socios (
+            id_club, nombre, alias, fecha_nac, celular, email, direccion, 
+            pais, region, ciudad, comuna,
+            rol, foto_url, genero, deporte, id_puesto, habilidad,
+            activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
         $id_club,
@@ -184,17 +198,20 @@ try {
         $deporte,
         $id_puesto ?: null,
         $habilidad ?: 'Básica',
-        'Si',           // activo
-        0,              // email_verified  
-        $verification_code, // verification_code
-        0,              // es_responsable
-        1,              // datos_completos
-        $password_hash  // password_hash
+        'Si',
+        0,
+        $verification_code,
+        0,
+        1,
+        $password_hash
     ]);
+
     $id_socio = $pdo->lastInsertId();
+    error_log("✓ Socio insertado: ID " . $id_socio);
 
     // Enviar correo solo si hay club
     if (!$modo_individual) {
+        error_log("Enviando correo de verificación...");
         require_once __DIR__ . '/../includes/brevo_mailer.php';
         $mail = new BrevoMailer();
         $mail->setTo($email, $nombre);
@@ -213,8 +230,13 @@ try {
         ");
 
         if (!$mail->send()) {
-            error_log("Correo fallido para socio $id_socio");
+            error_log("⚠️ Correo fallido para socio $id_socio");
+            // No lanzamos excepción, permitimos continuar
+        } else {
+            error_log("✓ Correo enviado correctamente");
         }
+    } else {
+        error_log("✓ Modo individual: NO se envía correo");
     }
 
     $response_data = [
@@ -223,10 +245,13 @@ try {
         'club_slug' => $club_slug,
         'modo_individual' => $modo_individual
     ];
+    error_log("Respuesta JSON: " . json_encode($response_data));
+    error_log("=== FIN REGISTRO SOCIO ===");
     echo json_encode($response_data);
 
 } catch (Exception $e) {
-    error_log("Registro socio error: " . $e->getMessage());
+    error_log("❌ Registro socio ERROR: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
