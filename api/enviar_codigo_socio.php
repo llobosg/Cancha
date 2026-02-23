@@ -46,12 +46,26 @@ try {
     // Verificar que el deporte sea válido según el modo
     $modo_individual = empty($club_slug); // ← ¡Asegúrate de tener esta línea!
     
+    // Verificar que el deporte sea válido según el modo
+    $modo_individual = empty($club_slug);
+
     if ($modo_individual) {
-        $stmt_check = $pdo->prepare("SELECT 1 FROM deportes WHERE deporte = ? AND tipo_deporte = '1'");
+        $stmt_check = $pdo->prepare("
+            SELECT 1 FROM deportes 
+            WHERE TRIM(deporte) = TRIM(?) 
+            AND tipo_deporte = '1' 
+            COLLATE utf8mb4_unicode_ci
+        ");
     } else {
-        $stmt_check = $pdo->prepare("SELECT 1 FROM deportes WHERE deporte = ? AND tipo_deporte = '2'");
+        $stmt_check = $pdo->prepare("
+            SELECT 1 FROM deportes 
+            WHERE TRIM(deporte) = TRIM(?) 
+            AND tipo_deporte = '2' 
+            COLLATE utf8mb4_unicode_ci
+        ");
     }
     $stmt_check->execute([$deporte]);
+    
     if (!$stmt_check->fetch()) {
         throw new Exception('Deporte no válido para este tipo de registro');
     }
