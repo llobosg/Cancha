@@ -110,7 +110,7 @@ while ($row = $stmt_regiones->fetch()) {
     /* Logo ⚽ en esquinas */
     .form-container::before,
     .form-container::after {
-      content: "⚽";
+      content: "⚽🎾🏐";
       position: absolute;
       font-size: 2.2rem;
       color: #003366;
@@ -295,11 +295,11 @@ while ($row = $stmt_regiones->fetch()) {
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <div class="header-container">
-      <h2><?= $modo_individual ? 'Socio Individual 🎾' : 'Inscríbete a:' ?></h2>
+      <h2><?= $modo_individual ? 'Socio Individual 💪' : 'Inscríbete a:' ?></h2>
       <div class="club-header">
         
           <?php if ($modo_individual): ?>
-            🎾🏐💪🏊‍♂️
+            🎾🏐🏊‍♂️
           <?php else: ?>
             <div class="club-logo">
               <?php if ($club_logo): ?>

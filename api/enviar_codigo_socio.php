@@ -164,7 +164,7 @@ try {
         pais, region, ciudad, comuna,
         rol, foto_url, genero, deporte, id_puesto, habilidad,
         activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
         $id_club,
@@ -184,8 +184,12 @@ try {
         $deporte,
         $id_puesto ?: null,
         $habilidad ?: 'Básica',
-        $verification_code,
-        $password_hash
+        'Si',           // activo
+        0,              // email_verified  
+        $verification_code, // verification_code
+        0,              // es_responsable
+        1,              // datos_completos
+        $password_hash  // password_hash
     ]);
     $id_socio = $pdo->lastInsertId();
 
