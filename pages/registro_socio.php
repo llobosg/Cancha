@@ -295,12 +295,12 @@ while ($row = $stmt_regiones->fetch()) {
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <div class="header-container">
+      <h2><?= $modo_individual ? 'Registro Individual' : 'Inscríbete a:' ?></h2>
       <div class="club-header">
         <div class="club-logo">
           <?php if ($modo_individual): ?>
             ⚽
           <?php else: ?>
-            <h2>Inscríbete a:</h2>
             <?php if ($club_logo): ?>
               <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
             <?php else: ?>
@@ -309,7 +309,7 @@ while ($row = $stmt_regiones->fetch()) {
           <?php endif; ?>
         </div>
         <div class="club-name">
-          <?= htmlspecialchars($modo_individual ? 'Registro Individual' : $club_nombre) ?>
+          <?= htmlspecialchars($modo_individual ? '' : $club_nombre) ?>
         </div>
       </div>
     </div>
@@ -319,12 +319,12 @@ while ($row = $stmt_regiones->fetch()) {
     <?php endif; ?>
 
     <form id="registroForm" enctype="multipart/form-data">
-      <input type="hidden" name="club_slug" value="<?= htmlspecialchars($slug) ?>">
       <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
       <input type="hidden" name="pais" value="Chile">
-      <!-- Si es modo individual, ocultar campos de club -->
+      
+      <!-- Solo incluir club_slug si NO es modo individual -->
       <?php if (!$modo_individual): ?>
-        <input type="hidden" name="club_slug" value="<?= htmlspecialchars($_GET['club']) ?>">
+        <input type="hidden" name="club_slug" value="<?= htmlspecialchars($club_slug_from_url) ?>">
       <?php endif; ?>
 
       <div class="form-grid">
