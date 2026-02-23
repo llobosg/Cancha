@@ -564,17 +564,18 @@ while ($row = $stmt_regiones->fetch()) {
         btn.disabled = true;
 
         try {
-            const response = await fetch('../api/enviar_codigo_socio.php', {
-                method: 'POST',
-                body: formData
-            });
-            
             const data = await response.json();
-            
+            console.log('Respuesta API:', data); // ← Agregar esto
+
             if (data.success) {
                 mostrarToast('✅ Código enviado a tu correo');
                 setTimeout(() => {
-                    window.location.href = 'verificar_socio.php?club=' + data.club_slug;
+                    console.log('Modo individual:', data.modo_individual); // ← Agregar esto
+                    if (data.modo_individual) {
+                        window.location.href = 'verificar_socio.php?id_socio=' + data.id_socio;
+                    } else {
+                        window.location.href = 'verificar_socio.php?club=' + data.club_slug;
+                    }
                 }, 2000);
             } else {
                 mostrarToast('❌ ' + data.message);
@@ -649,7 +650,7 @@ while ($row = $stmt_regiones->fetch()) {
         
         toastContainer.appendChild(toast);
         
-        // Eliminar toast después de 3 segundos
+        // Eliminar toast después de 5 segundos
         setTimeout(() => {
             if (toast.parentNode) {
                 toast.parentNode.removeChild(toast);
