@@ -189,8 +189,14 @@ try {
     $id_socio = $pdo->lastInsertId();
 
     // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
+error_log("Iniciando envío de correo a: " . $email);
+try {
     require_once __DIR__ . '/../includes/brevo_mailer.php';
+    error_log("✓ BrevoMailer incluido correctamente");
+    
     $mail = new BrevoMailer();
+    error_log("✓ Instancia de BrevoMailer creada");
+    
     $mail->setTo($email, $nombre);
     $mail->setSubject('🔐 Código de verificación - CanchaSport');
 
@@ -217,22 +223,19 @@ try {
         ");
     }
 
-    if (!$mail->send()) {
-        // No eliminamos el socio si falla el correo (puede reintentar)
-        error_log("Correo fallido para socio $id_socio");
+    error_log("Intentando enviar correo...");
+    $send_result = $mail->send();
+    
+    if (!$send_result) {
+        error_log("❌ ERROR: Fallo al enviar correo. Resultado: " . var_export($send_result, true));
+        throw new Exception('Error al enviar el correo de verificación');
+    } else {
+        error_log("✓ Correo enviado exitosamente a: " . $email);
     }
-
-    $response_data = [
-        'success' => true,
-        'id_socio' => $id_socio,
-        'club_slug' => $club_slug,
-        'modo_individual' => $modo_individual
-    ];
-    echo json_encode($response_data);
-
+    
 } catch (Exception $e) {
-    error_log("Registro socio error: " . $e->getMessage());
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    error_log("❌ EXCEPCIÓN en envío de correo: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    // No detenemos el flujo, pero registramos el error
 }
 ?>
