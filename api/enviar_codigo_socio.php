@@ -189,53 +189,67 @@ try {
     $id_socio = $pdo->lastInsertId();
 
     // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
-error_log("Iniciando envío de correo a: " . $email);
-try {
-    require_once __DIR__ . '/../includes/brevo_mailer.php';
-    error_log("✓ BrevoMailer incluido correctamente");
-    
-    $mail = new BrevoMailer();
-    error_log("✓ Instancia de BrevoMailer creada");
-    
-    $mail->setTo($email, $nombre);
-    $mail->setSubject('🔐 Código de verificación - CanchaSport');
+    error_log("Iniciando envío de correo a: " . $email);
+    try {
+        require_once __DIR__ . '/../includes/brevo_mailer.php';
+        error_log("✓ BrevoMailer incluido correctamente");
+        
+        $mail = new BrevoMailer();
+        error_log("✓ Instancia de BrevoMailer creada");
+        
+        $mail->setTo($email, $nombre);
+        $mail->setSubject('🔐 Código de verificación - CanchaSport');
 
-    if ($modo_individual) {
-        $mail->setHtmlBody("
-            <h2>¡Bienvenido a CanchaSport!</h2>
-            <p>Tu código de verificación para activar tu cuenta es:</p>
-            <h1 style='color:#009966;'>{$verification_code}</h1>
-            <p>Ingresa este código en la página de verificación para completar tu registro.</p>
-            <p>¡Disfruta de CanchaSport!</p>
-        ");
-    } else {
-        // Obtener nombre del club
-        $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
-        $stmt->execute([$id_club]);
-        $club_nombre = $stmt->fetchColumn() ?: 'tu club';
+        if ($modo_individual) {
+            $mail->setHtmlBody("
+                <h2>¡Bienvenido a CanchaSport!</h2>
+                <p>Tu código de verificación para activar tu cuenta es:</p>
+                <h1 style='color:#009966;'>{$verification_code}</h1>
+                <p>Ingresa este código en la página de verificación para completar tu registro.</p>
+                <p>¡Disfruta de CanchaSport!</p>
+            ");
+        } else {
+            // Obtener nombre del club
+            $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
+            $stmt->execute([$id_club]);
+            $club_nombre = $stmt->fetchColumn() ?: 'tu club';
 
-        $mail->setHtmlBody("
-            <h2>¡Bienvenido a CanchaSport!</h2>
-            <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
-            <h1 style='color:#009966;'>{$verification_code}</h1>
-            <p>Ingresa este código para confirmar tu inscripción.</p>
-            <p>El código tiene validez de medio tiempo sin alargue</p>
-        ");
+            $mail->setHtmlBody("
+                <h2>¡Bienvenido a CanchaSport!</h2>
+                <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
+                <h1 style='color:#009966;'>{$verification_code}</h1>
+                <p>Ingresa este código para confirmar tu inscripción.</p>
+                <p>El código tiene validez de medio tiempo sin alargue</p>
+            ");
+        }
+
+        error_log("Intentando enviar correo...");
+        $send_result = $mail->send();
+        
+        if (!$send_result) {
+            error_log("❌ ERROR: Fallo al enviar correo. Resultado: " . var_export($send_result, true));
+            throw new Exception('Error al enviar el correo de verificación');
+        } else {
+            error_log("✓ Correo enviado exitosamente a: " . $email);
+        }
+        
+    } catch (Exception $e) {
+        error_log("❌ EXCEPCIÓN en envío de correo: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        // No detenemos el flujo, pero registramos el error
     }
 
-    error_log("Intentando enviar correo...");
-    $send_result = $mail->send();
-    
-    if (!$send_result) {
-        error_log("❌ ERROR: Fallo al enviar correo. Resultado: " . var_export($send_result, true));
-        throw new Exception('Error al enviar el correo de verificación');
-    } else {
-        error_log("✓ Correo enviado exitosamente a: " . $email);
-    }
-    
+    $response_data = [
+        'success' => true,
+        'id_socio' => $id_socio,
+        'club_slug' => $club_slug,
+        'modo_individual' => $modo_individual
+    ];
+    echo json_encode($response_data);
+
 } catch (Exception $e) {
-    error_log("❌ EXCEPCIÓN en envío de correo: " . $e->getMessage());
-    error_log("Stack trace: " . $e->getTraceAsString());
-    // No detenemos el flujo, pero registramos el error
+    error_log("Registro socio error: " . $e->getMessage());
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
