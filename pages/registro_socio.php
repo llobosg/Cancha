@@ -295,11 +295,11 @@ while ($row = $stmt_regiones->fetch()) {
     <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
     <div class="header-container">
-      <h2><?= $modo_individual ? 'Registro Individual' : 'Inscríbete a:' ?></h2>
+      <h2><?= $modo_individual ? '會員註冊 Individual 🎾' : 'Inscríbete a:' ?></h2>
       <div class="club-header">
         <div class="club-logo">
           <?php if ($modo_individual): ?>
-            ⚽
+            🎾🏐💪🏊‍♂️
           <?php else: ?>
             <?php if ($club_logo): ?>
               <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">

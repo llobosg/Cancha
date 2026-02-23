@@ -159,15 +159,15 @@ try {
 
     // Insertar socio
     $stmt = $pdo->prepare("
-        INSERT INTO socios (
-            id_club, nombre, alias, fecha_nac, celular, email, direccion, 
-            pais, region, ciudad, comuna,
-            rol, foto_url, genero, deporte, id_puesto, habilidad,
-            activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
+    INSERT INTO socios (
+        id_club, nombre, alias, fecha_nac, celular, email, direccion, 
+        pais, region, ciudad, comuna,
+        rol, foto_url, genero, deporte, id_puesto, habilidad,
+        activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
     ");
     $stmt->execute([
-        $id_club, // puede ser null en modo individual
+        $id_club,
         $nombre,
         $alias,
         !empty($fecha_nac) ? $fecha_nac : null,
@@ -187,7 +187,6 @@ try {
         $verification_code,
         $password_hash
     ]);
-
     $id_socio = $pdo->lastInsertId();
 
     // Enviar correo solo si hay club
