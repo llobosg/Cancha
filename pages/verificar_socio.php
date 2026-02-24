@@ -178,9 +178,9 @@ if ($modo_individual) {
                     alert('✅ ¡Cuenta verificada exitosamente!');
                     // Redirigir al dashboard
                     if (data.club_slug) {
-                        window.location.href = '../dashboard_socio.php?id_club=' + data.club_slug;
+                        window.location.href = 'dashboard_socio.php?id_club=' + data.club_slug;
                     } else {
-                        window.location.href = '../dashboard_socio.php';
+                        window.location.href = 'dashboard_socio.php';
                     }
                 } else {
                     alert('❌ ' + data.message);
