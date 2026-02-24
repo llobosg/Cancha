@@ -634,13 +634,10 @@ while ($row = $stmt_regiones->fetch()) {
                     select.appendChild(opt);
                 });
                 
-                // Si es modo individual y deporte es Pádel, seleccionar "Jugador"
+                // Si es modo individual y deporte es Pádel, seleccionar primer puesto
                 if (<?= $modo_individual ? 'true' : 'false' ?> && deporte === 'Pádel') {
-                    const jugadorOption = Array.from(select.options).find(opt => 
-                        opt.textContent.toLowerCase().includes('jugador')
-                    );
-                    if (jugadorOption) {
-                        select.value = jugadorOption.value;
+                    if (select.options.length > 1) {
+                        select.selectedIndex = 1; // Primer puesto real (índice 1, porque 0 es "Seleccionar")
                     }
                 }
             })
