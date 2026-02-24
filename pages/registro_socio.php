@@ -610,38 +610,52 @@ while ($row = $stmt_regiones->fetch()) {
     }
 
     function cargarPuestosPorDeporte(deporte) {
+      console.log('🔍 Cargando puestos para deporte:', deporte);
+      
       const url = deporte 
           ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
           : '../api/get_puestos.php';
       
       fetch(url)
-          .then(r => r.json())
+          .then(r => {
+              console.log('📡 Respuesta API get_puestos.php:', r.status);
+              return r.json();
+          })
           .then(puestos => {
+              console.log('📥 Puestos recibidos:', puestos);
+              
               const select = document.getElementById('id_puesto');
               select.innerHTML = '<option value="">Seleccionar</option>';
               
-              puestos.forEach(p => {
+              puestos.forEach((p, index) => {
+                  console.log(`  ${index + 1}. ID: ${p.id_puesto}, Puesto: "${p.puesto}"`);
                   const opt = document.createElement('option');
                   opt.value = p.id_puesto;
                   opt.textContent = p.puesto;
                   select.appendChild(opt);
               });
               
-              // En vez de buscar "Jugador", selecciona "Sexta" si existe
+              // Si es modo individual y deporte es Pádel, buscar "Primera"
               if (<?= $modo_individual ? 'true' : 'false' ?> && deporte === 'Pádel') {
-                  const sextaOption = Array.from(select.options).find(opt => 
-                      opt.textContent.trim() === 'Sexta'
+                  console.log('🎯 Modo individual + Pádel detectado, buscando "Primera"');
+                  
+                  const primeraOption = Array.from(select.options).find(opt => 
+                      opt.textContent.trim() === 'Primera'
                   );
                   
-                  if (sextaOption) {
-                      select.value = sextaOption.value;
+                  if (primeraOption) {
+                      console.log('✅ "Primera" encontrada, seleccionando...');
+                      select.value = primeraOption.value;
                   } else if (select.options.length > 1) {
+                      console.log('⚠️ "Primera" no encontrada, seleccionando primer puesto');
                       select.selectedIndex = 1;
+                  } else {
+                      console.log('❌ No hay puestos disponibles');
                   }
               }
           })
-          .catch(() => {
-              console.warn('No se pudieron cargar los puestos');
+          .catch(error => {
+              console.error('❌ Error al cargar puestos:', error);
           });
     }
 
