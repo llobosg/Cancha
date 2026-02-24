@@ -564,42 +564,45 @@ while ($row = $stmt_regiones->fetch()) {
         btn.disabled = true;
 
         try {
-            const response = await fetch('../api/enviar_codigo_socio.php', {
-                method: 'POST',
-                body: formData
-            });
-            
-            console.log('Status:', response.status);
-            console.log('Response text:', await response.text()); // ← Ver texto real
-            
-            if (!response.ok) {
-                throw new Error('Error HTTP: ' + response.status);
-            }             
-            const data = await response.json();
-            console.log('Respuesta API:', data); // ← Agregar esto
-
-            if (data.success) {
-                mostrarToast('✅ Código enviado a tu correo');
-                setTimeout(() => {
-                    // Si hay club_slug, es modo club; si no, es individual
-                    if (data.club_slug && data.club_slug.trim() !== '') {
-                        window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
-                    } else {
-                        window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
-                    }
-                }, 2000);
-            } else {
-                mostrarToast('❌ ' + data.message);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-            
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarToast('❌ Error al enviar el código');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+          const response = await fetch('../api/enviar_codigo_socio.php', {
+              method: 'POST',
+              body: formData
+          });
+          
+          // Leer el body SOLO UNA VEZ
+          const textResponse = await response.text();
+          console.log('Respuesta cruda:', textResponse);
+          
+          // Verificar si la respuesta es JSON válido
+          let data;
+          try {
+              data = JSON.parse(textResponse);
+          } catch (e) {
+              console.error('Respuesta no es JSON válido:', textResponse);
+              throw new Error('Error interno del servidor');
+          }
+          
+          if (data.success) {
+              mostrarToast('✅ Código enviado a tu correo');
+              setTimeout(() => {
+                  if (data.club_slug && data.club_slug.trim() !== '') {
+                      window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
+                  } else {
+                      window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
+                  }
+              }, 2000);
+          } else {
+              mostrarToast('❌ ' + data.message);
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+          }
+          
+      } catch (error) {
+          console.error('Error:', error);
+          mostrarToast('❌ Error al enviar el código');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+      }
     });
 
     // Registrar Service Worker
