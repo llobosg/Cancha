@@ -68,7 +68,9 @@ if (isset($_SESSION['id_socio'])) {
     }
 }
 
-// Si no tenemos id_socio válido, intentar obtenerlo del login
+// Determinar si es modo individual
+$modo_individual = empty($club_slug);
+
 if (!$id_socio) {
     $user_email = null;
     
@@ -80,25 +82,39 @@ if (!$id_socio) {
     }
     
     if ($user_email) {
-        // Buscar socio existente con este email y club
-        $stmt_socio = $pdo->prepare("
-            SELECT id_socio FROM socios 
-            WHERE email = ? AND id_club = ?
-        ");
-        $stmt_socio->execute([$user_email, $club_id]);
+        if ($modo_individual) {
+            // Buscar socio individual (sin club)
+            $stmt_socio = $pdo->prepare("
+                SELECT id_socio FROM socios 
+                WHERE email = ? AND id_club IS NULL
+            ");
+            $stmt_socio->execute([$user_email]);
+        } else {
+            // Buscar socio de club
+            $stmt_socio = $pdo->prepare("
+                SELECT id_socio FROM socios 
+                WHERE email = ? AND id_club = ?
+            ");
+            $stmt_socio->execute([$user_email, $club_id]);
+        }
+        
         $socio_data = $stmt_socio->fetch();
         
         if ($socio_data) {
-            // Socio ya existe - guardar en sesión
             $id_socio = $socio_data['id_socio'];
             $_SESSION['id_socio'] = $id_socio;
         } else {
-            // Socio no existe, redirigir a completar perfil
-            header('Location: completar_perfil.php?id=' . $club_slug);
+            // Socio no existe
+            if ($modo_individual) {
+                // Redirigir a completar perfil individual
+                header('Location: completar_perfil.php?modo=individual');
+            } else {
+                header('Location: completar_perfil.php?id=' . $club_slug);
+            }
             exit;
         }
     } else {
-        // No hay email en sesión, redirigir a login
+        // No hay email en sesión
         header('Location: ../index.php');
         exit;
     }
