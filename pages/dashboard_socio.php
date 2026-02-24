@@ -1,7 +1,7 @@
 <?php
 error_log("=== INICIO DASHBOARD_SOCIO.PHP ===");
 error_log("GET recibido: " . print_r($_GET, true));
-error_log("SESSION inicial: " . print_r($_SESSION, true));
+error_log("SESSION inicial: " . (isset($_SESSION) ? print_r($_SESSION, true) : 'NO DEFINIDA'));
 
 require_once __DIR__ . '/../includes/config.php';
 

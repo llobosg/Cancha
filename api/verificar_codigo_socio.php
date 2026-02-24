@@ -17,6 +17,11 @@ try {
         throw new Exception('Código inválido');
     }
 
+    // Iniciar sesión para guardar datos
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
     // Determinar modo
     $modo_individual = isset($_POST['id_socio']);
     
@@ -28,7 +33,7 @@ try {
         
         // Verificar código para socio individual
         $stmt = $pdo->prepare("
-            SELECT id_socio, email_verified 
+            SELECT id_socio, email, email_verified 
             FROM socios 
             WHERE id_socio = ? AND verification_code = ? AND email_verified = 0
         ");
@@ -42,6 +47,13 @@ try {
         // Actualizar verificación
         $stmt = $pdo->prepare("UPDATE socios SET email_verified = 1 WHERE id_socio = ?");
         $stmt->execute([$id_socio]);
+        
+        // Guardar en sesión
+        $_SESSION['id_socio'] = $id_socio;
+        $_SESSION['user_email'] = $socio['email'];
+        $_SESSION['modo_individual'] = true;
+        $_SESSION['club_id'] = null;
+        $_SESSION['current_club'] = null;
         
         $response_data = [
             'success' => true,
@@ -74,9 +86,9 @@ try {
         
         // Verificar código para socio de club
         $stmt = $pdo->prepare("
-            SELECT id_socio, email_verified 
-            FROM socios 
-            WHERE id_club = ? AND verification_code = ? AND email_verified = 0
+            SELECT s.id_socio, s.email, s.email_verified 
+            FROM socios s
+            WHERE s.id_club = ? AND s.verification_code = ? AND s.email_verified = 0
         ");
         $stmt->execute([$id_club, $codigo]);
         $socio = $stmt->fetch();
@@ -88,6 +100,13 @@ try {
         // Actualizar verificación
         $stmt = $pdo->prepare("UPDATE socios SET email_verified = 1 WHERE id_socio = ?");
         $stmt->execute([$socio['id_socio']]);
+        
+        // Guardar en sesión
+        $_SESSION['id_socio'] = $socio['id_socio'];
+        $_SESSION['user_email'] = $socio['email'];
+        $_SESSION['modo_individual'] = false;
+        $_SESSION['club_id'] = $id_club;
+        $_SESSION['current_club'] = $club_slug;
         
         $response_data = [
             'success' => true,
