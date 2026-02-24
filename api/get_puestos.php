@@ -5,10 +5,10 @@ require_once __DIR__ . '/../includes/config.php';
 $deporte = $_GET['deporte'] ?? null;
 
 if ($deporte) {
-    $stmt = $pdo->prepare("SELECT id_puesto, puesto FROM puestos WHERE deporte = ? ORDER BY puesto");
+    $stmt = $pdo->prepare("SELECT id_puesto, puesto FROM puestos WHERE deporte = ? ORDER BY id_puesto");
     $stmt->execute([$deporte]);
 } else {
-    $stmt = $pdo->prepare("SELECT id_puesto, puesto FROM puestos ORDER BY puesto");
+    $stmt = $pdo->prepare("SELECT id_puesto, puesto FROM puestos ORDER BY id_puesto");
     $stmt->execute();
 }
 
