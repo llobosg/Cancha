@@ -564,6 +564,17 @@ while ($row = $stmt_regiones->fetch()) {
         btn.disabled = true;
 
         try {
+            const response = await fetch('../api/enviar_codigo_socio.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            console.log('Status:', response.status);
+            console.log('Response text:', await response.text()); // ← Ver texto real
+            
+            if (!response.ok) {
+                throw new Error('Error HTTP: ' + response.status);
+            }             
             const data = await response.json();
             console.log('Respuesta API:', data); // ← Agregar esto
 
