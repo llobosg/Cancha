@@ -24,6 +24,7 @@ if ($modo_individual) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -151,7 +152,6 @@ if ($modo_individual) {
             </div>
 
             <button type="submit" class="btn-submit">Verificar Código</button>
-            <label>Ingresa el código enviado al correo registrado</label>
         </form>
     </div>
 
