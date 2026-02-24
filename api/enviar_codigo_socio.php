@@ -1,6 +1,4 @@
 <?php
-// ← ASEGÚRATE DE QUE NO HAYA NADA ANTES DE <?php
-
 // Limpiar cualquier output previo
 if (ob_get_level()) {
     ob_end_clean();

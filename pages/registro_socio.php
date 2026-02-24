@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/config.php';
 
 // Evitar problemas de headers
-ob_start();
+//ob_start();
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
