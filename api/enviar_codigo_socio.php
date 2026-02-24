@@ -1,4 +1,7 @@
 <?php
+// Evitar output antes del JSON
+ob_start();
+
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -245,6 +248,8 @@ try {
         'club_slug' => $club_slug,
         'modo_individual' => $modo_individual
     ];
+    // Limpiar cualquier output accidental
+    ob_end_clean();
     echo json_encode($response_data);
 
 } catch (Exception $e) {
