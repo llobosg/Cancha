@@ -335,20 +335,23 @@ while ($row = $stmt_regiones->fetch()) {
       <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
       <div class="form-group"><label for="alias">Alias</label></div>
       <div class="form-group"><input type="text" id="alias" name="alias" required></div>
+      
+      <!-- Rol (fijo en Jugador para modo individual) -->
       <div class="form-group"><label for="rol">Rol</label></div>
       <div class="form-group">
-        <select id="rol" name="rol" required>
-          <option value="">Seleccionar</option>
-          <option value="Jugador">Jugador</option>
-          <option value="Galleta">Galleta</option>
-          <option value="Amigo del club">Amigo del club</option>
-          <option value="Tesorero">Tesorero</option>
-          <option value="Director">Director</option>
-          <option value="Delegado">Delegado</option>
-          <option value="Profe">Profe</option>
-          <option value="Kine">Kine</option>
-          <option value="Preparador Físico">Preparador Físico</option>
-          <option value="Utilero">Utilero</option>
+        <select id="rol" name="rol" required <?= $modo_individual ? 'disabled' : '' ?>>
+          <option value="Jugador" <?= ($modo_individual || (!empty($rol) && $rol === 'Jugador')) ? 'selected' : '' ?>>Jugador</option>
+          <?php if (!$modo_individual): ?>
+            <option value="Galleta">Galleta</option>
+            <option value="Amigo del club">Amigo del club</option>
+            <option value="Tesorero">Tesorero</option>
+            <option value="Director">Director</option>
+            <option value="Delegado">Delegado</option>
+            <option value="Profe">Profe</option>
+            <option value="Kine">Kine</option>
+            <option value="Preparador Físico">Preparador Físico</option>
+            <option value="Utilero">Utilero</option>
+          <?php endif; ?>
         </select>
       </div>
 
@@ -407,29 +410,21 @@ while ($row = $stmt_regiones->fetch()) {
           <?php endforeach; ?>
         </select>
       </div>
+      <!-- Puesto (fijo en Jugador para modo individual) -->
       <div class="form-group"><label for="id_puesto">Puesto</label></div>
       <div class="form-group">
-        <select id="id_puesto" name="id_puesto">
+        <select id="id_puesto" name="id_puesto" required <?= $modo_individual ? 'disabled' : '' ?>>
           <option value="">Seleccionar</option>
           <!-- Se cargará dinámicamente -->
         </select>
       </div>
       <div class="form-group"><label for="habilidad">Habilidad</label></div>
       <div class="form-group">
-        <select id="habilidad" name="habilidad">
+        <select id="habilidad" name="habilidad" required>
           <option value="">Seleccionar</option>
           <option value="Básica">Malo</option>
           <option value="Intermedia">Más o Menos</option>
           <option value="Avanzada">Crack</option>
-          <option value="Pádel-Sexta">Pádel-Sexta</option>
-          <option value="Pádel-Quinta">Pádel-Quinta</option>
-          <option value="Pádel-Cuarta">Pádel-Cuarta</option>
-          <option value="Pádel-Tercera">Pádel-Tercera</option>
-          <option value="Pádel-Segunda">Pádel-Segunda</option>
-          <option value="Pádel-Primera">Pádel-Primera</option>
-          <option value="Volley-Atacante">Volley-Atacante</option>
-          <option value="Volley-Defensor">Volley-Defensor</option>
-          <option value="Volley-Bloqueo">Volley-Bloqueo</option>
         </select>
       </div>
 
@@ -556,6 +551,12 @@ while ($row = $stmt_regiones->fetch()) {
             return;
         }
 
+        // Si es modo individual, forzar valores
+        if (data.modo_individual) {
+            document.getElementById('rol').value = 'Jugador';
+            // El puesto se seleccionará automáticamente según el deporte
+        }
+
         const formData = new FormData(e.target);
         const btn = e.submitter;
         const originalText = btn.innerHTML;
@@ -614,21 +615,50 @@ while ($row = $stmt_regiones->fetch()) {
       });
     }
 
+    // Función para cargar puestos según deporte
+    function cargarPuestosPorDeporte(deporte) {
+        const url = deporte 
+            ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
+            : '../api/get_puestos.php';
+        
+        fetch(url)
+            .then(r => r.json())
+            .then(puestos => {
+                const select = document.getElementById('id_puesto');
+                select.innerHTML = '<option value="">Seleccionar</option>';
+                
+                puestos.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id_puesto;
+                    opt.textContent = p.puesto;
+                    select.appendChild(opt);
+                });
+                
+                // Si es modo individual y deporte es Pádel, seleccionar "Jugador"
+                if (<?= $modo_individual ? 'true' : 'false' ?> && deporte === 'Pádel') {
+                    const jugadorOption = Array.from(select.options).find(opt => 
+                        opt.textContent.toLowerCase().includes('jugador')
+                    );
+                    if (jugadorOption) {
+                        select.value = jugadorOption.value;
+                    }
+                }
+            })
+            .catch(() => {
+                console.warn('No se pudieron cargar los puestos');
+            });
+    }
+
     // Cargar puestos al iniciar
     document.addEventListener('DOMContentLoaded', () => {
-      fetch('../api/get_puestos.php')
-        .then(r => r.json())
-        .then(puestos => {
-          const select = document.getElementById('id_puesto');
-          puestos.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id_puesto;
-            opt.textContent = p.puesto;
-            select.appendChild(opt);
-          });
-        })
-        .catch(() => {
-          console.warn('No se pudieron cargar los puestos');
+        const deporteSelect = document.getElementById('deporte');
+        if (deporteSelect.value) {
+            cargarPuestosPorDeporte(deporteSelect.value);
+        }
+        
+        // Recargar puestos cuando cambie el deporte
+        deporteSelect?.addEventListener('change', function() {
+            cargarPuestosPorDeporte(this.value);
         });
     });
 

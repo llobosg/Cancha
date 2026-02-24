@@ -1,13 +1,17 @@
 <?php
-// api/get_puestos.php
-header('Content-Type: application/json; charset=utf-8');
+header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 
-try {
-    $stmt = $pdo->query("SELECT id_puesto, puesto FROM puestos ORDER BY puesto");
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-} catch (Exception $e) {
-    error_log("Error get_puestos: " . $e->getMessage());
-    echo json_encode([]);
+$deporte = $_GET['deporte'] ?? null;
+
+if ($deporte) {
+    $stmt = $pdo->prepare("SELECT id_puesto, puesto FROM puestos WHERE deporte = ? ORDER BY puesto");
+    $stmt->execute([$deporte]);
+} else {
+    $stmt = $pdo->prepare("SELECT id_puesto, puesto FROM puestos ORDER BY puesto");
+    $stmt->execute();
 }
+
+$puestos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+echo json_encode($puestos);
 ?>
