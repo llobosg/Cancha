@@ -1,4 +1,8 @@
 <?php
+error_log("=== INICIO DASHBOARD_SOCIO.PHP ===");
+error_log("GET recibido: " . print_r($_GET, true));
+error_log("SESSION inicial: " . print_r($_SESSION, true));
+
 require_once __DIR__ . '/../includes/config.php';
 
 // Configuración robusta de sesiones
@@ -13,21 +17,24 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
+error_log("SESSION después de start: " . print_r($_SESSION, true));
 
 // Determinar si es modo individual
 $modo_individual = !isset($_GET['id_club']) || empty($_GET['id_club']);
+error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
 
 if ($modo_individual) {
-    // Modo individual: no hay club
+    error_log("✓ Modo individual detectado");
     $club_id = null;
     $club_nombre = 'Socio Individual';
     $club_logo = null;
     $club_slug = null;
 } else {
-    // Modo club: validar slug
+    error_log("Modo club detectado");
     $club_slug_from_url = $_GET['id_club'];
     
     if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+        error_log("❌ Slug inválido, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
@@ -36,6 +43,7 @@ if ($modo_individual) {
     $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
     $stmt_club->execute();
     $clubs = $stmt_club->fetchAll();
+    error_log("Clubs encontrados: " . count($clubs));
 
     $club_id = null;
     $club_nombre = '';
@@ -54,9 +62,11 @@ if ($modo_individual) {
     }
 
     if (!$club_id) {
+        error_log("❌ Club no encontrado, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
+    error_log("✓ Club cargado: " . $club_nombre);
 }
 
 // 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS 🔥
@@ -66,32 +76,36 @@ $socio_actual = null;
 // Verificar si ya tenemos id_socio en sesión y es válido
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
+    error_log("ID_SOCIO desde sesión: " . $id_socio);
     
     if ($modo_individual) {
-        // Validar socio individual
         $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL");
         $stmt_validate->execute([$id_socio]);
     } else {
-        // Validar socio de club
         $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ?");
         $stmt_validate->execute([$id_socio, $club_id]);
     }
     
     $socio_actual = $stmt_validate->fetch();
+    error_log("Socio actual encontrado: " . ($socio_actual ? 'true' : 'false'));
     
     if (!$socio_actual) {
         $id_socio = null;
         $socio_actual = null;
+        error_log("❌ Socio no válido, limpiando ID");
     }
 }
 
 if (!$id_socio) {
+    error_log("No hay ID_SOCIO válido, buscando por email...");
     $user_email = null;
     
     if (isset($_SESSION['google_email'])) {
         $user_email = $_SESSION['google_email'];
+        error_log("Email desde Google: " . $user_email);
     } elseif (isset($_SESSION['user_email'])) {
         $user_email = $_SESSION['user_email'];
+        error_log("Email desde sesión: " . $user_email);
     }
     
     if ($user_email) {
@@ -104,11 +118,14 @@ if (!$id_socio) {
         }
         
         $socio_data = $stmt_socio->fetch();
+        error_log("Socio encontrado por email: " . ($socio_data ? 'true' : 'false'));
         
         if ($socio_data) {
             $id_socio = $socio_data['id_socio'];
             $_SESSION['id_socio'] = $id_socio;
+            error_log("✓ ID_SOCIO guardado en sesión: " . $id_socio);
         } else {
+            error_log("❌ Socio no existe, redirigiendo a completar_perfil");
             if ($modo_individual) {
                 header('Location: completar_perfil.php?modo=individual');
             } else {
@@ -117,15 +134,18 @@ if (!$id_socio) {
             exit;
         }
     } else {
+        error_log("❌ No hay email en sesión, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
 } else {
     $_SESSION['id_socio'] = $id_socio;
+    error_log("✓ ID_SOCIO ya existía en sesión");
 }
 
 // Asegurar que $socio_actual esté definida
 if (!$socio_actual) {
+    error_log("Cargando socio_actual desde fallback...");
     if ($modo_individual) {
         $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL LIMIT 1");
         $stmt_fallback->execute([$_SESSION['id_socio']]);
@@ -134,13 +154,17 @@ if (!$socio_actual) {
         $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
     }
     $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
+    error_log("Socio actual fallback: " . ($socio_actual ? 'cargado' : 'predeterminado'));
 }
 
 // Guardar en sesión
 if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
     $_SESSION['current_club'] = $club_slug;
+    error_log("✓ Datos de club guardados en sesión");
 }
+
+error_log("=== FIN INICIO DASHBOARD_SOCIO.PHP ===");
 ?>
 
 <?php
