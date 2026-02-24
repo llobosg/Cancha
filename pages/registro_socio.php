@@ -570,11 +570,11 @@ while ($row = $stmt_regiones->fetch()) {
             if (data.success) {
                 mostrarToast('✅ Código enviado a tu correo');
                 setTimeout(() => {
-                    console.log('Modo individual:', data.modo_individual); // ← Agregar esto
-                    if (data.modo_individual) {
-                        window.location.href = 'verificar_socio.php?id_socio=' + data.id_socio;
+                    // Si hay club_slug, es modo club; si no, es individual
+                    if (data.club_slug && data.club_slug.trim() !== '') {
+                        window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
                     } else {
-                        window.location.href = 'verificar_socio.php?club=' + data.club_slug;
+                        window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
                     }
                 }, 2000);
             } else {
