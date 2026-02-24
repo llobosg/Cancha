@@ -410,10 +410,10 @@ while ($row = $stmt_regiones->fetch()) {
           <?php endforeach; ?>
         </select>
       </div>
-      <!-- Puesto (fijo en Jugador para modo individual) -->
+      <!-- Puesto (editable en modo individual, pero con valor por defecto) -->
       <div class="form-group"><label for="id_puesto">Puesto</label></div>
       <div class="form-group">
-        <select id="id_puesto" name="id_puesto" required <?= $modo_individual ? 'disabled' : '' ?>>
+        <select id="id_puesto" name="id_puesto" required>
           <option value="">Seleccionar</option>
           <!-- Se cargará dinámicamente -->
         </select>
