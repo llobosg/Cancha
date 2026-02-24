@@ -635,22 +635,21 @@ while ($row = $stmt_regiones->fetch()) {
                   select.appendChild(opt);
               });
               
-              // Si es modo individual y deporte es Pádel, buscar "Primera"
+              // Si es modo individual y deporte es Pádel, seleccionar "Sexta" (nivel menos experto)
               if (<?= $modo_individual ? 'true' : 'false' ?> && deporte === 'Pádel') {
-                  console.log('🎯 Modo individual + Pádel detectado, buscando "Primera"');
+                  console.log('🎯 Modo individual + Pádel detectado, buscando "Sexta"');
                   
-                  const primeraOption = Array.from(select.options).find(opt => 
-                      opt.textContent.trim() === 'Primera'
+                  const sextaOption = Array.from(select.options).find(opt => 
+                      opt.textContent.trim() === 'Sexta'
                   );
                   
-                  if (primeraOption) {
-                      console.log('✅ "Primera" encontrada, seleccionando...');
-                      select.value = primeraOption.value;
+                  if (sextaOption) {
+                      console.log('✅ "Sexta" encontrada, seleccionando...');
+                      select.value = sextaOption.value;
                   } else if (select.options.length > 1) {
-                      console.log('⚠️ "Primera" no encontrada, seleccionando primer puesto');
-                      select.selectedIndex = 1;
-                  } else {
-                      console.log('❌ No hay puestos disponibles');
+                      // Fallback: seleccionar el último puesto (asumiendo que es el menos experto)
+                      console.log('⚠️ "Sexta" no encontrada, seleccionando último puesto');
+                      select.selectedIndex = select.options.length - 1;
                   }
               }
           })
