@@ -551,12 +551,6 @@ while ($row = $stmt_regiones->fetch()) {
             return;
         }
 
-        // Si es modo individual, forzar valores
-        if (data.modo_individual) {
-            document.getElementById('rol').value = 'Jugador';
-            // El puesto se seleccionará automáticamente según el deporte
-        }
-
         const formData = new FormData(e.target);
         const btn = e.submitter;
         const originalText = btn.innerHTML;
@@ -615,35 +609,40 @@ while ($row = $stmt_regiones->fetch()) {
       });
     }
 
-    // Función para cargar puestos según deporte
     function cargarPuestosPorDeporte(deporte) {
-        const url = deporte 
-            ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
-            : '../api/get_puestos.php';
-        
-        fetch(url)
-            .then(r => r.json())
-            .then(puestos => {
-                const select = document.getElementById('id_puesto');
-                select.innerHTML = '<option value="">Seleccionar</option>';
-                
-                puestos.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id_puesto;
-                    opt.textContent = p.puesto;
-                    select.appendChild(opt);
-                });
-                
-                // Si es modo individual y deporte es Pádel, seleccionar primer puesto
-                if (<?= $modo_individual ? 'true' : 'false' ?> && deporte === 'Pádel') {
-                    if (select.options.length > 1) {
-                        select.selectedIndex = 1; // Primer puesto real (índice 1, porque 0 es "Seleccionar")
-                    }
-                }
-            })
-            .catch(() => {
-                console.warn('No se pudieron cargar los puestos');
-            });
+      const url = deporte 
+          ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
+          : '../api/get_puestos.php';
+      
+      fetch(url)
+          .then(r => r.json())
+          .then(puestos => {
+              const select = document.getElementById('id_puesto');
+              select.innerHTML = '<option value="">Seleccionar</option>';
+              
+              puestos.forEach(p => {
+                  const opt = document.createElement('option');
+                  opt.value = p.id_puesto;
+                  opt.textContent = p.puesto;
+                  select.appendChild(opt);
+              });
+              
+              // En vez de buscar "Jugador", selecciona "Sexta" si existe
+              if (<?= $modo_individual ? 'true' : 'false' ?> && deporte === 'Pádel') {
+                  const sextaOption = Array.from(select.options).find(opt => 
+                      opt.textContent.trim() === 'Sexta'
+                  );
+                  
+                  if (sextaOption) {
+                      select.value = sextaOption.value;
+                  } else if (select.options.length > 1) {
+                      select.selectedIndex = 1;
+                  }
+              }
+          })
+          .catch(() => {
+              console.warn('No se pudieron cargar los puestos');
+          });
     }
 
     // Cargar puestos al iniciar
