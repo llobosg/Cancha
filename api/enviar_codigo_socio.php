@@ -1,5 +1,10 @@
 <?php
-// Evitar output antes del JSON
+// ← ASEGÚRATE DE QUE NO HAYA NADA ANTES DE <?php
+
+// Limpiar cualquier output previo
+if (ob_get_level()) {
+    ob_end_clean();
+}
 ob_start();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -251,6 +256,7 @@ try {
     // Limpiar cualquier output accidental
     ob_end_clean();
     echo json_encode($response_data);
+    exit;
 
 } catch (Exception $e) {
     error_log("Registro socio error: " . $e->getMessage());
