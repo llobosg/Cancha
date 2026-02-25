@@ -208,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     .login-container {
         position: relative;
-        z-index: 1000;
+        z-index: 1001;
     }
   </style>
 </body>

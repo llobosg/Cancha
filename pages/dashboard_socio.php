@@ -212,7 +212,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     ");
     $stmt_evento->execute([$_SESSION['club_id']]);
     $proximo_evento = $stmt_evento->fetch();
-}logo
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -955,19 +955,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   `;
   document.head.appendChild(style);
 
-  // Funciones para nuevos botones
-  function invitarGalletas(idReserva) {
-      alert('Función "Invitar Galletas" en desarrollo');
-  }
-
-  function invitarCancha(idReserva) {
-      alert('Función "Invitar un Cancha" en desarrollo');
-  }
-
-  function pagarCuota(idReserva) {
-      alert('Función "Pagar cuota" en desarrollo');
-  }
-
   // Función pasoEvento actualizada
   function pasoEvento(idReserva) {
       const card = event.target.closest('.stat-card');
@@ -980,6 +967,19 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       }
   }
 
+  // Funciones para nuevos botones
+  function invitarGalletas(idReserva) {
+      alert('Función "Invitar Galletas" en desarrollo');
+  }
+
+  function invitarCancha(idReserva) {
+      alert('Función "Invitar un Cancha" en desarrollo');
+  }
+
+  function pagarCuota(idReserva) {
+      alert('Función "Pagar cuota" en desarrollo');
+  }
+  
   requestNotificationPermission();
 
   // Cargar tabla de detalle eventos
