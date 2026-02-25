@@ -593,7 +593,7 @@ $_SESSION['visited_index'] = true;
       Ingresar
     </button>
 
-    <!-- Google Login -->
+    <!-- Google Login 
     <div id="googleLoginContainer">
       <div id="g_id_onload"
            data-client_id="887808441549-lpgd9gs8t1dqe9r00a5uj7omg8iob8mt.apps.googleusercontent.com"
@@ -608,7 +608,7 @@ $_SESSION['visited_index'] = true;
            data-shape="rectangular"
            data-logo_alignment="left">
       </div>
-    </div>
+    </div> -->
   </div>
 </div>
 

@@ -196,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="hidden" name="club_slug" value="<?= htmlspecialchars($_GET['club'] ?? '') ?>">
         
         <div class="form-group">
-          <label for="email">Email *</label>
+          <label for="email">Email **</label>
           <input type="email" id="email" name="email" required 
                  value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
         </div>
