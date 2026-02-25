@@ -26,7 +26,7 @@ error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
 if ($modo_individual) {
     error_log("✓ Modo individual detectado");
     $club_id = null;
-    $club_nombre = 'Socio Individual';
+    $club_nombre = 'Socio CanchaSport';
     $club_logo = null;
     $club_slug = null;
 } else {
@@ -212,7 +212,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     ");
     $stmt_evento->execute([$_SESSION['club_id']]);
     $proximo_evento = $stmt_evento->fetch();
-}
+}logo
 ?>
 <!DOCTYPE html>
 <html lang="es">

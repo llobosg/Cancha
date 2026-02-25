@@ -525,9 +525,66 @@ $_SESSION['visited_index'] = true;
         padding: 0.4rem 0.8rem;
         font-size: 0.9rem;
       ">
-        Recintos Deportivos
+        Registrarse
       </button>
       <div id="dropdownContentRecintos" style="
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        min-width: 200px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        border-radius: 12px;
+        z-index: 1001;
+        display: none;
+        margin-top: 5px;
+      ">
+        <a href="pages/registro_recinto.php" style="
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #071289;
+          text-decoration: none;
+          font-weight: bold;
+        ">Recinto Deportivo</a>
+         <a href="pages/registro_club.php" style="
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #071289;
+          text-decoration: none;
+          font-weight: bold;
+          border-bottom: 1px solid #eee;
+        ">⚽ Club de amigos</a>
+        <a href="pages/registro_socio.php" style="
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #9B59B6;
+          text-decoration: none;
+          font-weight: bold;
+        ">🎾 Socio Individual</a>
+        <a href="pages/login_recintos.php" style="
+          display: block;
+          padding: 0.8rem 1.5rem;
+          color: #071289;
+          text-decoration: none;
+          font-weight: bold;
+          border-bottom: 1px solid #eee;
+        ">🔐 Entrar a tu Club</a>
+        
+      </div>
+    </div>
+
+    <!-- Menú "Registrarse" (desplegable) -->
+    <div id="registroDropdown" style="position: relative; display: inline-block;">
+      <button id="registroBtn" class="btn-register" style="
+        background: transparent !important;
+        border: 2px solid white !important;
+        color: white !important;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+      ">
+        Ingreso
+      </button>
+      <div id="dropdownContentRegistro" style="
         position: absolute;
         top: 100%;
         left: 0;
@@ -546,55 +603,14 @@ $_SESSION['visited_index'] = true;
           text-decoration: none;
           font-weight: bold;
           border-bottom: 1px solid #eee;
-        ">🔐 Entrar a tu Club</a>
-        <a href="pages/registro_recinto.php" style="
-          display: block;
-          padding: 0.8rem 1.5rem;
-          color: #071289;
-          text-decoration: none;
-          font-weight: bold;
-        ">Registra tu Club</a>
-      </div>
-    </div>
-
-    <!-- Menú "Registrarse" (desplegable) -->
-    <div id="registroDropdown" style="position: relative; display: inline-block;">
-      <button id="registroBtn" class="btn-register" style="
-        background: transparent !important;
-        border: 2px solid white !important;
-        color: white !important;
-        padding: 0.4rem 0.8rem;
-        font-size: 0.9rem;
-      ">
-        Registrarse
-      </button>
-      <div id="dropdownContentRegistro" style="
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: white;
-        min-width: 200px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-        border-radius: 12px;
-        z-index: 1001;
-        display: none;
-        margin-top: 5px;
-      ">
-        <a href="pages/registro_club.php" style="
-          display: block;
-          padding: 0.8rem 1.5rem;
-          color: #071289;
-          text-decoration: none;
-          font-weight: bold;
-          border-bottom: 1px solid #eee;
-        ">⚽ Crear club</a>
+        ">🔐 admin Recinto Deportivo</a>
         <a href="pages/registro_socio.php" style="
           display: block;
           padding: 0.8rem 1.5rem;
           color: #9B59B6;
           text-decoration: none;
           font-weight: bold;
-        ">🎾 Individual</a>
+        ">⚽🎾 Socio Jugador</a>
       </div>
     </div>
   </div>
