@@ -1,6 +1,6 @@
 <?php
 session_start();
-// Procesar login alternativo - SIMPLIFICADO
+// Procesar login alternativo - ACTUALIZADO PARA SOCIOS INDIVIDUALES Y CLUBES
 $error_login = '';
 if (isset($_POST['login_alternativo'])) {
     $email = trim($_POST['email_alt'] ?? '');
@@ -9,13 +9,13 @@ if (isset($_POST['login_alternativo'])) {
     if (empty($email) || empty($password)) {
         $error_login = 'Email y contraseña son requeridos';
     } else {
-        // Verificar credenciales del socio (sin club_slug)
         require_once __DIR__ . '/includes/config.php';
+        
+        // Buscar socio por email (incluye individuales y de club)
         $stmt = $pdo->prepare("
-            SELECT s.id_socio, s.id_club, s.password_hash, c.email_responsable
-            FROM socios s
-            JOIN clubs c ON s.id_club = c.id_club
-            WHERE s.email = ? AND s.password_hash IS NOT NULL
+            SELECT id_socio, id_club, password_hash, email
+            FROM socios 
+            WHERE email = ? AND password_hash IS NOT NULL
         ");
         $stmt->execute([$email]);
         $socio = $stmt->fetch();
@@ -23,15 +23,28 @@ if (isset($_POST['login_alternativo'])) {
         if ($socio && password_verify($password, $socio['password_hash'])) {
             // Login exitoso
             $_SESSION['id_socio'] = $socio['id_socio'];
-            $_SESSION['club_id'] = $socio['id_club'];
             $_SESSION['user_email'] = $email;
             
-            // Generar club_slug para redirección
-            $club_slug = substr(md5($socio['id_club'] . $socio['email_responsable']), 0, 8);
-            $_SESSION['current_club'] = $club_slug;
-            
-            header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
-            exit;
+            if ($socio['id_club']) {
+                // Socio de club
+                $stmt_club = $pdo->prepare("SELECT email_responsable FROM clubs WHERE id_club = ?");
+                $stmt_club->execute([$socio['id_club']]);
+                $club_data = $stmt_club->fetch();
+                
+                if ($club_data) {
+                    $club_slug = substr(md5($socio['id_club'] . $club_data['email_responsable']), 0, 8);
+                    $_SESSION['club_id'] = $socio['id_club'];
+                    $_SESSION['current_club'] = $club_slug;
+                    header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
+                    exit;
+                } else {
+                    $error_login = 'Club no encontrado';
+                }
+            } else {
+                // Socio individual
+                header('Location: pages/dashboard_socio.php');
+                exit;
+            }
         } else {
             $error_login = 'Credenciales incorrectas o contraseña no configurada';
         }
@@ -590,7 +603,7 @@ $_SESSION['visited_index'] = true;
   <div class="google-login-container">
     <!-- Botón Ingresar -->
     <button class="btn-enter" onclick="toggleLoginAlternativo()">
-      Ingresar socio
+      Ingreso
     </button>
 
     <!-- Google Login 
@@ -839,9 +852,6 @@ function toggleModal(loginDiv, overlay) {
         overlay.style.display = 'none';
     }
 }
-
-// Hacer accesible globalmente
-window.toggleLoginAlternativo = toggleLoginAlternativo;
 
 // Hacer accesible globalmente
 window.toggleLoginAlternativo = toggleLoginAlternativo;
@@ -1173,7 +1183,6 @@ function cerrarRecuperarPassword() {
 }
 
 // Hacer funciones accesibles globalmente
-window.toggleLoginAlternativo = toggleLoginAlternativo;
 window.mostrarRecuperarPassword = mostrarRecuperarPassword;
 window.cerrarRecuperarPassword = cerrarRecuperarPassword;
 
