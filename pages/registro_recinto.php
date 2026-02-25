@@ -401,8 +401,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           
           <div class="form-group">
-            <label for="usuario_admin">Usuario de Administrador <span class="required">*</span></label>
-            <input type="text" id="usuario_admin" name="usuario_admin" required>
+            <label for="usuario_admin">Usuario para Login (no el correo, puede ser un alias) <span class="required">*</span></label>
+            <input type="text" id="usuario_admin" name="usuario_admin" placeholder="Ej: Luis, Lucho, jefe" required>
           </div>
           
           <div class="form-row">
