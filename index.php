@@ -58,7 +58,7 @@ $_SESSION['visited_index'] = true;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cancha - Gestión para clubes deportivos</title>
+  <title>CanchaSport - Comunidad deportiva 360º</title>
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
@@ -496,7 +496,7 @@ $_SESSION['visited_index'] = true;
     <div class="ball-container">
       <div class="spinning-ball">⚽</div>
     </div>
-    <div class="loading-text">Estamos abriendo el recinto para que entres a Cancha</div>
+    <div class="loading-text">Estamos abriendo el recinto para que entres a CanchaSport</div>
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -545,7 +545,7 @@ $_SESSION['visited_index'] = true;
           color: #071289;
           text-decoration: none;
           font-weight: bold;
-        ">🏟️ Recinto Deportivo</a>
+        ">🏟️ Centro Deportivo</a>
          <a href="pages/registro_club.php" style="
           display: block;
           padding: 0.8rem 1.5rem;
@@ -594,7 +594,7 @@ $_SESSION['visited_index'] = true;
           text-decoration: none;
           font-weight: bold;
           border-bottom: 1px solid #eee;
-        ">🔐 Admin Recinto Deportivo</a>
+        ">🔐 Admin Centro Deportivo</a>
         
         <!-- Botón para abrir el modal de login de socio -->
         <a href="#" onclick="toggleLoginAlternativo(); return false;" style="
@@ -676,8 +676,8 @@ $_SESSION['visited_index'] = true;
 
 <!-- Contenido principal -->
 <div class="hero">
-  <h1 class="title-cancha">CANCHA <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
-  <p class="subtitle">Tu deporte a un click</p>
+  <h1 class="title-cancha">CanchaSport <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
+  <p class="subtitle">Tu deporte o Gestión de un Centro Deportivo a un click</p>
 
   <!-- Sección multimedia principal -->
   <div class="media-main">
@@ -702,7 +702,7 @@ $_SESSION['visited_index'] = true;
         <div class="carousel-item" data-feature="finanzas">
           <img src="assets/img/feature3.jpg" alt="Finanzas">
           <div class="item-overlay">
-            <h4>💰 Finanzas</h4>
+            <h4>💰 Finanzas club de amigos o Centro Deportivo</h4>
           </div>
         </div>
         <!-- Feature 4 -->
@@ -895,19 +895,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const featureTexts = {
     socios: {
       title: "Gestión de Socios",
-      content: "En Cancha, cada socio es parte fundamental de la familia. Desde tu inscripción a un Club tendrás acceso inmediato a todas las actividades y eventos, podrás confirmar asistencia a partidos, pagar las cuotas, recibir notificaciones de quienes se anotan o bajan y participar en la vida comunitaria. ¡Tu club te espera!"
+      content: "En CanchaSport, cada socio es parte fundamental de la familia. Desde tu inscripción a un Club o Jugador Individual tendrás acceso inmediato a todas las actividades y eventos, podrás confirmar asistencia a partidos, pagar las cuotas, recibir notificaciones de quienes se anotan o bajan, participar de campeonatos y en definitiva, disfrutar tu pasión deportiva en vida comunitaria. ¡Tu club te espera!"
     },
     convocatorias: {
       title: "Convocatorias Inteligentes",
-      content: "¿Cansado de los grupos de WhatsApp infinitos y llenos de porno que suenan toda la noche mientras quieres dormir? Con Cancha, las convocatorias son claras, organizadas y eficientes. Recibe invitaciones personalizadas, confirma tu asistencia con un clic y mantén todo tu historial de participación. La organización nunca fue tan fácil."
+      content: "¿Cansado de los grupos de WhatsApp infinitos y llenos de porno que suenan toda la noche mientras quieres dormir? Con CanchaSport, las convocatorias son claras, organizadas y eficientes. Recibe invitaciones personalizadas, confirma tu asistencia con un clic y mantén todo tu historial de participación. La organización nunca fue tan fácil."
     },
     finanzas: {
       title: "Finanzas Transparentes",
-      content: "La transparencia es clave en cualquier club. En Cancha, puedes ver el estado de tus cuotas, el uso de los fondos colectivos y contribuir al crecimiento sostenible de tu equipo. Todo claro, justo y accesible desde tu celular."
+      content: "La transparencia es clave en cualquier club. En CanchaSport, puedes ver el estado de tus cuotas, el uso de los fondos colectivos y contribuir al crecimiento sostenible de tu equipo. Todo claro, justo y accesible desde tu celular."
     },
     estadisticas: {
       title: "Estadísticas que Inspiran",
-      content: "Sigue el crecimiento de tu club en tiempo real. Número de socios, eventos realizados, participación en actividades... Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos. Y más adelante podremos ver otros Clubes inscritos en nuestar ciudad, comuna y organizar partidos con ellos, campeonatos entre la comunidad cancha, disponibilidad de canchas, y mucho más."
+      content: "Sigue el crecimiento de tu club o el tuyo propio en tiempo real. Número de socios, eventos realizados, participación en actividades, estadísiticas de tus Americanos. Todos estos datos no solo muestran números, sino la historia viva de una comunidad que juega junta y crece juntos. Y más adelante podremos ver otros Clubes inscritos en nuestar ciudad, comuna y organizar partidos con ellos, campeonatos entre la comunidad CanchaSport, disponibilidad de canchas, y mucho más."
     }
   };
 
@@ -935,7 +935,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (window.innerWidth > 768) {
       // Web: 2 imágenes visibles
-      const itemWidth = (track.offsetWidth / 2);
+      const itemWidth = (track.offsetWidth / 3);
       const offset = -currentIndex * itemWidth;
       track.style.transform = `translateX(${offset}px)`;
     } else {
@@ -974,7 +974,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function startAutoSlide() {
     autoSlideInterval = setInterval(() => {
       moveCarousel(1);
-    }, 3000);
+    }, 6000);
   }
 
   // === TOUCH SWIPE MEJORADO ===
