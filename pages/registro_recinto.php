@@ -1,6 +1,30 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
+// Verificar token de invitación
+$token = $_GET['invitacion'] ?? null;
+if (!$token) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Validar token
+$stmt = $pdo->prepare("
+    SELECT id_invitacion, usado, expira_en 
+    FROM invitaciones_recintos 
+    WHERE token = ? AND usado = FALSE AND expira_en > NOW()
+");
+$stmt->execute([$token]);
+$invitacion = $stmt->fetch();
+
+if (!$invitacion) {
+    die('<h2 style="color:white;text-align:center;margin-top:50px;">❌ Enlace inválido o expirado</h2>');
+}
+
+// Marcar como usado (opcional: hacerlo al finalizar el registro)
+//$stmt_update = $pdo->prepare("UPDATE invitaciones_recintos SET usado = TRUE WHERE id_invitacion = ?");
+//$stmt_update->execute([$invitacion['id_invitacion']]);
+
 $error = '';
 $success = '';
 

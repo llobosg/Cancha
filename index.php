@@ -546,7 +546,7 @@ $_SESSION['visited_index'] = true;
           text-decoration: none;
           font-weight: bold;
         ">🏟️ Centro Deportivo</a>
-         <a href="pages/registro_club.php" style="
+         <a href="pages/registro_centro_contacto.php" style="
           display: block;
           padding: 0.8rem 1.5rem;
           color: #071289;
@@ -935,7 +935,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (window.innerWidth > 768) {
       // Web: 2 imágenes visibles
-      const itemWidth = (track.offsetWidth / 3);
+      const itemWidth = (track.offsetWidth / 2);
       const offset = -currentIndex * itemWidth;
       track.style.transform = `translateX(${offset}px)`;
     } else {
