@@ -124,13 +124,9 @@ try {
             */
         }
 
-        // Mensaje de éxito
-        echo json_encode(['success' => true, 'message' => "✅ ¡Anotado! Se notificó a los socios del club."]);
-        
-        // Mensaje personalizado
+        // Mensaje personalizado único
         $fecha_formateada = date('d/m', strtotime($reserva['fecha']));
-        $mensaje = "Listo....Anotado para {$fecha_formateada} {$reserva['hora_inicio']} Cancha {$reserva['id_cancha']}";
-        
+        $mensaje = "✅ ¡Anotado! {$fecha_formateada} {$reserva['hora_inicio']} - Cancha {$reserva['id_cancha']}";
         echo json_encode(['success' => true, 'message' => $mensaje]);
         
     } else {
