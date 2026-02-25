@@ -50,11 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login Recintos - Cancha</title>
+  <title>Login Recintos - CanchaSport</title>
+  <link rel="stylesheet" href="../styles.css">
   <style>
     body {
-      background: linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
-                 url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+      background: 
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
       margin: 0;
       padding: 0;
@@ -69,17 +71,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .login-container {
       width: 95%;
       max-width: 400px;
-      background: white;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
       padding: 2rem;
       border-radius: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     }
 
-    h2 {
+    .form-title {
+      color: #FFD700;
       text-align: center;
-      color: #003366;
-      margin-bottom: 1.8rem;
-      font-weight: 700;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
     }
 
     .error {
@@ -99,21 +102,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-group label {
       display: block;
       font-weight: bold;
-      color: #333;
+      color: white;
       margin-bottom: 0.5rem;
+      text-align: left;
     }
 
     .form-group input {
       width: 100%;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      padding: 0.9rem;
+      border: 2px solid #ccc;
+      border-radius: 8px;
       color: #071289;
+      font-size: 1rem;
+      background: white;
     }
 
     .btn-submit {
       width: 100%;
-      padding: 0.9rem;
+      padding: 1rem;
       background: #071289;
       color: white;
       border: none;
@@ -121,6 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 1.1rem;
       font-weight: bold;
       cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-submit:hover {
+      background: #050d6b;
     }
 
     .forgot-password {
@@ -129,15 +140,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     .forgot-password a {
-      color: #071289;
+      color: #FFD700;
       text-decoration: underline;
       font-size: 0.9rem;
+    }
+
+    .close-btn {
+      display: block;
+      text-align: center;
+      margin-top: 1rem;
+      color: #FFD700;
+      text-decoration: underline;
+      font-size: 0.9rem;
+    }
+
+    /* Responsive móvil */
+    @media (max-width: 768px) {
+      .login-container {
+        padding: 1.5rem;
+      }
     }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <h2>🏟️ Login Recintos</h2>
+    <h2 class="form-title">🔐 Login Centros Deportivos</h2>
     
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
@@ -145,8 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="POST">
       <div class="form-group">
-        <label for="usuario">Usuario recintos</label>
-        <input type="text" id="usuario" name="usuario" required>
+        <label for="usuario">Usuario Alias*</label>
+        <input type="text" id="usuario" name="usuario" placeholder="Ej: Luis, lucho, admin, jefe" required>
       </div>
       
       <div class="form-group">
@@ -154,12 +181,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="password" id="contraseña" name="contraseña" required>
       </div>
       
-      <button type="submit" class="btn-submit">Ingresar</button>
+      <button type="submit" class="btn-submit">Iniciar Sesión</button>
     </form>
     
     <div class="forgot-password">
       <a href="recuperar_contraseña_recinto.php">¿Olvidaste tu contraseña?</a>
     </div>
+    
+    <a href="../index.php" class="close-btn">Cerrar</a>
   </div>
 </body>
 </html>

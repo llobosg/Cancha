@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'email' => $email_to_verify,
                     'name' => $_POST['responsable']
                 ]],
-                'subject' => '⚽ Código de verificación - Cancha',
+                'subject' => '⚽🎾🏐 Código de verificación - Cancha',
                 'htmlContent' => "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 12px;'>
                     <div style='text-align: center; margin-bottom: 30px;'>
@@ -404,20 +404,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
     <?php else: ?>
-      <h2>Registra tu Club ⚽</h2>
+      <h2>Registra tu Club de amigos ⚽🎾🏐</h2>
 
       <?php if ($error_message): ?>
         <div class="error">
           <?php if ($error_type === 'duplicate'): ?>
             <div style="text-align: left; line-height: 1.6;">
               <strong>⚠️ ¡Hola! Ya tienes un club registrado con este correo.</strong><br><br>
-              En Cancha, la versión <strong>Gratuita</strong> permite registrar <strong>1 club por responsable</strong>.<br><br>
+              En CanchaSport, la versión <strong>Gratuita</strong> permite registrar <strong>1 club por responsable</strong>.<br><br>
               Si deseas gestionar <strong>múltiples clubes</strong>, te invitamos a conocer nuestra versión <strong>Premiere League</strong> con beneficios exclusivos:<br>
               • Gestión de múltiples clubes<br>
               • Estadísticas avanzadas<br>
               • Soporte prioritario<br>
               • Funciones premium<br><br>
-              ¿Te interesa? Escríbenos a <strong>hola@cancha-sport.cl</strong> para más información.
+              ¿Te interesa? Escríbenos a <strong>contacto@canchasport.com</strong> o llámanos al <strong>+569 3656 0392</strong> para más información.
             </div>
           <?php else: ?>
             <?= htmlspecialchars($error_message) ?>
