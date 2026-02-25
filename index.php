@@ -594,8 +594,10 @@ $_SESSION['visited_index'] = true;
           text-decoration: none;
           font-weight: bold;
           border-bottom: 1px solid #eee;
-        ">🔐 admin Recinto Deportivo</a>
-        <a href="pages/registro_socio.php" style="
+        ">🔐 Admin Recinto Deportivo</a>
+        
+        <!-- Botón para abrir el modal de login de socio -->
+        <a href="#" onclick="toggleLoginAlternativo(); return false;" style="
           display: block;
           padding: 0.8rem 1.5rem;
           color: #9B59B6;
@@ -608,11 +610,6 @@ $_SESSION['visited_index'] = true;
 
   <!-- Botones de login -->
   <div class="google-login-container">
-    <!-- Botón Ingresar -->
-    <button class="btn-enter" onclick="toggleLoginAlternativo()">
-      Ingreso
-    </button>
-
     <!-- Google Login 
     <div id="googleLoginContainer">
       <div id="g_id_onload"
