@@ -336,12 +336,18 @@ while ($row = $stmt_regiones->fetch()) {
       <div class="form-group"><label for="alias">Alias</label></div>
       <div class="form-group"><input type="text" id="alias" name="alias" required></div>
       
-      <!-- Rol (fijo en Jugador para modo individual) -->
+      <!-- Rol -->
       <div class="form-group"><label for="rol">Rol</label></div>
       <div class="form-group">
-        <select id="rol" name="rol" required <?= $modo_individual ? 'disabled' : '' ?>>
-          <option value="Jugador" <?= ($modo_individual || (!empty($rol) && $rol === 'Jugador')) ? 'selected' : '' ?>>Jugador</option>
-          <?php if (!$modo_individual): ?>
+        <?php if ($modo_individual): ?>
+          <!-- Modo individual: valor fijo, no editable -->
+          <input type="hidden" name="rol" value="Jugador">
+          <input type="text" value="Jugador" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#fafcff;color:#071289;width:100%;">
+        <?php else: ?>
+          <!-- Modo club: selección normal -->
+          <select id="rol" name="rol" required>
+            <option value="">Seleccionar</option>
+            <option value="Jugador">Jugador</option>
             <option value="Galleta">Galleta</option>
             <option value="Amigo del club">Amigo del club</option>
             <option value="Tesorero">Tesorero</option>
@@ -351,8 +357,8 @@ while ($row = $stmt_regiones->fetch()) {
             <option value="Kine">Kine</option>
             <option value="Preparador Físico">Preparador Físico</option>
             <option value="Utilero">Utilero</option>
-          <?php endif; ?>
-        </select>
+          </select>
+        <?php endif; ?>
       </div>
 
       <!-- Fila 2 -->
