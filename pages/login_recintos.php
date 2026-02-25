@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="POST">
       <div class="form-group">
-        <label for="usuario">Usuario *</label>
+        <label for="usuario">Usuario recintos</label>
         <input type="text" id="usuario" name="usuario" required>
       </div>
       

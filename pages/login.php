@@ -98,7 +98,7 @@
         <form method="POST" action="auth.php">
             <input type="text" name="nombre" placeholder="Usuario" required />
             <input type="password" name="password" placeholder="Contraseña" required />
-            <button type="submit">Ingresar</button>
+            <button type="submit">Ingresar login</button>
         </form>
     </div>
     <script>
