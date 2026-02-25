@@ -103,56 +103,49 @@ try {
         $accion = 'anotado';
         $mensaje = "✅ ¡Inscripción confirmada!";
     }
-    
-    // === NOTIFICACIONES POR CORREO (solo a otros socios del club) ===
-    $stmt_nombre = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
-    $stmt_nombre->execute([$id_socio]);
-    $nombre_inscrito = $stmt_nombre->fetch()['nombre'] ?? 'Un jugador';
-    
-    $fecha_formateada = date('d/m', strtotime($reserva['fecha']));
-    
-    // Obtener socios del club (excepto el que actuó)
-    $stmt_socios = $pdo->prepare("
-        SELECT id_socio, email, nombre 
-        FROM socios 
-        WHERE id_club = ? AND id_socio != ? AND email_verified = 1
+
+    // === ENVIAR NOTIFICACIONES PUSH A SOCIOS DEL CLUB ===
+    $stmt_subs = $pdo->prepare("
+        SELECT sp.endpoint, sp.p256dh, sp.auth
+        FROM suscripciones_push sp
+        JOIN socios s ON sp.id_socio = s.id_socio
+        WHERE s.id_club = ? AND s.id_socio != ?
     ");
-    $stmt_socios->execute([$id_club, $id_socio]);
-    $socios_notificar = $stmt_socios->fetchAll();
-    
-    foreach ($socios_notificar as $socio) {
-        try {
-            require_once __DIR__ . '/../includes/brevo_mailer.php';
-            $mail = new BrevoMailer();
-            $mail->setTo($socio['email'], $socio['nombre']);
-            $mail->setSubject('⚽ Actualización en tu club: ' . ($accion === 'bajado' ? 'baja' : 'nueva inscripción'));
-            $mail->setHtmlBody("
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 12px;'>
-                    <div style='text-align: center; background: #071289; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
-                        <h2>🔔 CanchaSport</h2>
-                    </div>
-                    <p style='font-size: 1.1rem; line-height: 1.5;'>
-                        <strong>{$nombre_inscrito}</strong> se ha " . ($accion === 'bajado' ? "<span style='color:#E74C3C;'>dado de baja</span>" : "<span style='color:#2ECC71;'>anotado</span>") . " al próximo evento.
-                    </p>
-                    <p style='font-size: 1rem; color: #555;'>
-                        <strong>Fecha:</strong> {$fecha_formateada} | <strong>Hora:</strong> {$reserva['hora_inicio']}
-                    </p>
-                    <p style='margin-top: 20px; text-align: center;'>
-                        <a href='https://canchasport.com/pages/dashboard_socio.php?id_club={$club_slug}' 
-                           style='background: #071289; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;'>
-                            Ver dashboard
-                        </a>
-                    </p>
-                    <hr style='margin: 25px 0; border: 0; border-top: 1px solid #eee;'>
-                    <p style='text-align: center; font-size: 0.9rem; color: #888;'>
-                        Este mensaje fue generado automáticamente. Por favor, no respondas a este correo.
-                    </p>
-                </div>
-            ");
-            $mail->send(); // No detener si falla
-        } catch (Exception $e) {
-            error_log("Error notificando a {$socio['email']}: " . $e->getMessage());
+    $stmt_subs->execute([$id_club, $id_socio]);
+    $suscripciones = $stmt_subs->fetchAll();
+
+    if (!empty($suscripciones)) {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        use Minishlink\WebPush\WebPush;
+
+        $webPush = new WebPush([
+            'VAPID' => [
+                'subject' => 'https://canchasport.com',
+                'publicKey' => VAPID_PUBLIC_KEY,
+                'privateKey' => VAPID_PRIVATE_KEY,
+            ],
+        ]);
+
+        $mensaje = ($accion === 'bajado')
+            ? "{$nombre_inscrito} se ha dado de baja del evento"
+            : "{$nombre_inscrito} se ha anotado al evento";
+
+        foreach ($suscripciones as $sub) {
+            $webPush->queueNotification(
+                $sub['endpoint'],
+                json_encode([
+                    'title' => '⚽ CanchaSport',
+                    'body' => $mensaje,
+                    'icon' => '/assets/icons/logo2-icon-192x192.png',
+                    'badge' => '/assets/icons/logo2-icon-192x192.png',
+                    'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
+                ]),
+                null,
+                ['TTL' => 60 * 60] // 1 hora
+            );
         }
+
+        $webPush->flush();
     }
     
     // Mensaje único para el usuario que actuó

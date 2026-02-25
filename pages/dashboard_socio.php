@@ -1049,6 +1049,32 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           });
       });
   });
+
+  function subscribeToPush() {
+    navigator.serviceWorker.ready.then(registration => {
+        return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array('<?= VAPID_PUBLIC_KEY ?>')
+        });
+    }).then(subscription => {
+        // Enviar a backend
+        fetch('../api/guardar_suscripcion.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_socio: <?= $_SESSION['id_socio'] ?>,
+                subscription: subscription
+            })
+        });
+    });
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+  }
 </script>
 </body>
 </html>
