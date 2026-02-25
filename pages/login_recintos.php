@@ -190,5 +190,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <a href="../index.php" class="close-btn">Cerrar</a>
   </div>
+  <!-- Overlay de fondo -->
+  <div id="loginOverlay" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+  "></div>
+
+  <!-- Ajustar contenedor principal para estar sobre el overlay -->
+  <style>
+    body {
+        overflow: hidden; /* Evita scroll al abrir modal */
+    }
+    .login-container {
+        position: relative;
+        z-index: 1000;
+    }
+  </style>
 </body>
 </html>
