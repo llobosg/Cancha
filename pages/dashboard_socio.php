@@ -576,10 +576,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           ?>
             <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:12px;">
           <?php else: ?>
-            ⚽🎾🏐
+            <img src="../assets/icons/logo2-icon-192x192.png" alt="CanchaSport" style="width:100%;height:100%;border-radius:12px;">
           <?php endif; ?>
         <?php else: ?>
-          ⚽🎾🏐
+          <img src="../assets/icons/logo2-icon-192x192.png" alt="CanchaSport" style="width:100%;height:100%;border-radius:12px;">
         <?php endif; ?>
       </div>
       <div class="club-info">
