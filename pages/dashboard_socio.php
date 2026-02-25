@@ -26,7 +26,7 @@ error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
 if ($modo_individual) {
     error_log("✓ Modo individual detectado");
     $club_id = null;
-    $club_nombre = 'Socio CanchaSport';
+    $club_nombre = '';
     $club_logo = null;
     $club_slug = null;
 } else {
@@ -583,7 +583,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <?php endif; ?>
       </div>
       <div class="club-info">
-        <h1><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h1>
+        <h2><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h2>
         <p>Tu Cancha está lista</p>
       </div>
     </div>
@@ -591,7 +591,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- Cerrar sesión en header -->
     <div class="header-right">
       <a href="../index.php" onclick="limpiarSesion()" class="logout-header">
-        🏳️ Cerrar sesión
+        Salir
       </a>
     </div>
   </div>
