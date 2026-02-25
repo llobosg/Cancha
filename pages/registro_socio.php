@@ -342,7 +342,7 @@ while ($row = $stmt_regiones->fetch()) {
         <?php if ($modo_individual): ?>
           <!-- Modo individual: valor fijo, no editable -->
           <input type="hidden" name="rol" value="Jugador">
-          <input type="text" value="Jugador" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#fafcff;color:#071289;width:100%;">
+          <input type="text" id="rol" value="Jugador" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#fafcff;color:#071289;width:100%;">
         <?php else: ?>
           <!-- Modo club: selección normal -->
           <select id="rol" name="rol" required>
@@ -551,8 +551,16 @@ while ($row = $stmt_regiones->fetch()) {
         }
         
         // Validación de rol
-        const rolSelect = document.getElementById('rol');
-        if (!rolSelect.value) {
+        const rolElement = document.getElementById('rol');
+        let rolValue = '';
+
+        if (rolElement.tagName === 'SELECT') {
+            rolValue = rolElement.value;
+        } else if (rolElement.tagName === 'INPUT') {
+            rolValue = rolElement.value; // Para el modo individual
+        }
+
+        if (!rolValue) {
             mostrarToast('❌ Por favor selecciona un rol en el club');
             return;
         }
