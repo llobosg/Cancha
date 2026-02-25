@@ -539,7 +539,7 @@ $_SESSION['visited_index'] = true;
         display: none;
         margin-top: 5px;
       ">
-        <a href="pages/registro_recinto.php" style="
+        <a href="pages/registro_centro_contacto.php" style="
           display: block;
           padding: 0.8rem 1.5rem;
           color: #071289;
