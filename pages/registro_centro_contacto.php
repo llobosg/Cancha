@@ -31,10 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Enviar notificación a CanchaSport
             require_once __DIR__ . '/../includes/brevo_mailer.php';
             $mail = new BrevoMailer();
-            $mail->setFrom('llobos@gltcomex.com', 'CanchaSport');
-            $mail->addAddress('llobos@gltcomex.com');
-            $mail->Subject = 'Nueva solicitud de Centro Deportivo - ' . $nombre_recinto;
-            $mail->Body = "
+            $mail->setTo('luis.lobos.g@gmail.com', 'CanchaSport');
+            $mail->setSubject('Nueva solicitud de Centro Deportivo - ' . $nombre_recinto);
+            $mail->setHtmlBody("
                 <h2>Nueva solicitud de registro</h2>
                 <p><strong>Nombre:</strong> $nombre</p>
                 <p><strong>Teléfono:</strong> $telefono</p>
@@ -43,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Token:</strong> <code>$token</code></p>
                 <p>Para habilitar el registro, envía este enlace al interesado:</p>
                 <p><a href='https://canchasport.com/pages/registro_recinto.php?invitacion=$token'>https://canchasport.com/pages/registro_recinto.php?invitacion=$token</a></p>
-            ";
+            ");
 
             if ($mail->send()) {
                 $success = true;
