@@ -512,7 +512,7 @@ $_SESSION['visited_index'] = true;
         padding: 0.4rem 0.8rem;
         font-size: 0.9rem;
       ">
-        Gestión Recintos
+        Recintos Deportivos
       </button>
       <div id="dropdownContentRecintos" style="
         position: absolute;
@@ -533,14 +533,14 @@ $_SESSION['visited_index'] = true;
           text-decoration: none;
           font-weight: bold;
           border-bottom: 1px solid #eee;
-        ">🔐 Entrar a tu Recinto</a>
+        ">🔐 Entrar a tu Club</a>
         <a href="pages/registro_recinto.php" style="
           display: block;
           padding: 0.8rem 1.5rem;
           color: #071289;
           text-decoration: none;
           font-weight: bold;
-        ">Registra tu Recinto</a>
+        ">Registra tu Club</a>
       </div>
     </div>
 
