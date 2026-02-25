@@ -590,7 +590,7 @@ $_SESSION['visited_index'] = true;
   <div class="google-login-container">
     <!-- Botón Ingresar -->
     <button class="btn-enter" onclick="toggleLoginAlternativo()">
-      Ingresar
+      Ingresar socio
     </button>
 
     <!-- Google Login 
