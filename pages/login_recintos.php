@@ -188,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <a href="recuperar_contraseña_recinto.php">¿Olvidaste tu contraseña?</a>
     </div>
     
-    <a href="../index.php" class="close-btn" style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">Cerrar</a>
+    <a href="../index.php" class="close-btn">Cerrar</a>
   </div>
   <!-- Overlay de fondo -->
   <div id="loginOverlay" style="
@@ -197,8 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      z-index: 1001;
+      background: rgba(63, 58, 58, 0.6);
+      z-index: 999;
   "></div>
 
   <!-- Ajustar contenedor principal para estar sobre el overlay -->
