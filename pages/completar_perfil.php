@@ -171,6 +171,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         $_SESSION['mensaje_exito'] = 'Perfil actualizado exitosamente';
+
+        // Después de guardar el socio en la base de datos
+        if ($modo_individual) {
+            $asunto = '⚽🎾  ¡Bienvenido a CanchaSport!';
+            $mensaje = "
+                <p>¡Hola {$nombre}!</p>
+                <p>Gracias por unirte a CanchaSport como socio individual.</p>
+                <p>Aquí podrás gestionar tus partidos, reservar canchas y participar en la comunidad deportiva.</p>
+                <p><a href='https://canchasport.com'>Ingresa a tu dashboard</a></p>
+            ";
+        } else {
+            $asunto = '⚽🎾  ¡Bienvenido a tu club en CanchaSport!';
+            $mensaje = "
+                <p>¡Hola {$nombre}!</p>
+                <p>Has sido registrado exitosamente en el club <strong>{$club_nombre}</strong>.</p>
+                <p>A partir de ahora recibirás notificaciones sobre eventos, cuotas y novedades del club.</p>
+                <p><a href='https://canchasport.com/pages/dashboard_socio.php?id_club={$club_slug}'>Ir a tu dashboard</a></p>
+            ";
+        }
+
+        $mail = new BrevoMailer();
+        $mail->setTo($email, $nombre);
+        $mail->setSubject($asunto);
+        $mail->setHtmlBody($mensaje);
+        $mail->send();
         
         // Generar club_slug para redirección
         $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE id_club = ?");
