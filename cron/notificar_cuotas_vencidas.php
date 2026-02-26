@@ -7,23 +7,15 @@ require_once __DIR__ . '/../includes/config.php';
 try {
     // Cuotas vencidas hace más de 3 días y aún pendientes
     $stmt = $pdo->prepare("
-        SELECT 
-            cu.id_cuota,
-            cu.id_socio,
-            cu.monto,
-            cu.fecha_vencimiento,
-            s.email,
-            s.nombre,
-            s.id_club,
-            c.nombre as club_nombre,
-            c.email_responsable
-        FROM cuotas cu
-        JOIN socios s ON cu.id_socio = s.id_socio
-        JOIN clubs c ON s.id_club = c.id_club
-        WHERE cu.fecha_vencimiento <= CURDATE() - INTERVAL 3 DAY
-          AND cu.estado = 'pendiente'
-          AND s.email_verified = 1
-    ");
+        SELECT c.*, s.email, s.nombre, cl.nombre as club_nombre
+            FROM cuotas c
+            JOIN socios s ON c.id_socio = s.id_socio
+            JOIN reservas r ON c.id_evento = r.id_reserva
+            JOIN clubs cl ON r.id_club = cl.id_club
+            WHERE c.estado = 'pendiente'
+            AND c.fecha_vencimiento <= CURDATE() - INTERVAL 3 DAY
+            AND s.email_verified = 1;
+        ");
     $stmt->execute();
     $cuotas = $stmt->fetchAll();
 

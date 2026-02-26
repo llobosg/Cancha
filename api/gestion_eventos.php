@@ -50,12 +50,16 @@ try {
     $ya_inscrito = $stmt_check->fetch();
     
     if ($ya_inscrito) {
-        // Dar de baja
+        // Dar de baja en inscritos
         $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ?")
-             ->execute([$id_reserva, $id_socio]);
+            ->execute([$id_reserva, $id_socio]);
+        
+        // ✅ Eliminar cuota asociada
+        $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ?")
+            ->execute([$id_reserva, $id_socio]);
         
         $accion = 'bajado';
-        $mensaje = "✅ Te has dado de baja del evento";
+        $mensaje = "✅ Te has bajado del evento";
     } else {
         // Validar cupo solo para deportes específicos
         $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
@@ -99,6 +103,24 @@ try {
             INSERT INTO inscritos (id_evento, id_socio, anotado, equipo, posicion_jugador)
             VALUES (?, ?, 1, ?, ?)
         ")->execute([$id_reserva, $id_socio, $equipo_default, $posicion_default]);
+
+        // Generar cuota pendiente si el evento tiene costo
+        if ($reserva['monto_total'] > 0) {
+            // Fecha de vencimiento: 3 días después del evento
+            $fecha_vencimiento = date('Y-m-d', strtotime($reserva['fecha'] . ' +3 days'));
+            
+            $stmt_cuota = $pdo->prepare("
+                INSERT INTO cuotas (id_evento, id_socio, monto, fecha_vencimiento, estado)
+                VALUES (?, ?, ?, ?, 'pendiente')
+                ON DUPLICATE KEY UPDATE estado = 'pendiente'
+            ");
+            $stmt_cuota->execute([
+                $id_reserva,
+                $id_socio,
+                $reserva['monto_total'],
+                $fecha_vencimiento
+            ]);
+        }
         
         $accion = 'anotado';
         $mensaje = "✅ ¡Inscripción confirmada!";
