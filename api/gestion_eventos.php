@@ -69,12 +69,14 @@ try {
     $ya_inscrito = $stmt_check->fetch();
 
     if ($ya_inscrito) {
-        // === DAR DE BAJA ===
+        // Dar de baja en inscritos
         $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
-             ->execute([$id_actividad, $id_socio, $tipo_actividad]);
+            ->execute([$id_actividad, $id_socio, $tipo_actividad]);
+        
+        // ✅ Eliminar cuota asociada (con tipo_actividad)
         $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
-             ->execute([$id_actividad, $id_socio, $tipo_actividad]);
-
+            ->execute([$id_actividad, $id_socio, $tipo_actividad]);
+        
         $accion = 'bajado';
         $mensaje = "✅ Te has dado de baja del evento";
     } else {
