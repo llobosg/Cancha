@@ -21,7 +21,7 @@ $stmt = $pdo->prepare("
         cl.email_responsable,
         -- Origen
         CASE 
-            WHEN c.tipo_actividad = 'reserva' THEN ca.deporte
+            WHEN c.tipo_actividad = 'reserva' THEN ca.id_deporte
             WHEN c.tipo_actividad = 'evento' THEN e.nombre
             ELSE 'Sin detalle'
         END as detalle_origen,
