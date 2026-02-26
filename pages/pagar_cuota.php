@@ -19,10 +19,10 @@ $stmt = $pdo->prepare("
         s.email as socio_email,
         cl.nombre as club_nombre,
         cl.email_responsable,
-        -- Origen
+        -- Detalle del origen
         CASE 
-            WHEN c.tipo_actividad = 'reserva' THEN ca.id_deporte
-            WHEN c.tipo_actividad = 'evento' THEN e.nombre
+            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
             ELSE 'Sin detalle'
         END as detalle_origen,
         CASE 
@@ -33,9 +33,13 @@ $stmt = $pdo->prepare("
     FROM cuotas c
     JOIN socios s ON c.id_socio = s.id_socio
     JOIN clubs cl ON s.id_club = cl.id_club
+    -- Reservas
     LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
     LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+    -- Eventos sociales
     LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
     WHERE c.id_cuota = ? AND c.id_socio = ?
 ");
 $stmt->execute([$id_cuota, $id_socio]);
