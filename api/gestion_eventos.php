@@ -4,6 +4,9 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Minishlink\WebPush\WebPush;
 
 session_start();
 
@@ -146,9 +149,6 @@ try {
     $suscripciones = $stmt_subs->fetchAll();
 
     if (!empty($suscripciones)) {
-        require_once __DIR__ . '/../vendor/autoload.php';
-        use Minishlink\WebPush\WebPush;
-
         $webPush = new WebPush([
             'VAPID' => [
                 'subject' => 'https://canchasport.com',
