@@ -653,7 +653,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               <div class="ficha-buttons">
                 <?php if ($ya_inscrito): ?>
                   <button class="btn-action" style="background: #E74C3C; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
                     Bajarse
                   </button>
                   <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
@@ -662,7 +662,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   </button>
                 <?php else: ?>
                   <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                          onclick="anotarseEvento(<?= $id_evento ?>, 'evento', '', 0, <?= $valor_cuota ?>)">
                     Anotarse
                   </button>
                   <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;" 
@@ -869,18 +869,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   }
 
   // Función para anotarse a un evento
-  function anotarseEvento(idReserva, deporte, playersMax, montoTotal) {
-      const formData = new FormData();
-      formData.append('action', 'anotarse');
-      formData.append('id_reserva', idReserva);
-      formData.append('deporte', deporte);
-      formData.append('players_max', playersMax);
-      formData.append('monto_total', montoTotal);
-      
-      fetch('../api/gestion_eventos.php', {
-          method: 'POST',
-          body: formData
-      })
+  function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+    const formData = new FormData();
+    formData.append('action', 'anotarse');
+    formData.append('id_actividad', idActividad);
+    formData.append('tipo_actividad', tipoActividad);
+    formData.append('deporte', deporte);
+    formData.append('players_max', playersMax);
+    formData.append('monto_total', montoTotal);
+    
+    fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
       .then(response => response.json())
       .then(data => {
           if (data.success) {
