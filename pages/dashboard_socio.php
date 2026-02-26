@@ -974,8 +974,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       alert('Función "Invitar un Cancha" en desarrollo');
   }
 
-  function pagarCuota(idReserva) {
-      alert('Función "Pagar cuota" en desarrollo');
+  function pagarCuota(idCuota) {
+    window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
   }
   
   requestNotificationPermission();
