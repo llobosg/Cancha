@@ -610,27 +610,58 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <h3>Próximo Evento</h3>
           <div class="stat-card-content">
             <div style="margin: 0.5rem 0; font-size: 0.85rem; text-align: left;">
-              <div><strong><?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> 
-                <span style="font-size: 0.7em; opacity: 0.7;">
-                  (<?= $proximo_evento['tipo_reserva'] === 'semanal' ? 'Semanal' : 
-                      ($proximo_evento['tipo_reserva'] === 'mensual' ? 'Mensual' : 'Spot') ?>)
-                </span>
+              <?php
+              // === Icono según deporte ===
+              $deporte = $proximo_evento['id_deporte'];
+              $icono_deporte = '⚽'; // default
+
+              if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
+                  $icono_deporte = '⚽';
+              } elseif (in_array($deporte, ['padel', 'pádel', 'tenis'])) {
+                  $icono_deporte = '🎾';
+              } elseif (in_array($deporte, ['volley', 'voleibol', 'volleyball'])) {
+                  $icono_deporte = '🏐';
+              } elseif ($deporte === 'gimnasio') {
+                  $icono_deporte = '🏋️';
+              } elseif ($deporte === 'piscina') {
+                  $icono_deporte = '🏊';
+              } else {
+                  $icono_deporte = '⚽';
+              }
+
+              // === Tipo de reserva ===
+              $tipo_reserva_label = match($proximo_evento['tipo_reserva']) {
+                  'semanal' => 'Semanal',
+                  'mensual' => 'Mensual',
+                  default => 'Spot'
+              };
+              ?>
+
+              <!-- Fila 1: Deporte + tipo -->
+              <div>
+                  <strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong>
+                  <span style="font-size: 0.7em; opacity: 0.7;">
+                      (<?= $tipo_reserva_label ?>)
+                  </span>
               </div>
-              
+
+              <!-- Fila 2: Fecha y hora -->
               <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-                <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> · 
-                <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
+                  <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> •
+                  <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
               </div>
-              
+
+              <!-- Fila 3: Recinto deportivo (antes decía "Cancha") -->
               <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-                <strong>⚽</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
+                  <strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
               </div>
-              
+
+              <!-- Fila 4: Monto y cupo -->
               <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-                <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> ·
-                <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
+                  <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> •
+                  <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
               </div>
-            </div>
+              </div>
             
             <?php 
             // Verificar si el usuario ya está inscrito
