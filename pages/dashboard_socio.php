@@ -687,20 +687,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   </button>
                   <?php endif; ?>
                 <?php else: ?>
-                  <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="anotarseEvento(<?= $id_evento ?>, 'evento', '', 0, <?= $valor_cuota ?>)">
+                  <!-- Botón "Anotarse" para RESERVA DE CANCHA -->
+                  <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;"
+                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
                     Anotarse
                   </button>
-                  <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;" 
+                  <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;"
                           onclick="pasoEvento(<?= $id_reserva ?>)">
                     Paso
                   </button>
-                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
+                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;"
                           onclick="pagarCuota(<?= $id_reserva ?>)">
                     Pagar cuota
                   </button>
                 <?php endif; ?>
-                
                 <!-- Botones solo para responsable -->
                 <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
                   <button class="btn-action" style="background: #9B59B6; padding: 0.4rem; font-size: 0.8rem;" 
