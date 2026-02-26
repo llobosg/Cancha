@@ -11,37 +11,61 @@ if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
 $id_cuota = (int)$_GET['id_cuota'];
 $id_socio = $_SESSION['id_socio'];
 
-// Obtener datos de la cuota
-$stmt = $pdo->prepare("
-    SELECT 
-        c.*,
-        s.nombre as socio_nombre,
-        s.email as socio_email,
-        cl.nombre as club_nombre,
-        cl.email_responsable,
-        -- Detalle del origen
-        CASE 
-            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-            ELSE 'Sin detalle'
-        END as detalle_origen,
-        CASE 
-            WHEN c.tipo_actividad = 'reserva' THEN r.fecha
-            WHEN c.tipo_actividad = 'evento' THEN e.fecha
-            ELSE c.fecha_vencimiento
-        END as fecha_origen
-    FROM cuotas c
-    JOIN socios s ON c.id_socio = s.id_socio
-    JOIN clubs cl ON s.id_club = cl.id_club
-    -- Reservas
-    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-    -- Eventos sociales
-    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-    WHERE c.id_cuota = ? AND c.id_socio = ?
-");
+// === Paso 1: Obtener tipo_actividad ===
+$stmt_check = $pdo->prepare("SELECT tipo_actividad FROM cuotas WHERE id_cuota = ? AND id_socio = ?");
+$stmt_check->execute([$id_cuota, $id_socio]);
+$tipo_actividad = $stmt_check->fetchColumn();
+
+if (!$tipo_actividad) {
+    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
+}
+
+// === Paso 2: Ejecutar consulta específica ===
+if ($tipo_actividad === 'reserva') {
+    $stmt = $pdo->prepare("
+        SELECT 
+            c.id_cuota,
+            c.monto,
+            c.fecha_vencimiento,
+            c.estado,
+            s.nombre AS socio_nombre,
+            s.email AS socio_email,
+            cl.nombre AS club_nombre,
+            cl.email_responsable,
+            rd.nombre AS detalle_origen,
+            r.fecha AS fecha_origen
+        FROM cuotas c
+        INNER JOIN socios s ON c.id_socio = s.id_socio
+        INNER JOIN clubs cl ON s.id_club = cl.id_club
+        INNER JOIN reservas r ON c.id_evento = r.id_reserva
+        INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
+        INNER JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+        WHERE c.id_cuota = ? AND c.id_socio = ?
+        LIMIT 1
+    ");
+} else {
+    $stmt = $pdo->prepare("
+        SELECT 
+            c.id_cuota,
+            c.monto,
+            c.fecha_vencimiento,
+            c.estado,
+            s.nombre AS socio_nombre,
+            s.email AS socio_email,
+            cl.nombre AS club_nombre,
+            cl.email_responsable,
+            te.tipoevento AS detalle_origen,
+            e.fecha AS fecha_origen
+        FROM cuotas c
+        INNER JOIN socios s ON c.id_socio = s.id_socio
+        INNER JOIN clubs cl ON s.id_club = cl.id_club
+        INNER JOIN eventos e ON c.id_evento = e.id_evento
+        INNER JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+        WHERE c.id_cuota = ? AND c.id_socio = ?
+        LIMIT 1
+    ");
+}
+
 $stmt->execute([$id_cuota, $id_socio]);
 $cuota = $stmt->fetch();
 
