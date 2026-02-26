@@ -604,155 +604,142 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   <div class="dashboard-upper">
       <!-- Sub sección izquierda (70%) - 4 fichas en grid -->
       <div class="upper-left">
-        <!-- Próximo Evento -->
+        <!-- === FICHA: PRÓXIMO EVENTO === -->
         <?php if ($proximo_evento): ?>
-        <div class="stat-card">
-          <h3>Próximo Evento</h3>
-          <div class="stat-card-content">
-            <div style="margin: 0.5rem 0; font-size: 0.85rem; text-align: left;">
-              <?php
-              // === Icono según deporte ===
-              $deporte = $proximo_evento['id_deporte'];
-              $icono_deporte = '⚽'; // default
+        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h3>⚽ Próximo Evento</h3>
 
-              if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
-                  $icono_deporte = '⚽';
-              } elseif (in_array($deporte, ['padel', 'pádel', 'tenis'])) {
-                  $icono_deporte = '🎾';
-              } elseif (in_array($deporte, ['volley', 'voleibol', 'volleyball'])) {
-                  $icono_deporte = '🏐';
-              } elseif ($deporte === 'gimnasio') {
-                  $icono_deporte = '🏋️';
-              } elseif ($deporte === 'piscina') {
-                  $icono_deporte = '🏊';
-              } else {
-                  $icono_deporte = '⚽';
-              }
-
-              // === Tipo de reserva ===
-              $tipo_reserva_label = match($proximo_evento['tipo_reserva']) {
-                  'semanal' => 'Semanal',
-                  'mensual' => 'Mensual',
-                  default => 'Spot'
-              };
-              ?>
-
-              <!-- Fila 1: Deporte + tipo -->
-              <div>
-                  <strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong>
-                  <span style="font-size: 0.7em; opacity: 0.7;">
-                      (<?= $tipo_reserva_label ?>)
-                  </span>
-              </div>
-
-              <!-- Fila 2: Fecha y hora -->
-              <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-                  <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> •
-                  <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
-              </div>
-
-              <!-- Fila 3: Recinto deportivo (antes decía "Cancha") -->
-              <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-                  <strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
-              </div>
-
-              <!-- Fila 4: Monto y cupo -->
-              <div style="margin: 0.3rem 0; font-size: 0.8rem;">
-                  <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> •
-                  <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
-              </div>
-              </div>
-            
-            <?php 
-            // Verificar si el usuario ya está inscrito
-            $stmt_check_inscrito = $pdo->prepare("SELECT id_inscrito FROM inscritos WHERE id_evento = ? AND id_socio = ?");
-            $stmt_check_inscrito->execute([$proximo_evento['id_reserva'], $_SESSION['id_socio']]);
-            $ya_inscrito = $stmt_check_inscrito->fetch();
-            
-            $inscritos = (int)$proximo_evento['inscritos_actuales'];
-            $players = (int)$proximo_evento['players'];
+            <?php
+            // === Icono según deporte ===
             $deporte = $proximo_evento['id_deporte'];
-            $id_reserva = $proximo_evento['id_reserva'];
-            $monto_total = (int)$proximo_evento['monto_total'];
-            
-            $deportes_con_cupo = ['futbolito', 'futsal', 'padel', 'tenis'];
-            $validar_cupo = in_array($deporte, $deportes_con_cupo);
-            $cupo_lleno = ($validar_cupo && $inscritos >= $players);
-            ?>
-            
-            <?php if ($cupo_lleno): ?>
-              <div style="background: #ff6b6b; color: white; padding: 0.3rem; border-radius: 4px; font-size: 0.75rem; margin-top: 0.5rem;">
-                Inscripciones cerradas
-              </div>
-            <?php else: ?>
-              <div class="ficha-buttons">
-                <?php if ($ya_inscrito): ?>
-                  <button class="btn-action" style="background: #E74C3C; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                    Bajarse
-                  </button>
-                  <?php
-                  // Buscar id_cuota asociada al evento y socio
-                  $stmt_cuota = $pdo->prepare("
-                      SELECT id_cuota 
-                      FROM cuotas 
-                      WHERE id_evento = ? 
-                        AND id_socio = ? 
-                        AND tipo_actividad = 'reserva' 
-                        AND estado = 'pendiente'
-                  ");
-                  $stmt_cuota->execute([$id_reserva, $_SESSION['id_socio']]);
-                  $cuota_pendiente = $stmt_cuota->fetch();
-                  $id_cuota = $cuota_pendiente ? $cuota_pendiente['id_cuota'] : null;
-                  ?>
+            $icono_deporte = '⚽';
+            if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
+                $icono_deporte = '⚽';
+            } elseif (in_array($deporte, ['padel', 'pádel', 'tenis'])) {
+                $icono_deporte = '🎾';
+            } elseif (in_array($deporte, ['volley', 'voleibol', 'volleyball'])) {
+                $icono_deporte = '🏐';
+            } elseif ($deporte === 'gimnasio') {
+                $icono_deporte = '🏋️';
+            } elseif ($deporte === 'piscina') {
+                $icono_deporte = '🏊';
+            }
 
-                  <!-- botón Pagar Cuota -->
-                  <?php if ($id_cuota): ?>
-                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;"
-                          onclick="pagarCuota(<?= $id_cuota ?>)">
-                      Pagar cuota
-                  </button>
-                  <?php else: ?>
-                  <button class="btn-action" style="background: #95a5a6; padding: 0.4rem; font-size: 0.8rem;" disabled>
-                      Sin cuota pendiente
-                  </button>
-                  <?php endif; ?>
+            // === Tipo de reserva ===
+            $tipo_reserva_label = match($proximo_evento['tipo_reserva']) {
+                'semanal' => 'Semanal',
+                'mensual' => 'Mensual',
+                default => 'Spot'
+            };
+            ?>
+
+            <div style="margin: 0.5rem 0; font-size: 0.85rem; text-align: left;">
+                <!-- Fila 1: Deporte + tipo -->
+                <div>
+                    <strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong>
+                    <span style="font-size: 0.7em; opacity: 0.7;">(<?= $tipo_reserva_label ?>)</span>
+                </div>
+
+                <!-- Fila 2: Fecha y hora -->
+                <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+                    <strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> •
+                    <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?>
+                </div>
+
+                <!-- Fila 3: Recinto deportivo -->
+                <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+                    <strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?>
+                </div>
+
+                <!-- Fila 4: Monto y cupo -->
+                <div style="margin: 0.3rem 0; font-size: 0.8rem;">
+                    <strong>💰</strong> $<?= number_format((int)$proximo_evento['monto_total'], 0, ',', '.') ?> •
+                    <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= (int)$proximo_evento['players'] ?>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <?php if ($ya_inscrito): ?>
+                    <!-- Ya inscrito -->
+                    <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;"
+                            onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                        Bajarse
+                    </button>
+                    <?php if ($id_cuota): ?>
+                        <button class "btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;"
+                                onclick="pagarCuota(<?= $id_cuota ?>)">
+                            Pagar cuota
+                        </button>
+                    <?php endif; ?>
                 <?php else: ?>
-                  <!-- Botón "Anotarse" para RESERVA DE CANCHA -->
-                  <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;"
-                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                    Anotarse
-                  </button>
-                  <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;"
-                          onclick="pasoEvento(<?= $id_reserva ?>)">
-                    Paso
-                  </button>
-                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;"
-                          onclick="pagarCuota(<?= $id_reserva ?>)">
-                    Pagar cuota
-                  </button>
+                    <!-- No inscrito -->
+                    <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;"
+                            onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                        Anotarse
+                    </button>
+                    <button class="btn-action" style="background: #FF6B6B; padding: 0.4rem; font-size: 0.8rem;"
+                            onclick="pasoEvento(<?= $id_reserva ?>)">
+                        Paso
+                    </button>
                 <?php endif; ?>
-                <!-- Botones solo para responsable -->
+
+                <!-- ✅ Botones SOLO para responsable, DENTRO del contenedor flex -->
                 <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-                  <button class="btn-action" style="background: #9B59B6; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="invitarGalletas(<?= $id_reserva ?>)">
-                    Invitar Galletas
-                  </button>
-                  <button class="btn-action" style="background: #F39C12; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="invitarCancha(<?= $id_reserva ?>)">
-                    Invitar un Cancha
-                  </button>
+                    <button class="btn-action" style="background: #9B59B6; padding: 0.4rem; font-size: 0.8rem;" 
+                            onclick="invitarGalletas(<?= $id_reserva ?>)">
+                        Invitar Galletas
+                    </button>
+                    <button class="btn-action" style="background: #F39C12; padding: 0.4rem; font-size: 0.8rem;" 
+                            onclick="invitarCancha(<?= $id_reserva ?>)">
+                        Invitar un Cancha
+                    </button>
                 <?php endif; ?>
-              </div>
-            <?php endif; ?>
-          </div>
+            </div>
         </div>
-        <?php else: ?>
-        <div class="stat-card">
-          <h3>Próximo Evento</h3>
-          <div class="stat-card-content">
-            <p style="margin-top: 2rem;">Sin eventos próximos</p>
-          </div>
+        <?php endif; ?>
+
+        <!-- === SECCIÓN: DEUDAS PENDIENTES === -->
+        <?php
+        $stmt_deudas = $pdo->prepare("
+            SELECT 
+                c.id_cuota,
+                c.monto,
+                c.fecha_vencimiento,
+                CASE 
+                    WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                    WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+                    ELSE 'Sin detalle'
+                END as detalle_origen,
+                COALESCE(r.fecha, e.fecha) as fecha_evento
+            FROM cuotas c
+            LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+            LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+            LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+            LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+            LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+            WHERE c.id_socio = ? AND c.estado = 'pendiente'
+            ORDER BY c.fecha_vencimiento ASC
+            LIMIT 3
+        ");
+        $stmt_deudas->execute([$_SESSION['id_socio']]);
+        $deudas_pendientes = $stmt_deudas->fetchAll();
+        ?>
+
+        <?php if (!empty($deudas_pendientes)): ?>
+        <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289; margin-top: 1.5rem;">
+            <h3>⚠️ Deudas Pendientes</h3>
+            <?php foreach ($deudas_pendientes as $deuda): ?>
+            <div style="margin: 0.8rem 0; padding: 0.6rem; background: rgba(255,255,255,0.7); border-radius: 8px; font-size: 0.85rem;">
+                <strong><?= htmlspecialchars($deuda['detalle_origen']) ?></strong><br>
+                <strong>📅</strong> <?= date('d/m', strtotime($deuda['fecha_evento'])) ?> • 
+                <strong>💰</strong> $<?= number_format($deuda['monto'], 0, ',', '.') ?><br>
+                <button class="btn-action" style="background:#E74C3C; margin-top:0.5rem; font-size:0.8rem; color:white;"
+                        onclick="pagarCuota(<?= $deuda['id_cuota'] ?>)">
+                    Pagar ahora
+                </button>
+            </div>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
         
