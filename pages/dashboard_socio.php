@@ -5,6 +5,10 @@ error_log("SESSION inicial: " . (isset($_SESSION) ? print_r($_SESSION, true) : '
 
 require_once __DIR__ . '/../includes/config.php';
 
+if (!defined('VAPID_PUBLIC_KEY')) {
+    define('VAPID_PUBLIC_KEY', '');
+}
+
 // Configuración robusta de sesiones
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -656,10 +660,32 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                           onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
                     Bajarse
                   </button>
-                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;" 
-                          onclick="pagarCuota(<?= $id_reserva ?>)">
-                    Pagar cuota
+                  <?php
+                  // Buscar id_cuota asociada al evento y socio
+                  $stmt_cuota = $pdo->prepare("
+                      SELECT id_cuota 
+                      FROM cuotas 
+                      WHERE id_evento = ? 
+                        AND id_socio = ? 
+                        AND tipo_actividad = 'reserva' 
+                        AND estado = 'pendiente'
+                  ");
+                  $stmt_cuota->execute([$id_reserva, $_SESSION['id_socio']]);
+                  $cuota_pendiente = $stmt_cuota->fetch();
+                  $id_cuota = $cuota_pendiente ? $cuota_pendiente['id_cuota'] : null;
+                  ?>
+
+                  <!-- botón Pagar Cuota -->
+                  <?php if ($id_cuota): ?>
+                  <button class="btn-action" style="background: #3498DB; padding: 0.4rem; font-size: 0.8rem;"
+                          onclick="pagarCuota(<?= $id_cuota ?>)">
+                      Pagar cuota
                   </button>
+                  <?php else: ?>
+                  <button class="btn-action" style="background: #95a5a6; padding: 0.4rem; font-size: 0.8rem;" disabled>
+                      Sin cuota pendiente
+                  </button>
+                  <?php endif; ?>
                 <?php else: ?>
                   <button class="btn-action" style="background: #4ECDC4; padding: 0.4rem; font-size: 0.8rem;" 
                           onclick="anotarseEvento(<?= $id_evento ?>, 'evento', '', 0, <?= $valor_cuota ?>)">
