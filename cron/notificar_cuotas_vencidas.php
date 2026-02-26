@@ -7,15 +7,34 @@ require_once __DIR__ . '/../includes/config.php';
 try {
     // Cuotas vencidas hace más de 3 días y aún pendientes
     $stmt = $pdo->prepare("
-        SELECT c.*, s.email, s.nombre, cl.nombre as club_nombre
-            FROM cuotas c
-            JOIN socios s ON c.id_socio = s.id_socio
-            JOIN reservas r ON c.id_evento = r.id_reserva
-            JOIN clubs cl ON r.id_club = cl.id_club
-            WHERE c.estado = 'pendiente'
-            AND c.fecha_vencimiento <= CURDATE() - INTERVAL 3 DAY
-            AND s.email_verified = 1;
-        ");
+        SELECT 
+            c.*,
+            s.email,
+            s.nombre,
+            s.id_club,
+            cl.nombre as club_nombre,
+            cl.email_responsable,
+            -- Detalle del origen
+            CASE 
+                WHEN c.tipo_actividad = 'reserva' THEN ca.id_deporte
+                WHEN c.tipo_actividad = 'evento' THEN e.nombre
+                ELSE 'Sin detalle'
+            END as detalle_origen,
+            CASE 
+                WHEN c.tipo_actividad = 'reserva' THEN r.fecha
+                WHEN c.tipo_actividad = 'evento' THEN e.fecha
+                ELSE c.fecha_vencimiento
+            END as fecha_origen
+        FROM cuotas c
+        JOIN socios s ON c.id_socio = s.id_socio
+        JOIN clubs cl ON s.id_club = cl.id_club
+        LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+        LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+        LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+        WHERE c.estado = 'pendiente'
+        AND c.fecha_vencimiento <= CURDATE() - INTERVAL 3 DAY
+        AND s.email_verified = 1
+    ");
     $stmt->execute();
     $cuotas = $stmt->fetchAll();
 
@@ -39,14 +58,17 @@ try {
                         ¡Hola {$cuota['nombre']}!
                     </p>
                     <p>Tienes una cuota pendiente en el club <strong>{$cuota['club_nombre']}</strong>:</p>
-                    <p>
-                        <strong>Monto:</strong> $" . number_format($cuota['monto'], 0, ',', '.') . "<br>
-                        <strong>Vencimiento:</strong> " . date('d/m/Y', strtotime($cuota['fecha_vencimiento'])) . "
+                    
+                    <p style='background: #fff; padding: 12px; border-radius: 8px; margin: 15px 0; font-weight: bold;'>
+                        <strong>Detalle:</strong> {$cuota['detalle_origen']}<br>
+                        <strong>Fecha:</strong> " . date('d/m/Y', strtotime($cuota['fecha_origen'])) . "<br>
+                        <strong>Monto:</strong> $" . number_format($cuota['monto'], 0, ',', '.') . "
                     </p>
+
                     <p>Por favor regulariza tu situación para no perder acceso a los eventos.</p>
                     <p style='margin-top: 20px; text-align: center;'>
-                        <a href='https://canchasport.com/pages/dashboard_socio.php?id_club=" . substr(md5($cuota['id_club'] . $cuota['email_responsable']), 0, 8) . "' 
-                           style='background: #071289; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;'>
+                        <a href='https://canchasport.com/pages/dashboard_socio.php?id_club={$club_slug}' 
+                        style='background: #071289; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;'>
                             Pagar ahora
                         </a>
                     </p>
