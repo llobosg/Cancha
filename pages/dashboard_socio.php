@@ -646,7 +646,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
           <!-- === FICHA: PRÓXIMO EVENTO === -->
           <?php if ($proximo_evento): ?>
-          <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
               <h3>⚽ Próximo Evento</h3>
 
               <?php
@@ -733,7 +733,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       </button>
                   <?php endif; ?>
               </div>
-          </div>
+            </div>         
           <?php endif; ?>
 
           <!-- === FICHA: DEUDAS PENDIENTES === -->
@@ -815,7 +815,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           </div>
         </div>
       </div>
-    </div>
+  </div>
 
     <!-- Sub sección derecha (30%) - Botones de acción -->
     <div class="upper-right">
