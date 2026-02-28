@@ -815,6 +815,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           </div>
         </div>
       </div>
+    </div>
 
     <!-- Sub sección derecha (30%) - Botones de acción -->
     <div class="upper-right">
