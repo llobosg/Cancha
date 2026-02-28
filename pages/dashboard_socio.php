@@ -779,8 +779,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               <?php endforeach; ?>
           </div>
           <?php endif; ?>
-
-      </div>
         
         <!-- Último Evento -->
         <div class="stat-card">
