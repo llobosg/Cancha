@@ -800,7 +800,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   /* Grid de fichas */
   .fichas-dashboard {
     display: grid;
-    gap: 2rem;
+    gap: 3rem;
     width: 100%;
   }
 
