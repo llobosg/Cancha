@@ -283,15 +283,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       margin-bottom: 1.5rem; /* ← Reducido de 2rem a 1.5rem */
     }
 
-    .upper-left {
-      flex: 0 0 85%;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-      overflow-y: auto;
-      margin-left: 20px;
-    }
-
     .upper-right {
       flex: 0 0 15%;
       display: flex;
@@ -776,61 +767,63 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     </div>
   </div>
 
-  <!-- CSS RESPONSIVE INTEGRADO -->
-  <style>
-  /* Asegurar layout flexible en desktop */
-  @media (min-width: 1024px) {
-    .dashboard-upper {
-      display: flex;
-      gap: 1.8rem;
-      margin-top: 1.2rem;
-    }
-    .upper-left {
-      flex: 4;
-      max-width: none;
-    }
-    .upper-right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
+  <!-- CSS RESPONSIVE CORREGIDO -->
+<style>
+/* Asegurar layout flexible en desktop */
+@media (min-width: 1024px) {
+  .dashboard-upper {
+    display: flex;
+    gap: 1.8rem;
+    margin-top: 1.2rem;
   }
+  .upper-left {
+    flex: 4; /* ~80% del ancho */
+    max-width: none;
+    margin-left: 20px;
+  }
+  .upper-right {
+    flex: 1; /* ~20% del ancho */
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-right: 20px;
+  }
+}
 
-  /* Grid de fichas */
+/* Contenedor de fichas */
+.fichas-dashboard {
+  display: grid;
+  gap: 1.4rem;
+  width: 100%;
+  /* Móvil: 1 columna */
+  grid-template-columns: 1fr;
+}
+
+/* Tablet: 2 columnas */
+@media (min-width: 768px) and (max-width: 1023px) {
   .fichas-dashboard {
-    display: grid;
-    gap: 1.4rem;
-    width: 100%;
+    grid-template-columns: repeat(2, 1fr);
   }
+}
 
-  /* Móvil */
-  @media (max-width: 767px) {
-    .fichas-dashboard {
-      grid-template-columns: 1fr;
-    }
+/* Desktop: 4 columnas */
+@media (min-width: 1024px) {
+  .fichas-dashboard {
+    grid-template-columns: repeat(4, 1fr);
   }
+}
 
-  /* Tablet */
-  @media (min-width: 768px) and (max-width: 1023px) {
-    .fichas-dashboard {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
+/* Asegurar que las tarjetas usen todo el ancho */
+.fichas-dashboard > .stat-card {
+  width: 100%;
+  min-width: 0;
+}
 
-  /* Desktop */
-  @media (min-width: 1024px) {
-    .fichas-dashboard {
-      grid-template-columns: repeat(4, 1fr);
-    }
-  }
-
-  /* Asegurar que las tarjetas usen todo el ancho */
-  .fichas-dashboard > .stat-card {
-    width: 100%;
-    min-width: 0;
-  }
-  </style>
+/* Ajuste adicional: asegurar que upper-left no use grid directamente */
+.upper-left {
+  display: block; /* o flex, pero NO grid */
+}
+</style>
 
   <!-- MITAD INFERIOR -->
   <div class="dashboard-lower">
@@ -888,6 +881,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+
   // Generar QR
   const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
   new QRCode(document.getElementById("qrCode"), {
