@@ -832,20 +832,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   }
   </style>
 
-    <!-- Sub sección derecha (30%) - Botones de acción -->
-    <div class="upper-right">
-      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-      
-      <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-        <button class="btn-action" onclick="window.location.href='socios.php?id=<?= htmlspecialchars($club_slug) ?>'">Gestionar socios</button>
-      <?php endif; ?>
-      
-      <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
-      <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= htmlspecialchars($club_slug) ?>'">Login Alternativo</button>
-      <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil</button>
-    </div>
-  </div>
-
   <!-- MITAD INFERIOR -->
   <div class="dashboard-lower">
     <h3>Detalle Eventos</h3>
