@@ -668,14 +668,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     ?>
 
     <!-- === CONTENEDOR GRID RESPONSIVE === -->
-    <div class="fichas-dashboard" style="
-      display: grid;
-      gap: 1rem;
-      margin-top: 1.2rem;
-    ">
-      <!-- Próximo Evento -->
-      <?php if ($proximo_evento): ?>
-      <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+<div class="fichas-dashboard">
+  <!-- Próximo Evento -->
+  <?php if ($proximo_evento): ?>
+  <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
         <h3>⚽ Próximo Evento</h3>
         <?php
           $icono_deporte = '⚽';
@@ -767,17 +763,29 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       </div>
     </div>
 
-    <!-- CSS Responsive -->
     <style>
+    .fichas-dashboard {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.2rem;
+      /* Móvil: 1 columna */
+      grid-template-columns: 1fr;
+    }
+    /* Tablet: 2 columnas */
+    @media (min-width: 768px) {
       .fichas-dashboard {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
       }
-      @media (min-width: 768px) {
-        .fichas-dashboard {
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        }
+    }
+
+    /* Desktop: 4 columnas */
+    @media (min-width: 1024px) {
+      .fichas-dashboard {
+        grid-template-columns: repeat(4, 1fr);
       }
+    }
     </style>
+
   </div>
 
     <!-- Sub sección derecha (30%) - Botones de acción -->
