@@ -786,7 +786,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       margin-top: 1.2rem;
     }
     .upper-left {
-      flex: 3;
+      flex: 4;
       max-width: none;
     }
     .upper-right {
@@ -800,7 +800,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   /* Grid de fichas */
   .fichas-dashboard {
     display: grid;
-    gap: 0.5rem;
+    gap: 1.4rem;
     width: 100%;
   }
 
