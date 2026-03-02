@@ -543,14 +543,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       margin-top: 1rem;
     }
 
-    .ficha-buttons .btn-action {
-      padding: 0.5rem;
-      font-size: 0.85rem;
-      min-width: auto;
-      width: 100%;
+    .ficha-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 1rem;
     }
 
-    /* MÓVIL: botones en columna */
     @media (max-width: 768px) {
       .ficha-buttons {
         grid-template-columns: 1fr;
@@ -630,7 +629,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           }
       }
 
-      // === Deudas pendientes ===
       $stmt_deudas = $pdo->prepare("
           SELECT 
               c.id_cuota,
@@ -649,11 +647,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
           LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
           WHERE c.id_socio = ? AND c.estado = 'pendiente'
-          ORDER BY c.fecha_vencimiento ASC
-          LIMIT 3
+          ORDER BY c.fecha_vencimiento ASC  -- La más antigua (más urgente)
+          LIMIT 1
       ");
       $stmt_deudas->execute([$_SESSION['id_socio']]);
-      $deudas_pendientes = $stmt_deudas->fetchAll();
+      $deuda_mas_vigente = $stmt_deudas->fetch(); // Solo una
       ?>
 
       <!-- === CONTENEDOR GRID RESPONSIVE === -->
@@ -688,20 +686,33 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <div style="margin:0.3rem 0;"><strong>💰</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?> • <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= $players ?></div>
           </div>
 
-          <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <div class="ficha-buttons">
             <?php if ($ya_inscrito): ?>
-              <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Bajarse</button>
-              <?php if ($id_cuota): ?>
-                <button class="btn-action" style="background:#3498DB;padding:0.4rem;font-size:0.8rem;" onclick="pagarCuota(<?= $id_cuota ?>)">Pagar cuota</button>
-              <?php endif; ?>
+              <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                      onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                Bajarse
+              </button>
             <?php else: ?>
-              <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Anotarse</button>
-              <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</button>
+              <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;"
+                      onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                Anotarse
+              </button>
             <?php endif; ?>
 
+            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                    onclick="pasoEvento(<?= $id_reserva ?>)">
+              <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
+            </button>
+
             <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-              <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;" onclick="invitarGalletas(<?= $id_reserva ?>)">Invitar Galletas</button>
-              <button class="btn-action" style="background:#F39C12;padding:0.4rem;font-size:0.8rem;" onclick="invitarCancha(<?= $id_reserva ?>)">Invitar un Cancha</button>
+              <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
+                      onclick="invitarGalletas(<?= $id_reserva ?>)">
+                Invitar Galletas
+              </button>
+              <button class="btn-action" style="background:#F39C12;padding:0.4rem;font-size:0.8rem;"
+                      onclick="invitarCancha(<?= $id_reserva ?>)">
+                Invitar un Cancha
+              </button>
             <?php endif; ?>
           </div>
         </div>
@@ -709,20 +720,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
 
         <!-- Deudas Pendientes -->
-        <?php if (!empty($deudas_pendientes)): ?>
-        <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
-          <h3>⚠️ Deudas Pendientes</h3>
-          <?php foreach ($deudas_pendientes as $deuda): ?>
+        <?php if ($deuda_mas_vigente): ?>
+          <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
+            <h3>⚠️ Deuda Pendiente</h3>
             <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
-              <strong><?= htmlspecialchars($deuda['detalle_origen']) ?></strong><br>
-              <strong>📅</strong> <?= date('d/m', strtotime($deuda['fecha_evento'])) ?> • 
-              <strong>💰</strong> $<?= number_format($deuda['monto'], 0, ',', '.') ?><br>
-              <button class="btn-action" style="background:#E74C3C;margin-top:0.5rem;font-size:0.8rem;color:white;" onclick="pagarCuota(<?= $deuda['id_cuota'] ?>)">Pagar ahora</button>
+              <strong><?= htmlspecialchars($deuda_mas_vigente['detalle_origen']) ?></strong><br>
+              <strong>📅</strong> <?= date('d/m', strtotime($deuda_mas_vigente['fecha_evento'])) ?> • 
+              <strong>💰</strong> $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?><br>
+              <button class="btn-action" style="background:#E74C3C;margin-top:0.5rem;font-size:0.8rem;color:white;"
+                      onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">
+                Pagar ahora
+              </button>
             </div>
-          <?php endforeach; ?>
-        </div>
+          </div>
         <?php endif; ?>
-
 
         <!-- Estadísticas -->
         <div class="stat-card">
