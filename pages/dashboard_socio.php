@@ -912,104 +912,100 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     </div>
   </div>
 
-<!-- Sección de compartir y logout -->
-<script>
-  // Generar QR
-  const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
-  new QRCode(document.getElementById("qrCode"), {
-    text: shareUrl,
-    width: 160,
-    height: 160,
-    colorDark: "#003366",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-  });
+  <!-- Sección de compartir y logout -->
+  <script>
+  // === VARIABLES PHP INYECTADAS DE FORMA SEGURA ===
+  const shareUrl = <?= json_encode($share_url ?? '') ?>;
+  const clubSlug = <?= json_encode($club_slug ?? '') ?>;
+  const idSocio = <?= json_encode($_SESSION['id_socio'] ?? 0) ?>;
+
+  // === QR en dashboard (si se usara en futuro) ===
+  // Nota: Ya no se usa aquí, pero se deja comentado por si acaso
+  /*
+  if (document.getElementById("qrCode")) {
+      new QRCode(document.getElementById("qrCode"), {
+          text: shareUrl,
+          width: 160,
+          height: 160,
+          colorDark: "#003366",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+      });
+  }
+  */
 
   function copyLink() {
-    const link = document.getElementById('shareLink').textContent;
-    navigator.clipboard.writeText(link).then(() => {
-      alert('¡Enlace copiado al portapapeles!');
-    });
+      const link = document.getElementById('shareLink')?.textContent;
+      if (link) {
+          navigator.clipboard.writeText(link).then(() => {
+              alert('¡Enlace copiado al portapapeles!');
+          });
+      }
   }
 
-  // Guardar sesión en dispositivo
+  // === Gestión de sesión local ===
   const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
   localStorage.setItem('cancha_device', deviceId);
   localStorage.setItem('cancha_session', 'active');
-  localStorage.setItem('cancha_club', '<?= htmlspecialchars($club_slug) ?>');
+  localStorage.setItem('cancha_club', clubSlug);
 
   function limpiarSesion() {
-    localStorage.removeItem('cancha_session');
-    localStorage.removeItem('cancha_club');
+      localStorage.removeItem('cancha_session');
+      localStorage.removeItem('cancha_club');
   }
 
-  // Registrar PWA
+  // === PWA ===
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('SW registered: ', registration);
-        })
-        .catch(registrationError => {
-          console.log('SW registration failed: ', registrationError);
-        });
-    });
+      window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+              .then(registration => console.log('SW registered:', registration))
+              .catch(err => console.log('SW registration failed:', err));
+      });
   }
 
-  // Solicitar permiso para notificaciones
+  // === Notificaciones Push ===
   function requestNotificationPermission() {
-    if (!('Notification' in window)) {
-      return;
-    }
-    
-    if (Notification.permission === 'granted') {
-      subscribeToPush();
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
           subscribeToPush();
-        }
-      });
-    }
+      } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+              if (permission === 'granted') subscribeToPush();
+          });
+      }
   }
 
   function subscribeToPush() {
-    console.log('Usuario suscrito a notificaciones');
+      console.log('Usuario suscrito a notificaciones');
   }
 
-  // Función para anotarse a un evento
+  // === Funciones de interacción ===
   function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
-    const formData = new FormData();
-    formData.append('action', 'anotarse');
-    formData.append('id_actividad', idActividad);
-    formData.append('tipo_actividad', tipoActividad);
-    formData.append('deporte', deporte);
-    formData.append('players_max', playersMax);
-    formData.append('monto_total', montoTotal);
-    
-    fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-      .then(response => response.json())
-      .then(data => {
-          if (data.success) {
-              // Mostrar toast personalizado
-              mostrarToast(data.message);
-              // Recargar la página para actualizar la ficha
-              setTimeout(() => {
-                  location.reload();
-              }, 1500);
-          } else {
-              mostrarToast('❌ ' + data.message);
-          }
-      })
-      .catch(error => {
-          mostrarToast('❌ Error al procesar la inscripción');
-          console.error('Error:', error);
-      });
+      const formData = new FormData();
+      formData.append('action', 'anotarse');
+      formData.append('id_actividad', idActividad);
+      formData.append('tipo_actividad', tipoActividad);
+      formData.append('deporte', deporte);
+      formData.append('players_max', playersMax);
+      formData.append('monto_total', montoTotal);
+      
+      fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  mostrarToast(data.message);
+                  setTimeout(() => location.reload(), 1500);
+              } else {
+                  mostrarToast('❌ ' + data.message);
+              }
+          })
+          .catch(error => {
+              mostrarToast('❌ Error al procesar la inscripción');
+              console.error('Error:', error);
+          });
   }
 
-  // Función para mostrar toast notifications
   function mostrarToast(mensaje) {
-      // Crear contenedor de toast si no existe
       let toastContainer = document.getElementById('toast-container');
       if (!toastContainer) {
           toastContainer = document.createElement('div');
@@ -1024,7 +1020,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           document.body.appendChild(toastContainer);
       }
       
-      // Crear toast
       const toast = document.createElement('div');
       toast.textContent = mensaje;
       toast.style.cssText = `
@@ -1037,18 +1032,14 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
           font-size: 14px;
       `;
-      
       toastContainer.appendChild(toast);
       
-      // Eliminar toast después de 3 segundos
       setTimeout(() => {
-          if (toast.parentNode) {
-              toast.parentNode.removeChild(toast);
-          }
+          if (toast.parentNode) toast.parentNode.removeChild(toast);
       }, 3000);
   }
 
-  // Animaciones CSS para toasts
+  // Animaciones para toasts
   const style = document.createElement('style');
   style.textContent = `
       @keyframes slideInRight {
@@ -1062,19 +1053,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   `;
   document.head.appendChild(style);
 
-  // Función pasoEvento actualizada
   function pasoEvento(idReserva) {
-      const card = event.target.closest('.stat-card');
-      if (card) {
-          // Solo cambiar el botón "Paso", mantener el resto
-          const pasoBtn = event.target;
-          pasoBtn.textContent = 'Paso esta semana';
-          pasoBtn.disabled = true;
-          pasoBtn.style.opacity = '0.7';
-      }
+      const btn = event.target;
+      btn.textContent = 'Paso esta semana';
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
   }
 
-  // Funciones para nuevos botones
   function invitarGalletas(idReserva) {
       alert('Función "Invitar Galletas" en desarrollo');
   }
@@ -1084,23 +1069,14 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   }
 
   function pagarCuota(idCuota) {
-    window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+      window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
   }
-  
-  requestNotificationPermission();
 
-  // Cargar tabla de detalle eventos
+  // === Carga de tablas ===
   function cargarDetalleEventos(filtro = 'inscritos') {
-      let url = '';
-      
-      // Determinar qué API usar según el filtro
-      if (filtro === 'cuotas') {
-          // Usar API específica para cuotas del socio
-          url = '../api/cargar_cuotas_socio.php';
-      } else {
-          // Usar API original para el resto (reservas, inscritos, etc.)
-          url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
-      }
+      let url = filtro === 'cuotas' 
+          ? '../api/cargar_cuotas_socio.php'
+          : `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
 
       fetch(url)
           .then(response => response.json())
@@ -1110,7 +1086,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">${data.error}</td></tr>`;
                   return;
               }
-
               if (data.length === 0) {
                   tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:1.5rem;">Sin datos para mostrar</td></tr>`;
                   return;
@@ -1119,7 +1094,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               let html = '';
               data.forEach(row => {
                   if (filtro === 'cuotas') {
-                      // Formato específico para cuotas
                       html += `
                           <tr>
                               <td>${formatDate(row.fecha_evento)}</td>
@@ -1142,7 +1116,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                           </tr>
                       `;
                   } else {
-                      // Formato original para otros filtros
                       html += `
                           <tr>
                               <td>${formatDate(row.fecha)}</td>
@@ -1172,45 +1145,39 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           });
   }
 
-  // Formatear fecha YYYY-MM-DD → DD/MM
   function formatDate(dateStr) {
       if (!dateStr) return '-';
       const [y, m, d] = dateStr.split('-');
       return `${d}/${m}`;
   }
 
-  // Inicializar al cargar la página
+  // === Inicialización ===
   document.addEventListener('DOMContentLoaded', () => {
       cargarDetalleEventos('inscritos');
-
-      // Manejar clics en filtros
       document.querySelectorAll('.filter-btn').forEach(btn => {
           btn.addEventListener('click', () => {
               document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
-              const filtro = btn.getAttribute('data-filter');
-              cargarDetalleEventos(filtro);
+              cargarDetalleEventos(btn.getAttribute('data-filter'));
           });
       });
+      requestNotificationPermission();
   });
 
+  // === Web Push (VAPID) ===
   function subscribeToPush() {
-    navigator.serviceWorker.ready.then(registration => {
-        return registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array('<?= VAPID_PUBLIC_KEY ?>')
-        });
-    }).then(subscription => {
-        // Enviar a backend
-        fetch('../api/guardar_suscripcion.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                id_socio: <?= $_SESSION['id_socio'] ?>,
-                subscription: subscription
-            })
-        });
-    });
+      navigator.serviceWorker.ready.then(registration => {
+          return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(<?= json_encode(VAPID_PUBLIC_KEY ?? '') ?>)
+          });
+      }).then(subscription => {
+          fetch('../api/guardar_suscripcion.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ id_socio: idSocio, subscription })
+          });
+      });
   }
 
   function urlBase64ToUint8Array(base64String) {
@@ -1223,9 +1190,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   // === MODAL COMPARTIR ===
   function abrirModalCompartir() {
       document.getElementById('modalCompartir').style.display = 'flex';
-      // Generar QR en el modal
       new QRCode(document.getElementById("qrCodeModal"), {
-          text: '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>',
+          text: shareUrl,
           width: 160,
           height: 160,
           colorDark: "#003366",
@@ -1239,16 +1205,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   }
 
   function copiarEnlace() {
-      navigator.clipboard.writeText('<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>')
+      navigator.clipboard.writeText(shareUrl)
           .then(() => alert('¡Enlace copiado!'))
           .catch(err => console.error('Error al copiar:', err));
   }
 
-  // Cerrar modal al hacer clic fuera
-  document.getElementById('modalCompartir').addEventListener('click', function(e) {
+  document.getElementById('modalCompartir')?.addEventListener('click', function(e) {
       if (e.target === this) cerrarModalCompartir();
   });
-</script>
+  </script>
 
   <!-- Modal Compartir Club -->
   <div id="modalCompartir" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
