@@ -38,9 +38,10 @@ if (!$stmt->fetch()) {
 }
 
 // Obtener datos del usuario
+// Obtener datos del usuario
 $stmt_user = $pdo->prepare("
     SELECT 
-        s.alias, s.email, s.celular,
+        s.alias, s.email, s.celular, s.es_responsable,
         c.nombre as nombre_club, c.logo as logo_club
     FROM socios s
     JOIN clubs c ON s.id_club = c.id_club
@@ -771,7 +772,7 @@ $deportes = [
                 </div>
 
                 <!-- === OPCIÓN DE RECAUDACIÓN (solo para responsables) === -->
-                <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
+                <?php if (isset($usuario_data['es_responsable']) && $usuario_data['es_responsable'] == 1): ?>
                 <div class="form-group">
                   <label for="monto_recaudacion">Monto total a recaudar ($)</label>
                   <input type="number" id="monto_recaudacion" name="monto_recaudacion" min="0" step="100" placeholder="Ej: 49000">

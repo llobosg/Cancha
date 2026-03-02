@@ -712,6 +712,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <div style="margin:0.3rem 0;"><strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> • <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?></div>
             <div style="margin:0.3rem 0;"><strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?></div>
             <div style="margin:0.3rem 0;"><strong>💰</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?> • <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= $players ?></div>
+            <?php if ($proximo_evento['monto_recaudacion']): ?>
+            <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
+              <strong>💰 Recaudación:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?>
+              <br><strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?>
+            </div>
+            <?php endif; ?>
           </div>
 
           <div class="ficha-buttons">
