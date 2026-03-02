@@ -93,26 +93,38 @@ try {
         // === OBTENER POSICIÓN Y EQUIPO POR DEFECTO ===
         $posicion_default = null;
         $equipo_default = 'blanco';
-        // Determinar monto de la cuota
+
+        // Determinar el monto de la cuota
+        $monto_cuota = 0;
+
         if ($tipo_actividad === 'reserva') {
             // Cargar datos completos de la reserva
-            $stmt_res = $pdo->prepare("SELECT monto_recaudacion, jugadores_esperados, monto_total FROM reservas WHERE id_reserva = ?");
+            $stmt_res = $pdo->prepare("
+                SELECT 
+                    monto_total, 
+                    monto_recaudacion, 
+                    jugadores_esperados 
+                FROM reservas 
+                WHERE id_reserva = ?
+            ");
             $stmt_res->execute([$id_actividad]);
             $reserva = $stmt_res->fetch();
 
-            if ($reserva && $reserva['monto_recaudacion'] && $reserva['jugadores_esperados']) {
-                // Evento recaudatorio
-                $monto_cuota = $reserva['monto_recaudacion'] / $reserva['jugadores_esperados'];
-            } else {
-                // Comportamiento original
-                $monto_cuota = $reserva['monto_total'] ?? 0;
+            if ($reserva) {
+                if ($reserva['monto_recaudacion'] !== null && $reserva['jugadores_esperados'] > 0) {
+                    // Modo recaudación: dividir el total entre cupos
+                    $monto_cuota = (float)$reserva['monto_recaudacion'] / (int)$reserva['jugadores_esperados'];
+                } else {
+                    // Modo tradicional: usar el valor del arriendo
+                    $monto_cuota = (float)($reserva['monto_total'] ?? 0);
+                }
             }
-        } else {
-            // Evento social
+        } elseif ($tipo_actividad === 'evento') {
+            // Para eventos sociales
             $stmt_evt = $pdo->prepare("SELECT valor_cuota FROM eventos WHERE id_evento = ?");
             $stmt_evt->execute([$id_actividad]);
             $evento = $stmt_evt->fetch();
-            $monto_cuota = $evento['valor_cuota'] ?? 0;
+            $monto_cuota = (float)($evento['valor_cuota'] ?? 0);
         }
 
         // === INSERTAR EN INSCRITOS ===
