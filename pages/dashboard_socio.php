@@ -543,11 +543,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       margin-top: 1rem;
     }
 
-    .ficha-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-      margin-top: 1rem;
+    /* Ajuste para botones dentro de fichas */
+    .ficha-buttons .btn-action {
+      padding: 0.4rem;
+      font-size: 0.8rem;
+      min-width: auto;
+      width: 100%;
+      box-sizing: border-box; /* ← clave para respetar el ancho del contenedor */
     }
 
     @media (max-width: 768px) {
@@ -652,6 +654,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       ");
       $stmt_deudas->execute([$_SESSION['id_socio']]);
       $deuda_mas_vigente = $stmt_deudas->fetch(); // Solo una
+
+      // Contar total de deudas pendientes
+      $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
+      $stmt_count->execute([$_SESSION['id_socio']]);
+      $total_deudas = (int)$stmt_count->fetchColumn();
       ?>
 
       <!-- === CONTENEDOR GRID RESPONSIVE === -->
@@ -732,6 +739,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 Pagar ahora
               </button>
             </div>
+
+            <?php if ($total_deudas > 1): ?>
+              <p style="font-size:0.8rem; margin-top:0.8rem; opacity:0.8;">
+                ⚠️ Existens más cuotas pendientes, las puedes revisar en <strong>Detalle Eventos → Cuotas</strong>
+              </p>
+            <?php endif; ?>
           </div>
         <?php endif; ?>
 
@@ -842,10 +855,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     
     <div class="filters">
       <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
-      <button class="filter-btn" data-filter="reservas">Reservas</button>
-      <button class="filter-btn" data-filter="cuotas">Cuotas</button>
-      <button class="filter-btn" data-filter="eventos">Eventos</button>
-      <button class="filter-btn" data-filter="socios">Socios</button>
+      
+      <?php if (!$modo_individual): ?>
+        <button class="filter-btn" data-filter="reservas">Reservas</button>
+        <button class="filter-btn" data-filter="cuotas">Cuotas</button>
+        <button class="filter-btn" data-filter="eventos">Eventos</button>
+        <button class="filter-btn" data-filter="socios">Socios</button>
+      <?php endif; ?>
     </div>
     
     <div class="dynamic-table-container">
@@ -1070,7 +1086,18 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
   // Cargar tabla de detalle eventos
   function cargarDetalleEventos(filtro = 'inscritos') {
-      fetch(`../api/cargar_detalle_eventos.php?filtro=${filtro}`)
+      let url = '';
+      
+      // Determinar qué API usar según el filtro
+      if (filtro === 'cuotas') {
+          // Usar API específica para cuotas del socio
+          url = '../api/cargar_cuotas_socio.php';
+      } else {
+          // Usar API original para el resto (reservas, inscritos, etc.)
+          url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
+      }
+
+      fetch(url)
           .then(response => response.json())
           .then(data => {
               const tbody = document.querySelector('.dynamic-table tbody');
@@ -1086,29 +1113,55 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
               let html = '';
               data.forEach(row => {
-                  html += `
-                      <tr>
-                          <td>${formatDate(row.fecha)}</td>
-                          <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                          <td>${row.id_tipoevento || '-'}</td>
-                          <td>${row.id_club}</td>
-                          <td>${row.id_cancha}</td>
-                          <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                          <td>${row.nombre || '-'}</td>
-                          <td>${row.posicion_jugador || '-'}</td>
-                          <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                          <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                          <td>${row.comentario || '-'}</td>
-                          <td>
-                              <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>
-                          </td>
-                      </tr>
-                  `;
+                  if (filtro === 'cuotas') {
+                      // Formato específico para cuotas
+                      html += `
+                          <tr>
+                              <td>${formatDate(row.fecha_evento)}</td>
+                              <td>-</td>
+                              <td>${row.origen || '-'}</td>
+                              <td>-</td>
+                              <td>-</td>
+                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                              <td>-</td>
+                              <td>-</td>
+                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                              <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                              <td>${row.comentario || '-'}</td>
+                              <td>
+                                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
+                                          onclick="pagarCuota(${row.id_cuota})">
+                                      💳 Pagar
+                                  </button>
+                              </td>
+                          </tr>
+                      `;
+                  } else {
+                      // Formato original para otros filtros
+                      html += `
+                          <tr>
+                              <td>${formatDate(row.fecha)}</td>
+                              <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                              <td>${row.id_tipoevento || '-'}</td>
+                              <td>${row.id_club}</td>
+                              <td>${row.id_cancha}</td>
+                              <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                              <td>${row.nombre || '-'}</td>
+                              <td>${row.posicion_jugador || '-'}</td>
+                              <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                              <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                              <td>${row.comentario || '-'}</td>
+                              <td>
+                                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>
+                              </td>
+                          </tr>
+                      `;
+                  }
               });
               tbody.innerHTML = html;
           })
           .catch(err => {
-              console.error('Error al cargar eventos:', err);
+              console.error('Error al cargar datos:', err);
               document.querySelector('.dynamic-table tbody').innerHTML = 
                   `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al cargar datos</td></tr>`;
           });
