@@ -976,7 +976,29 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   }
 
   function subscribeToPush() {
-      console.log('Usuario suscrito a notificaciones');
+    const vapidKey = <?= json_encode(VAPID_PUBLIC_KEY ?? '') ?>;
+    if (!vapidKey || vapidKey.length < 10) {
+        console.warn('VAPID key no configurada, notificaciones push desactivadas');
+        return;
+    }
+
+    navigator.serviceWorker.ready.then(registration => {
+        return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey)
+        });
+    }).then(subscription => {
+        fetch('../api/guardar_suscripcion.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_socio: <?= json_encode($_SESSION['id_socio'] ?? 0) ?>,
+                subscription: subscription
+            })
+        });
+    }).catch(err => {
+        console.error('Error al suscribir a notificaciones:', err);
+    });
   }
 
   // === Funciones de interacción ===
@@ -1163,22 +1185,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       });
       requestNotificationPermission();
   });
-
-  // === Web Push (VAPID) ===
-  function subscribeToPush() {
-      navigator.serviceWorker.ready.then(registration => {
-          return registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(<?= json_encode(VAPID_PUBLIC_KEY ?? '') ?>)
-          });
-      }).then(subscription => {
-          fetch('../api/guardar_suscripcion.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({ id_socio: idSocio, subscription })
-          });
-      });
-  }
 
   function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
