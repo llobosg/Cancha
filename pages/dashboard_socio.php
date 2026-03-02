@@ -314,15 +314,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     /* SUBIR DETALLE EVENTOS - POSICIÓN CERCANA A FICHAS */
     .dashboard-lower {
-      height: 20vh;
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
       padding: 1.5rem;
       border-radius: 14px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       overflow-y: auto;
-      margin: 0 auto 2rem auto; /* ← Margen superior = 0 */
+      max-height: 600px; /* ≈14 filas */
+      margin: 0 auto 2rem auto;
       max-width: 1400px;
+    }
+
+    /* Asegurar que la tabla no se desborde */
+    .dynamic-table-container {
+      max-height: 500px;
+      overflow-y: auto;
     }
 
     .dashboard-lower h3 {
@@ -557,6 +563,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         grid-template-columns: 1fr;
       }
     }
+
+    .btn-share {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.4);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-share:hover {
+      background: rgba(255,255,255,0.3);
+    }
   </style>
 </head>
 <body>
@@ -584,11 +605,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       </div>
     </div>
     
-    <!-- Cerrar sesión en header -->
     <div class="header-right">
-      <a href="../index.php" onclick="limpiarSesion()" class="logout-header">
-        Salir
-      </a>
+      <?php if (!$modo_individual): ?>
+        <button class="btn-share" onclick="abrirModalCompartir()">📤 Compartir club</button>
+      <?php endif; ?>
+      <a href="../index.php" onclick="limpiarSesion()" class="logout-header">Salir</a>
     </div>
   </div>
 
@@ -891,24 +912,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     </div>
   </div>
 
-  <!-- Share section -->
-  <div class="share-section">
-    <h3>📱 Comparte tu club</h3>
-    <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
-    
-    <?php
-    $share_url = "https://canchasport.com/pages/registro_socio.php?club=" . $club_slug;
-    ?>
-    
-    <div class="qr-code" id="qrCode"></div>
-    <div class="share-link" id="shareLink"><?= htmlspecialchars($share_url) ?></div>
-    <button class="copy-btn" onclick="copyLink()">📋 Copiar enlace</button>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Sección de compartir y logout -->
 <script>
-
   // Generar QR
   const shareUrl = '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>';
   new QRCode(document.getElementById("qrCode"), {
@@ -1214,6 +1219,58 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       const rawData = atob(base64);
       return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
   }
+
+  // === MODAL COMPARTIR ===
+  function abrirModalCompartir() {
+      document.getElementById('modalCompartir').style.display = 'flex';
+      // Generar QR en el modal
+      new QRCode(document.getElementById("qrCodeModal"), {
+          text: '<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>',
+          width: 160,
+          height: 160,
+          colorDark: "#003366",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+      });
+  }
+
+  function cerrarModalCompartir() {
+      document.getElementById('modalCompartir').style.display = 'none';
+  }
+
+  function copiarEnlace() {
+      navigator.clipboard.writeText('<?= htmlspecialchars($share_url, ENT_QUOTES, 'UTF-8') ?>')
+          .then(() => alert('¡Enlace copiado!'))
+          .catch(err => console.error('Error al copiar:', err));
+  }
+
+  // Cerrar modal al hacer clic fuera
+  document.getElementById('modalCompartir').addEventListener('click', function(e) {
+      if (e.target === this) cerrarModalCompartir();
+  });
 </script>
+
+  <!-- Modal Compartir Club -->
+  <div id="modalCompartir" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; color:#071289; padding:2rem; border-radius:14px; max-width:400px; width:90%;">
+      <h3 style="margin-top:0;">📤 Compartir tu club</h3>
+      <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
+      
+      <?php
+      $share_url = "https://canchasport.com/pages/registro_socio.php?club=" . htmlspecialchars($club_slug);
+      ?>
+      
+      <div style="margin:1rem 0;">
+        <div id="qrCodeModal" style="width:180px; height:180px; margin:0 auto; background:white; padding:8px; border-radius:8px;"></div>
+      </div>
+      
+      <div style="background:#f1f1f1; padding:0.6rem; border-radius:6px; margin:1rem 0; word-break:break-all; font-family:monospace; font-size:0.9rem;">
+        <?= htmlspecialchars($share_url) ?>
+      </div>
+      
+      <button onclick="copiarEnlace()" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; margin-right:0.5rem;">📋 Copiar</button>
+      <button onclick="cerrarModalCompartir()" style="background:#6c757d; color:white; border:none; padding:0.5rem 1rem; border-radius:6px;">Cerrar</button>
+    </div>
+  </div>
 </body>
 </html>
