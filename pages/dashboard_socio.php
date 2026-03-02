@@ -530,7 +530,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 290px; /* Altura fija para todas las fichas */
+      height: 310px; /* Altura fija para todas las fichas */
       display: flex;
       flex-direction: column;
     }
