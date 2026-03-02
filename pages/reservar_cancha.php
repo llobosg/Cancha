@@ -819,54 +819,59 @@ $deportes = [
     }
 
     function confirmarReservaInteligente() {
-        const tipoReserva = document.getElementById('reservaPatron').checked ? 'patron' : 'simple';
-        
-        let tipoPatronAPI = 'simple';
-        if (tipoReserva === 'patron') {
-            const frecuencia = document.getElementById('frecuenciaPatron').value;
-            // Mapear a los valores de tu tabla
-            if (frecuencia === 'semanal') tipoPatronAPI = 'semanal';
-            else if (frecuencia === 'quincenal') tipoPatronAPI = 'semanal'; // o crear nuevo tipo
-            else if (frecuencia === 'mensual') tipoPatronAPI = 'mensual';
-        }
-        
-        const datos = {
-            id_cancha: reservaActual.id_cancha,
-            fecha_base: reservaActual.fecha,
-            hora_inicio: reservaActual.hora_inicio,
-            hora_fin: reservaActual.hora_fin,
-            tipo_patron: tipoPatronAPI
-        };
-        
-        if (tipoReserva === 'patron') {
-            datos.fecha_desde = document.getElementById('fechaDesdePatron').value;
-            datos.fecha_hasta = document.getElementById('fechaHastaPatron').value;
-        }
-        
-        // Enviar a la API
-        fetch('../api/crear_reserva_recurrente.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams(datos)
-        })
-        .then(response => response.json())
-        .then(data => {
-            cerrarModalReserva();
-            if (data.success) {
-                mostrarToast('✅ ' + data.message + ` (${data.total_reservas} reservas creadas)`);
-                // Recargar disponibilidad
-                cargarDisponibilidad();
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        })
-        .catch(error => {
-            cerrarModalReserva();
-            mostrarToast('❌ Error al crear la reserva: ' + error.message);
-        });
-    }
+      const tipoReserva = document.getElementById('reservaPatron').checked ? 'patron' : 'simple';
+      
+      let tipoPatronAPI = 'simple';
+      if (tipoReserva === 'patron') {
+          const frecuencia = document.getElementById('frecuenciaPatron').value;
+          if (frecuencia === 'semanal') tipoPatronAPI = 'semanal';
+          else if (frecuencia === 'quincenal') tipoPatronAPI = 'semanal';
+          else if (frecuencia === 'mensual') tipoPatronAPI = 'mensual';
+      }
+      
+      // === OBTENER CAMPOS DE RECAUDACIÓN ===
+      const montoRecaudacion = document.getElementById('monto_recaudacion')?.value || '';
+      const jugadoresEsperados = document.getElementById('jugadores_esperados')?.value || '';
+      
+      const datos = {
+          id_cancha: reservaActual.id_cancha,
+          fecha_base: reservaActual.fecha,
+          hora_inicio: reservaActual.hora_inicio,
+          hora_fin: reservaActual.hora_fin,
+          tipo_patron: tipoPatronAPI,
+          // === AGREGAR CAMPOS NUEVOS ===
+          monto_recaudacion: montoRecaudacion,
+          jugadores_esperados: jugadoresEsperados
+      };
+      
+      if (tipoReserva === 'patron') {
+          datos.fecha_desde = document.getElementById('fechaDesdePatron').value;
+          datos.fecha_hasta = document.getElementById('fechaHastaPatron').value;
+      }
+      
+      // Enviar a la API
+      fetch('../api/crear_reserva_recurrente.php', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams(datos)
+      })
+      .then(response => response.json())
+      .then(data => {
+          cerrarModalReserva();
+          if (data.success) {
+              mostrarToast('✅ ' + data.message + ` (${data.total_reservas} reservas creadas)`);
+              cargarDisponibilidad();
+          } else {
+              mostrarToast('❌ ' + data.message);
+          }
+      })
+      .catch(error => {
+          cerrarModalReserva();
+          mostrarToast('❌ Error al crear la reserva: ' + error.message);
+      });
+  }
 
     function actualizarPreview() {
         const frecuencia = document.getElementById('frecuenciaPatron').value;
