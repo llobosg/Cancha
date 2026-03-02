@@ -18,6 +18,10 @@ try {
     $fecha_desde = $_POST['fecha_desde'] ?? $fecha_base;
     $fecha_hasta = $_POST['fecha_hasta'] ?? $fecha_base;
     
+    // === Nuevos campos para recaudación ===
+    $monto_recaudacion = !empty($_POST['monto_recaudacion']) ? (float)$_POST['monto_recaudacion'] : null;
+    $jugadores_esperados = !empty($_POST['jugadores_esperados']) ? (int)$_POST['jugadores_esperados'] : null;
+
     // Validaciones básicas
     if (!$id_cancha || !$fecha_base || !$hora_inicio || !$hora_fin) {
         throw new Exception('Datos incompletos');
@@ -63,7 +67,8 @@ try {
     // Crear todas las reservas
     $reservas_creadas = crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $cancha, 
                                           $fechas_reservar, $hora_inicio, $hora_fin, 
-                                          $tipo_reserva, $tipo_arriendo);
+                                          $tipo_reserva, $tipo_arriendo,
+                                          $monto_recaudacion, $jugadores_esperados);
     
     echo json_encode([
         'success' => true,
@@ -73,7 +78,6 @@ try {
     ]);
     
 } catch (Exception $e) {
-    // Siempre usar código 400 para errores de aplicación
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
@@ -95,26 +99,21 @@ function generarFechasPatron($tipo, $desde, $hasta, $fecha_base) {
     }
     
     if ($tipo === 'semanal') {
-        // Encontrar la primera ocurrencia del mismo día de la semana
         while ((int)$fecha_actual->format('N') !== $dia_base && $fecha_actual <= $fecha_fin) {
             $fecha_actual->modify('+1 day');
         }
-        
-        // Generar todas las ocurrencias
         while ($fecha_actual <= $fecha_fin) {
             if ((int)$fecha_actual->format('N') === $dia_base) {
                 $fechas[] = $fecha_actual->format('Y-m-d');
             }
             $fecha_actual->modify('+1 day');
         }
-        
     } elseif ($tipo === 'quincenal') {
         $fecha_actual = new DateTime($desde);
         while ($fecha_actual <= $fecha_fin) {
             $fechas[] = $fecha_actual->format('Y-m-d');
             $fecha_actual->modify('+15 days');
         }
-        
     } elseif ($tipo === 'mensual') {
         $fecha_actual = new DateTime($desde);
         while ($fecha_actual <= $fecha_fin) {
@@ -123,16 +122,13 @@ function generarFechasPatron($tipo, $desde, $hasta, $fecha_base) {
         }
     }
     
-    // Eliminar duplicados y ordenar
     $fechas = array_unique($fechas);
     sort($fechas);
-    
     return $fechas;
 }
 
 function validarDisponibilidad($pdo, $id_cancha, $fechas, $hora_inicio, $hora_fin) {
     $conflictos = [];
-    
     foreach ($fechas as $fecha) {
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as ocupado 
@@ -143,33 +139,31 @@ function validarDisponibilidad($pdo, $id_cancha, $fechas, $hora_inicio, $hora_fi
             AND estado != 'disponible'
         ");
         $stmt->execute([$id_cancha, $fecha, $hora_inicio]);
-        
         if ($stmt->fetch()['ocupado'] > 0) {
             $conflictos[] = $fecha;
         }
     }
-    
     return $conflictos;
 }
 
 function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $cancha, 
-                           $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo) {
+                           $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,
+                           $monto_recaudacion = null, $jugadores_esperados = null) {
     $reservas = [];
     $valor_unitario = (float)$cancha['valor_arriendo'];
     
     foreach ($fechas as $fecha) {
-        // Generar código de reserva único
         $codigo_reserva = strtoupper(substr(uniqid(), -8));
         
-        // Insertar en tabla reservas
         $stmt = $pdo->prepare("
             INSERT INTO reservas (
                 codigo_reserva, id_cancha, id_club, id_socio,
                 nombre_cliente, email_cliente, telefono_cliente,
                 fecha, hora_inicio, hora_fin,
                 tipo_reserva, tipo_arriendo,
-                monto_total, estado, estado_pago
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                monto_total, estado, estado_pago,
+                monto_recaudacion, jugadores_esperados
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $stmt->execute([
@@ -187,10 +181,11 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             $tipo_arriendo,
             $valor_unitario,
             'confirmada',
-            'pendiente'
+            'pendiente',
+            $monto_recaudacion,
+            $jugadores_esperados
         ]);
         
-        // Actualizar disponibilidad_canchas
         $pdo->prepare("
             UPDATE disponibilidad_canchas 
             SET estado = 'reservada', id_reserva = ?

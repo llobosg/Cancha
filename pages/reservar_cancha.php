@@ -769,6 +769,19 @@ $deportes = [
                         </div>
                     </div>
                 </div>
+
+                <!-- === OPCIÓN DE RECAUDACIÓN (solo para responsables) === -->
+                <?php if (isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
+                <div class="form-group">
+                  <label for="monto_recaudacion">Monto total a recaudar ($)</label>
+                  <input type="number" id="monto_recaudacion" name="monto_recaudacion" min="0" step="100" placeholder="Ej: 49000">
+                </div>
+
+                <div class="form-group">
+                  <label for="jugadores_esperados">Cupos disponibles</label>
+                  <input type="number" id="jugadores_esperados" name="jugadores_esperados" min="1" max="30" placeholder="Ej: 14">
+                </div>
+                <?php endif; ?>
                 
                 <div style="margin-top: 20px; text-align: right;">
                     <button onclick="cerrarModalReserva()" style="margin-right: 10px; padding: 10px 20px; border: 1px solid #ccc; border-radius: 6px; background: white; cursor: pointer;">Cancelar</button>

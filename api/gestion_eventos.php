@@ -93,28 +93,26 @@ try {
         // === OBTENER POSICIÓN Y EQUIPO POR DEFECTO ===
         $posicion_default = null;
         $equipo_default = 'blanco';
+        // Determinar monto de la cuota
         if ($tipo_actividad === 'reserva') {
-            $stmt_puesto = $pdo->prepare("SELECT rol, genero FROM socios WHERE id_socio = ?");
-            $stmt_puesto->execute([$id_socio]);
-            $socio_info = $stmt_puesto->fetch();
+            // Cargar datos completos de la reserva
+            $stmt_res = $pdo->prepare("SELECT monto_recaudacion, jugadores_esperados, monto_total FROM reservas WHERE id_reserva = ?");
+            $stmt_res->execute([$id_actividad]);
+            $reserva = $stmt_res->fetch();
 
-            if ($socio_info) {
-                $rol = $socio_info['rol'];
-                if (strpos($rol, 'Arquero') !== false || strpos($rol, 'Portero') !== false) {
-                    $posicion_default = 'arquero';
-                } elseif (strpos($rol, 'Defensa') !== false) {
-                    $posicion_default = 'defensa';
-                } elseif (strpos($rol, 'Delantero') !== false) {
-                    $posicion_default = 'delantero';
-                } elseif (strpos($rol, 'Medio') !== false || strpos($rol, 'Central') !== false) {
-                    $posicion_default = 'medio';
-                }
+            if ($reserva && $reserva['monto_recaudacion'] && $reserva['jugadores_esperados']) {
+                // Evento recaudatorio
+                $monto_cuota = $reserva['monto_recaudacion'] / $reserva['jugadores_esperados'];
+            } else {
+                // Comportamiento original
+                $monto_cuota = $reserva['monto_total'] ?? 0;
             }
-
-            $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM inscritos WHERE id_evento = ? AND tipo_actividad = ?");
-            $stmt_count->execute([$id_actividad, $tipo_actividad]);
-            $total_inscritos = $stmt_count->fetch()['total'];
-            $equipo_default = ($total_inscritos % 2 == 0) ? 'blanco' : 'azul';
+        } else {
+            // Evento social
+            $stmt_evt = $pdo->prepare("SELECT valor_cuota FROM eventos WHERE id_evento = ?");
+            $stmt_evt->execute([$id_actividad]);
+            $evento = $stmt_evt->fetch();
+            $monto_cuota = $evento['valor_cuota'] ?? 0;
         }
 
         // === INSERTAR EN INSCRITOS ===

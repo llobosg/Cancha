@@ -105,12 +105,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$error) {
             // Actualizar cuota
-            $stmt_update = $pdo->prepare("
-                UPDATE cuotas 
-                SET fecha_pago = ?, comentario = ?, adjunto = ?, estado = 'en_revision'
-                WHERE id_cuota = ?
-            ");
-            $stmt_update->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+            // Si es una reserva y es evento recaudatorio, sumar al fondo del club
+            if ($cuota['tipo_actividad'] === 'reserva') {
+                $stmt_check = $pdo->prepare("
+                    SELECT r.monto_recaudacion 
+                    FROM reservas r 
+                    WHERE r.id_reserva = ? AND r.monto_recaudacion IS NOT NULL
+                ");
+                $stmt_check->execute([$cuota['id_evento']]);
+                
+                if ($stmt_check->fetch()) {
+                    $pdo->prepare("
+                        UPDATE clubs 
+                        SET fondos_acumulados = COALESCE(fondos_acumulados, 0) + ?
+                        WHERE id_club = ?
+                    ")->execute([$cuota['monto'], $cuota['id_club']]);
+                }
+            }
 
             // Enviar correo al socio
             require_once __DIR__ . '/../includes/brevo_mailer.php';
