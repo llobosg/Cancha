@@ -31,7 +31,7 @@ try {
                         r.monto_total AS costo_evento,
                         s.nombre,
                         i.posicion_jugador,
-                        c.monto AS cuota_monto,
+                        c.monto AS monto_recaudacion,
                         c.fecha_pago,
                         c.comentario,
                         r.id_reserva AS id_evento
