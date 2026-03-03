@@ -31,18 +31,24 @@ try {
                         r.monto_total AS costo_evento,
                         s.nombre,
                         i.posicion_jugador,
-                        c.monto_recaudacion AS cuota_monto,
+                        c.monto AS cuota_monto,          -- ✅ Alias único
                         c.fecha_pago,
                         c.comentario,
                         r.id_reserva AS id_evento
                     FROM reservas r
-                    JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
-                    JOIN socios s ON i.id_socio = s.id_socio
-                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento 
-                                    AND i.id_socio = c.id_socio 
-                                    AND c.tipo_actividad = 'reserva'  -- ✅ Agregado
-                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    INNER JOIN inscritos i 
+                        ON r.id_reserva = i.id_evento 
+                        AND i.tipo_actividad = 'reserva'
+                    INNER JOIN socios s 
+                        ON i.id_socio = s.id_socio
+                    LEFT JOIN cuotas c 
+                        ON c.id_evento = r.id_reserva 
+                        AND c.id_socio = s.id_socio 
+                        AND c.tipo_actividad = 'reserva'   -- ✅ Condición clave
+                    INNER JOIN canchas ca 
+                        ON r.id_cancha = ca.id_cancha
+                    INNER JOIN tipoeventos te 
+                        ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                     WHERE s.id_socio = ?
                     ORDER BY r.fecha DESC, r.hora_inicio DESC
                     LIMIT 50
