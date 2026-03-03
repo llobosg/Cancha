@@ -38,7 +38,9 @@ try {
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
                     JOIN socios s ON i.id_socio = s.id_socio
-                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio
+                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento 
+                                    AND i.id_socio = c.id_socio 
+                                    AND c.tipo_actividad = 'reserva'  -- ✅ Agregado
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                     WHERE s.id_socio = ?
