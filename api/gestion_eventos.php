@@ -110,14 +110,11 @@ try {
             $stmt_res->execute([$id_actividad]);
             $reserva = $stmt_res->fetch();
 
-            if ($reserva) {
-                if ($reserva['monto_recaudacion'] !== null && $reserva['jugadores_esperados'] > 0) {
-                    // Modo recaudación: dividir el total entre cupos
-                    $monto_cuota = (float)$reserva['monto_recaudacion'] / (int)$reserva['jugadores_esperados'];
-                } else {
-                    // Modo tradicional: usar el valor del arriendo
-                    $monto_cuota = (float)($reserva['monto_total'] ?? 0);
-                }
+            if ($reserva['monto_recaudacion'] !== null) {
+                // El campo "monto_recaudacion" YA ES la cuota por socio
+                $monto_cuota = (float)$reserva['monto_recaudacion'];
+            } else {
+                $monto_cuota = (float)($reserva['monto_total'] ?? 0);
             }
         } elseif ($tipo_actividad === 'evento') {
             // Para eventos sociales
