@@ -26,7 +26,12 @@ try {
                 WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
                 ELSE 'Sin detalle'
             END as origen,
-            COALESCE(r.fecha, e.fecha) as fecha_evento
+            COALESCE(r.fecha, e.fecha) as fecha_evento,
+            -- ✅ Agregar el valor del arriendo (costo_evento)
+            CASE 
+                WHEN c.tipo_actividad = 'reserva' THEN r.monto_total
+                ELSE 0
+            END as costo_evento
         FROM cuotas c
         LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
         LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
