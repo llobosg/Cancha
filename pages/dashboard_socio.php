@@ -903,10 +903,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <th>Tipo</th>
             <th>Club</th>
             <th>Cancha</th>
-            <th>Costo</th>
+            <th>Arriendo</th>
             <th>Nombre</th>
             <th>Pos</th>
-            <th>Monto</th>
+            <th>Cuota</th>
             <th>Pago</th>
             <th>Comentario</th>
             <th>Acción</th>
@@ -1135,7 +1135,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
                               <td>-</td>
                               <td>-</td>
-                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                              <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
                               <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
                               <td>${row.comentario || '-'}</td>
                               <td>
