@@ -134,12 +134,12 @@ try {
         ")->execute([$id_actividad, $id_socio, $tipo_actividad, $equipo_default, $posicion_default]);
 
         // === GENERAR CUOTA SI HAY MONTO ===
-        if ($monto > 0 && $fecha_evento) {
+        if ($monto_cuota > 0 && $fecha_evento) {
             $fecha_vencimiento = date('Y-m-d', strtotime($fecha_evento . ' +3 days'));
             $pdo->prepare("
                 INSERT INTO cuotas (id_evento, id_socio, monto, fecha_vencimiento, tipo_actividad, estado)
                 VALUES (?, ?, ?, ?, ?, 'pendiente')
-            ")->execute([$id_actividad, $id_socio, $monto, $fecha_vencimiento, $tipo_actividad]);
+            ")->execute([$id_actividad, $id_socio, $monto_cuota, $fecha_vencimiento, $tipo_actividad]);
         }
 
         $accion = 'anotado';
