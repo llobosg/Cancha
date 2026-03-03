@@ -21,40 +21,63 @@ try {
     if (!isset($_SESSION['club_id'])) {
         switch ($filtro) {
             case 'inscritos':
-                $sql = "
-                    SELECT 
-                        r.fecha,
-                        r.hora_inicio,
-                        te.tipoevento AS id_tipoevento,
-                        NULL AS id_club,
-                        r.id_cancha,
-                        r.monto_total AS costo_evento,
-                        s.nombre,
-                        i.posicion_jugador,
-                        c.monto AS cuota_monto,          -- ✅ Alias único
-                        c.fecha_pago,
-                        c.comentario,
-                        r.id_reserva AS id_evento
-                    FROM reservas r
-                    INNER JOIN inscritos i 
-                        ON r.id_reserva = i.id_evento 
-                        AND i.tipo_actividad = 'reserva'
-                    INNER JOIN socios s 
-                        ON i.id_socio = s.id_socio
-                    LEFT JOIN cuotas c 
-                        ON c.id_evento = r.id_reserva 
-                        AND c.id_socio = s.id_socio 
-                        AND c.tipo_actividad = 'reserva'   -- ✅ Condición clave
-                    INNER JOIN canchas ca 
-                        ON r.id_cancha = ca.id_cancha
-                    INNER JOIN tipoeventos te 
-                        ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE s.id_socio = ?
-                    ORDER BY r.fecha DESC, r.hora_inicio DESC
-                    LIMIT 50
-                ";
-                $params = [$id_socio];
-                break;
+            $sql = "
+                SELECT 
+                    r.fecha,
+                    r.hora_inicio,
+                    te.tipoevento AS id_tipoevento,
+                    r.id_club,
+                    r.id_cancha,
+                    r.monto_total AS costo_evento,
+                    s.nombre,
+                    i.posicion_jugador,
+                    c.monto AS cuota_monto,
+                    c.fecha_pago,
+                    c.comentario,
+                    r.id_reserva AS id_evento,
+                    -- Campos para debugging
+                    i.id_socio as inscrito_id_socio,
+                    c.id_socio as cuota_id_socio,
+                    c.id_evento as cuota_id_evento,
+                    c.tipo_actividad as cuota_tipo_actividad
+                FROM reservas r
+                JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
+                JOIN socios s ON i.id_socio = s.id_socio
+                LEFT JOIN cuotas c ON c.id_evento = r.id_reserva 
+                                AND c.id_socio = s.id_socio 
+                                AND c.tipo_actividad = 'reserva'
+                JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                WHERE s.id_socio = ?
+                ORDER BY r.fecha DESC, r.hora_inicio DESC
+                LIMIT 50
+            ";
+            $params = [$id_socio];
+            
+            // === LOGGING DETALLADO ===
+            error_log("🔍 [DEBUG] Cargando inscritos para socio ID: " . $id_socio);
+            error_log("🔍 [DEBUG] SQL: " . $sql);
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (empty($resultados)) {
+                error_log("⚠️ [DEBUG] No se encontraron resultados para el socio");
+            } else {
+                foreach ($resultados as $idx => $row) {
+                    error_log("📋 [DEBUG] Fila " . ($idx + 1) . ":");
+                    error_log("   → id_evento: " . ($row['id_evento'] ?? 'NULL'));
+                    error_log("   → inscrito_id_socio: " . ($row['inscrito_id_socio'] ?? 'NULL'));
+                    error_log("   → cuota_id_socio: " . ($row['cuota_id_socio'] ?? 'NULL'));
+                    error_log("   → cuota_monto: " . ($row['cuota_monto'] ?? 'NULL'));
+                    error_log("   → costo_evento: " . ($row['costo_evento'] ?? 'NULL'));
+                    error_log("   → cuota_tipo_actividad: " . ($row['cuota_tipo_actividad'] ?? 'NULL'));
+                }
+            }
+            
+            echo json_encode($resultados);
+            break;
 
             default:
                 echo json_encode([]);
