@@ -1132,7 +1132,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>${row.origen || '-'}</td>
                               <td>-</td>
                               <td>-</td>
-                              <td>$${parseInt(row.monto_total || 0).toLocaleString()}</td>
+                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
                               <td>-</td>
                               <td>-</td>
                               <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
@@ -1154,7 +1154,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>${row.id_tipoevento || '-'}</td>
                               <td>${row.id_club}</td>
                               <td>${row.id_cancha}</td>
-                              <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
                               <td>${row.nombre || '-'}</td>
                               <td>${row.posicion_jugador || '-'}</td>
                               <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
