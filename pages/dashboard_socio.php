@@ -1132,7 +1132,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>${row.origen || '-'}</td>
                               <td>-</td>
                               <td>-</td>
-                              <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                              <td>$${parseInt(row.monto_total || 0).toLocaleString()}</td>
                               <td>-</td>
                               <td>-</td>
                               <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
