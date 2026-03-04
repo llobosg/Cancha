@@ -14,12 +14,7 @@ try {
     }
     
     $action = $_POST['action'] ?? '';
-    $id_recinto = (int)($_POST['id_recinto'] ?? 0);
-    
-    // Verificar que el recinto pertenece al administrador
-    if ($id_recinto !== $_SESSION['id_recinto']) {
-        throw new Exception('Acceso no autorizado al recinto');
-    }
+    $id_recinto = (int)$_SESSION['id_recinto'];
     
     if ($action !== 'insert' && $action !== 'update' && $action !== 'delete') {
         throw new Exception('Acción no válida');
