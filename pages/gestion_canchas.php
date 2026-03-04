@@ -356,6 +356,16 @@ foreach ($canchas as $c) {
         width: 100%;
       }
     }
+
+    /* === Animación de giro para íconos === */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin-icon {
+      animation: spin 1.5s linear infinite;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
@@ -490,7 +500,7 @@ foreach ($canchas as $c) {
       <!-- Overlay de carga -->
       <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; justify-content:center; align-items:center;">
         <div style="background:white; padding:2rem; border-radius:14px; text-align:center; min-width:300px;">
-          <div id="loadingIcon" style="font-size:3rem; margin-bottom:1rem;">🏟️</div>
+          <div id="loadingIcon" class="spin-icon" style="font-size:3rem; margin-bottom:1rem;">🏟️</div>
           <div style="font-size:1.2rem; color:#071289; font-weight:bold;">
             Generando disponibilidad de cancha...
           </div>
