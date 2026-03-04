@@ -402,7 +402,6 @@ while ($row = $stmt_regiones->fetch()) {
       <!-- Fila 4 -->
       <div class="form-group"><label for="direccion">Dirección</label></div>
       <div class="form-group full-width-mobile"><input type="text" id="direccion" name="direccion" placeholder="Ej: Av. Grecia 2001, Ñuñoa"></div>
-      <div></div>
       <div class="form-group"><label for="email">Correo</label></div>
       <div class="form-group"><input type="email" id="email" name="email" required></div>
 
