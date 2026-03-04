@@ -487,6 +487,18 @@ foreach ($canchas as $c) {
         
         <button type="submit" class="btn-submit">Guardar Cancha</button>
       </form>
+      <!-- Overlay de carga -->
+      <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:2rem; border-radius:14px; text-align:center; min-width:300px;">
+          <div id="loadingIcon" style="font-size:3rem; margin-bottom:1rem;">🏟️</div>
+          <div style="font-size:1.2rem; color:#071289; font-weight:bold;">
+            Generando disponibilidad de cancha...
+          </div>
+          <div style="margin-top:1rem; font-size:0.9rem; color:#666;">
+            Por favor, espera unos segundos.
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Sección inferior: Tabla de canchas -->
@@ -652,9 +664,25 @@ foreach ($canchas as $c) {
       
       const duracion = parseInt(document.getElementById('duracionBloque').value);
       if (duracion < 60) {
-        alert('La duración mínima debe ser de 60 minutos');
-        return;
+          alert('La duración mínima debe ser de 60 minutos');
+          return;
       }
+      
+      // === Mostrar overlay de carga con ícono del deporte ===
+      const deporte = document.getElementById('deporte').value;
+      const iconosDeporte = {
+          'futbol': '⚽',
+          'futbolito': '⚽',
+          'futsal': '⚽',
+          'tenis': '🎾',
+          'padel': '🎾',
+          'voleyball': '🏐',
+          'otro': '🏟️'
+      };
+      const icono = iconosDeporte[deporte] || '🏟️';
+      
+      document.getElementById('loadingIcon').textContent = icono;
+      document.getElementById('loadingOverlay').style.display = 'flex';
       
       const formData = new FormData();
       formData.append('action', document.getElementById('actionType').value);
@@ -675,27 +703,33 @@ foreach ($canchas as $c) {
       const diasSelect = document.getElementById('diasDisponibles');
       const diasSeleccionados = [];
       for (let i = 0; i < diasSelect.options.length; i++) {
-        if (diasSelect.options[i].selected) {
-          diasSeleccionados.push(diasSelect.options[i].value);
-        }
+          if (diasSelect.options[i].selected) {
+              diasSeleccionados.push(diasSelect.options[i].value);
+          }
       }
       formData.append('dias_disponibles', JSON.stringify(diasSeleccionados));
       
       fetch('../api/gestion_canchas.php', {
-        method: 'POST',
-        body: formData
+          method: 'POST',
+          body: formData
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          location.reload();
-        } else {
-          alert('Error: ' + data.message);
-        }
+          // === Ocultar overlay ===
+          document.getElementById('loadingOverlay').style.display = 'none';
+          
+          if (data.success) {
+              location.reload();
+          } else {
+              alert('Error: ' + data.message);
+          }
       })
       .catch(error => {
-        console.error('Error:', error);
-        alert('Error al guardar la cancha');
+          // === Ocultar overlay incluso en error ===
+          document.getElementById('loadingOverlay').style.display = 'none';
+          
+          console.error('Error:', error);
+          alert('Error al guardar la cancha');
       });
     }
     
