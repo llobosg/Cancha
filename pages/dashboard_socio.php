@@ -1038,69 +1038,68 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
             let html = '';
             data.forEach(row => {
-                if (filtro === 'cuotas') {
-                    // Formato específico para cuotas
-                    html += `
-                        <tr>
-                            <td>${formatDate(row.fecha_evento)}</td>
-                            <td>-</td>
-                            <td>${row.origen || '-'}</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                            <td>${row.nombre_socio || '-'}</td>
-                            <td>-</td>
-                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                            <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                            <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
-                            <td>
-                                ${row.estado === 'en_revision' ? 
-                                    `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>` : 
-                                    `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarCuota(${row.id_cuota})">✏️ Editar</button>`
-                                }
-                            </td>
-                        </tr>
-                    `;
+              if (filtro === 'cuotas') {
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha_evento)}</td>
+                    <td>-</td>
+                    <td>${row.origen || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre_socio || '-'}</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                    <td>
+                      ${row.estado === 'en_revision' ? 
+                        `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>` : 
+                        `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarCuota(${row.id_cuota})">✏️ Editar</button>`
+                      }
+                    </td>
+                  </tr>
+                `;
+              } else {
+                let botonAccion = '';
+                if (filtro === 'socios') {
+                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                  if (esResponsable) {
+                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
+                  } else {
+                    botonAccion = '-';
+                  }
+                } else if (filtro === 'inscritos') {
+                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                  if (esResponsable) {
+                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarReservaCompleta(' + row.id_evento + ')">✏️ Editar</button>';
+                  } else {
+                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
+                  }
                 } else {
-                    // Columna de acción dinámica
-                    let botonAccion = '';
-
-                    if (filtro === 'socios') {
-                        const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-                        if (esResponsable) {
-                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
-                        } else {
-                            botonAccion = '-';
-                        }
-                    } else if (filtro === 'inscritos') {
-                        const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-                        if (esResponsable) {
-                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarReservaCompleta(' + row.id_evento + ')">✏️ Editar</button>';
-                        } else {
-                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
-                        }
-                    } else {
-                        botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
-                    }
-
-                    html += `
-                        <tr>
-                            <td>${formatDate(row.fecha)}</td>
-                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                            <td>${row.id_tipoevento || '-'}</td>
-                            <td>${row.id_club}</td>
-                            <td>${row.id_cancha}</td>
-                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                            <td>${row.nombre || '-'}</td>
-                            <td>${row.posicion_jugador || '-'}</td>
-                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                            <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                            <td>${row.comentario || '-'}</td>
-                            <td>${botonAccion}</td>
-                        </tr>
-                    `;
+                  botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
                 }
+
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha)}</td>
+                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                    <td>${row.id_tipoevento || '-'}</td>
+                    <td>${row.id_club}</td>
+                    <td>${row.id_cancha}</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre || '-'}</td>
+                    <td>${row.posicion_jugador || '-'}</td>
+                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.comentario || '-'}</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              }
             });
+            tbody.innerHTML = html;
+          })
           .catch(err => {
             console.error('Error al cargar datos:', err);
             document.querySelector('.dynamic-table tbody').innerHTML =
