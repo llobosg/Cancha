@@ -604,7 +604,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <?php endif; ?>
       </div>
       <div class="club-info">
-        <h2><?= htmlspecialchars($socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h2>
+        <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h2>
         <p>Tu Cancha está lista</p>
       </div>
     </div>
@@ -1182,9 +1182,23 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
                               <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
                               <td>${row.comentario || '-'}</td>
-                              <td>
-                                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>
-                              </td>
+                              // Reemplazar el botón "Editar" genérico por uno con ID
+                              if (filtro === 'socios') {
+                                  html += `
+                                      <td>
+                                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
+                                                  onclick="editarPerfilSocio(${row.id_evento})">
+                                              👤 Editar
+                                          </button>
+                                      </td>
+                                  `;
+                              } else {
+                                  html += `
+                                      <td>
+                                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>
+                                      </td>
+                                  `;
+                              }
                           </tr>
                       `;
                   }
@@ -1250,6 +1264,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   document.getElementById('modalCompartir')?.addEventListener('click', function(e) {
       if (e.target === this) cerrarModalCompartir();
   });
+
+  function editarPerfilSocio(idSocio) {
+    // Redirigir al formulario de actualización del socio
+    window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
+  }
   </script>
 
   <!-- Modal Compartir Club -->
