@@ -735,9 +735,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <!-- Sub sección derecha (25% en desktop) -->
       <div class="upper-right">
         <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-        <?php if (!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
-          <button class="btn-action" onclick="window.location.href='socios.php?id=<?= htmlspecialchars($club_slug) ?>'">Gestionar socios</button>
-        <?php endif; ?>
         <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
         <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= htmlspecialchars($club_slug) ?>'">Login Alternativo</button>
         <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil</button>
@@ -798,7 +795,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     </style>
 
     <!-- MITAD INFERIOR -->
-    <div class="dashboard-lower">
+    <div class="dashboard-lower" style="margin-top: 4rem;">
       <h3>Detalle Eventos</h3>
       <div class="filters">
         <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
@@ -1068,12 +1065,18 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 // Columna de acción dinámica
                 let botonAccion = '';
                 if (filtro === 'socios') {
-                    // Solo mostrar botón de edición si es responsable
                     const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
                     if (esResponsable) {
                         botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
                     } else {
                         botonAccion = '-';
+                    }
+                } else if (filtro === 'inscritos') {
+                    const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                    if (esResponsable) {
+                        botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarReservaCompleta(' + row.id_evento + ')">✏️ Editar</button>';
+                    } else {
+                        botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
                     }
                 } else {
                     botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
@@ -1129,6 +1132,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       function editarPerfilSocio(idSocio) {
         window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
+      }
+
+      function editarReservaCompleta(idReserva) {
+          window.location.href = 'editar_reserva.php?id_reserva=' + idReserva;
       }
 
       function subscribeToPush() {
