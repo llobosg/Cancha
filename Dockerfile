@@ -1,8 +1,10 @@
 # Dockerfile
 FROM php:8.2-cli
 
-# Instalar dependencias del sistema (incluyendo libzip-dev explícitamente)
+# Instalar git, unzip y dependencias del sistema
 RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
