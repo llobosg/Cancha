@@ -1184,20 +1184,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>${row.comentario || '-'}</td>
                               // Reemplazar el botón "Editar" genérico por uno con ID
                               if (filtro === 'socios') {
-                                  html += `
-                                      <td>
-                                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
-                                                  onclick="editarPerfilSocio(${row.id_evento})">
-                                              👤 Editar
-                                          </button>
-                                      </td>
-                                  `;
-                              } else {
-                                  html += `
-                                      <td>
-                                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>
-                                      </td>
-                                  `;
+                                  html += `<td>
+                                      <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
+                                              onclick="editarPerfilSocio(${row.id_evento})">
+                                          👤 Editar
+                                      </button>
+                                  </td>`;
                               }
                           </tr>
                       `;
