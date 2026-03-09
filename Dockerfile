@@ -1,15 +1,17 @@
 # Dockerfile
 FROM php:8.2-cli
 
-# Instalar dependencias del sistema
+# Instalar extensiones
+RUN docker-php-ext-install pdo pdo_mysql mysqli zip
+
+# Instalar dependencias del sistema para GD
 RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
-    libzip-dev \
     default-mysql-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mysqli zip \
+    && docker-php-ext-install -j$(nproc) gd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -18,15 +20,15 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Instalar dependencias primero (cacheable)
+# Instalar dependencias
 COPY composer.json composer.lock* ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Copiar aplicación
 COPY . .
 
-# Puerto que Railway espera
+# Puerto
 EXPOSE 8080
 
-# Iniciar servidor PHP
+# Comando de inicio explícito
 CMD ["php", "-S", "0.0.0.0:8080", "-t", "."]

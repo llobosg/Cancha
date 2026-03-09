@@ -1,0 +1,8 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 10000
+startCommand = "php -S 0.0.0.0:8080 -t ."
+
