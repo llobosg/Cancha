@@ -190,7 +190,18 @@ try {
     } elseif ($action === 'bajarse') {
     // === NUEVA LÓGICA PARA "BAJARSE" ===
     $id_reserva = (int)($_POST['id_actividad'] ?? 0);
-    $id_socio = $_SESSION['id_socio'];
+    // Si es responsable, puede especificar qué socio dar de baja
+    if (isset($_POST['id_socio_objetivo'])) {
+        $id_socio = (int)$_POST['id_socio_objetivo'];
+        // Validar que pertenece al mismo club
+        $stmt_val = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+        $stmt_val->execute([$id_socio, $_SESSION['club_id']]);
+        if (!$stmt_val->fetch()) {
+            throw new Exception('Socio no válido');
+        }
+    } else {
+        $id_socio = $_SESSION['id_socio'];
+    }
     
     if (!$id_reserva) {
         throw new Exception('Reserva no especificada');

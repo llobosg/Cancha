@@ -1061,23 +1061,24 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   </tr>
                 `;
               } else {
-                let botonAccion = '';
-                if (filtro === 'socios') {
-                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-                  if (esResponsable) {
-                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
-                  } else {
-                    botonAccion = '-';
-                  }
-                } else if (filtro === 'inscritos') {
-                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-                  if (esResponsable) {
-                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarReservaCompleta(' + row.id_evento + ')">✏️ Editar</button>';
-                  } else {
-                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
-                  }
-                } else {
-                  botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
+                let botonAccion = '-';
+
+                if (filtro === 'inscritos') {
+                    // Solo responsables pueden ver "Bajar"
+                    const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                    
+                    if (esResponsable) {
+                        // Verificar si el evento es hoy o futuro
+                        const fechaEvento = new Date(row.fecha);
+                        const hoy = new Date();
+                        hoy.setHours(0, 0, 0, 0); // Solo comparar fecha, no hora
+                        
+                        if (fechaEvento >= hoy) {
+                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + row.id_socio + ')">Bajar</button>';
+                        }
+                        // Si es pasado → botonAccion sigue siendo '-'
+                    }
+                    // Socios normales → sin acción
                 }
 
                 html += `
@@ -1136,8 +1137,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           window.location.href = 'editar_reserva.php?id_reserva=' + idReserva;
       }
 
-      function bajarseEvento(idReserva) {
-          if (!confirm('¿Estás seguro de bajarte de este evento?')) return;
+      function bajarseEvento(idReserva, idSocio) {
+          if (!confirm('¿Estás seguro de dar de baja a este socio del evento?')) return;
           
           fetch('../api/gestion_eventos.php', {
               method: 'POST',
@@ -1145,13 +1146,14 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               body: new URLSearchParams({
                   action: 'bajarse',
                   id_actividad: idReserva,
+                  id_socio_objetivo: idSocio, // ← Nuevo parámetro
                   tipo_actividad: 'reserva'
               })
           })
           .then(r => r.json())
           .then(data => {
               if (data.success) {
-                  mostrarToast('✅ Te has bajado del evento');
+                  mostrarToast('✅ Socio dado de baja');
                   setTimeout(() => location.reload(), 1500);
               } else {
                   mostrarToast('❌ ' + data.message);
