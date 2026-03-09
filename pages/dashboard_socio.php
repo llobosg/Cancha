@@ -838,16 +838,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     <!-- Sección de compartir y logout -->
     <script>
-      // Generar QR
-      const shareUrl = '<?= json_encode($share_url ?? '') ?>';
-      new QRCode(document.getElementById("qrCode"), {
-        text: shareUrl,
-        width: 160,
-        height: 160,
-        colorDark: "#003366",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
+      // Generar QR (solo si existe el elemento)
+      if (document.getElementById("qrCode")) {
+          try {
+              new QRCode(document.getElementById("qrCode"), {
+                  text: shareUrl,
+                  width: 160,
+                  height: 160,
+                  colorDark: "#003366",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.H
+              });
+          } catch (e) {
+              console.warn('QRCode no disponible:', e);
+          }
+      }
 
       function copyLink() {
         const link = document.getElementById('shareLink').textContent;
@@ -1148,16 +1153,19 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === MODAL COMPARTIR ===
       function abrirModalCompartir() {
-        document.getElementById('modalCompartir').style.display = 'flex';
-        // Generar QR en el modal
-        new QRCode(document.getElementById("qrCodeModal"), {
-          text: '<?= json_encode($share_url ?? '') ?>',
-          width: 160,
-          height: 160,
-          colorDark: "#003366",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
+          document.getElementById('modalCompartir').style.display = 'flex';
+          try {
+              new QRCode(document.getElementById("qrCodeModal"), {
+                  text: shareUrl,
+                  width: 160,
+                  height: 160,
+                  colorDark: "#003366",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.H
+              });
+          } catch (e) {
+              console.warn('QRCode no disponible en modal:', e);
+          }
       }
 
       function cerrarModalCompartir() {
