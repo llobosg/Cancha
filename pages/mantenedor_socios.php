@@ -28,13 +28,26 @@ if (!$socio_logueado) {
 // Determinar qué socio se va a editar
 $id_socio_a_editar = $id_socio_logueado;
 
-// Si es responsable de club y se pasa id_socio por GET
-if (!$modo_individual && isset($_GET['id_socio']) && isset($socio_logueado['es_responsable']) && $socio_logueado['es_responsable'] == 1) {
-    // Validar que el socio pertenece al mismo club
-    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-    $stmt_check->execute([$_GET['id_socio'], $_SESSION['club_id']]);
-    if ($row = $stmt_check->fetch()) {
-        $id_socio_a_editar = $row['id_socio'];
+// Si NO es modo individual y se pasa id_socio por GET
+if (!$modo_individual && isset($_GET['id_socio'])) {
+    $id_socio_request = (int)$_GET['id_socio'];
+    
+    // Si es el mismo socio, permitir
+    if ($id_socio_request === $id_socio_logueado) {
+        $id_socio_a_editar = $id_socio_request;
+    }
+    // Si es responsable, permitir editar cualquier socio del club
+    elseif (isset($socio_logueado['es_responsable']) && $socio_logueado['es_responsable'] == 1) {
+        $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+        $stmt_check->execute([$id_socio_request, $_SESSION['club_id']]);
+        if ($row = $stmt_check->fetch()) {
+            $id_socio_a_editar = $row['id_socio'];
+        }
+    }
+    // Si no es responsable ni es su propio perfil, redirigir
+    else {
+        header('Location: dashboard_socio.php');
+        exit;
     }
 }
 
