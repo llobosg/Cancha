@@ -1016,8 +1016,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         let url = '';
         // Determinar qué API usar según el filtro
         if (filtro === 'cuotas') {
-          // Usar API específica para cuotas del socio
-          url = '../api/cargar_cuotas_socio.php';
+            const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+            url = esResponsable 
+                ? '../api/cargar_cuotas_responsable.php'  // ← Esta API debe devolver TODAS las cuotas
+                : '../api/cargar_cuotas_socio.php';
+            break;
         } else {
           // Usar API original para el resto (reservas, inscritos, etc.)
           url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
