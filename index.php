@@ -1229,5 +1229,101 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- GOOGLE LOGIN SCRIPT -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- === BANNER DE INSTALACIÓN PWA (solo móvil) === -->
+<div id="installBanner" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:#071289; color:white; padding:12px; text-align:center; z-index:10000; box-shadow:0 -2px 10px rgba(0,0,0,0.2);">
+  <div style="max-width:600px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+    <span>📲 ¿Quieres usar CanchaSport como app?</span>
+    <button id="installBtn" style="background:#FFD700; color:#071289; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">Instalar</button>
+    <button id="closeBanner" style="background:transparent; color:white; border:none; font-size:1.2rem; cursor:pointer;">×</button>
+  </div>
+</div>
+
+<!-- === FOOTER ELEGANTE (todos los dispositivos) === -->
+<style>
+.app-download-footer {
+  background: #071289;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  margin-top: 3rem;
+}
+.download-title {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+.app-stores {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.store-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: white;
+  color: #071289;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.store-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.store-icon {
+  font-size: 1.4rem;
+}
+</style>
+
+<div class="app-download-footer">
+  <div class="download-title">¿Quieres la mejor experiencia CanchaSport?</div>
+  <div class="app-stores">
+    <a href="https://play.google.com/store/apps/details?id=com.canchasport.app" class="store-btn" target="_blank">
+      <span class="store-icon">📱</span> Android
+    </a>
+    <a href="https://apps.apple.com/app/canchasport/id123456789" class="store-btn" target="_blank">
+      <span class="store-icon">🍎</span> iOS
+    </a>
+  </div>
+  <p style="margin-top:15px; font-size:0.9rem; opacity:0.8;">
+    O usa la versión web: agrega a tu pantalla de inicio desde el menú del navegador
+  </p>
+</div>
+
+<script>
+// === ACTIVAR PROMPT DE INSTALACIÓN PWA ===
+if ('serviceWorker' in navigator && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+  let deferredPrompt;
+  
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBanner').style.display = 'block';
+  });
+
+  document.getElementById('installBtn').addEventListener('click', () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('App instalada');
+        }
+        deferredPrompt = null;
+        document.getElementById('installBanner').style.display = 'none';
+      });
+    }
+  });
+
+  document.getElementById('closeBanner').addEventListener('click', () => {
+    document.getElementById('installBanner').style.display = 'none';
+  });
+}
+</script>
 </body>
 </html>

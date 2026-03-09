@@ -1,7 +1,7 @@
 {
   "name": "Cancha",
-  "short_name": "Cancha",
-  "description": "Gestión para clubes deportivos",
+  "short_name": "CanchaSport",
+  "description": "Buscar canchas, torneos, americanos y gestión para dueños de recintos deportivos",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#003366",
