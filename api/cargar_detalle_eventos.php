@@ -93,27 +93,26 @@ try {
                     SELECT 
                         r.fecha,
                         r.hora_inicio,
-                        te.tipoevento AS id_tipoevento,
+                        te.tipoevento as id_tipoevento,
                         r.id_club,
                         r.id_cancha,
-                        r.monto_total AS costo_evento,
+                        r.monto_total as costo_evento,
                         s.nombre,
                         i.posicion_jugador,
-                        c.monto AS cuota_monto,
+                        c.monto as cuota_monto,
                         c.fecha_pago,
                         c.comentario,
-                        r.id_reserva AS id_evento
+                        r.id_reserva as id_evento
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento
                     JOIN socios s ON i.id_socio = s.id_socio
                     LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE r.id_club = ?
+                    WHERE r.id_club = ? AND r.fecha >= CURDATE()
                     ORDER BY r.fecha DESC, r.hora_inicio DESC
                     LIMIT 50
                 ";
-                $params = [$club_id];
                 break;
 
             case 'reservas':
@@ -121,24 +120,23 @@ try {
                     SELECT 
                         r.fecha,
                         r.hora_inicio,
-                        te.tipoevento AS id_tipoevento,
+                        te.tipoevento as id_tipoevento,
                         r.id_club,
                         r.id_cancha,
-                        r.monto_total AS costo_evento,
-                        '' AS nombre,
-                        '' AS posicion_jugador,
-                        NULL AS cuota_monto,
-                        NULL AS fecha_pago,
-                        '' AS comentario,
-                        r.id_reserva AS id_evento
+                        r.monto_total as costo_evento,
+                        '' as nombre,
+                        '' as posicion_jugador,
+                        NULL as cuota_monto,
+                        NULL as fecha_pago,
+                        '' as comentario,
+                        r.id_reserva as id_evento
                     FROM reservas r
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE r.id_club = ?
+                    WHERE r.id_club = ? AND r.fecha >= CURDATE()
                     ORDER BY r.fecha DESC
                     LIMIT 50
                 ";
-                $params = [$club_id];
                 break;
 
             case 'eventos':
@@ -157,11 +155,10 @@ try {
                         e.comentario,
                         e.id_evento
                     FROM eventos e
-                    WHERE e.id_club = ?
+                    WHERE e.id_club = ? AND e.fecha >= CURDATE()
                     ORDER BY e.fecha DESC
                     LIMIT 50
                 ";
-                $params = [$club_id];
                 break;
 
             case 'socios':

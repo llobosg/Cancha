@@ -1,3 +1,20 @@
+# Agrega todos los archivos actuales
+git add .
+
+# Haz el primer commit
+git commit -m "feat: estructura inicial de Cancha"
+
+# Renombra la rama actual a 'main' (si tu rama se llama 'master' o está sin nombre)
+git branch -M main
+
+# Vincula con GitHub (solo si no lo hiciste antes)
+git remote add origin https://github.com/llobosg/cancha.git
+
+# Empuja por primera vez
+git push -u origin main
+
+git remote add origin https://github.com/alice-dev/cancha.git
+
 echo "# Cancha" >> README.md
 git init
 git add README.md
@@ -9,3 +26,46 @@ git push -u origin main
 cd /Applications/XAMPP/xamppfiles/htdocs/Cancha
 git checkout main
 git pull origin main
+
+
+/Applications/XAMPP/xamppfiles/bin/mysql \
+  --host=metro.proxy.rlwy.net \
+  --port=42951 \
+  --user=root \
+  --password=BJfdOmZzlcQSgEUUOMTHvSqTSmcltSUT \
+  --database=railway \
+  -e "ALTER TABLE clubs 
+ADD COLUMN fondos_acumulados DECIMAL(12,2) DEFAULT 0.00 AFTER email_responsable;"
+
+
+git add .
+git commit -m "monto cuota28 / registrar cancha4"
+git push
+
+<label>Ingresa el código enviado al correo registrado</label>
+
+# Tareas repetidas automáticamente
+crontab -e
+
+# Recordatorio de eventos
+/Applications/XAMPP/bin/php /Applications/XAMPP/xamppfiles/htdocs/cancha/cron/recordatorio_eventos.php
+
+# Notificación de cuotas vencidas
+/Applications/XAMPP/bin/php /Applications/XAMPP/xamppfiles/htdocs/cancha/cron/notificar_cuotas_vencidas.php
+
+
+token para cron 5aa46fa87600b6632f5df3a72b0805dd4d5b3e783116ca42d626ded53b0dce67
+
+API Bienvenida
+https://canchasport.com/api/cron/bienvenida.php?token=5aa46fa87600b6632f5df3a72b0805dd4d5b3e783116ca42d626ded53b0dce67
+
+API Recordatorio
+https://canchasport.com/api/cron/recordatorio.php?token=5aa46fa87600b6632f5df3a72b0805dd4d5b3e783116ca42d626ded53b0dce67
+
+API Cuotas vencidas
+https://canchasport.com/api/cron/cuotas.php?token=5aa46fa87600b6632f5df3a72b0805dd4d5b3e783116ca42d626ded53b0dce67
+
+
+Altura ficha Próximo eventos
+<div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+

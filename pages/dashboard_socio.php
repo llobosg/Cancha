@@ -688,6 +688,22 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       <!-- === CONTENEDOR GRID RESPONSIVE === -->
       <div class="fichas-dashboard">
+        <?php
+          // === LÓGICA PARA CONTROLAR EL BOTÓN "ANOTARSE" ===
+          $apertura_habilitada = false;
+          if ($proximo_evento) {
+              $hoy = new DateTime();
+              $dia_semana = (int)$hoy->format('N'); // 1=lunes, 7=domingo
+              $hora_actual = (int)$hoy->format('H');
+              $minuto_actual = (int)$hoy->format('i');
+
+              // Si es lunes y ya pasaron las 09:00, o es martes+
+              if (($dia_semana === 1 && ($hora_actual > 9 || ($hora_actual === 9 && $minuto_actual >= 0))) ||
+                  $dia_semana > 1) {
+                  $apertura_habilitada = true;
+              }
+          }
+        ?>
         <!-- Próximo Evento -->
         <?php if ($proximo_evento): ?>
         <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -731,10 +747,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 Bajarse
               </button>
             <?php else: ?>
-              <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;"
-                      onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                Anotarse
-              </button>
+              <?php if ($apertura_habilitada): ?>
+                <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;"
+                        onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                  Anotarse
+                </button>
+              <?php else: ?>
+                <button class="btn-action" style="background:#ccc;padding:0.4rem;font-size:0.8rem;" disabled>
+                  Anotarse (desde lunes 09:00)
+                </button>
+              <?php endif; ?>
             <?php endif; ?>
 
             <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
