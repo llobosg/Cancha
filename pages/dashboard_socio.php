@@ -1126,10 +1126,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
   }
 
   // === Carga de tablas ===
+  // Cargar tabla de detalle eventos
   function cargarDetalleEventos(filtro = 'inscritos') {
-      let url = filtro === 'cuotas' 
-          ? '../api/cargar_cuotas_socio.php'
-          : `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
+      let url = '';
+      
+      if (filtro === 'cuotas') {
+          url = '../api/cargar_cuotas_socio.php';
+      } else {
+          url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
+      }
 
       fetch(url)
           .then(response => response.json())
@@ -1148,27 +1153,35 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               data.forEach(row => {
                   if (filtro === 'cuotas') {
                       html += `
-                        <tr>
-                            <td>${formatDate(row.fecha_evento)}</td>
-                            <td>-</td>
-                            <td>${row.origen || '-'}</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td> <!-- ✅ Costo = arriendo -->
-                            <td>-</td>
-                            <td>-</td>
-                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>      <!-- ✅ Monto = cuota -->
-                            <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                            <td>${row.comentario || '-'}</td>
-                            <td>
-                                <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
-                                        onclick="pagarCuota(${row.id_cuota})">
-                                    💳 Pagar
-                                </button>
-                            </td>
-                        </tr>
-                    `;
+                          <tr>
+                              <td>${formatDate(row.fecha_evento)}</td>
+                              <td>-</td>
+                              <td>${row.origen || '-'}</td>
+                              <td>-</td>
+                              <td>-</td>
+                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                              <td>-</td>
+                              <td>-</td>
+                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                              <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                              <td>${row.comentario || '-'}</td>
+                              <td>
+                                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
+                                          onclick="pagarCuota(${row.id_cuota})">
+                                      💳 Pagar
+                                  </button>
+                              </td>
+                          </tr>
+                      `;
                   } else {
+                      // Columna de acción dinámica
+                      let botonAccion = '';
+                      if (filtro === 'socios') {
+                          botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
+                      } else {
+                          botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
+                      }
+
                       html += `
                           <tr>
                               <td>${formatDate(row.fecha)}</td>
@@ -1179,22 +1192,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                               <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                               <td>${row.nombre || '-'}</td>
                               <td>${row.posicion_jugador || '-'}</td>
-                              <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                              <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
                               <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
                               <td>${row.comentario || '-'}</td>
-                              // Reemplazar el botón "Editar" genérico por uno con ID
-                              if (filtro === 'socios') {
-                                  html += '<td>' +
-                                      '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" ' +
-                                      'onclick="editarPerfilSocio(' + row.id_evento + ')">' +
-                                      '👤 Editar' +
-                                      '</button>' +
-                                      '</td>';
-                              } else {
-                                  html += '<td>' +
-                                      '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>' +
-                                      '</td>';
-                              }
+                              <td>${botonAccion}</td>
                           </tr>
                       `;
                   }
