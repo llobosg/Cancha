@@ -1239,61 +1239,75 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<!-- === FOOTER ELEGANTE (todos los dispositivos) === -->
+<!-- Footer de descarga tipo EasyCancha -->
 <style>
-.app-download-footer {
-  background: #071289;
-  color: white;
-  padding: 20px;
-  text-align: center;
+.download-app-footer {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   font-family: 'Segoe UI', system-ui, sans-serif;
-  margin-top: 3rem;
-}
-.download-title {
-  font-size: 1.2rem;
-  margin-bottom: 15px;
-  font-weight: 600;
-}
-.app-stores {
+  z-index: 1000;
   display: flex;
-  justify-content: center;
-  gap: 15px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  max-width: 320px;
+}
+.download-app-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+.app-store-btns {
+  display: flex;
+  gap: 8px;
 }
 .store-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: white;
-  color: #071289;
-  text-decoration: none;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  font-weight: bold;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: background 0.2s;
 }
 .store-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  background: #e0e0e0;
 }
 .store-icon {
-  font-size: 1.4rem;
+  font-size: 18px;
+  line-height: 1;
+}
+@media (max-width: 480px) {
+  .download-app-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+  .app-store-btns {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>
 
-<div class="app-download-footer">
-  <div class="download-title">¿Quieres la mejor experiencia CanchaSport?</div>
-  <div class="app-stores">
-    <a href="https://play.google.com/store/apps/details?id=com.canchasport.app" class="store-btn" target="_blank">
-      <span class="store-icon">📱</span> Android
+<div class="download-app-footer">
+  <div class="download-app-text">Descarga nuestra app</div>
+  <div class="app-store-btns">
+    <a href="https://apps.apple.com/app/canchasport/id123456789" class="store-btn" target="_blank" title="Apple Store">
+      <span class="store-icon">🍎</span>
     </a>
-    <a href="https://apps.apple.com/app/canchasport/id123456789" class="store-btn" target="_blank">
-      <span class="store-icon">🍎</span> iOS
+    <a href="https://play.google.com/store/apps/details?id=com.canchasport.app" class="store-btn" target="_blank" title="Google Play">
+      <span class="store-icon">📱</span>
     </a>
   </div>
-  <p style="margin-top:15px; font-size:0.9rem; opacity:0.8;">
-    O usa la versión web: agrega a tu pantalla de inicio desde el menú del navegador
-  </p>
 </div>
 
 <script>
