@@ -1239,16 +1239,17 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<!-- Footer de descarga tipo EasyCancha -->
+<!-- Footer de descarga con íconos oficiales -->
 <style>
 .download-app-footer {
   position: fixed;
   bottom: 20px;
   left: 20px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.85); /* Fondo gris claro semi-transparente */
+  backdrop-filter: blur(10px);
   padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   font-family: 'Segoe UI', system-ui, sans-serif;
   z-index: 1000;
   display: flex;
@@ -1270,19 +1271,26 @@ document.addEventListener('DOMContentLoaded', function() {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #f0f0f0;
+  background: #f8f9fa; /* Gris muy claro */
   display: flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  border: 1px solid #e9ecef;
 }
 .store-btn:hover {
-  background: #e0e0e0;
+  background: #e9ecef;
+  transform: translateY(-1px);
 }
-.store-icon {
-  font-size: 18px;
-  line-height: 1;
+/* Íconos oficiales en SVG */
+.apple-icon {
+  width: 20px;
+  height: 24px;
+}
+.google-icon {
+  width: 20px;
+  height: 24px;
 }
 @media (max-width: 480px) {
   .download-app-footer {
@@ -1302,10 +1310,17 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="download-app-text">Descarga nuestra app</div>
   <div class="app-store-btns">
     <a href="https://apps.apple.com/app/canchasport/id123456789" class="store-btn" target="_blank" title="Apple Store">
-      <span class="store-icon">🍎</span>
+      <svg class="apple-icon" viewBox="0 0 128 152" xmlns="http://www.w3.org/2000/svg">
+        <path d="M83.2 112c-1.2 3.6-4.8 6-8.4 4.8-19.2-6.4-30.4-22.4-37.6-41.6-2-5.2-1.6-11.2 1.2-16 4.8-8.4 13.6-11.2 21.6-6.8 5.2 2.8 7.6 8.8 5.6 14-5.6 14.4-4 29.6 4.8 43.2 2.4 3.6 1.2 8.4-2.4 10.8zM64 32c4.8 0 8.8-4 8.8-8.8s-4-8.8-8.8-8.8c-4.8 0-8.8 4-8.8 8.8S59.2 32 64 32z" fill="#000"/>
+      </svg>
     </a>
     <a href="https://play.google.com/store/apps/details?id=com.canchasport.app" class="store-btn" target="_blank" title="Google Play">
-      <span class="store-icon">📱</span>
+      <svg class="google-icon" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+        <path d="M109.2 64c0-3.2-.4-6.4-1.2-9.6l-32 12.8 12.8 32c2.8-1.2 5.6-2.8 8-4.8 4.8-4.8 8-11.2 8-18.4z" fill="#34A853"/>
+        <path d="M64 109.2c-12.8 0-24-4.4-32-12.8l16-16c4.8 4.8 11.2 8 16 8s11.2-3.2 16-8l16 16c-8 8.4-19.2 12.8-32 12.8z" fill="#4285F4"/>
+        <path d="M64 109.2c12.8 0 24-4.4 32-12.8l-16-16c-4.8 4.8-11.2 8-16 8s-11.2-3.2-16-8l-16 16c8 8.4 19.2 12.8 32 12.8z" fill="#FBBC05"/>
+        <path d="M32 64c0-3.2.4-6.4 1.2-9.6L12 41.6C4.8 56 4.8 72 12 86.4l20-22.4z" fill="#EA4335"/>
+      </svg>
     </a>
   </div>
 </div>
