@@ -37,7 +37,7 @@ if (!$modo_individual && isset($_GET['id_socio'])) {
         $id_socio_a_editar = $id_socio_request;
     }
     // Si es responsable, permitir editar cualquier socio del club
-    elseif (isset($socio_logueado['es_responsable']) && $socio_logueado['es_responsable'] == 1) {
+    elseif (!empty($socio_logueado) && isset($socio_logueado['es_responsable']) && $socio_logueado['es_responsable'] == 1) {
         $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
         $stmt_check->execute([$id_socio_request, $_SESSION['club_id']]);
         if ($row = $stmt_check->fetch()) {
@@ -75,6 +75,7 @@ $editing_own_profile = ($id_socio_a_editar == $id_socio_logueado);
 // Para CEO: mantener funcionalidad existente
 $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -234,6 +235,7 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <?php if ($is_ceo): ?>
@@ -413,12 +415,6 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
               <option value="Básica">Malo</option>
               <option value="Intermedia">Más o Menos</option>
               <option value="Avanzada">Crack</option>
-              <option value="Pádel-Sexta">Pádel-Sexta</option>
-              <option value="Pádel-Quinta">Pádel-Quinta</option>
-              <option value="Pádel-Cuarta">Pádel-Cuarta</option>
-              <option value="Pádel-Tercera">Pádel-Tercera</option>
-              <option value="Pádel-Segunda">Pádel-Segunda</option>
-              <option value="Pádel-Primera">Pádel-Primera</option>
         </select>
         </div>
         
