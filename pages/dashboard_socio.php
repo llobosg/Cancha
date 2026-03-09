@@ -1106,13 +1106,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           });
       }
 
-      // Formatear fecha YYYY-MM-DD → DD/MM
-      function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        const [y, m, d] = dateStr.split('-');
-        return `${d}/${m}`;
-      }
-
       // Inicializar al cargar la página
       document.addEventListener('DOMContentLoaded', () => {
         cargarDetalleEventos('inscritos');
@@ -1126,6 +1119,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           });
         });
       });
+
+      // Formatear fecha YYYY-MM-DD → DD/MM
+      function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}`;
+      }
 
       function editarPerfilSocio(idSocio) {
         window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;

@@ -481,10 +481,6 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
       
       document.getElementById('socioModal').style.display = 'flex';
     }
-    
-    function closeSocioModal() {
-      document.getElementById('socioModal').style.display = 'none';
-    }
 
     function saveSocio(event) {
       event.preventDefault();
@@ -549,6 +545,10 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
         console.error('Error:', error);
         alert('Error al guardar el perfil');
       });
+    }
+
+    function closeSocioModal() {
+      document.getElementById('socioModal').style.display = 'none';
     }
     
     window.onclick = function(event) {
