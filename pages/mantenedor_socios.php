@@ -294,20 +294,19 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
       </div>
     <?php else: ?>
       <!-- Para socios: mostrar directamente su perfil -->
-      <?php if (!empty($socios)): ?>
-        <?php $socio = $socios[0]; ?>
+      <?php if ($socio_editar): ?>
         <button class="btn-add" onclick="openSocioModal('update', 
-          <?= $socio['id_socio'] ?>, 
-          '<?= addslashes(htmlspecialchars($socio['alias'])) ?>',
-          '<?= addslashes(htmlspecialchars($socio['fecha_nac'] ?? '')) ?>',
-          '<?= addslashes(htmlspecialchars($socio['celular'] ?? '')) ?>',
-          '<?= addslashes(htmlspecialchars($socio['email'])) ?>',
-          '<?= addslashes(htmlspecialchars($socio['direccion'] ?? '')) ?>',
-          '<?= addslashes(htmlspecialchars($socio['rol'] ?? '')) ?>',
-          '<?= addslashes(htmlspecialchars($socio['foto_url'] ?? '')) ?>',
-          '<?= addslashes(htmlspecialchars(strtolower($socio['genero'] ?? ''))) ?>',
-          '<?= addslashes(htmlspecialchars($socio['id_puesto'] ?? '')) ?>',
-          '<?= addslashes(htmlspecialchars($socio['habilidad'] ?? '')) ?>'
+          <?= $socio_editar['id_socio'] ?>, 
+          '<?= addslashes(htmlspecialchars($socio_editar['alias'])) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['fecha_nac'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['celular'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['email'])) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['direccion'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['rol'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['foto_url'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars(strtolower($socio_editar['genero'] ?? ''))) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['id_puesto'] ?? '')) ?>',
+          '<?= addslashes(htmlspecialchars($socio_editar['habilidad'] ?? '')) ?>'
         )" style="background:#00cc66; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold; margin-bottom:2rem;">
           Editar Mi Perfil
         </button>
@@ -315,15 +314,15 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
         <!-- Vista de perfil actual -->
         <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:2rem;">
           <h3>Datos Actuales</h3>
-          <p style="color: #040942ff;"><strong>Alias:</strong> <?= htmlspecialchars($socio['alias']) ?></p>
-          <p style="color: #040942ff;"><strong>Fecha Nac.:</strong> <?= htmlspecialchars($socio['fecha_nac'] ?? '') ?></p>
-          <p style="color: #040942ff;"><strong>Celular:</strong> <?= htmlspecialchars($socio['celular'] ?? '') ?></p>
-          <p style="color: #040942ff;"><strong>Email:</strong> <?= htmlspecialchars($socio['email']) ?></p>
-          <p style="color: #040942ff;"><strong>Dirección:</strong> <?= htmlspecialchars($socio['direccion'] ?? '') ?></p>
-          <p style="color: #040942ff;"><strong>Rol:</strong> <?= htmlspecialchars($socio['rol'] ?? '') ?></p>
-          <p style="color: #040942ff;"><strong>Género:</strong> <?= htmlspecialchars(ucfirst($socio['genero'] ?? '')) ?></p>
-          <p style="color: #040942ff;"><strong>Puesto:</strong> <?= htmlspecialchars($socio['puesto_nombre'] ?? '') ?></p>
-          <p><strong>Habilidad:</strong> <?= htmlspecialchars($socio['habilidad'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Alias:</strong> <?= htmlspecialchars($socio_editar['alias']) ?></p>
+          <p style="color: #040942ff;"><strong>Fecha Nac.:</strong> <?= htmlspecialchars($socio_editar['fecha_nac'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Celular:</strong> <?= htmlspecialchars($socio_editar['celular'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Email:</strong> <?= htmlspecialchars($socio_editar['email']) ?></p>
+          <p style="color: #040942ff;"><strong>Dirección:</strong> <?= htmlspecialchars($socio_editar['direccion'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Rol:</strong> <?= htmlspecialchars($socio_editar['rol'] ?? '') ?></p>
+          <p style="color: #040942ff;"><strong>Género:</strong> <?= htmlspecialchars(ucfirst($socio_editar['genero'] ?? '')) ?></p>
+          <p style="color: #040942ff;"><strong>Puesto:</strong> <?= htmlspecialchars($socio_editar['puesto_nombre'] ?? '') ?></p>
+          <p><strong>Habilidad:</strong> <?= htmlspecialchars($socio_editar['habilidad'] ?? '') ?></p>
         </div>
       <?php endif; ?>
     <?php endif; ?>
