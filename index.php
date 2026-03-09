@@ -1259,5 +1259,17 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 </script>
+
+<!-- Tip educativo para instalar PWA -->
+<div id="pwaTip" style="display:none; position:fixed; bottom:70px; left:20px; background:#071289; color:white; padding:10px 14px; border-radius:8px; font-size:0.85rem; z-index:999; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+  💡 Toca <strong>⋮ → Agregar a pantalla principal</strong> para instalar la app
+</div>
+
+<script>
+// Mostrar solo en Chrome Android
+if (/Android.*Chrome/i.test(navigator.userAgent)) {
+    document.getElementById('pwaTip').style.display = 'block';
+}
+</script>
 </body>
 </html>
