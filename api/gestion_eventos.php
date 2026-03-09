@@ -187,6 +187,43 @@ try {
         $webPush->flush();
     }
 
+    } elseif ($action === 'bajarse') {
+    // === NUEVA LÓGICA PARA "BAJARSE" ===
+    $id_reserva = (int)($_POST['id_actividad'] ?? 0);
+    $id_socio = $_SESSION['id_socio'];
+    
+    if (!$id_reserva) {
+        throw new Exception('Reserva no especificada');
+    }
+    
+    // Verificar si el evento es en menos de 24h
+    $stmt_check = $pdo->prepare("SELECT fecha, hora_inicio FROM reservas WHERE id_reserva = ? AND id_club = ?");
+    $stmt_check->execute([$id_reserva, $_SESSION['club_id']]);
+    $evento = $stmt_check->fetch();
+    
+    if (!$evento) {
+        throw new Exception('Evento no encontrado');
+    }
+    
+    $fecha_evento = new DateTime($evento['fecha'] . ' ' . $evento['hora_inicio']);
+    $ahora = new DateTime();
+    $diferencia = $ahora->diff($fecha_evento);
+    $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
+    
+    // Eliminar inscripción
+    $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'")
+        ->execute([$id_reserva, $id_socio]);
+    
+    if ($horas_restantes >= 24) {
+        // Eliminar cuota si es con más de 24h de anticipación
+        $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'")
+            ->execute([$id_reserva, $id_socio]);
+        $mensaje = "Te has bajado del evento y se eliminó tu cuota";
+    } else {
+        // Mantener cuota si es con menos de 24h
+        $mensaje = "Te has bajado del evento, pero se mantiene tu cuota por política de cancelación";
+    }
+    
     echo json_encode(['success' => true, 'message' => $mensaje]);
 
 } catch (Exception $e) {

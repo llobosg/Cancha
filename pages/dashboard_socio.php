@@ -1040,26 +1040,27 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             data.forEach(row => {
               if (filtro === 'cuotas') {
                 // Formato específico para cuotas
+                // En el bloque de 'cuotas'
                 html += `
-                  <tr>
-                    <td>${formatDate(row.fecha_evento)}</td>
-                    <td>-</td>
-                    <td>${row.origen || '-'}</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                    <td>${row.comentario || '-'}</td>
-                    <td>
-                      <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;"
-                              onclick="pagarCuota(${row.id_cuota})">
-                        💳 Pagar
-                      </button>
-                    </td>
-                  </tr>
+                    <tr>
+                        <td>${formatDate(row.fecha_evento)}</td>
+                        <td>-</td>
+                        <td>${row.origen || '-'}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                        <td>${row.nombre_socio || '-'}</td>
+                        <td>-</td>
+                        <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                        <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                        <td>${row.estado} ${row.comentario ? ' - ' + row.comentario : ''}</td>
+                        <td>
+                            ${row.estado === 'en_revision' ? 
+                                `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>` : 
+                                `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarCuota(${row.id_cuota})">✏️ Editar</button>`
+                            }
+                        </td>
+                    </tr>
                 `;
               } else {
                 // Columna de acción dinámica
@@ -1071,12 +1072,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     } else {
                         botonAccion = '-';
                     }
-                } else if (filtro === 'inscritos') {
-                    const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-                    if (esResponsable) {
-                        botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarReservaCompleta(' + row.id_evento + ')">✏️ Editar</button>';
-                    } else {
-                        botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
+                } else
+                    if (filtro === 'inscritos') {
+                        const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                        if (esResponsable) {
+                            // Responsables: pueden editar la reserva completa
+                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarReservaCompleta(' + row.id_evento + ')">✏️ Editar</button>';
+                        } else {
+                            // Socios normales: solo pueden "bajarse"
+                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
+                        }
                     }
                 } else {
                     botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;">Editar</button>';
@@ -1138,6 +1143,29 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           window.location.href = 'editar_reserva.php?id_reserva=' + idReserva;
       }
 
+      function bajarseEvento(idReserva) {
+          if (!confirm('¿Estás seguro de bajarte de este evento?')) return;
+          
+          fetch('../api/gestion_eventos.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: new URLSearchParams({
+                  action: 'bajarse',
+                  id_actividad: idReserva,
+                  tipo_actividad: 'reserva'
+              })
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  mostrarToast('✅ Te has bajado del evento');
+                  setTimeout(() => location.reload(), 1500);
+              } else {
+                  mostrarToast('❌ ' + data.message);
+              }
+          });
+      }
+
       function subscribeToPush() {
         navigator.serviceWorker.ready.then(registration => {
           return registration.pushManager.subscribe({
@@ -1189,6 +1217,30 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         navigator.clipboard.writeText('<?= json_encode($share_url ?? '') ?>')
           .then(() => alert('¡Enlace copiado!'))
           .catch(err => console.error('Error al copiar:', err));
+      }
+
+      function validarPago(idCuota) {
+          if (!confirm('¿Confirmar pago como válido?')) return;
+          
+          fetch('../api/validar_pago.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: new URLSearchParams({id_cuota: idCuota})
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  mostrarToast('✅ Pago validado');
+                  setTimeout(() => location.reload(), 1500);
+              } else {
+                  mostrarToast('❌ ' + data.message);
+              }
+          });
+      }
+
+      function editarCuota(idCuota) {
+          // Redirigir a formulario de edición
+          window.location.href = 'editar_cuota.php?id=' + idCuota;
       }
 
       // Cerrar modal al hacer clic fuera
