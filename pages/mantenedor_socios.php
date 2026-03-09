@@ -6,21 +6,49 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Verificar autenticación (CEO o Socio)
-$is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
-$is_socio = isset($_SESSION['id_socio']) && !empty($_SESSION['id_socio']);
-$can_edit = $is_ceo || $is_socio;
+// Verificar autenticación
+if (!isset($_SESSION['id_socio'])) {
+    header('Location: ../index.php');
+    exit;
+}
 
-// Si no hay sesión pero se pide perfil propio
-if (!$can_edit && isset($_GET['mi_perfil'])) {
-    if (isset($_SESSION['id_socio']) && !empty($_SESSION['id_socio'])) {
-        $is_socio = true;
-        $can_edit = true;
+$id_socio_logueado = $_SESSION['id_socio'];
+$modo_individual = !isset($_SESSION['club_id']);
+
+// Cargar datos del socio logueado
+$stmt_self = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
+$stmt_self->execute([$id_socio_logueado]);
+$socio_logueado = $stmt_self->fetch();
+
+if (!$socio_logueado) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Determinar qué socio se va a editar
+$id_socio_a_editar = $id_socio_logueado;
+
+// Si es responsable de club y se pasa id_socio por GET
+if (!$modo_individual && isset($_GET['id_socio']) && isset($socio_logueado['es_responsable']) && $socio_logueado['es_responsable'] == 1) {
+    // Validar que el socio pertenece al mismo club
+    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+    $stmt_check->execute([$_GET['id_socio'], $_SESSION['club_id']]);
+    if ($row = $stmt_check->fetch()) {
+        $id_socio_a_editar = $row['id_socio'];
     }
 }
 
-if (!$can_edit) {
-    header('Location: ../index.php');
+// Cargar datos del socio a editar
+$stmt_edit = $pdo->prepare("SELECT s.*, c.nombre as club_nombre, p.puesto as puesto_nombre 
+                           FROM socios s 
+                           LEFT JOIN clubs c ON s.id_club = c.id_club 
+                           LEFT JOIN puestos p ON s.id_puesto = p.id_puesto 
+                           WHERE s.id_socio = ?");
+$stmt_edit->execute([$id_socio_a_editar]);
+$socio_editar = $stmt_edit->fetch();
+
+if (!$socio_editar) {
+    header('Location: dashboard_socio.php');
     exit;
 }
 
@@ -28,34 +56,11 @@ if (!$can_edit) {
 $stmt_puestos = $pdo->query("SELECT id_puesto, puesto FROM puestos ORDER BY puesto");
 $puestos = $stmt_puestos->fetchAll();
 
-// Obtener socio actual si es modo socio
-$current_socio_id = $is_socio ? $_SESSION['id_socio'] : null;
-$editing_own_profile = false;
+// Determinar si es edición de perfil propio
+$editing_own_profile = ($id_socio_a_editar == $id_socio_logueado);
 
-// Obtener socios según rol
-if ($is_ceo) {
-    // CEO ve todos los socios
-    $stmt = $pdo->query("
-        SELECT s.*, c.nombre as club_nombre, p.puesto as puesto_nombre
-        FROM socios s
-        LEFT JOIN clubs c ON s.id_club = c.id_club
-        LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
-        ORDER BY s.alias
-    ");
-    $socios = $stmt->fetchAll();
-} else {
-    // Socio solo ve su propio perfil
-    $stmt = $pdo->prepare("
-        SELECT s.*, c.nombre as club_nombre, p.puesto as puesto_nombre
-        FROM socios s
-        LEFT JOIN clubs c ON s.id_club = c.id_club
-        LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
-        WHERE s.id_socio = ?
-    ");
-    $stmt->execute([$current_socio_id]);
-    $socios = $stmt->fetchAll();
-    $editing_own_profile = true;
-}
+// Para CEO: mantener funcionalidad existente
+$is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
 ?>
 <!DOCTYPE html>
 <html lang="es">
