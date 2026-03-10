@@ -1576,6 +1576,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         const mejorJugadorEl = document.getElementById('mejorJugador');
         const modal = document.getElementById('modalEquipos');
         
+        // Verificación explícita
+        if (!rojosEl || !blancosEl || !modal) {
+            console.error('❌ Elementos del modal no encontrados');
+            alert('Error: Modal no disponible');
+            return;
+        }
+        
         if (!rojosEl || !blancosEl || !mejorJugadorEl || !modal) return;
 
         // Limpiar contenedores
