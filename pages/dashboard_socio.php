@@ -547,9 +547,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         </div>
       </div>
       <div class="header-right">
-        <?php if (!$modo_individual): ?>
-          <button class="btn-share" onclick="abrirModalCompartir()">📤 Compartir club</button>
-        <?php endif; ?>
         <a href="../index.php" onclick="limpiarSesion()" class="logout-header">Salir</a>
       </div>
     </div>
@@ -842,7 +839,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <div class="upper-right">
         <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
         <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
-        <button class="btn-action" onclick="window.location.href='login_email.php?club=<?= htmlspecialchars($club_slug) ?>'">Login Alternativo</button>
+        <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
         <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil</button>
       </div>
     </div>
