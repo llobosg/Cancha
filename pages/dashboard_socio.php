@@ -649,6 +649,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   </div>
                 <?php endif; ?>
               </div>
+              <!-- nuevo botón armar equipos IA -->
+              <?php if ($es_responsable && $inscritos_actuales >= 14): ?>
+                <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
+                        onclick="armarEquiposIA(<?= $id_reserva ?>)">
+                  ⚽ Armar Equipos IA
+                </button>
+              <?php endif; ?>
 
               <div class="ficha-buttons">
                 <?php if ($ya_inscrito): ?>
@@ -705,9 +712,38 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
           <!-- Estadísticas -->
           <div class="stat-card">
-            <h3>Estadísticas</h3>
+            <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
-              <p style="margin-top:2rem;">Próximamente disponible</p>
+              <?php
+              // Obtener último partido con equipos
+              $stmt_last = $pdo->prepare("
+                  SELECT 
+                      ep.nombre_equipo,
+                      ep.ganador,
+                      ep.marcador_final,
+                      s.alias as mejor_jugador,
+                      r.fecha
+                  FROM equipos_partido ep
+                  LEFT JOIN jugadores_equipo je ON ep.id_equipo = je.id_equipo AND je.mejor_jugador = 1
+                  LEFT JOIN socios s ON je.id_socio = s.id_socio
+                  JOIN reservas r ON ep.id_reserva = r.id_reserva
+                  WHERE r.id_club = ?
+                  ORDER BY r.fecha DESC
+                  LIMIT 1
+              ");
+              $stmt_last->execute([$_SESSION['club_id']]);
+              $ultimo_partido = $stmt_last->fetch();
+              ?>
+              
+              <?php if ($ultimo_partido): ?>
+                <p><strong><?= htmlspecialchars($ultimo_partido['nombre_equipo']) ?></strong> 
+                  <?= $ultimo_partido['ganador'] ? 'ganó' : 'perdió' ?> 
+                  con <?= $ultimo_partido['marcador_final'] ?> goles</p>
+                <p><strong>Mejor jugador:</strong> <?= htmlspecialchars($ultimo_partido['mejor_jugador'] ?? 'No asignado') ?></p>
+                <p><strong>Fecha:</strong> <?= date('d/m', strtotime($ultimo_partido['fecha'])) ?></p>
+              <?php else: ?>
+                <p style="margin-top:2rem;">Próximamente disponible</p>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -799,6 +835,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <h3>Detalle Eventos</h3>
       <div class="filters">
         <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
+        <button class="filter-btn" data-filter="equipos">Equipos IA</button>
         <?php if (!$modo_individual): ?>
           <button class="filter-btn" data-filter="reservas">Reservas</button>
           <button class="filter-btn" data-filter="cuotas">Cuotas</button>
@@ -835,418 +872,598 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     <!-- Sección de compartir y logout -->
     <script>
-      // Generar QR (solo si existe el elemento)
-      if (document.getElementById("qrCode")) {
-          try {
-              new QRCode(document.getElementById("qrCode"), {
-                  text: shareUrl,
-                  width: 160,
-                  height: 160,
-                  colorDark: "#003366",
-                  colorLight: "#ffffff",
-                  correctLevel: QRCode.CorrectLevel.H
-              });
-          } catch (e) {
-              console.warn('QRCode no disponible:', e);
-          }
+    // === FUNCIONES DE NOTIFICACIÓN ===
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-message');
+      if (!toast || !msg) return;
+
+      msg.textContent = mensaje;
+      toast.className = 'toast ' + (tipo === 'exito' ? 'success' : tipo === 'error' ? 'error' : 'info');
+      toast.style.display = 'flex';
+      void toast.offsetWidth;
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.style.display = 'none', 400);
+      }, 5000);
+    }
+
+    // === VALIDAR EDAD ===
+    function validarEdad(fechaNac) {
+      if (!fechaNac) return true;
+      const hoy = new Date();
+      const nacimiento = new Date(fechaNac);
+      let edad = hoy.getFullYear() - nacimiento.getFullYear();
+      const mes = hoy.getMonth() - nacimiento.getMonth();
+      if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+        edad--;
+      }
+      return edad >= 14;
+    }
+
+    // === MANEJO DEL FORMULARIO ===
+    document.getElementById('registroForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fechaNacInput = document.getElementById('fecha_nac');
+      if (fechaNacInput && !validarEdad(fechaNacInput.value)) {
+        mostrarNotificacion('❌ La edad mínima es 14 años', 'error');
+        return;
       }
 
-      function copyLink() {
-        const link = document.getElementById('shareLink').textContent;
-        navigator.clipboard.writeText(link).then(() => {
-          alert('¡Enlace copiado al portapapeles!');
-        });
+      const password = document.getElementById('password')?.value;
+      const passwordConfirm = document.getElementById('password_confirm')?.value;
+      if (password !== passwordConfirm) {
+        mostrarNotificacion('❌ Las contraseñas no coinciden', 'error');
+        return;
+      }
+      if (password && password.length < 6) {
+        mostrarNotificacion('❌ Contraseña debe tener al menos 6 caracteres', 'error');
+        return;
       }
 
-      // Guardar sesión en dispositivo
-      const deviceId = localStorage.getItem('cancha_device') || crypto.randomUUID();
-      localStorage.setItem('cancha_device', deviceId);
-      localStorage.setItem('cancha_session', 'active');
-      localStorage.setItem('cancha_club', '<?= json_encode($club_slug ?? '') ?>');
+      const formData = new FormData(e.target);
+      const btn = e.submitter;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Enviando...';
+      btn.disabled = true;
 
-      function limpiarSesion() {
-        localStorage.removeItem('cancha_session');
-        localStorage.removeItem('cancha_club');
-      }
-
-      // Registrar PWA
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-              console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
-
-      // Solicitar permiso para notificaciones
-      function requestNotificationPermission() {
-        if (!('Notification' in window)) {
-          return;
+      try {
+        const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
+        const textResponse = await response.text();
+        let data;
+        try {
+          data = JSON.parse(textResponse);
+        } catch (e) {
+          throw new Error('Error interno del servidor');
         }
-        if (Notification.permission === 'granted') {
-          subscribeToPush();
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-              subscribeToPush();
-            }
-          });
-        }
-      }
 
-      function subscribeToPush() {
-        console.log('Usuario suscrito a notificaciones');
-      }
-
-      // Función para anotarse a un evento
-      function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
-        const formData = new FormData();
-        formData.append('action', 'anotarse');
-        formData.append('id_actividad', idActividad);
-        formData.append('tipo_actividad', tipoActividad);
-        formData.append('deporte', deporte);
-        formData.append('players_max', playersMax);
-        formData.append('monto_total', montoTotal);
-
-        fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              // Mostrar toast personalizado
-              mostrarToast(data.message);
-              // Recargar la página para actualizar la ficha
-              setTimeout(() => {
-                location.reload();
-              }, 1500);
+        if (data.success) {
+          mostrarNotificacion('✅ Código enviado a tu correo', 'exito');
+          setTimeout(() => {
+            if (data.club_slug && data.club_slug.trim() !== '') {
+              window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
             } else {
-              mostrarToast('❌ ' + data.message);
+              window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
             }
-          })
-          .catch(error => {
-            mostrarToast('❌ Error al procesar la inscripción');
-            console.error('Error:', error);
-          });
-      }
-
-      // Función para mostrar toast notifications
-      function mostrarToast(mensaje) {
-        // Crear contenedor de toast si no existe
-        let toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) {
-          toastContainer = document.createElement('div');
-          toastContainer.id = 'toast-container';
-          toastContainer.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            max-width: 300px;
-          `;
-          document.body.appendChild(toastContainer);
+          }, 2000);
+        } else {
+          mostrarNotificacion('❌ ' + data.message, 'error');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
         }
-        // Crear toast
-        const toast = document.createElement('div');
-        toast.textContent = mensaje;
-        toast.style.cssText = `
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 12px 16px;
-          border-radius: 8px;
-          margin-bottom: 10px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
-          font-size: 14px;
+      } catch (error) {
+        console.error('Error:', error);
+        mostrarNotificacion('❌ Error al enviar el código', 'error');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    // === CARGAR PUESTOS POR DEPORTE ===
+    function cargarPuestosPorDeporte(deporte) {
+      const url = deporte 
+          ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
+          : '../api/get_puestos.php';
+      
+      fetch(url)
+        .then(r => r.json())
+        .then(puestos => {
+          const select = document.getElementById('id_puesto');
+          if (!select) return;
+          select.innerHTML = '<option value="">Seleccionar</option>';
+          puestos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id_puesto;
+            opt.textContent = p.puesto;
+            select.appendChild(opt);
+          });
+        })
+        .catch(error => console.error('Error al cargar puestos:', error));
+    }
+
+    // === INICIALIZAR PUESTOS ===
+    document.addEventListener('DOMContentLoaded', () => {
+      const deporteSelect = document.getElementById('deporte');
+      if (deporteSelect?.value) {
+        cargarPuestosPorDeporte(deporteSelect.value);
+      }
+      deporteSelect?.addEventListener('change', function() {
+        cargarPuestosPorDeporte(this.value);
+      });
+    });
+
+    // === TOAST PERSONALIZADO ===
+    function mostrarToast(mensaje) {
+      let toastContainer = document.getElementById('toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          z-index: 1000;
+          max-width: 300px;
         `;
-        toastContainer.appendChild(toast);
-        // Eliminar toast después de 3 segundos
-        setTimeout(() => {
-          if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-          }
-        }, 3000);
+        document.body.appendChild(toastContainer);
       }
-
-      // Animaciones CSS para toasts
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
+      
+      const toast = document.createElement('div');
+      toast.textContent = mensaje;
+      toast.style.cssText = `
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+        font-size: 14px;
       `;
-      document.head.appendChild(style);
+      toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 5000);
+    }
 
-      // Función pasoEvento actualizada
-      function pasoEvento(idReserva) {
-        const card = event.target.closest('.stat-card');
-        if (card) {
-          // Solo cambiar el botón "Paso", mantener el resto
-          const pasoBtn = event.target;
-          pasoBtn.textContent = 'Paso esta semana';
-          pasoBtn.disabled = true;
-          pasoBtn.style.opacity = '0.7';
-        }
+    // === ANIMACIONES CSS ===
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
-
-      // Funciones para nuevos botones
-      function invitarGalletas(idReserva) {
-        alert('Función "Invitar Galletas" en desarrollo');
+      @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
       }
+    `;
+    document.head.appendChild(style);
 
-      function invitarCancha(idReserva) {
-        alert('Función "Invitar un Cancha" en desarrollo');
+    // === REGIONES DINÁMICAS ===
+    let datosChile = {};
+    fetch('../api/get_regiones.php')
+      .then(response => response.json())
+      .then(data => { datosChile = data; })
+      .catch(error => console.error('Error al cargar regiones:', error));
+
+    function actualizarCiudades() {
+      const region = document.getElementById('region');
+      const ciudadSelect = document.getElementById('ciudad');
+      const comunaSelect = document.getElementById('comuna');
+      if (!region || !ciudadSelect || !comunaSelect) return;
+
+      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      ciudadSelect.disabled = !region.value;
+      comunaSelect.disabled = true;
+
+      if (region.value && datosChile[region.value]) {
+        Object.entries(datosChile[region.value].ciudades).forEach(([codigo, nombre]) => {
+          const option = document.createElement('option');
+          option.value = codigo;
+          option.textContent = nombre;
+          ciudadSelect.appendChild(option);
+        });
+        ciudadSelect.disabled = false;
       }
+    }
 
-      function pagarCuota(idCuota) {
-        window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+    document.getElementById('region')?.addEventListener('change', actualizarCiudades);
+    document.getElementById('ciudad')?.addEventListener('change', function() {
+      const region = document.getElementById('region')?.value;
+      const ciudad = this.value;
+      const comunaSelect = document.getElementById('comuna');
+      if (!comunaSelect) return;
+
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
+
+      if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
+        datosChile[region].comunas[ciudad].forEach(comuna => {
+          const option = document.createElement('option');
+          option.value = comuna.toLowerCase().replace(/\s+/g, '_');
+          option.textContent = comuna;
+          comunaSelect.appendChild(option);
+        });
+        comunaSelect.disabled = false;
       }
+    });
 
-      requestNotificationPermission();
+    // === SERVICE WORKER ===
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registrado:', reg.scope))
+          .catch(err => console.log('Error SW:', err));
+      });
+    }
 
-      // Cargar tabla de detalle eventos
-      function cargarDetalleEventos(filtro = 'inscritos') {
-        let url = '';
-        // Determinar qué API usar según el filtro
-        if (filtro === 'cuotas') {
-          const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-          if (esResponsable && row.estado === 'en_revision') {
-              // Solo mostrar botón de validación
-              botonAccion = `
-                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>
-              `;
-          } else {
-              botonAccion = '-';
-          }
-        }
+    // === PUSH NOTIFICATIONS ===
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        subscribeToPush();
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') subscribeToPush();
+        });
+      }
+    }
 
-        fetch(url)
-          .then(response => response.json())
-          .then(data => {
-            const tbody = document.querySelector('.dynamic-table tbody');
-            if (data.error) {
-              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">${data.error}</td></tr>`;
-              return;
-            }
-            if (data.length === 0) {
-              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:1.5rem;">Sin datos para mostrar</td></tr>`;
-              return;
-            }
-
-            let html = '';
-            data.forEach(row => {
-              if (filtro === 'cuotas') {
-                html += `
-                  <tr>
-                    <td>${formatDate(row.fecha_evento)}</td>
-                    <td>-</td>
-                    <td>${row.origen || '-'}</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                    <td>${row.nombre_socio || '-'}</td>
-                    <td>-</td>
-                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
-                    <td>
-                      ${row.estado === 'en_revision' ? 
-                        `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>` : 
-                        `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarCuota(${row.id_cuota})">✏️ Editar</button>`
-                      }
-                    </td>
-                  </tr>
-                `;
-              } else {
-                let botonAccion = '-';
-
-                if (filtro === 'inscritos') {
-                    // Solo responsables pueden ver "Bajar"
-                    const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
-                    
-                    if (esResponsable) {
-                        // Verificar si el evento es hoy o futuro
-                        const fechaEvento = new Date(row.fecha);
-                        const hoy = new Date();
-                        hoy.setHours(0, 0, 0, 0); // Solo comparar fecha, no hora
-                        
-                        if (fechaEvento >= hoy) {
-                            botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + row.id_socio + ')">Bajar</button>';
-                        }
-                        // Si es pasado → botonAccion sigue siendo '-'
-                    }
-                    // Socios normales → sin acción
-                }
-
-                html += `
-                  <tr>
-                    <td>${formatDate(row.fecha)}</td>
-                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                    <td>${row.id_tipoevento || '-'}</td>
-                    <td>${row.id_club}</td>
-                    <td>${row.id_cancha}</td>
-                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                    <td>${row.nombre || '-'}</td>
-                    <td>${row.posicion_jugador || '-'}</td>
-                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                    <td>${row.comentario || '-'}</td>
-                    <td>${botonAccion}</td>
-                  </tr>
-                `;
-              }
-            });
-            tbody.innerHTML = html;
+    function subscribeToPush() {
+      navigator.serviceWorker.ready.then(registration => {
+        return registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array('<?= VAPID_PUBLIC_KEY ?>')
+        });
+      }).then(subscription => {
+        fetch('../api/guardar_suscripcion.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            id_socio: <?= $_SESSION['id_socio'] ?? 0 ?>,
+            subscription: subscription
           })
-          .catch(err => {
-            console.error('Error al cargar datos:', err);
-            document.querySelector('.dynamic-table tbody').innerHTML =
-              `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al cargar datos</td></tr>`;
-          });
-      }
-
-      // Inicializar al cargar la página
-      document.addEventListener('DOMContentLoaded', () => {
-        cargarDetalleEventos('inscritos');
-        // Manejar clics en filtros
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const filtro = btn.getAttribute('data-filter');
-            cargarDetalleEventos(filtro);
-          });
         });
       });
+    }
 
-      // Formatear fecha YYYY-MM-DD → DD/MM
-      function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        const [y, m, d] = dateStr.split('-');
-        return `${d}/${m}`;
-      }
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
 
-      function editarPerfilSocio(idSocio) {
-        window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
-      }
+    // === LIMPIAR SESIÓN ===
+    function limpiarSesion() {
+      localStorage.removeItem('cancha_session');
+      localStorage.removeItem('cancha_club');
+    }
 
-      function editarReservaCompleta(idReserva) {
-          window.location.href = 'editar_reserva.php?id_reserva=' + idReserva;
-      }
+    // === MODAL COMPARTIR ===
+    function abrirModalCompartir() {
+      const modal = document.getElementById('modalCompartir');
+      if (modal) modal.style.display = 'flex';
+    }
 
-      function bajarseEvento(idReserva, idSocio) {
-          if (!confirm('¿Estás seguro de dar de baja a este socio del evento?')) return;
-          
-          fetch('../api/gestion_eventos.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: new URLSearchParams({
-                  action: 'bajarse',
-                  id_actividad: idReserva,
-                  id_socio_objetivo: idSocio, // ← Nuevo parámetro
-                  tipo_actividad: 'reserva'
-              })
-          })
-          .then(r => r.json())
-          .then(data => {
-              if (data.success) {
-                  mostrarToast('✅ Socio dado de baja');
-                  setTimeout(() => location.reload(), 1500);
-              } else {
-                  mostrarToast('❌ ' + data.message);
-              }
-          });
-      }
+    function cerrarModalCompartir() {
+      const modal = document.getElementById('modalCompartir');
+      if (modal) modal.style.display = 'none';
+    }
 
-      function subscribeToPush() {
-        navigator.serviceWorker.ready.then(registration => {
-          return registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array('<?= VAPID_PUBLIC_KEY ?>')
-          });
-        }).then(subscription => {
-          // Enviar a backend
-          fetch('../api/guardar_suscripcion.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              id_socio: <?= $_SESSION['id_socio'] ?>,
-              subscription: subscription
-            })
-          });
-        });
-      }
+    function copiarEnlace() {
+      const url = '<?= json_encode($share_url ?? '') ?>';
+      navigator.clipboard.writeText(url)
+        .then(() => alert('¡Enlace copiado!'))
+        .catch(err => console.error('Error al copiar:', err));
+    }
 
-      function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = atob(base64);
-        return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-      }
-
-      // === MODAL COMPARTIR ===
-      function abrirModalCompartir() {
-          document.getElementById('modalCompartir').style.display = 'flex';
-          try {
-              new QRCode(document.getElementById("qrCodeModal"), {
-                  text: shareUrl,
-                  width: 160,
-                  height: 160,
-                  colorDark: "#003366",
-                  colorLight: "#ffffff",
-                  correctLevel: QRCode.CorrectLevel.H
-              });
-          } catch (e) {
-              console.warn('QRCode no disponible en modal:', e);
-          }
-      }
-
-      function cerrarModalCompartir() {
-        document.getElementById('modalCompartir').style.display = 'none';
-      }
-
-      function copiarEnlace() {
-        navigator.clipboard.writeText('<?= json_encode($share_url ?? '') ?>')
-          .then(() => alert('¡Enlace copiado!'))
-          .catch(err => console.error('Error al copiar:', err));
-      }
-
-      function validarPago(idCuota) {
-          if (!confirm('¿Confirmar pago como válido?')) return;
-          
-          fetch('../api/validar_pago.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: new URLSearchParams({id_cuota: idCuota})
-          })
-          .then(r => r.json())
-          .then(data => {
-              if (data.success) {
-                  mostrarToast('✅ Pago validado');
-                  setTimeout(() => location.reload(), 1500);
-              } else {
-                  mostrarToast('❌ ' + data.message);
-              }
-          });
-      }
-
-      function editarCuota(idCuota) {
-          // Redirigir a formulario de edición
-          window.location.href = 'editar_cuota.php?id=' + idCuota;
-      }
-
-      // Cerrar modal al hacer clic fuera
-      document.getElementById('modalCompartir').addEventListener('click', function(e) {
+    // === CERRAR MODAL AL HACER CLICK FUERA ===
+    const modalCompartir = document.getElementById('modalCompartir');
+    if (modalCompartir) {
+      modalCompartir.addEventListener('click', function(e) {
         if (e.target === this) cerrarModalCompartir();
       });
-    </script>
+    }
+
+    // === ACCIONES DE EVENTOS ===
+    function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+      const formData = new FormData();
+      formData.append('action', 'anotarse');
+      formData.append('id_actividad', idActividad);
+      formData.append('tipo_actividad', tipoActividad);
+      formData.append('deporte', deporte);
+      formData.append('players_max', playersMax);
+      formData.append('monto_total', montoTotal);
+
+      fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            mostrarToast(data.message);
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        })
+        .catch(error => {
+          mostrarToast('❌ Error al procesar la inscripción');
+          console.error('Error:', error);
+        });
+    }
+
+    function pasoEvento(idReserva) {
+      const card = event.target.closest('.stat-card');
+      if (card) {
+        const pasoBtn = event.target;
+        pasoBtn.textContent = 'Paso esta semana';
+        pasoBtn.disabled = true;
+        pasoBtn.style.opacity = '0.7';
+      }
+    }
+
+    function invitarGalletas(idReserva) {
+      alert('Función "Invitar Galletas" en desarrollo');
+    }
+
+    function invitarCancha(idReserva) {
+      alert('Función "Invitar un Cancha" en desarrollo');
+    }
+
+    function pagarCuota(idCuota) {
+      window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+    }
+
+    // === ARMAR EQUIPOS IA ===
+    function armarEquiposIA(idReserva) {
+      fetch('../api/armar_equipos_ia.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_reserva: idReserva})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          mostrarModalEquipos(data.equipos);
+        } else {
+          alert('Error: ' + data.message);
+        }
+      });
+    }
+
+    function mostrarModalEquipos(equipos) {
+      const rojosEl = document.getElementById('equipoRojos');
+      const blancosEl = document.getElementById('equipoBlancos');
+      const mejorJugadorEl = document.getElementById('mejorJugador');
+      const modal = document.getElementById('modalEquipos');
+      
+      if (!rojosEl || !blancosEl || !mejorJugadorEl || !modal) return;
+
+      let htmlRojos = '';
+      let htmlBlancos = '';
+      let opcionesJugadores = '<option value="">Seleccionar...</option>';
+      
+      equipos.rojos.forEach(j => {
+        htmlRojos += `<li>${j.alias}</li>`;
+        opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Rojos)</option>`;
+      });
+      
+      equipos.blancos.forEach(j => {
+        htmlBlancos += `<li>${j.alias}</li>`;
+        opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Blancos)</option>`;
+      });
+      
+      rojosEl.innerHTML = htmlRojos;
+      blancosEl.innerHTML = htmlBlancos;
+      mejorJugadorEl.innerHTML = opcionesJugadores;
+      modal.style.display = 'flex';
+    }
+
+    function guardarEquipos() {
+      const marcador = document.getElementById('marcador')?.value;
+      const idMejor = document.getElementById('mejorJugador')?.value;
+      
+      if (!marcador || !idMejor) {
+        alert('Completa marcador y mejor jugador');
+        return;
+      }
+      
+      alert('Funcionalidad de guardado implementada en próxima versión');
+      cerrarModalEquipos();
+    }
+
+    function cerrarModalEquipos() {
+      const modal = document.getElementById('modalEquipos');
+      if (modal) modal.style.display = 'none';
+    }
+
+    // === EDITAR PERFIL SOCIO ===
+    function editarPerfilSocio(idSocio) {
+      window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
+    }
+
+    // === BAJARSE DE EVENTO ===
+    function bajarseEvento(idReserva, idSocioObjetivo = null) {
+      if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
+      
+      const params = new URLSearchParams({
+        action: 'bajarse',
+        id_actividad: idReserva,
+        tipo_actividad: 'reserva'
+      });
+      if (idSocioObjetivo) {
+        params.append('id_socio_objetivo', idSocioObjetivo);
+      }
+      
+      fetch('../api/gestion_eventos.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: params
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          mostrarToast('✅ Te has dado de baja del evento');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          mostrarToast('❌ ' + data.message);
+        }
+      });
+    }
+
+    // === VALIDAR PAGO ===
+    function validarPago(idCuota) {
+      if (!confirm('¿Confirmar pago como válido?')) return;
+      
+      fetch('../api/validar_pago.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_cuota: idCuota})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          mostrarToast('✅ Pago validado');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          mostrarToast('❌ ' + data.message);
+        }
+      });
+    }
+
+    // === CARGAR DETALLE EVENTOS ===
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}`;
+    }
+
+    function cargarDetalleEventos(filtro = 'inscritos') {
+      let url = '';
+
+      // Determinar qué API usar según el filtro
+      if (filtro === 'cuotas') {
+          const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+          url = esResponsable 
+              ? '../api/cargar_cuotas_responsable.php'
+              : '../api/cargar_cuotas_socio.php';
+      } else {
+          url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
+      }
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const tbody = document.querySelector('.dynamic-table tbody');
+          if (!tbody) return;
+
+          if (data.error) {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">${data.error}</td></tr>`;
+            return;
+          }
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:1.5rem;">Sin datos para mostrar</td></tr>`;
+            return;
+          }
+
+          let html = '';
+          data.forEach(row => {
+            if (filtro === 'cuotas') {
+              html += `
+                <tr>
+                  <td>${formatDate(row.fecha_evento)}</td>
+                  <td>-</td>
+                  <td>${row.origen || '-'}</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                  <td>${row.nombre_socio || '-'}</td>
+                  <td>-</td>
+                  <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                  <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                  <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                  <td>
+                    ${row.estado === 'en_revision' ? 
+                      `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>` : 
+                      '-'}
+                  </td>
+                </tr>
+              `;
+            } else {
+              let botonAccion = '-';
+              if (filtro === 'socios') {
+                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                  if (esResponsable) {
+                      botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
+                  }
+              } else if (filtro === 'inscritos') {
+                  const esMiInscripcion = (row.nombre === '<?= addslashes(htmlspecialchars($socio_actual['nombre'] ?? '')) ?>');
+                  if (esMiInscripcion) {
+                      botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
+                  }
+                  // Responsables pueden ver "Bajar" para todos en eventos futuros
+                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                  if (esResponsable) {
+                      const fechaEvento = new Date(row.fecha);
+                      const hoy = new Date();
+                      hoy.setHours(0, 0, 0, 0);
+                      if (fechaEvento >= hoy) {
+                          botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + row.id_socio + ')">Bajar</button>';
+                      }
+                  }
+              }
+              html += `
+                <tr>
+                  <td>${formatDate(row.fecha)}</td>
+                  <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                  <td>${row.id_tipoevento || '-'}</td>
+                  <td>${row.id_club}</td>
+                  <td>${row.id_cancha}</td>
+                  <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                  <td>${row.nombre || '-'}</td>
+                  <td>${row.posicion_jugador || '-'}</td>
+                  <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                  <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                  <td>${row.comentario || '-'}</td>
+                  <td>${botonAccion}</td>
+                </tr>
+              `;
+            }
+          });
+          tbody.innerHTML = html;
+        })
+        .catch(err => {
+          console.error('Error al cargar datos:', err);
+          const tbody = document.querySelector('.dynamic-table tbody');
+          if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al cargar datos</td></tr>`;
+          }
+        });
+    }
+
+    // === INICIALIZAR AL CARGAR LA PÁGINA ===
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarDetalleEventos('inscritos');
+      
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const filtro = btn.getAttribute('data-filter');
+          cargarDetalleEventos(filtro);
+        });
+      });
+
+      // Solicitar permiso para notificaciones
+      requestNotificationPermission();
+    });
+  </script>
 
     <!-- Modal Compartir Club -->
     <div id="modalCompartir" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
@@ -1266,5 +1483,38 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <button onclick="cerrarModalCompartir()" style="background:#6c757d; color:white; border:none; padding:0.5rem 1rem; border-radius:6px;">Cerrar</button>
       </div>
     </div>
+
+    <!-- Modal Equipos IA -->
+    <div id="modalEquipos" class="submodal" style="display:none;">
+      <div class="submodal-content">
+        <h3>⚽ Equipos Futbolito</h3>
+        
+        <div style="display:flex;gap:2rem;margin:1.5rem 0;">
+          <div style="flex:1;background:#ffebee;padding:1rem;border-radius:8px;">
+            <h4 style="color:#e74c3c;">🔴 Rojos</h4>
+            <ul id="equipoRojos"></ul>
+          </div>
+          <div style="flex:1;background:#e3f2fd;padding:1rem;border-radius:8px;">
+            <h4 style="color:#2980b9;">⚪ Blancos</h4>
+            <ul id="equipoBlancos"></ul>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <label>Mejor jugador:</label>
+            <select id="mejorJugador" style="width:100%;padding:0.5rem;"></select>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <label>Marcador final (Ej: 8-6):</label>
+            <input type="text" id="marcador" placeholder="8-6" style="width:100%;padding:0.5rem;">
+          </div>
+        </div>
+
+        <button onclick="guardarEquipos()" class="btn-submit" style="margin-top:1.5rem;">Guardar Equipos</button>
+        <button onclick="cerrarModalEquipos()" style="margin-top:0.5rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
+      </div>
+    </div>
+
   </body>
 </html>

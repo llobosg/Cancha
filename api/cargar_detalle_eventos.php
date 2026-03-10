@@ -1,5 +1,15 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+
+// Evitar salida de errores como HTML
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// Limpiar cualquier salida previa
+if (ob_get_level() > 0) {
+    ob_clean();
+}
+
 require_once __DIR__ . '/../includes/config.php';
 
 session_start();

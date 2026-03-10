@@ -29,6 +29,10 @@ function loadEnvVars() {
 
 $env = loadEnvVars();
 
+// config.php
+define('VAPID_PUBLIC_KEY', 'tu_clave_publica_aqui'); // Ej: BMx...
+define('VAPID_PRIVATE_KEY', 'tu_clave_privada_aqui');
+
 // Validación crítica
 if (empty($env['MYSQLHOST']) || empty($env['MYSQLUSER']) || empty($env['MYSQLDATABASE'])) {
     error_log("❌ Faltan variables de entorno: MYSQLHOST, MYSQLUSER, MYSQLDATABASE");
