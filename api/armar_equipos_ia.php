@@ -97,15 +97,20 @@ try {
     $equipoA = [];
     $equipoB = [];
 
-    // Asignar arqueros
+    // Asignar EXACTAMENTE 1 arquero por equipo
     if (!empty($arqueros)) {
         $equipoA[] = array_shift($arqueros);
-        if (!empty($arqueros)) {
-            $equipoB[] = array_shift($arqueros);
-        }
+    }
+    if (!empty($arqueros)) {
+        $equipoB[] = array_shift($arqueros);
     }
 
-    // Si falta arquero, usar defensa
+    // Los arqueros sobrantes se convierten en "jugadores libres"
+    while (!empty($arqueros)) {
+        $jugadores[] = array_shift($arqueros);
+    }
+
+    // Si falta arquero en algún equipo, usar defensa como fallback
     if (empty($equipoA) && !empty($defensas)) {
         $equipoA[] = array_shift($defensas);
     }
