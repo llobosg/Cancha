@@ -1724,16 +1724,40 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     }
 
     function guardarEquipos() {
-        const marcador = document.getElementById('marcador')?.value;
-        const idMejor = document.getElementById('mejorJugador')?.value;
+        const rojos = Array.from(document.getElementById('equipoRojos').children).map(li => 
+            li.dataset.idSocio
+        );
+        const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li => 
+            li.dataset.idSocio
+        );
         
-        if (!marcador || !idMejor) {
-            alert('Completa marcador y mejor jugador');
+        if (rojos.length === 0 || blancos.length === 0) {
+            alert('Ambos equipos deben tener al menos un jugador');
             return;
         }
         
-        alert('Funcionalidad de guardado implementada en próxima versión');
-        cerrarModalEquipos();
+        fetch('../api/guardar_equipos_manual.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_reserva: <?= $id_reserva ?? 0 ?>,
+                rojos: rojos,
+                blancos: blancos
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('✅ Equipos guardados');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            mostrarToast('❌ Error al guardar equipos');
+        });
     }
 
     function cerrarModalEquipos() {
