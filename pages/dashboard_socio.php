@@ -1252,78 +1252,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       });
     }
 
-    function mostrarModalEquipos(equipos) {
-      const rojosEl = document.getElementById('equipoRojos');
-      const blancosEl = document.getElementById('equipoBlancos');
-      const mejorJugadorEl = document.getElementById('mejorJugador');
-      const modal = document.getElementById('modalEquipos');
-      
-      if (!rojosEl || !blancosEl || !mejorJugadorEl || !modal) return;
-
-      let htmlRojos = '';
-      let htmlBlancos = '';
-      let opcionesJugadores = '<option value="">Seleccionar...</option>';
-      
-      equipos.rojos.forEach(j => {
-        htmlRojos += `<li>${j.alias}</li>`;
-        opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Rojos)</option>`;
-      });
-      
-      equipos.blancos.forEach(j => {
-        htmlBlancos += `<li>${j.alias}</li>`;
-        opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Blancos)</option>`;
-      });
-      
-      rojosEl.innerHTML = htmlRojos;
-      blancosEl.innerHTML = htmlBlancos;
-      mejorJugadorEl.innerHTML = opcionesJugadores;
-      modal.style.display = 'flex';
-    }
-
-    function guardarEquipos() {
-      const marcador = document.getElementById('marcador').value;
-      const idMejor = document.getElementById('mejorJugador').value;
-      
-      if (!marcador || !idMejor) {
-          alert('Completa marcador y mejor jugador');
-          return;
-      }
-      
-      // Obtener jugadores actuales en cada equipo
-      const rojos = Array.from(document.getElementById('equipoRojos').children).map(li => 
-          li.dataset.idSocio
-      );
-      const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li => 
-          li.dataset.idSocio
-      );
-      
-      fetch('../api/guardar_equipos_manual.php', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-              id_reserva: <?= $id_reserva ?>,
-              rojos: rojos,
-              blancos: blancos,
-              marcador: marcador,
-              mejor_jugador: idMejor
-          })
-      })
-      .then(r => r.json())
-      .then(data => {
-          if (data.success) {
-              mostrarToast('✅ Equipos guardados');
-              setTimeout(() => location.reload(), 1500);
-          } else {
-              mostrarToast('❌ ' + data.message);
-          }
-      });
-    }
-
-    function cerrarModalEquipos() {
-      const modal = document.getElementById('modalEquipos');
-      if (modal) modal.style.display = 'none';
-    }
-
     // === EDITAR PERFIL SOCIO ===
     function editarPerfilSocio(idSocio) {
       window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
@@ -1541,16 +1469,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
         <h3>⚽ Equipos Futbolito</h3>
         
-        <div style="display:flex;gap:1rem;margin:1.5rem 0;">
+        <div style="display:flex;gap:2rem;margin:1.5rem 0;">
+          <!-- Equipo Rojos -->
           <div style="flex:1;background:#ffebee;padding:1rem;border-radius:8px;">
             <h4 style="color:#e74c3c;">🔴 Rojos</h4>
-            <ul id="equipoRojos"></ul>
-            <button onclick="moverJugador('rojos', 'blancos')" style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;">→ Mover a Blancos</button>
+            <ul id="equipoRojos" style="list-style:none;padding:0;"></ul>
+            <button onclick="moverJugador('rojos', 'blancos')" 
+                    style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+              → Mover a Blancos
+            </button>
           </div>
+
+          <!-- Equipo Blancos -->
           <div style="flex:1;background:#e3f2fd;padding:1rem;border-radius:8px;">
             <h4 style="color:#2980b9;">⚪ Blancos</h4>
-            <ul id="equipoBlancos"></ul>
-            <button onclick="moverJugador('blancos', 'rojos')" style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;">→ Mover a Rojos</button>
+            <ul id="equipoBlancos" style="list-style:none;padding:0;"></ul>
+            <button onclick="moverJugador('blancos', 'rojos')" 
+                    style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+              → Mover a Rojos
+            </button>
           </div>
         </div>
 
@@ -1569,6 +1506,175 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <button onclick="cerrarModalEquipos()" style="margin-top:0.5rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
       </div>
     </div>
+
+    <script>
+    // Variables globales para seguimiento
+    let jugadorSeleccionado = null;
+    let equipoOrigen = null;
+
+    function mostrarModalEquipos(equipos) {
+        const rojosEl = document.getElementById('equipoRojos');
+        const blancosEl = document.getElementById('equipoBlancos');
+        const mejorJugadorEl = document.getElementById('mejorJugador');
+        const modal = document.getElementById('modalEquipos');
+        
+        if (!rojosEl || !blancosEl || !mejorJugadorEl || !modal) return;
+
+        // Limpiar contenedores
+        rojosEl.innerHTML = '';
+        blancosEl.innerHTML = '';
+        
+        let opcionesJugadores = '<option value="">Seleccionar...</option>';
+        
+        // Crear elementos con data-id y eventos de selección
+        equipos.rojos.forEach(j => {
+            const li = document.createElement('li');
+            li.textContent = j.alias;
+            li.dataset.idSocio = j.id_socio;
+            li.style.padding = '0.3rem';
+            li.style.cursor = 'pointer';
+            li.style.border = '1px solid transparent';
+            li.onclick = () => seleccionarJugador(li, 'rojos');
+            rojosEl.appendChild(li);
+            
+            opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Rojos)</option>`;
+        });
+        
+        equipos.blancos.forEach(j => {
+            const li = document.createElement('li');
+            li.textContent = j.alias;
+            li.dataset.idSocio = j.id_socio;
+            li.style.padding = '0.3rem';
+            li.style.cursor = 'pointer';
+            li.style.border = '1px solid transparent';
+            li.onclick = () => seleccionarJugador(li, 'blancos');
+            blancosEl.appendChild(li);
+            
+            opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Blancos)</option>`;
+        });
+        
+        mejorJugadorEl.innerHTML = opcionesJugadores;
+        modal.style.display = 'flex';
+        
+        // === 👇 AQUÍ VA EL BLOQUE DE BOTONES DE MOVIMIENTO 👇 ===
+        // Eliminar controles previos si existen
+        const controlesPrevios = document.querySelector('.controles-mover');
+        if (controlesPrevios) controlesPrevios.remove();
+        
+        const controles = document.createElement('div');
+        controles.className = 'controles-mover';
+        controles.style.display = 'flex';
+        controles.style.gap = '1rem';
+        controles.style.marginTop = '1rem';
+        controles.style.justifyContent = 'center';
+
+        const btnRojosABlancos = document.createElement('button');
+        btnRojosABlancos.textContent = '→ Rojos a Blancos';
+        btnRojosABlancos.onclick = () => moverJugador('rojos', 'blancos');
+        btnRojosABlancos.style.padding = '0.3rem 0.6rem';
+        btnRojosABlancos.style.background = '#2980b9';
+        btnRojosABlancos.style.color = 'white';
+        btnRojosABlancos.style.border = 'none';
+        btnRojosABlancos.style.borderRadius = '4px';
+        btnRojosABlancos.style.cursor = 'pointer';
+
+        const btnBlancosARojos = document.createElement('button');
+        btnBlancosARojos.textContent = '→ Blancos a Rojos';
+        btnBlancosARojos.onclick = () => moverJugador('blancos', 'rojos');
+        btnBlancosARojos.style.padding = '0.3rem 0.6rem';
+        btnBlancosARojos.style.background = '#e74c3c';
+        btnBlancosARojos.style.color = 'white';
+        btnBlancosARojos.style.border = 'none';
+        btnBlancosARojos.style.borderRadius = '4px';
+        btnBlancosARojos.style.cursor = 'pointer';
+
+        controles.appendChild(btnRojosABlancos);
+        controles.appendChild(btnBlancosARojos);
+        
+        // Insertar controles debajo de los equipos
+        const submodalContent = document.querySelector('.submodal-content');
+        if (submodalContent) {
+            // Buscar el último elemento antes del footer (mejor jugador/marcador)
+            const marcadorSection = document.getElementById('marcador')?.parentElement;
+            if (marcadorSection) {
+                marcadorSection.parentNode.insertBefore(controles, marcadorSection);
+            } else {
+                // Si no hay marcador, poner al final
+                submodalContent.appendChild(controles);
+            }
+        }
+        // === 👆 FIN DEL BLOQUE 👆 ===
+        
+        // Reiniciar selección
+        jugadorSeleccionado = null;
+        equipoOrigen = null;
+    }
+
+    function seleccionarJugador(elemento, equipo) {
+        // Quitar selección previa
+        document.querySelectorAll('#equipoRojos li, #equipoBlancos li').forEach(el => {
+            el.style.border = '1px solid transparent';
+            el.style.backgroundColor = '';
+        });
+        
+        // Aplicar selección actual
+        elemento.style.border = '2px solid #3498DB';
+        elemento.style.backgroundColor = '#d6eaf8';
+        
+        jugadorSeleccionado = elemento.dataset.idSocio;
+        equipoOrigen = equipo;
+    }
+
+    function moverJugador(de, a) {
+        if (!jugadorSeleccionado) {
+            alert('Selecciona un jugador primero');
+            return;
+        }
+        
+        const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
+        const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
+        
+        if (destino.children.length >= 7) {
+            alert('El equipo ya tiene 7 jugadores');
+            return;
+        }
+        
+        // Encontrar el elemento seleccionado
+        let elementoSeleccionado = null;
+        Array.from(origen.children).forEach(li => {
+            if (li.dataset.idSocio == jugadorSeleccionado) {
+                elementoSeleccionado = li;
+            }
+        });
+        
+        if (elementoSeleccionado) {
+            destino.appendChild(elementoSeleccionado);
+            // Limpiar selección
+            jugadorSeleccionado = null;
+            equipoOrigen = null;
+            elementoSeleccionado.style.border = '1px solid transparent';
+            elementoSeleccionado.style.backgroundColor = '';
+        }
+    }
+
+    function guardarEquipos() {
+        const marcador = document.getElementById('marcador')?.value;
+        const idMejor = document.getElementById('mejorJugador')?.value;
+        
+        if (!marcador || !idMejor) {
+            alert('Completa marcador y mejor jugador');
+            return;
+        }
+        
+        alert('Funcionalidad de guardado implementada en próxima versión');
+        cerrarModalEquipos();
+    }
+
+    function cerrarModalEquipos() {
+        const modal = document.getElementById('modalEquipos');
+        if (modal) modal.style.display = 'none';
+    }
+    </script>
 
   </body>
 </html>
