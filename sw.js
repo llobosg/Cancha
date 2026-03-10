@@ -18,18 +18,11 @@ self.addEventListener('install', (event) => {
 });
 
 // Fetch con caché
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Si está en caché, devolverlo
-        if (response) {
-          return response;
-        }
-        // Si no, ir a red
-        return fetch(event.request);
-      })
-  );
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => response || fetch(event.request))
+    );
 });
 
 self.addEventListener('push', function(event) {
