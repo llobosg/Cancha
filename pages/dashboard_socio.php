@@ -1395,11 +1395,19 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       // Determinar qué API usar según el filtro
       if (filtro === 'cuotas') {
           const esResponsable = <?= json_encode($es_responsable) ?>;
-          url = esResponsable 
-              ? '../api/cargar_cuotas_responsable.php'
-              : '../api/cargar_cuotas_socio.php';
-      } else {
-          url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
+          if (esResponsable && row.estado === 'en_revision') {
+              // Mostrar botones de validación
+              botonAccion = `
+                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>
+              `;
+          } else if (esResponsable && row.estado === 'pendiente') {
+              // Opción para revisar (marcar como "en_revision")
+              botonAccion = `
+                  <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>
+              `;
+          } else {
+              botonAccion = '-';
+          }
       }
 
       fetch(url)
@@ -1797,6 +1805,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             console.error('Error:', error);
         }
     });
+
+    function revisarPago(idCuota) {
+        if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
+        
+        fetch('../api/revisar_pago.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({id_cuota: idCuota})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('✅ Cuota en revisión');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        });
+    }
     </script>
 
   </body>
