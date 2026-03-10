@@ -41,46 +41,102 @@ try {
         throw new Exception('Se requieren al menos 10 jugadores para armar equipos');
     }
 
-    // Agrupar por habilidad
-    $malos = [];
-    $intermedios = [];
-    $cracks = [];
+    // Agrupar jugadores por posición y habilidad
+    $posiciones = [
+        'Arquero' => [],
+        'Defensa' => [],      // Incluye "Atrás", "Central"
+        'Medio' => [],
+        'Lateral' => [],      // Incluye "Lateral izq", "Lateral der"
+        'Delantero' => [],    // Incluye "Delantero izq", "Delantero der", "Adelante"
+        'Jugador' => []       // Puede ir en cualquier posición
+    ];
+
+    $habilidades = ['Básica' => [], 'Intermedia' => [], 'Avanzada' => []];
 
     foreach ($inscritos as $socio) {
-        switch ($socio['habilidad']) {
-            case 'Avanzada': $cracks[] = $socio; break;
-            case 'Intermedia': $intermedios[] = $socio; break;
-            case 'Básica':
-            default: $malos[] = $socio; break;
+        // Clasificar por posición
+        $pos = $socio['posicion_jugador'] ?? 'Jugador';
+        if (strpos($pos, 'Arquero') !== false) {
+            $posiciones['Arquero'][] = $socio;
+        } elseif (strpos($pos, 'Defensa') !== false || strpos($pos, 'Atrás') !== false || strpos($pos, 'Central') !== false) {
+            $posiciones['Defensa'][] = $socio;
+        } elseif (strpos($pos, 'Medio') !== false) {
+            $posiciones['Medio'][] = $socio;
+        } elseif (strpos($pos, 'Lateral') !== false) {
+            $posiciones['Lateral'][] = $socio;
+        } elseif (strpos($pos, 'Delantero') !== false || strpos($pos, 'Adelante') !== false) {
+            $posiciones['Delantero'][] = $socio;
+        } else {
+            $posiciones['Jugador'][] = $socio;
         }
+        
+        // Clasificar por habilidad
+        $habilidades[$socio['habilidad']][] = $socio;
     }
 
     // Mezclar aleatoriamente
-    shuffle($malos);
-    shuffle($intermedios);
-    shuffle($cracks);
+    foreach ($posiciones as &$grupo) shuffle($grupo);
+    foreach ($habilidades as &$grupo) shuffle($grupo);
 
-    // Distribuir alternadamente
+    // Distribuir arqueros primero (mínimo 1 por equipo)
     $equipoA = [];
     $equipoB = [];
 
-    $distribuir = function(&$grupo, &$eqA, &$eqB) {
-        foreach ($grupo as $i => $jugador) {
-            if ($i % 2 === 0) $eqA[] = $jugador;
-            else $eqB[] = $jugador;
+    // Asignar arqueros
+    if (!empty($posiciones['Arquero'])) {
+        $equipoA[] = array_shift($posiciones['Arquero']);
+        if (!empty($posiciones['Arquero'])) {
+            $equipoB[] = array_shift($posiciones['Arquero']);
         }
-    };
-
-    $distribuir($cracks, $equipoA, $equipoB);
-    $distribuir($intermedios, $equipoB, $equipoA); // Invertir para balancear
-    $distribuir($malos, $equipoA, $equipoB);
-
-    // Ajustar a 7 jugadores por equipo
-    while (count($equipoA) > 7) {
-        $equipoB[] = array_pop($equipoA);
     }
-    while (count($equipoB) > 7) {
-        $equipoA[] = array_pop($equipoB);
+
+    // Si falta arquero en algún equipo, usar otras posiciones
+    if (count($equipoA) == 0 && !empty($posiciones['Defensa'])) {
+        $equipoA[] = array_shift($posiciones['Defensa']);
+    }
+    if (count($equipoB) == 0 && !empty($posiciones['Defensa'])) {
+        $equipoB[] = array_shift($posiciones['Defensa']);
+    }
+
+    // Completar con otras posiciones en orden específico
+    $orden_posiciones = ['Defensa', 'Medio', 'Lateral', 'Delantero', 'Jugador'];
+    foreach ($orden_posiciones as $pos) {
+        while (!empty($posiciones[$pos]) && (count($equipoA) < 7 || count($equipoB) < 7)) {
+            if (count($equipoA) < 7) {
+                $equipoA[] = array_shift($posiciones[$pos]);
+            }
+            if (!empty($posiciones[$pos]) && count($equipoB) < 7) {
+                $equipoB[] = array_shift($posiciones[$pos]);
+            }
+        }
+    }
+
+    // Balancear habilidades (máximo 3 cracks por equipo)
+    $cracksA = array_filter($equipoA, fn($j) => $j['habilidad'] === 'Avanzada');
+    $cracksB = array_filter($equipoB, fn($j) => $j['habilidad'] === 'Avanzada');
+
+    if (count($cracksA) > 3 && count($cracksB) < 3) {
+        // Mover un crack de A a B
+        foreach ($equipoA as $i => $jugador) {
+            if ($jugador['habilidad'] === 'Avanzada') {
+                $equipoB[] = $jugador;
+                unset($equipoA[$i]);
+                break;
+            }
+        }
+        $equipoA = array_values($equipoA);
+    }
+
+    // Asegurar al menos 1 "Básico" por equipo
+    $bajosA = array_filter($equipoA, fn($j) => $j['habilidad'] === 'Básica');
+    $bajosB = array_filter($equipoB, fn($j) => $j['habilidad'] === 'Básica');
+
+    if (empty($bajosA) && !empty($habilidades['Básica'])) {
+        // Reemplazar un jugador de A con uno "Básico"
+        $equipoA[0] = array_shift($habilidades['Básica']);
+    }
+    if (empty($bajosB) && !empty($habilidades['Básica'])) {
+        $equipoB[0] = array_shift($habilidades['Básica']);
     }
 
     // Guardar en base de datos

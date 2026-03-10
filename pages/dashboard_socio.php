@@ -1281,16 +1281,42 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     }
 
     function guardarEquipos() {
-      const marcador = document.getElementById('marcador')?.value;
-      const idMejor = document.getElementById('mejorJugador')?.value;
+      const marcador = document.getElementById('marcador').value;
+      const idMejor = document.getElementById('mejorJugador').value;
       
       if (!marcador || !idMejor) {
-        alert('Completa marcador y mejor jugador');
-        return;
+          alert('Completa marcador y mejor jugador');
+          return;
       }
       
-      alert('Funcionalidad de guardado implementada en próxima versión');
-      cerrarModalEquipos();
+      // Obtener jugadores actuales en cada equipo
+      const rojos = Array.from(document.getElementById('equipoRojos').children).map(li => 
+          li.dataset.idSocio
+      );
+      const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li => 
+          li.dataset.idSocio
+      );
+      
+      fetch('../api/guardar_equipos_manual.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+              id_reserva: <?= $id_reserva ?>,
+              rojos: rojos,
+              blancos: blancos,
+              marcador: marcador,
+              mejor_jugador: idMejor
+          })
+      })
+      .then(r => r.json())
+      .then(data => {
+          if (data.success) {
+              mostrarToast('✅ Equipos guardados');
+              setTimeout(() => location.reload(), 1500);
+          } else {
+              mostrarToast('❌ ' + data.message);
+          }
+      });
     }
 
     function cerrarModalEquipos() {
@@ -1478,6 +1504,17 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       // Solicitar permiso para notificaciones
       requestNotificationPermission();
     });
+
+    function moverJugador(de, a) {
+        const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
+        const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
+        
+        // Obtener jugador seleccionado (por ahora el último)
+        if (origen.children.length > 0) {
+            const jugador = origen.removeChild(origen.lastElementChild);
+            destino.appendChild(jugador);
+        }
+    }
   </script>
 
     <!-- Modal Compartir Club -->
@@ -1500,18 +1537,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     </div>
 
     <!-- Modal Equipos IA -->
-    <div id="modalEquipos" class="submodal" style="display:none;">
-      <div class="submodal-content">
+    <div id="modalEquipos" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+      <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
         <h3>⚽ Equipos Futbolito</h3>
         
-        <div style="display:flex;gap:2rem;margin:1.5rem 0;">
+        <div style="display:flex;gap:1rem;margin:1.5rem 0;">
           <div style="flex:1;background:#ffebee;padding:1rem;border-radius:8px;">
             <h4 style="color:#e74c3c;">🔴 Rojos</h4>
             <ul id="equipoRojos"></ul>
+            <button onclick="moverJugador('rojos', 'blancos')" style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;">→ Mover a Blancos</button>
           </div>
           <div style="flex:1;background:#e3f2fd;padding:1rem;border-radius:8px;">
             <h4 style="color:#2980b9;">⚪ Blancos</h4>
             <ul id="equipoBlancos"></ul>
+            <button onclick="moverJugador('blancos', 'rojos')" style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;">→ Mover a Rojos</button>
           </div>
         </div>
 
