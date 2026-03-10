@@ -1298,7 +1298,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     // === ARMAR EQUIPOS IA ===
     function armarEquiposIA(idReserva) {
-        console.log('Iniciando armado de equipos para reserva:', idReserva);
+        console.log('🔍 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
         
         fetch('../api/armar_equipos_ia.php', {
             method: 'POST',
@@ -1306,20 +1306,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             body: new URLSearchParams({id_reserva: idReserva})
         })
         .then(response => {
-            console.log('Respuesta recibida, status:', response.status);
+            console.log('✅ [Frontend] Respuesta recibida, status:', response.status);
+            if (!response.ok) {
+                throw new Error('Respuesta no OK: ' + response.status);
+            }
             return response.json();
         })
         .then(data => {
-            console.log('Datos recibidos:', data);
+            console.log('📊 [Frontend] Datos recibidos:', data);
             if (data.success) {
+                console.log('🟢 [Frontend] Llamando a mostrarModalEquipos()');
                 mostrarModalEquipos(data.equipos);
             } else {
+                console.error('🔴 [Frontend] Error desde API:', data.message);
                 alert('Error: ' + data.message);
             }
         })
         .catch(err => {
-            console.error('Error en armado de equipos:', err);
-            alert('Error al armar equipos');
+            console.error('💥 [Frontend] Error en armado de equipos:', err);
+            alert('Error al armar equipos: ' + err.message);
         });
     }
 

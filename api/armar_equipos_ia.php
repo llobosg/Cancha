@@ -8,7 +8,18 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
+// Función para escribir logs
+function logMessage($message) {
+    $logFile = __DIR__ . '/logs/equipos_ia.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND | LOCK_EX);
+}
+
 try {
+    logMessage("=== INICIO ARMADO EQUIPOS IA ===");
+    logMessage("SESSION: " . json_encode($_SESSION));
+    logMessage("POST: " . json_encode($_POST));
+
     // Validar sesión
     if (!isset($_SESSION['club_id']) || empty($_POST['id_reserva'])) {
         throw new Exception('Acceso no autorizado');
@@ -16,6 +27,8 @@ try {
 
     $id_reserva = (int)$_POST['id_reserva'];
     $club_id = $_SESSION['club_id'];
+
+    logMessage("ID Reserva: {$id_reserva}, Club ID: {$club_id}");
 
     // Verificar reserva
     $stmt = $pdo->prepare("SELECT id_reserva FROM reservas WHERE id_reserva = ? AND id_club = ?");
@@ -39,6 +52,7 @@ try {
     ");
     $stmt->execute([$id_reserva]);
     $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    logMessage("Inscritos encontrados: " . count($inscritos));
 
     if (count($inscritos) < 10) {
         throw new Exception('Se requieren al menos 10 jugadores');
@@ -68,6 +82,8 @@ try {
             $jugadores[] = $socio;
         }
     }
+
+    logMessage("Clasificación: Arqueros=" . count($arqueros) . ", Defensas=" . count($defensas) . ", Medios=" . count($medios) . ", Laterales=" . count($laterales) . ", Delanteros=" . count($delanteros) . ", Jugadores=" . count($jugadores));
 
     // Mezclar
     shuffle($arqueros);
@@ -109,6 +125,9 @@ try {
             }
         }
     }
+
+    logMessage("Equipo A: " . count($equipoA) . " jugadores");
+    logMessage("Equipo B: " . count($equipoB) . " jugadores");
 
     // Balancear habilidades
     $cracksA = array_filter($equipoA, fn($j) => $j['habilidad'] === 'Avanzada');
@@ -154,10 +173,13 @@ try {
 
     $pdo->commit();
 
+    logMessage("✅ Equipos guardados exitosamente");
     echo json_encode(['success' => true, 'equipos' => ['rojos' => $equipoA, 'blancos' => $equipoB]]);
 
 } catch (Exception $e) {
     if (isset($pdo)) $pdo->rollBack();
+    $error_msg = 'Error: ' . $e->getMessage();
+    logMessage($error_msg);
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
