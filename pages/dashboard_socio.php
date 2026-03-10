@@ -66,6 +66,7 @@ if ($modo_individual) {
 // 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS 🔥
 $id_socio = null;
 $socio_actual = null;
+
 // Verificar si ya tenemos id_socio en sesión y es válido
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
@@ -78,8 +79,6 @@ if (isset($_SESSION['id_socio'])) {
         $stmt_validate->execute([$id_socio, $club_id]);
     }
     $socio_actual = $stmt_validate->fetch();
-    const esResponsable = <?= json_encode($es_responsable) ?>;
-
     error_log("Socio actual encontrado: " . ($socio_actual ? 'true' : 'false'));
     if (!$socio_actual) {
         $id_socio = null;
@@ -87,6 +86,7 @@ if (isset($_SESSION['id_socio'])) {
         error_log("❌ Socio no válido, limpiando ID");
     }
 }
+
 if (!$id_socio) {
     error_log("No hay ID_SOCIO válido, buscando por email...");
     $user_email = null;
@@ -129,6 +129,7 @@ if (!$id_socio) {
     $_SESSION['id_socio'] = $id_socio;
     error_log("✓ ID_SOCIO ya existía en sesión");
 }
+
 // Asegurar que $socio_actual esté definida
 if (!$socio_actual) {
     error_log("Cargando socio_actual desde fallback...");
@@ -142,6 +143,10 @@ if (!$socio_actual) {
     $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
     error_log("Socio actual fallback: " . ($socio_actual ? 'cargado' : 'predeterminado'));
 }
+
+// ✅ DEFINIR $es_responsable UNA SOLA VEZ (CORRECCIÓN CLAVE)
+$es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1;
+
 // Guardar en sesión
 if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
