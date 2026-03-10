@@ -724,42 +724,62 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
               <?php
-              // Obtener último partido con equipos (solo si hay equipos armados)
-              $stmt_last = $pdo->prepare("
+              // Obtener próximo evento (no último)
+              $stmt_next = $pdo->prepare("
                   SELECT 
-                      ep.id_equipo,
+                      r.id_reserva,
+                      r.fecha,
+                      r.hora_inicio,
                       ep.nombre_equipo,
                       ep.marcador_final,
-                      r.fecha,
-                      r.id_reserva
-                  FROM equipos_partido ep
-                  JOIN reservas r ON ep.id_reserva = r.id_reserva
-                  WHERE r.id_club = ?
-                  ORDER BY r.fecha DESC
+                      je.mejor_jugador,
+                      s.alias as mejor_jugador_alias,
+                      s.foto_url as foto_mejor
+                  FROM reservas r
+                  LEFT JOIN equipos_partido ep ON r.id_reserva = ep.id_reserva
+                  LEFT JOIN jugadores_equipo je ON ep.id_equipo = je.id_equipo AND je.mejor_jugador = 1
+                  LEFT JOIN socios s ON je.id_socio = s.id_socio
+                  WHERE r.id_club = ? AND r.fecha >= CURDATE()
+                  ORDER BY r.fecha ASC, r.hora_inicio ASC
                   LIMIT 1
               ");
-              $stmt_last->execute([$_SESSION['club_id']]);
-              $ultimo_partido = $stmt_last->fetch();
-              
-              if ($ultimo_partido && $es_responsable): ?>
-                <p><strong><?= htmlspecialchars($ultimo_partido['nombre_equipo']) ?></strong> 
-                  <?= $ultimo_partido['marcador_final'] ? 'hizo ' . $ultimo_partido['marcador_final'] . ' goles' : 'sin marcador' ?></p>
-                <p><strong>Fecha:</strong> <?= date('d/m', strtotime($ultimo_partido['fecha'])) ?></p>
-                
+              $stmt_next->execute([$_SESSION['club_id']]);
+              $proximo_partido = $stmt_next->fetch();
+
+              if ($proximo_partido && $es_responsable): ?>
+                <?php
+                $fecha_evento = new DateTime($proximo_partido['fecha'] . ' ' . $proximo_partido['hora_inicio']);
+                $ahora = new DateTime();
+                $diferencia = $ahora->diff($fecha_evento);
+                $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
+                ?>
+
+                <p><strong>Quedan <?= $horas_restantes ?> horas para el partido</strong></p>
+
                 <!-- Formulario post-partido -->
                 <form id="postPartidoForm" style="margin-top:1rem;">
-                  <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                  <input type="hidden" name="id_reserva" value="<?= $proximo_partido['id_reserva'] ?>">
                   
-                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Marcador final (Ej: 8-6):</label>
-                  <input type="text" name="marcador" placeholder="8-6" 
-                        value="<?= htmlspecialchars($ultimo_partido['marcador_final'] ?? '') ?>"
-                        style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                  
-                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Mejor jugador:</label>
-                  <select name="mejor_jugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                  <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                    <div style="flex:1;">
+                      <label style="font-weight:bold;">Rojos:</label>
+                      <input type="number" name="goles_rojos" placeholder="0" 
+                            value="<?= htmlspecialchars($proximo_partido['marcador_final'] ?? '') ?>"
+                            style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                    </div>
+                    <div style="flex:1;">
+                      <label style="font-weight:bold;">Blancos:</label>
+                      <input type="number" name="goles_blancos" placeholder="0" 
+                            value="0"
+                            style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                    </div>
+                  </div>
+
+                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltika:</label>
+                  <select name="jugador_experto" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                     <option value="">Seleccionar...</option>
                     <?php
-                    // Obtener todos los jugadores del último partido
+                    // Obtener todos los jugadores del próximo partido
                     $stmt_jugadores = $pdo->prepare("
                         SELECT s.id_socio, s.alias
                         FROM jugadores_equipo je
@@ -767,22 +787,30 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         JOIN equipos_partido ep ON je.id_equipo = ep.id_equipo
                         WHERE ep.id_reserva = ?
                     ");
-                    $stmt_jugadores->execute([$ultimo_partido['id_reserva']]);
+                    $stmt_jugadores->execute([$proximo_partido['id_reserva']]);
                     while ($jugador = $stmt_jugadores->fetch()): ?>
                       <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
                     <?php endwhile; ?>
                   </select>
-                  
+
                   <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-                    Guardar Resultado
+                    Grabar Resultado
                   </button>
                 </form>
+
+              <?php elseif ($proximo_partido): ?>
+                <!-- Mostrar resultado si ya está grabado -->
+                <p><strong>Rojos:</strong> <?= $proximo_partido['marcador_final'] ?? '0' ?> - 
+                  <strong>Blancos:</strong> <?= $proximo_partido['marcador_final'] ?? '0' ?></p>
                 
-              <?php elseif ($ultimo_partido): ?>
-                <p><strong><?= htmlspecialchars($ultimo_partido['nombre_equipo']) ?></strong> 
-                  <?= $ultimo_partido['marcador_final'] ? 'hizo ' . $ultimo_partido['marcador_final'] . ' goles' : 'sin marcador' ?></p>
-                <p><strong>Fecha:</strong> <?= date('d/m', strtotime($ultimo_partido['fecha'])) ?></p>
-                
+                <?php if ($proximo_partido['mejor_jugador_alias']): ?>
+                  <p><strong>Jugador Xperto:</strong> <?= htmlspecialchars($proximo_partido['mejor_jugador_alias']) ?></p>
+                  <?php if ($proximo_partido['foto_mejor']): ?>
+                    <img src="../uploads/fotos/<?= htmlspecialchars($proximo_partido['foto_mejor']) ?>" 
+                        alt="Mejor jugador" style="width:80px;height:80px;border-radius:50%;margin-top:0.5rem;">
+                  <?php endif; ?>
+                <?php endif; ?>
+
               <?php else: ?>
                 <p style="margin-top:2rem;">Próximamente disponible</p>
               <?php endif; ?>
@@ -1500,7 +1528,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- Modal Equipos IA -->
     <div id="modalEquipos" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
       <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
-        <h3>⚽ Algoritmo IA, Equipos Futbolito</h3>
+        <h3>⚽ Equipos Futbolito</h3>
         
         <div style="display:flex;gap:2rem;margin:1.5rem 0;">
           <!-- Equipo Rojos -->
@@ -1509,7 +1537,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <ul id="equipoRojos" style="list-style:none;padding:0;"></ul>
             <button onclick="moverJugador('rojos', 'blancos')" 
                     style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-              → Selecciona un jugador y mover a Blancos
+              → Mover a Blancos
             </button>
           </div>
 
@@ -1519,19 +1547,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <ul id="equipoBlancos" style="list-style:none;padding:0;"></ul>
             <button onclick="moverJugador('blancos', 'rojos')" 
                     style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-              ⇐ Selecciona un jugador y mover a Rojos
+              ← Mover a Rojos
             </button>
-          </div>
-        </div>
-
-        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
-          <div style="flex:1;min-width:200px;">
-            <label>Mejor jugador:</label>
-            <select id="mejorJugador" style="width:100%;padding:0.5rem;"></select>
-          </div>
-          <div style="flex:1;min-width:200px;">
-            <label>Marcador final (Ej: 8-6):</label>
-            <input type="text" id="marcador" placeholder="8-6" style="width:100%;padding:0.5rem;">
           </div>
         </div>
 
@@ -1718,6 +1735,39 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         
         if (!marcador || !mejorJugador) {
             alert('Completa marcador y mejor jugador');
+            return;
+        }
+        
+        try {
+            const response = await fetch('../api/guardar_resultado_partido.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                mostrarToast('✅ Resultado guardado');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        } catch (error) {
+            mostrarToast('❌ Error al guardar resultado');
+            console.error('Error:', error);
+        }
+    });
+
+    // Guardar resultado post-partido
+    document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const golesRojos = formData.get('goles_rojos');
+        const golesBlancos = formData.get('goles_blancos');
+        const jugadorExperto = formData.get('jugador_experto');
+        
+        if (!golesRojos && !golesBlancos) {
+            alert('Ingresa al menos un marcador');
             return;
         }
         

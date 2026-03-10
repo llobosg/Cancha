@@ -4,14 +4,14 @@ require_once __DIR__ . '/../includes/config.php';
 session_start();
 
 try {
-    // Validar rol responsable
-    if (!isset($_SESSION['club_id']) || empty($_POST['id_reserva']) || empty($_POST['marcador']) || empty($_POST['mejor_jugador'])) {
+    if (!isset($_SESSION['club_id']) || empty($_POST['id_reserva'])) {
         throw new Exception('Datos incompletos');
     }
     
     $id_reserva = (int)$_POST['id_reserva'];
-    $marcador = $_POST['marcador'];
-    $mejor_jugador = (int)$_POST['mejor_jugador'];
+    $goles_rojos = (int)($_POST['goles_rojos'] ?? 0);
+    $goles_blancos = (int)($_POST['goles_blancos'] ?? 0);
+    $jugador_experto = (int)($_POST['jugador_experto'] ?? 0);
     $club_id = $_SESSION['club_id'];
     
     // Verificar que la reserva pertenece al club
@@ -21,28 +21,25 @@ try {
         throw new Exception('Reserva no encontrada');
     }
     
-    // Determinar equipo ganador y marcador numérico
-    $goles = explode('-', $marcador);
-    $goles_equipo1 = (int)($goles[0] ?? 0);
-    $goles_equipo2 = (int)($goles[1] ?? 0);
-    
-    // Actualizar marcador en ambos equipos
-    $pdo->prepare("UPDATE equipos_partido SET marcador_final = ? WHERE id_reserva = ?")
-         ->execute([$goles_equipo1, $id_reserva]); // Equipo 1 (Rojos)
+    // Actualizar marcadores
+    $pdo->prepare("UPDATE equipos_partido SET marcador_final = ? WHERE id_reserva = ? AND nombre_equipo = 'Rojos'")
+         ->execute([$goles_rojos, $id_reserva]);
     $pdo->prepare("UPDATE equipos_partido SET marcador_final = ? WHERE id_reserva = ? AND nombre_equipo = 'Blancos'")
-         ->execute([$goles_equipo2, $id_reserva]); // Equipo 2 (Blancos)
+         ->execute([$goles_blancos, $id_reserva]);
     
-    // Marcar equipo ganador
+    // Marcar ganador
     $pdo->prepare("UPDATE equipos_partido SET ganador = ? WHERE id_reserva = ? AND nombre_equipo = 'Rojos'")
-         ->execute([$goles_equipo1 > $goles_equipo2, $id_reserva]);
+         ->execute([$goles_rojos > $goles_blancos, $id_reserva]);
     $pdo->prepare("UPDATE equipos_partido SET ganador = ? WHERE id_reserva = ? AND nombre_equipo = 'Blancos'")
-         ->execute([$goles_equipo2 > $goles_equipo1, $id_reserva]);
+         ->execute([$goles_blancos > $goles_rojos, $id_reserva]);
     
-    // Asignar mejor jugador
+    // Asignar jugador experto
     $pdo->prepare("UPDATE jugadores_equipo SET mejor_jugador = 0 WHERE id_equipo IN (SELECT id_equipo FROM equipos_partido WHERE id_reserva = ?)")
          ->execute([$id_reserva]);
-    $pdo->prepare("UPDATE jugadores_equipo SET mejor_jugador = 1 WHERE id_socio = ?")
-         ->execute([$mejor_jugador]);
+    if ($jugador_experto) {
+        $pdo->prepare("UPDATE jugadores_equipo SET mejor_jugador = 1 WHERE id_socio = ?")
+             ->execute([$jugador_experto]);
+    }
     
     echo json_encode(['success' => true]);
     
