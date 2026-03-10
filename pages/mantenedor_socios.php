@@ -418,10 +418,14 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
         </div>
         
         <button type="submit" class="btn-submit">Guardar Cambios</button>
-        <button class="btn-action" style="background:#E74C3C;color:white;padding:0.3rem;"
-                onclick="eliminarSocio(<?= $socio['id_socio'] ?>)">
-            🗑️ Eliminar
-        </button>
+        
+        <!-- BOTÓN DE ELIMINACIÓN CORREGIDO -->
+        <?php if (!$is_ceo): ?>
+          <button class="btn-action" style="background:#E74C3C;color:white;padding:0.3rem;margin-top:1rem;"
+                  onclick="eliminarSocio(<?= $socio_editar['id_socio'] ?>)">
+              🗑️ Eliminar mi cuenta
+          </button>
+        <?php endif; ?>
       </form>
     </div>
   </div>
