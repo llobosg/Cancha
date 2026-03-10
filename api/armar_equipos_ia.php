@@ -6,7 +6,6 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../includes/config.php';
-
 session_start();
 
 try {
@@ -27,7 +26,11 @@ try {
 
     // Obtener los inscritos (mínimo 10, máximo 14)
     $stmt_inscritos = $pdo->prepare("
-        SELECT s.id_socio, s.alias, s.habilidad, i.posicion_jugador
+        SELECT 
+            s.id_socio, 
+            s.alias, 
+            s.habilidad,
+            COALESCE(i.posicion_jugador, 'Jugador') as posicion_jugador
         FROM inscritos i
         JOIN socios s ON i.id_socio = s.id_socio
         WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
@@ -41,13 +44,14 @@ try {
         throw new Exception('Se requieren al menos 10 jugadores para armar equipos');
     }
 
-    // Agrupar jugadores por posición (respetando el orden definido)
-    $posiciones_orden = [
+    // Agrupar por posición y habilidad
+    $posiciones = [
         'Arquero' => [],
         'Defensa' => [],      // Incluye "Atrás", "Central"
         'Medio' => [],
         'Lateral' => [],      // Incluye "Lateral izq", "Lateral der"
-        'Delantero' => []     // Incluye "Delantero izq", "Delantero der", "Adelante"
+        'Delantero' => [],    // Incluye "Delantero izq", "Delantero der", "Adelante"
+        'Jugador' => []       // Puede ir en cualquier posición
     ];
 
     $habilidades = ['Básica' => [], 'Intermedia' => [], 'Avanzada' => []];
@@ -55,59 +59,57 @@ try {
     foreach ($inscritos as $socio) {
         // Clasificar por posición
         $pos = $socio['posicion_jugador'] ?? 'Jugador';
-        
         if (strpos($pos, 'Arquero') !== false) {
-            $posiciones_orden['Arquero'][] = $socio;
+            $posiciones['Arquero'][] = $socio;
         } elseif (strpos($pos, 'Defensa') !== false || strpos($pos, 'Atrás') !== false || strpos($pos, 'Central') !== false) {
-            $posiciones_orden['Defensa'][] = $socio;
+            $posiciones['Defensa'][] = $socio;
         } elseif (strpos($pos, 'Medio') !== false) {
-            $posiciones_orden['Medio'][] = $socio;
+            $posiciones['Medio'][] = $socio;
         } elseif (strpos($pos, 'Lateral') !== false) {
-            $posiciones_orden['Lateral'][] = $socio;
+            $posiciones['Lateral'][] = $socio;
         } elseif (strpos($pos, 'Delantero') !== false || strpos($pos, 'Adelante') !== false) {
-            $posiciones_orden['Delantero'][] = $socio;
+            $posiciones['Delantero'][] = $socio;
         } else {
-            // Jugadores sin posición específica: asignar según necesidad
-            $posiciones_orden['Delantero'][] = $socio; // Último recurso
+            $posiciones['Jugador'][] = $socio;
         }
         
         // Clasificar por habilidad
         $habilidades[$socio['habilidad']][] = $socio;
     }
 
-    // Mezclar aleatoriamente dentro de cada grupo
-    foreach ($posiciones_orden as &$grupo) shuffle($grupo);
+    // Mezclar aleatoriamente
+    foreach ($posiciones as &$grupo) shuffle($grupo);
     foreach ($habilidades as &$grupo) shuffle($grupo);
 
-    // Distribuir manteniendo el orden de posiciones
+    // Distribuir arqueros primero (mínimo 1 por equipo)
     $equipoA = [];
     $equipoB = [];
 
-    // Asignar arqueros primero (mínimo 1 por equipo)
-    if (!empty($posiciones_orden['Arquero'])) {
-        $equipoA[] = array_shift($posiciones_orden['Arquero']);
-        if (!empty($posiciones_orden['Arquero'])) {
-            $equipoB[] = array_shift($posiciones_orden['Arquero']);
+    // Asignar arqueros
+    if (!empty($posiciones['Arquero'])) {
+        $equipoA[] = array_shift($posiciones['Arquero']);
+        if (!empty($posiciones['Arquero'])) {
+            $equipoB[] = array_shift($posiciones['Arquero']);
         }
     }
 
     // Si falta arquero en algún equipo, usar Defensa como fallback
-    if (count($equipoA) == 0 && !empty($posiciones_orden['Defensa'])) {
-        $equipoA[] = array_shift($posiciones_orden['Defensa']);
+    if (count($equipoA) == 0 && !empty($posiciones['Defensa'])) {
+        $equipoA[] = array_shift($posiciones['Defensa']);
     }
-    if (count($equipoB) == 0 && !empty($posiciones_orden['Defensa'])) {
-        $equipoB[] = array_shift($posiciones_orden['Defensa']);
+    if (count($equipoB) == 0 && !empty($posiciones['Defensa'])) {
+        $equipoB[] = array_shift($posiciones['Defensa']);
     }
 
-    // Completar con el orden específico de posiciones
-    $orden_posiciones = ['Defensa', 'Medio', 'Lateral', 'Delantero'];
+    // Completar con otras posiciones en orden específico
+    $orden_posiciones = ['Defensa', 'Medio', 'Lateral', 'Delantero', 'Jugador'];
     foreach ($orden_posiciones as $pos) {
-        while (!empty($posiciones_orden[$pos]) && (count($equipoA) < 7 || count($equipoB) < 7)) {
+        while (!empty($posiciones[$pos]) && (count($equipoA) < 7 || count($equipoB) < 7)) {
             if (count($equipoA) < 7) {
-                $equipoA[] = array_shift($posiciones_orden[$pos]);
+                $equipoA[] = array_shift($posiciones[$pos]);
             }
-            if (!empty($posiciones_orden[$pos]) && count($equipoB) < 7) {
-                $equipoB[] = array_shift($posiciones_orden[$pos]);
+            if (!empty($posiciones[$pos]) && count($equipoB) < 7) {
+                $equipoB[] = array_shift($posiciones[$pos]);
             }
         }
     }
@@ -164,12 +166,13 @@ try {
     $stmt_blancos->execute([$id_reserva]);
     $id_blancos = $pdo->lastInsertId();
 
-    // Asignar jugadores
+    // Asignar jugadores a Rojos
     foreach ($equipoA as $jugador) {
         $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")
              ->execute([$id_rojos, $jugador['id_socio']]);
     }
 
+    // Asignar jugadores a Blancos
     foreach ($equipoB as $jugador) {
         $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")
              ->execute([$id_blancos, $jugador['id_socio']]);
