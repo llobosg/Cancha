@@ -41,6 +41,11 @@ try {
     }
     
     $pdo->commit();
+
+    // Notificar a todos los jugadores
+    require_once __DIR__ . '/notificar_armado_equipos.php';
+    notificarArmadoEquipos($data['id_reserva'], $pdo);
+
     echo json_encode(['success' => true]);
     
 } catch (Exception $e) {
