@@ -754,7 +754,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
                 ?>
 
-                <p><strong>Quedan <?= $horas_restantes ?> horas para el partido</strong></p>
+                <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
 
                 <!-- Formulario post-partido -->
                 <form id="postPartidoForm" style="margin-top:1rem;">
@@ -1298,19 +1298,29 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     // === ARMAR EQUIPOS IA ===
     function armarEquiposIA(idReserva) {
-      fetch('../api/armar_equipos_ia.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_reserva: idReserva})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          mostrarModalEquipos(data.equipos);
-        } else {
-          alert('Error: ' + data.message);
-        }
-      });
+        console.log('Iniciando armado de equipos para reserva:', idReserva);
+        
+        fetch('../api/armar_equipos_ia.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({id_reserva: idReserva})
+        })
+        .then(response => {
+            console.log('Respuesta recibida, status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data);
+            if (data.success) {
+                mostrarModalEquipos(data.equipos);
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error en armado de equipos:', err);
+            alert('Error al armar equipos');
+        });
     }
 
     // === EDITAR PERFIL SOCIO ===
@@ -1525,13 +1535,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       </div>
     </div>
 
-    <!-- Modal Equipos IA -->
+    <!-- Modal Equipos IA - ÚNICA INSTANCIA -->
     <div id="modalEquipos" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
       <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
         <h3>⚽ Equipos Futbolito</h3>
         
         <div style="display:flex;gap:2rem;margin:1.5rem 0;">
-          <!-- Equipo Rojos -->
           <div style="flex:1;background:#ffebee;padding:1rem;border-radius:8px;">
             <h4 style="color:#e74c3c;">🔴 Rojos</h4>
             <ul id="equipoRojos" style="list-style:none;padding:0;"></ul>
@@ -1541,7 +1550,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             </button>
           </div>
 
-          <!-- Equipo Blancos -->
           <div style="flex:1;background:#e3f2fd;padding:1rem;border-radius:8px;">
             <h4 style="color:#2980b9;">⚪ Blancos</h4>
             <ul id="equipoBlancos" style="list-style:none;padding:0;"></ul>
