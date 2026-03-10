@@ -1573,6 +1573,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           </div>
         </div>
 
+        <h3>⚽ Seleccionar un jugador y dar click en barra para mover a los rojos o blancos</h3>
+
         <button onclick="guardarEquipos()" class="btn-submit" style="margin-top:1.5rem;">Guardar Equipos</button>
         <button onclick="cerrarModalEquipos()" style="margin-top:0.5rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
       </div>
@@ -1635,25 +1637,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         controles.style.marginTop = '1rem';
         controles.style.justifyContent = 'center';
 
-        const btnRojosABlancos = document.createElement('button');
-        btnRojosABlancos.textContent = '→ Rojos a Blancos';
-        btnRojosABlancos.onclick = () => moverJugador('rojos', 'blancos');
-        btnRojosABlancos.style.padding = '0.3rem 0.6rem';
-        btnRojosABlancos.style.background = '#2980b9';
-        btnRojosABlancos.style.color = 'white';
-        btnRojosABlancos.style.border = 'none';
-        btnRojosABlancos.style.borderRadius = '4px';
-        btnRojosABlancos.style.cursor = 'pointer';
+        //const btnRojosABlancos = document.createElement('button');
+        //btnRojosABlancos.textContent = '→ Rojos a Blancos';
+        //btnRojosABlancos.onclick = () => moverJugador('rojos', 'blancos');
+        //btnRojosABlancos.style.padding = '0.3rem 0.6rem';
+        //btnRojosABlancos.style.background = '#2980b9';
+        //btnRojosABlancos.style.color = 'white';
+        //btnRojosABlancos.style.border = 'none';
+        //btnRojosABlancos.style.borderRadius = '4px';
+        //btnRojosABlancos.style.cursor = 'pointer';
 
-        const btnBlancosARojos = document.createElement('button');
-        btnBlancosARojos.textContent = '⇐ Blancos a Rojos';
-        btnBlancosARojos.onclick = () => moverJugador('blancos', 'rojos');
-        btnBlancosARojos.style.padding = '0.3rem 0.6rem';
-        btnBlancosARojos.style.background = '#e74c3c';
-        btnBlancosARojos.style.color = 'white';
-        btnBlancosARojos.style.border = 'none';
-        btnBlancosARojos.style.borderRadius = '4px';
-        btnBlancosARojos.style.cursor = 'pointer';
+        //const btnBlancosARojos = document.createElement('button');
+        //btnBlancosARojos.textContent = '⇐ Blancos a Rojos';
+        //btnBlancosARojos.onclick = () => moverJugador('blancos', 'rojos');
+        //btnBlancosARojos.style.padding = '0.3rem 0.6rem';
+        //btnBlancosARojos.style.background = '#e74c3c';
+        //btnBlancosARojos.style.color = 'white';
+        //btnBlancosARojos.style.border = 'none';
+        //btnBlancosARojos.style.borderRadius = '4px';
+        //btnBlancosARojos.style.cursor = 'pointer';
 
         controles.appendChild(btnRojosABlancos);
         controles.appendChild(btnBlancosARojos);
