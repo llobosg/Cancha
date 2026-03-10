@@ -30,8 +30,8 @@ function loadEnvVars() {
 $env = loadEnvVars();
 
 // config.php
-define('VAPID_PUBLIC_KEY', 'tu_clave_publica_aqui'); // Ej: BMx...
-define('VAPID_PRIVATE_KEY', 'tu_clave_privada_aqui');
+define('VAPID_PUBLIC_KEY', 'BCypaxoOeME13Nmd9GpOXoWAHtg7PbShVfJahjEd8CwfUZ18jtTK8yN36DYsKF9iwEdnUn_liiljZ8VM_7Mpwl0');
+define('VAPID_PRIVATE_KEY', 'LfRtDHMIWYhXODl9qSSVOBmKl6nN1qqU36UlOHT8ZEQ');
 
 // Validación crítica
 if (empty($env['MYSQLHOST']) || empty($env['MYSQLUSER']) || empty($env['MYSQLDATABASE'])) {

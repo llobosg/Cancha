@@ -19,6 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 error_log("SESSION después de start: " . print_r($_SESSION, true));
+
 // Determinar si es modo individual
 $modo_individual = !isset($_GET['id_club']) || empty($_GET['id_club']);
 error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
@@ -77,6 +78,8 @@ if (isset($_SESSION['id_socio'])) {
         $stmt_validate->execute([$id_socio, $club_id]);
     }
     $socio_actual = $stmt_validate->fetch();
+    const esResponsable = <?= json_encode($es_responsable) ?>;
+
     error_log("Socio actual encontrado: " . ($socio_actual ? 'true' : 'false'));
     if (!$socio_actual) {
         $id_socio = null;
@@ -675,7 +678,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
                 </button>
 
-                <?php if (!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1): ?>
+                <?php if (!empty($socio_actual) && isset($socio_actual['es_responsable']) && ($es_responsable)): ?>
                   <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
                           onclick="invitarGalletas(<?= $id_reserva ?>)">
                     Invitar Galletas
@@ -1116,21 +1119,27 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     }
 
     function subscribeToPush() {
-      navigator.serviceWorker.ready.then(registration => {
-        return registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array('<?= VAPID_PUBLIC_KEY ?>')
+        const vapidKey = '<?= VAPID_PUBLIC_KEY ?>';
+        if (!vapidKey || vapidKey === 'VAPID_PUBLIC_KEY') {
+            console.warn('VAPID key not configured');
+            return;
+        }
+        
+        navigator.serviceWorker.ready.then(registration => {
+            return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidKey)
+            });
+        }).then(subscription => {
+            fetch('../api/guardar_suscripcion.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id_socio: <?= (int)($_SESSION['id_socio'] ?? 0) ?>,
+                    subscription: subscription
+                })
+            });
         });
-      }).then(subscription => {
-        fetch('../api/guardar_suscripcion.php', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            id_socio: <?= $_SESSION['id_socio'] ?? 0 ?>,
-            subscription: subscription
-          })
-        });
-      });
     }
 
     function urlBase64ToUint8Array(base64String) {
@@ -1349,7 +1358,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // Determinar qué API usar según el filtro
       if (filtro === 'cuotas') {
-          const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+          const esResponsable = <?= json_encode($es_responsable) ?>;
           url = esResponsable 
               ? '../api/cargar_cuotas_responsable.php'
               : '../api/cargar_cuotas_socio.php';
@@ -1398,7 +1407,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             } else {
               let botonAccion = '-';
               if (filtro === 'socios') {
-                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                  const esResponsable = <?= json_encode($es_responsable) ?>;
                   if (esResponsable) {
                       botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
                   }
@@ -1408,7 +1417,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
                   }
                   // Responsables pueden ver "Bajar" para todos en eventos futuros
-                  const esResponsable = <?= json_encode(!empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1) ?>;
+                  const esResponsable = <?= json_encode($es_responsable) ?>;
                   if (esResponsable) {
                       const fechaEvento = new Date(row.fecha);
                       const hoy = new Date();
