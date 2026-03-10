@@ -1578,7 +1578,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     function mostrarModalEquipos(equipos) {
         const rojosEl = document.getElementById('equipoRojos');
         const blancosEl = document.getElementById('equipoBlancos');
-        const mejorJugadorEl = document.getElementById('mejorJugador');
         const modal = document.getElementById('modalEquipos');
         
         // Verificación explícita
@@ -1587,27 +1586,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             alert('Error: Modal no disponible');
             return;
         }
-        
-        if (!rojosEl || !blancosEl || !mejorJugadorEl || !modal) return;
 
         // Limpiar contenedores
         rojosEl.innerHTML = '';
         blancosEl.innerHTML = '';
         
-        let opcionesJugadores = '<option value="">Seleccionar...</option>';
-        
-        // Crear elementos con data-id y eventos de selección
+        // Crear elementos
         equipos.rojos.forEach(j => {
             const li = document.createElement('li');
             li.textContent = j.alias;
             li.dataset.idSocio = j.id_socio;
             li.style.padding = '0.3rem';
             li.style.cursor = 'pointer';
-            li.style.border = '1px solid transparent';
             li.onclick = () => seleccionarJugador(li, 'rojos');
             rojosEl.appendChild(li);
-            
-            opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Rojos)</option>`;
         });
         
         equipos.blancos.forEach(j => {
@@ -1616,15 +1608,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             li.dataset.idSocio = j.id_socio;
             li.style.padding = '0.3rem';
             li.style.cursor = 'pointer';
-            li.style.border = '1px solid transparent';
             li.onclick = () => seleccionarJugador(li, 'blancos');
             blancosEl.appendChild(li);
-            
-            opcionesJugadores += `<option value="${j.id_socio}">${j.alias} (Blancos)</option>`;
         });
         
-        mejorJugadorEl.innerHTML = opcionesJugadores;
         modal.style.display = 'flex';
+    }
         
         // === 👇 AQUÍ VA EL BLOQUE DE BOTONES DE MOVIMIENTO 👇 ===
         // Eliminar controles previos si existen
@@ -1678,7 +1667,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         // Reiniciar selección
         jugadorSeleccionado = null;
         equipoOrigen = null;
-    }
 
     function seleccionarJugador(elemento, equipo) {
         // Quitar selección previa
