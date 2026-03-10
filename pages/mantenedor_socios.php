@@ -418,6 +418,10 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
         </div>
         
         <button type="submit" class="btn-submit">Guardar Cambios</button>
+        <button class="btn-action" style="background:#E74C3C;color:white;padding:0.3rem;"
+                onclick="eliminarSocio(<?= $socio['id_socio'] ?>)">
+            🗑️ Eliminar
+        </button>
       </form>
     </div>
   </div>
@@ -610,6 +614,25 @@ $is_ceo = isset($_SESSION['ceo_id']) && $_SESSION['ceo_rol'] === 'ceo_cancha';
             to { opacity: 0; }
         }
     `;
+
+    function eliminarSocio(idSocio) {
+        if (!confirm('¿Estás seguro de eliminar este socio y todos sus registros?')) return;
+        
+        fetch('../api/eliminar_socio.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({id_socio: idSocio})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('✅ Socio eliminado');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        });
+    }
   </script>
 </body>
 </html>
