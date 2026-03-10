@@ -659,7 +659,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               </div>
 
               <!-- nuevo botón armar equipos IA -->
-              <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 14): ?>
+              <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
                 <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
                         onclick="armarEquiposIA(<?= $id_reserva ?>)">
                   ⚽ Armar Equipos IA
