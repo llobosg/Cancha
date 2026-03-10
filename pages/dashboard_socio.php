@@ -1573,7 +1573,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           </div>
         </div>
 
-        <h3>⚽ Seleccionar un jugador y dar click en barra para mover a los rojos o blancos</h3>
+        <h4>⚽ Seleccionar un jugador y dar click en barra para mover a los Rojos o Blancos</h4>
 
         <button onclick="guardarEquipos()" class="btn-submit" style="margin-top:1.5rem;">Guardar Equipos</button>
         <button onclick="cerrarModalEquipos()" style="margin-top:0.5rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>

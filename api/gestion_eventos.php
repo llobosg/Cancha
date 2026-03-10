@@ -1,4 +1,6 @@
 <?php
+// === SALIDA LIMPIA: evitar cualquier salida previa ===
+ob_start();
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -10,19 +12,18 @@ use Minishlink\WebPush\WebPush;
 
 session_start();
 
-if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Acceso no autorizado']);
-    exit;
-}
-
 try {
+    // Validar sesión y parámetros
+    if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+        throw new Exception('Acceso no autorizado');
+    }
+
     $action = $_POST['action'] ?? '';
     $id_socio = $_SESSION['id_socio'];
     $id_club = $_SESSION['club_id'];
     $club_slug = $_SESSION['current_club'] ?? '';
 
-    if ($action !== 'anotarse') {
+    if ($action !== 'anotarse' && $action !== 'bajarse') {
         throw new Exception('Acción no válida');
     }
 
@@ -68,16 +69,15 @@ try {
     $stmt_check->execute([$id_actividad, $id_socio, $tipo_actividad]);
     $ya_inscrito = $stmt_check->fetch();
 
-    if ($ya_inscrito) {
+    if ($action === 'bajarse') {
         // Dar de baja en inscritos
         $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
             ->execute([$id_actividad, $id_socio, $tipo_actividad]);
         
-        // ✅ Eliminar cuota asociada (con tipo_actividad)
+        // Eliminar cuota asociada
         $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
             ->execute([$id_actividad, $id_socio, $tipo_actividad]);
         
-        $accion = 'bajado';
         $mensaje = "✅ Te has dado de baja del evento";
     } else {
         // === VALIDAR CUPO (solo deportes específicos) ===
@@ -139,7 +139,6 @@ try {
             ")->execute([$id_actividad, $id_socio, $monto_cuota, $fecha_vencimiento, $tipo_actividad]);
         }
 
-        $accion = 'anotado';
         $mensaje = "✅ ¡Inscripción confirmada!";
     }
 
@@ -166,7 +165,7 @@ try {
             ],
         ]);
 
-        $msg = ($accion === 'bajado')
+        $msg = ($action === 'bajarse')
             ? "{$nombre_inscrito} se ha dado de baja"
             : "{$nombre_inscrito} se ha anotado";
 
@@ -187,54 +186,6 @@ try {
         $webPush->flush();
     }
 
-    } elseif ($action === 'bajarse') {
-    // === NUEVA LÓGICA PARA "BAJARSE" ===
-    $id_reserva = (int)($_POST['id_actividad'] ?? 0);
-    // Si es responsable, puede especificar qué socio dar de baja
-    if (isset($_POST['id_socio_objetivo'])) {
-        $id_socio = (int)$_POST['id_socio_objetivo'];
-        // Validar que pertenece al mismo club
-        $stmt_val = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-        $stmt_val->execute([$id_socio, $_SESSION['club_id']]);
-        if (!$stmt_val->fetch()) {
-            throw new Exception('Socio no válido');
-        }
-    } else {
-        $id_socio = $_SESSION['id_socio'];
-    }
-    
-    if (!$id_reserva) {
-        throw new Exception('Reserva no especificada');
-    }
-    
-    // Verificar si el evento es en menos de 24h
-    $stmt_check = $pdo->prepare("SELECT fecha, hora_inicio FROM reservas WHERE id_reserva = ? AND id_club = ?");
-    $stmt_check->execute([$id_reserva, $_SESSION['club_id']]);
-    $evento = $stmt_check->fetch();
-    
-    if (!$evento) {
-        throw new Exception('Evento no encontrado');
-    }
-    
-    $fecha_evento = new DateTime($evento['fecha'] . ' ' . $evento['hora_inicio']);
-    $ahora = new DateTime();
-    $diferencia = $ahora->diff($fecha_evento);
-    $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
-    
-    // Eliminar inscripción
-    $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'")
-        ->execute([$id_reserva, $id_socio]);
-    
-    if ($horas_restantes >= 24) {
-        // Eliminar cuota si es con más de 24h de anticipación
-        $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'")
-            ->execute([$id_reserva, $id_socio]);
-        $mensaje = "Te has bajado del evento y se eliminó tu cuota";
-    } else {
-        // Mantener cuota si es con menos de 24h
-        $mensaje = "Te has bajado del evento, pero se mantiene tu cuota por política de cancelación";
-    }
-    
     echo json_encode(['success' => true, 'message' => $mensaje]);
 
 } catch (Exception $e) {
@@ -242,4 +193,7 @@ try {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+
+// Limpiar buffer de salida
+ob_end_flush();
 ?>
