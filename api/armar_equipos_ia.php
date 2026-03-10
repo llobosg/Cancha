@@ -1,5 +1,5 @@
 <?php
-// === SALIDA LIMPIA: evitar cualquier salida previa ===
+// === SALIDA LIMPIA ===
 ob_start();
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/config.php';
 session_start();
 
 try {
-    // Validar sesión y parámetros
+    // Validar sesión
     if (!isset($_SESSION['club_id']) || empty($_POST['id_reserva'])) {
         throw new Exception('Acceso no autorizado');
     }
@@ -17,15 +17,15 @@ try {
     $id_reserva = (int)$_POST['id_reserva'];
     $club_id = $_SESSION['club_id'];
 
-    // Verificar que la reserva pertenece al club
-    $stmt_check = $pdo->prepare("SELECT id_reserva FROM reservas WHERE id_reserva = ? AND id_club = ?");
-    $stmt_check->execute([$id_reserva, $club_id]);
-    if (!$stmt_check->fetch()) {
+    // Verificar reserva
+    $stmt = $pdo->prepare("SELECT id_reserva FROM reservas WHERE id_reserva = ? AND id_club = ?");
+    $stmt->execute([$id_reserva, $club_id]);
+    if (!$stmt->fetch()) {
         throw new Exception('Reserva no encontrada');
     }
 
-    // Obtener los inscritos (mínimo 10, máximo 14)
-    $stmt_inscritos = $pdo->prepare("
+    // Obtener inscritos
+    $stmt = $pdo->prepare("
         SELECT 
             s.id_socio, 
             s.alias, 
@@ -37,166 +37,130 @@ try {
         ORDER BY s.alias
         LIMIT 14
     ");
-    $stmt_inscritos->execute([$id_reserva]);
-    $inscritos = $stmt_inscritos->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->execute([$id_reserva]);
+    $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (count($inscritos) < 10) {
-        throw new Exception('Se requieren al menos 10 jugadores para armar equipos');
+        throw new Exception('Se requieren al menos 10 jugadores');
     }
 
-    // Agrupar por posición y habilidad
-    $posiciones = [
-        'Arquero' => [],
-        'Defensa' => [],      // Incluye "Atrás", "Central"
-        'Medio' => [],
-        'Lateral' => [],      // Incluye "Lateral izq", "Lateral der"
-        'Delantero' => [],    // Incluye "Delantero izq", "Delantero der", "Adelante"
-        'Jugador' => []       // Puede ir en cualquier posición
-    ];
-
-    $habilidades = ['Básica' => [], 'Intermedia' => [], 'Avanzada' => []];
+    // Clasificar por posición
+    $arqueros = [];
+    $defensas = [];
+    $medios = [];
+    $laterales = [];
+    $delanteros = [];
+    $jugadores = [];
 
     foreach ($inscritos as $socio) {
-        // Clasificar por posición
-        $pos = $socio['posicion_jugador'] ?? 'Jugador';
+        $pos = $socio['posicion_jugador'];
         if (strpos($pos, 'Arquero') !== false) {
-            $posiciones['Arquero'][] = $socio;
+            $arqueros[] = $socio;
         } elseif (strpos($pos, 'Defensa') !== false || strpos($pos, 'Atrás') !== false || strpos($pos, 'Central') !== false) {
-            $posiciones['Defensa'][] = $socio;
+            $defensas[] = $socio;
         } elseif (strpos($pos, 'Medio') !== false) {
-            $posiciones['Medio'][] = $socio;
+            $medios[] = $socio;
         } elseif (strpos($pos, 'Lateral') !== false) {
-            $posiciones['Lateral'][] = $socio;
+            $laterales[] = $socio;
         } elseif (strpos($pos, 'Delantero') !== false || strpos($pos, 'Adelante') !== false) {
-            $posiciones['Delantero'][] = $socio;
+            $delanteros[] = $socio;
         } else {
-            $posiciones['Jugador'][] = $socio;
+            $jugadores[] = $socio;
         }
-        
-        // Clasificar por habilidad
-        $habilidades[$socio['habilidad']][] = $socio;
     }
 
-    // Mezclar aleatoriamente
-    foreach ($posiciones as &$grupo) shuffle($grupo);
-    foreach ($habilidades as &$grupo) shuffle($grupo);
+    // Mezclar
+    shuffle($arqueros);
+    shuffle($defensas);
+    shuffle($medios);
+    shuffle($laterales);
+    shuffle($delanteros);
+    shuffle($jugadores);
 
-    // Distribuir arqueros primero (mínimo 1 por equipo)
+    // Iniciar equipos
     $equipoA = [];
     $equipoB = [];
 
     // Asignar arqueros
-    if (!empty($posiciones['Arquero'])) {
-        $equipoA[] = array_shift($posiciones['Arquero']);
-        if (!empty($posiciones['Arquero'])) {
-            $equipoB[] = array_shift($posiciones['Arquero']);
+    if (!empty($arqueros)) {
+        $equipoA[] = array_shift($arqueros);
+        if (!empty($arqueros)) {
+            $equipoB[] = array_shift($arqueros);
         }
     }
 
-    // Si falta arquero en algún equipo, usar Defensa como fallback
-    if (count($equipoA) == 0 && !empty($posiciones['Defensa'])) {
-        $equipoA[] = array_shift($posiciones['Defensa']);
+    // Si falta arquero, usar defensa
+    if (empty($equipoA) && !empty($defensas)) {
+        $equipoA[] = array_shift($defensas);
     }
-    if (count($equipoB) == 0 && !empty($posiciones['Defensa'])) {
-        $equipoB[] = array_shift($posiciones['Defensa']);
+    if (empty($equipoB) && !empty($defensas)) {
+        $equipoB[] = array_shift($defensas);
     }
 
-    // Completar con otras posiciones en orden específico
-    $orden_posiciones = ['Defensa', 'Medio', 'Lateral', 'Delantero', 'Jugador'];
-    foreach ($orden_posiciones as $pos) {
-        while (!empty($posiciones[$pos]) && (count($equipoA) < 7 || count($equipoB) < 7)) {
+    // Completar con orden específico
+    $grupos = [$defensas, $medios, $laterales, $delanteros, $jugadores];
+    foreach ($grupos as $grupo) {
+        while (!empty($grupo) && (count($equipoA) < 7 || count($equipoB) < 7)) {
             if (count($equipoA) < 7) {
-                $equipoA[] = array_shift($posiciones[$pos]);
+                $equipoA[] = array_shift($grupo);
             }
-            if (!empty($posiciones[$pos]) && count($equipoB) < 7) {
-                $equipoB[] = array_shift($posiciones[$pos]);
+            if (!empty($grupo) && count($equipoB) < 7) {
+                $equipoB[] = array_shift($grupo);
             }
         }
     }
 
-    // Balancear habilidades (máximo 3 cracks por equipo, mínimo 1 básico)
-    balancearHabilidades($equipoA, $equipoB, $habilidades);
+    // Balancear habilidades
+    $cracksA = array_filter($equipoA, fn($j) => $j['habilidad'] === 'Avanzada');
+    $cracksB = array_filter($equipoB, fn($j) => $j['habilidad'] === 'Avanzada');
 
-    function balancearHabilidades(&$eqA, &$eqB, $habilidades) {
-        // Contar cracks
-        $cracksA = array_filter($eqA, fn($j) => $j['habilidad'] === 'Avanzada');
-        $cracksB = array_filter($eqB, fn($j) => $j['habilidad'] === 'Avanzada');
-        
-        // Mover cracks si hay desbalance
-        if (count($cracksA) > 3 && count($cracksB) < 3) {
-            foreach ($eqA as $i => $jugador) {
-                if ($jugador['habilidad'] === 'Avanzada') {
-                    $eqB[] = $jugador;
-                    unset($eqA[$i]);
-                    break;
-                }
-            }
-            $eqA = array_values($eqA);
-        }
-        
-        // Asegurar al menos 1 básico por equipo
-        $bajosA = array_filter($eqA, fn($j) => $j['habilidad'] === 'Básica');
-        $bajosB = array_filter($eqB, fn($j) => $j['habilidad'] === 'Básica');
-        
-        if (empty($bajosA) && !empty($habilidades['Básica'])) {
-            $eqA[0] = array_shift($habilidades['Básica']);
-        }
-        if (empty($bajosB) && !empty($habilidades['Básica'])) {
-            $eqB[0] = array_shift($habilidades['Básica']);
-        }
+    if (count($cracksA) > 3 && count($cracksB) < 3 && !empty($cracksA)) {
+        $equipoB[] = array_shift($cracksA);
     }
 
-    // Guardar en base de datos
+    // Asegurar al menos 1 básico por equipo
+    $basicos = array_filter($inscritos, fn($j) => $j['habilidad'] === 'Básica');
+    if (count(array_filter($equipoA, fn($j) => $j['habilidad'] === 'Básica')) == 0 && !empty($basicos)) {
+        $equipoA[0] = array_shift($basicos);
+    }
+    if (count(array_filter($equipoB, fn($j) => $j['habilidad'] === 'Básica')) == 0 && !empty($basicos)) {
+        $equipoB[0] = array_shift($basicos);
+    }
+
+    // Guardar en DB
     $pdo->beginTransaction();
 
     // Limpiar equipos anteriores
-    $stmt_clean = $pdo->prepare("
+    $pdo->prepare("
         DELETE je FROM jugadores_equipo je
         JOIN equipos_partido ep ON je.id_equipo = ep.id_equipo
         WHERE ep.id_reserva = ?
-    ");
-    $stmt_clean->execute([$id_reserva]);
+    ")->execute([$id_reserva]);
 
     // Crear equipos
-    $stmt_rojos = $pdo->prepare("INSERT INTO equipos_partido (id_reserva, nombre_equipo) VALUES (?, 'Rojos')");
-    $stmt_rojos->execute([$id_reserva]);
+    $pdo->prepare("INSERT INTO equipos_partido (id_reserva, nombre_equipo) VALUES (?, 'Rojos')")->execute([$id_reserva]);
     $id_rojos = $pdo->lastInsertId();
 
-    $stmt_blancos = $pdo->prepare("INSERT INTO equipos_partido (id_reserva, nombre_equipo) VALUES (?, 'Blancos')");
-    $stmt_blancos->execute([$id_reserva]);
+    $pdo->prepare("INSERT INTO equipos_partido (id_reserva, nombre_equipo) VALUES (?, 'Blancos')")->execute([$id_reserva]);
     $id_blancos = $pdo->lastInsertId();
 
-    // Asignar jugadores a Rojos
+    // Asignar jugadores
     foreach ($equipoA as $jugador) {
-        $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")
-             ->execute([$id_rojos, $jugador['id_socio']]);
+        $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")->execute([$id_rojos, $jugador['id_socio']]);
     }
-
-    // Asignar jugadores a Blancos
     foreach ($equipoB as $jugador) {
-        $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")
-             ->execute([$id_blancos, $jugador['id_socio']]);
+        $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")->execute([$id_blancos, $jugador['id_socio']]);
     }
 
     $pdo->commit();
 
-    // Devolver respuesta JSON
-    echo json_encode([
-        'success' => true,
-        'equipos' => [
-            'rojos' => $equipoA,
-            'blancos' => $equipoB
-        ]
-    ]);
+    echo json_encode(['success' => true, 'equipos' => ['rojos' => $equipoA, 'blancos' => $equipoB]]);
 
 } catch (Exception $e) {
-    if (isset($pdo)) {
-        $pdo->rollBack();
-    }
+    if (isset($pdo)) $pdo->rollBack();
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
-// Limpiar buffer de salida
 ob_end_flush();
 ?>
