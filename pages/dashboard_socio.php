@@ -837,10 +837,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       <!-- Sub sección derecha (25% en desktop) -->
       <div class="upper-right">
-        <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+        <?php if ($es_responsable): ?>
+          <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+          <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
+        <?php endif; ?>
         <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
         <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
-        <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil</button>
+        <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
       </div>
     </div>
 
