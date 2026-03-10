@@ -1,9 +1,16 @@
 <?php
-header('Content-Type: application/json');
+// === SALIDA LIMPIA: evitar cualquier salida previa ===
+ob_start();
+header('Content-Type: application/json; charset=utf-8');
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../includes/config.php';
+
 session_start();
 
 try {
+    // Validar sesión y parámetros
     if (!isset($_SESSION['club_id']) || empty($_POST['id_reserva'])) {
         throw new Exception('Acceso no autorizado');
     }
@@ -18,7 +25,7 @@ try {
         throw new Exception('Reserva no encontrada');
     }
 
-    // Obtener los 14 inscritos
+    // Obtener los inscritos (mínimo 10, máximo 14)
     $stmt_inscritos = $pdo->prepare("
         SELECT s.id_socio, s.alias, s.habilidad, i.posicion_jugador
         FROM inscritos i
@@ -30,8 +37,8 @@ try {
     $stmt_inscritos->execute([$id_reserva]);
     $inscritos = $stmt_inscritos->fetchAll(PDO::FETCH_ASSOC);
 
-    if (count($inscritos) < 14) {
-        throw new Exception('Se requieren 14 jugadores para armar equipos');
+    if (count($inscritos) < 10) {
+        throw new Exception('Se requieren al menos 10 jugadores para armar equipos');
     }
 
     // Agrupar por habilidad
@@ -41,9 +48,9 @@ try {
 
     foreach ($inscritos as $socio) {
         switch ($socio['habilidad']) {
-            case 'Básica': $malos[] = $socio; break;
-            case 'Intermedia': $intermedios[] = $socio; break;
             case 'Avanzada': $cracks[] = $socio; break;
+            case 'Intermedia': $intermedios[] = $socio; break;
+            case 'Básica':
             default: $malos[] = $socio; break;
         }
     }
@@ -68,7 +75,7 @@ try {
     $distribuir($intermedios, $equipoB, $equipoA); // Invertir para balancear
     $distribuir($malos, $equipoA, $equipoB);
 
-    // Ajustar si hay desbalance
+    // Ajustar a 7 jugadores por equipo
     while (count($equipoA) > 7) {
         $equipoB[] = array_pop($equipoA);
     }
@@ -76,9 +83,9 @@ try {
         $equipoA[] = array_pop($equipoB);
     }
 
-    // Guardar equipos
+    // Guardar en base de datos
     $pdo->beginTransaction();
-    
+
     // Limpiar equipos anteriores
     $stmt_clean = $pdo->prepare("
         DELETE je FROM jugadores_equipo je
@@ -87,31 +94,29 @@ try {
     ");
     $stmt_clean->execute([$id_reserva]);
 
-    // Crear equipo Rojos
+    // Crear equipos
     $stmt_rojos = $pdo->prepare("INSERT INTO equipos_partido (id_reserva, nombre_equipo) VALUES (?, 'Rojos')");
     $stmt_rojos->execute([$id_reserva]);
     $id_rojos = $pdo->lastInsertId();
 
-    // Crear equipo Blancos
     $stmt_blancos = $pdo->prepare("INSERT INTO equipos_partido (id_reserva, nombre_equipo) VALUES (?, 'Blancos')");
     $stmt_blancos->execute([$id_reserva]);
     $id_blancos = $pdo->lastInsertId();
 
-    // Asignar jugadores a Rojos
+    // Asignar jugadores
     foreach ($equipoA as $jugador) {
-        $stmt_jug = $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)");
-        $stmt_jug->execute([$id_rojos, $jugador['id_socio']]);
+        $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")
+             ->execute([$id_rojos, $jugador['id_socio']]);
     }
 
-    // Asignar jugadores a Blancos
     foreach ($equipoB as $jugador) {
-        $stmt_jug = $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)");
-        $stmt_jug->execute([$id_blancos, $jugador['id_socio']]);
+        $pdo->prepare("INSERT INTO jugadores_equipo (id_equipo, id_socio) VALUES (?, ?)")
+             ->execute([$id_blancos, $jugador['id_socio']]);
     }
 
     $pdo->commit();
 
-    // Devolver equipos para el modal
+    // Devolver respuesta JSON
     echo json_encode([
         'success' => true,
         'equipos' => [
@@ -121,8 +126,13 @@ try {
     ]);
 
 } catch (Exception $e) {
-    if (isset($pdo)) $pdo->rollBack();
+    if (isset($pdo)) {
+        $pdo->rollBack();
+    }
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+
+// Limpiar buffer de salida
+ob_end_flush();
 ?>

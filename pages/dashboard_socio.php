@@ -840,7 +840,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     </style>
 
     <!-- MITAD INFERIOR -->
-    <div class="dashboard-lower" style="margin-top: 4rem;">
+    <div class="dashboard-lower" style="margin-top: 8rem;">
       <h3>Detalle Eventos</h3>
       <div class="filters">
         <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
