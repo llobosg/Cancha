@@ -13,6 +13,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
+      .catch(err => console.warn('Cache falló:', err)) // ← Manejo de errores
   );
 });
 
