@@ -724,17 +724,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
               <?php
-              // Obtener último partido con equipos
+              // Obtener último partido con equipos (solo si hay equipos armados)
               $stmt_last = $pdo->prepare("
                   SELECT 
+                      ep.id_equipo,
                       ep.nombre_equipo,
-                      ep.ganador,
                       ep.marcador_final,
-                      s.alias as mejor_jugador,
-                      r.fecha
+                      r.fecha,
+                      r.id_reserva
                   FROM equipos_partido ep
-                  LEFT JOIN jugadores_equipo je ON ep.id_equipo = je.id_equipo AND je.mejor_jugador = 1
-                  LEFT JOIN socios s ON je.id_socio = s.id_socio
                   JOIN reservas r ON ep.id_reserva = r.id_reserva
                   WHERE r.id_club = ?
                   ORDER BY r.fecha DESC
@@ -742,14 +740,49 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               ");
               $stmt_last->execute([$_SESSION['club_id']]);
               $ultimo_partido = $stmt_last->fetch();
-              ?>
               
-              <?php if ($ultimo_partido): ?>
+              if ($ultimo_partido && $es_responsable): ?>
                 <p><strong><?= htmlspecialchars($ultimo_partido['nombre_equipo']) ?></strong> 
-                  <?= $ultimo_partido['ganador'] ? 'ganó' : 'perdió' ?> 
-                  con <?= $ultimo_partido['marcador_final'] ?> goles</p>
-                <p><strong>Mejor jugador:</strong> <?= htmlspecialchars($ultimo_partido['mejor_jugador'] ?? 'No asignado') ?></p>
+                  <?= $ultimo_partido['marcador_final'] ? 'hizo ' . $ultimo_partido['marcador_final'] . ' goles' : 'sin marcador' ?></p>
                 <p><strong>Fecha:</strong> <?= date('d/m', strtotime($ultimo_partido['fecha'])) ?></p>
+                
+                <!-- Formulario post-partido -->
+                <form id="postPartidoForm" style="margin-top:1rem;">
+                  <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                  
+                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Marcador final (Ej: 8-6):</label>
+                  <input type="text" name="marcador" placeholder="8-6" 
+                        value="<?= htmlspecialchars($ultimo_partido['marcador_final'] ?? '') ?>"
+                        style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                  
+                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Mejor jugador:</label>
+                  <select name="mejor_jugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                    <option value="">Seleccionar...</option>
+                    <?php
+                    // Obtener todos los jugadores del último partido
+                    $stmt_jugadores = $pdo->prepare("
+                        SELECT s.id_socio, s.alias
+                        FROM jugadores_equipo je
+                        JOIN socios s ON je.id_socio = s.id_socio
+                        JOIN equipos_partido ep ON je.id_equipo = ep.id_equipo
+                        WHERE ep.id_reserva = ?
+                    ");
+                    $stmt_jugadores->execute([$ultimo_partido['id_reserva']]);
+                    while ($jugador = $stmt_jugadores->fetch()): ?>
+                      <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                    <?php endwhile; ?>
+                  </select>
+                  
+                  <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+                    Guardar Resultado
+                  </button>
+                </form>
+                
+              <?php elseif ($ultimo_partido): ?>
+                <p><strong><?= htmlspecialchars($ultimo_partido['nombre_equipo']) ?></strong> 
+                  <?= $ultimo_partido['marcador_final'] ? 'hizo ' . $ultimo_partido['marcador_final'] . ' goles' : 'sin marcador' ?></p>
+                <p><strong>Fecha:</strong> <?= date('d/m', strtotime($ultimo_partido['fecha'])) ?></p>
+                
               <?php else: ?>
                 <p style="margin-top:2rem;">Próximamente disponible</p>
               <?php endif; ?>
@@ -1467,7 +1500,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- Modal Equipos IA -->
     <div id="modalEquipos" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
       <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
-        <h3>⚽ Equipos Futbolito</h3>
+        <h3>⚽ Algoritmo IA, Equipos Futbolito</h3>
         
         <div style="display:flex;gap:2rem;margin:1.5rem 0;">
           <!-- Equipo Rojos -->
@@ -1476,7 +1509,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <ul id="equipoRojos" style="list-style:none;padding:0;"></ul>
             <button onclick="moverJugador('rojos', 'blancos')" 
                     style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-              → Mover a Blancos
+              → Selecciona un jugador y mover a Blancos
             </button>
           </div>
 
@@ -1486,7 +1519,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <ul id="equipoBlancos" style="list-style:none;padding:0;"></ul>
             <button onclick="moverJugador('blancos', 'rojos')" 
                     style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-              → Mover a Rojos
+              ⇐ Selecciona un jugador y mover a Rojos
             </button>
           </div>
         </div>
@@ -1579,7 +1612,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         btnRojosABlancos.style.cursor = 'pointer';
 
         const btnBlancosARojos = document.createElement('button');
-        btnBlancosARojos.textContent = '→ Blancos a Rojos';
+        btnBlancosARojos.textContent = '⇐ Blancos a Rojos';
         btnBlancosARojos.onclick = () => moverJugador('blancos', 'rojos');
         btnBlancosARojos.style.padding = '0.3rem 0.6rem';
         btnBlancosARojos.style.background = '#e74c3c';
@@ -1674,6 +1707,38 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         const modal = document.getElementById('modalEquipos');
         if (modal) modal.style.display = 'none';
     }
+
+    // Guardar resultado post-partido
+    document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const marcador = formData.get('marcador');
+        const mejorJugador = formData.get('mejor_jugador');
+        
+        if (!marcador || !mejorJugador) {
+            alert('Completa marcador y mejor jugador');
+            return;
+        }
+        
+        try {
+            const response = await fetch('../api/guardar_resultado_partido.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                mostrarToast('✅ Resultado guardado');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        } catch (error) {
+            mostrarToast('❌ Error al guardar resultado');
+            console.error('Error:', error);
+        }
+    });
     </script>
 
   </body>
