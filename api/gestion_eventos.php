@@ -162,7 +162,7 @@ try {
         $mensaje = "✅ ¡Inscripción confirmada!";
     }
 
-    // === NOTIFICACIONES PUSH (versión segura) ===
+    // === NOTIFICACIONES PUSH (versión compatible con WebPush v7+) ===
     if (!empty($club_slug) && defined('VAPID_PUBLIC_KEY') && defined('VAPID_PRIVATE_KEY')) {
         try {
             $stmt_nombre = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
@@ -196,21 +196,17 @@ try {
                     : "{$nombre_inscrito} se ha anotado";
 
                 foreach ($suscripciones as $sub) {
-                    // Validar que todos los campos existan
-                    if (empty($sub['endpoint']) || empty($sub['publicKey']) || empty($sub['authToken'])) {
-                        continue;
-                    }
-
-                    $subscription = [
+                    // Crear objeto Subscription válido
+                    $subscription = \Minishlink\WebPush\Subscription::create([
                         'endpoint' => $sub['endpoint'],
                         'keys' => [
                             'p256dh' => $sub['publicKey'],
                             'auth' => $sub['authToken']
                         ]
-                    ];
+                    ]);
 
                     $webPush->queueNotification(
-                        $subscription,
+                        $subscription,  // ✅ Ahora es un objeto Subscription
                         json_encode([
                             'title' => '⚽ CanchaSport',
                             'body' => $msg,
@@ -231,12 +227,6 @@ try {
     }
 
     echo json_encode(['success' => true, 'message' => $mensaje]);
-
-} catch (Exception $e) {
-    error_log("Gestión eventos error: " . $e->getMessage());
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-}
 
 // Limpiar buffer de salida
 ob_end_flush();
