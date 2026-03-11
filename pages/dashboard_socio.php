@@ -1460,19 +1460,18 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                 botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
                             }
                         } else if (filtro === 'inscritos') {
-                            const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
-                            if (esMiInscripcion) {
-                                botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
-                            }
-                            // Responsables pueden ver "Bajar" para todos en eventos futuros
+                            // Siempre permitir al responsable ver "Bajar" en eventos FUTUROS
                             const esResponsable = <?= json_encode($es_responsable) ?>;
-                            if (esResponsable) {
-                                const fechaEvento = new Date(row.fecha);
-                                const hoy = new Date();
-                                hoy.setHours(0, 0, 0, 0);
-                                if (fechaEvento >= hoy) {
-                                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + row.id_socio + ')">Bajar</button>';
-                                }
+                            const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                            
+                            const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                            const ahora = new Date();
+                            
+                            // Mostrar "Bajar" si:
+                            // - Es mi inscripción (cualquier momento)
+                            // - O soy responsable y el evento aún no ha terminado
+                            if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                                botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
                             }
                         }
                         html += `

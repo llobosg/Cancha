@@ -82,15 +82,19 @@ try {
                         c.fecha_pago,
                         c.comentario,
                         r.id_reserva AS id_evento,
-                        s.id_socio  -- ← ¡Este campo es clave!
+                        s.id_socio
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento
                     JOIN socios s ON i.id_socio = s.id_socio
                     LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE r.id_club = ?
-                    ORDER BY r.fecha DESC, r.hora_inicio DESC
+                    WHERE r.id_club = ? 
+                    AND (
+                        r.fecha > CURDATE() 
+                        OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
+                    )
+                    ORDER BY r.fecha ASC, r.hora_inicio ASC
                     LIMIT 50
                 ";
                 $params = [$club_id];
