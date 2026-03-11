@@ -43,7 +43,8 @@ try {
                         c.monto AS cuota_monto,
                         c.fecha_pago,
                         c.comentario,
-                        r.id_reserva AS id_evento
+                        r.id_reserva AS id_evento,
+                        s.id_socio  -- ← ¡Este campo es clave!
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
                     JOIN socios s ON i.id_socio = s.id_socio
@@ -80,7 +81,8 @@ try {
                         c.monto AS cuota_monto,
                         c.fecha_pago,
                         c.comentario,
-                        r.id_reserva AS id_evento
+                        r.id_reserva AS id_evento,
+                        s.id_socio  -- ← ¡Este campo es clave!
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento
                     JOIN socios s ON i.id_socio = s.id_socio
