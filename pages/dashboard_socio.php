@@ -1338,27 +1338,31 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
       
       const params = new URLSearchParams({
-        action: 'bajarse',
-        id_actividad: idReserva,
-        tipo_actividad: 'reserva'
+          action: 'bajarse',
+          id_actividad: idReserva,
+          tipo_actividad: 'reserva'
       });
       if (idSocioObjetivo) {
-        params.append('id_socio_objetivo', idSocioObjetivo);
+          params.append('id_socio_objetivo', idSocioObjetivo);
       }
       
       fetch('../api/gestion_eventos.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: params
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: params
       })
       .then(r => r.json())
       .then(data => {
-        if (data.success) {
-          mostrarToast('✅ Te has dado de baja del evento');
-          setTimeout(() => location.reload(), 1500);
-        } else {
-          mostrarToast('❌ ' + data.message);
-        }
+          if (data.success) {
+              mostrarToast(data.message);
+              setTimeout(() => location.reload(), 1500);
+          } else {
+              mostrarToast('❌ ' + data.message);
+          }
+      })
+      .catch(err => {
+          console.error('Error:', err);
+          mostrarToast('❌ Error al procesar la baja');
       });
     }
 

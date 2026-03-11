@@ -23,6 +23,26 @@ try {
     $id_club = $_SESSION['club_id'];
     $club_slug = $_SESSION['current_club'] ?? '';
 
+    // Determinar el socio objetivo
+    if (isset($_POST['id_socio_objetivo'])) {
+        // Verificar que el responsable puede eliminar a otro socio
+        $stmt_check_responsable = $pdo->prepare("
+            SELECT es_responsable 
+            FROM socios 
+            WHERE id_socio = ? AND id_club = ?
+        ");
+        $stmt_check_responsable->execute([$_SESSION['id_socio'], $id_club]);
+        $es_responsable = $stmt_check_responsable->fetch()['es_responsable'] ?? 0;
+        
+        if (!$es_responsable) {
+            throw new Exception('Solo el responsable puede dar de baja a otros socios');
+        }
+        
+        $id_socio = (int)$_POST['id_socio_objetivo'];
+    } else {
+        $id_socio = $_SESSION['id_socio'];
+    }
+
     if ($action !== 'anotarse' && $action !== 'bajarse') {
         throw new Exception('Acción no válida');
     }
