@@ -1460,21 +1460,22 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                 botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
                             }
                         } else if (filtro === 'inscritos') {
-                            const esMiInscripcion = (row.nombre === '<?= addslashes(htmlspecialchars($socio_actual['nombre'] ?? '')) ?>');
-                            if (esMiInscripcion) {
-                                botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
-                            }
-                            // Responsables pueden ver "Bajar" para todos en eventos futuros
-                            const esResponsable = <?= json_encode($es_responsable) ?>;
-                            if (esResponsable) {
-                                const fechaEvento = new Date(row.fecha);
-                                const hoy = new Date();
-                                hoy.setHours(0, 0, 0, 0);
-                                if (fechaEvento >= hoy) {
-                                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + row.id_socio + ')">Bajar</button>';
-                                }
-                            }
-                        }
+                          // Comparar por ID de socio (no por nombre/alias)
+                          const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                          if (esMiInscripcion) {
+                              botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ')">Bajar</button>';
+                          }
+                          // Responsables pueden ver "Bajar" para todos en eventos futuros
+                          const esResponsable = <?= json_encode($es_responsable) ?>;
+                          if (esResponsable) {
+                              const fechaEvento = new Date(row.fecha);
+                              const hoy = new Date();
+                              hoy.setHours(0, 0, 0, 0);
+                              if (fechaEvento >= hoy) {
+                                  botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + row.id_socio + ')">Bajar</button>';
+                              }
+                          }
+                      }
                         html += `
                             <tr>
                                 <td>${formatDate(row.fecha)}</td>
