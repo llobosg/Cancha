@@ -214,6 +214,7 @@ try {
                             ]
                         ]);
 
+                        // ✅ Corrección clave: el tercer parámetro debe ser un array, no null
                         $webPush->queueNotification(
                             $subscription,
                             json_encode([
@@ -223,7 +224,7 @@ try {
                                 'badge' => '/assets/icons/logo2-icon-192x192.png',
                                 'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
                             ]),
-                            null,
+                            [], // ← Aquí estaba el error: era null, ahora es []
                             ['TTL' => 3600]
                         );
                     }
@@ -236,7 +237,7 @@ try {
         }
     }
 
-        echo json_encode(['success' => true, 'message' => $mensaje]);
+    echo json_encode(['success' => true, 'message' => $mensaje]);
 
 } catch (Exception $e) {
     // Registrar error
