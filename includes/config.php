@@ -1,4 +1,9 @@
 <?php
+// Evitar acceso directo
+if (!defined('APP_ACCESS')) {
+    http_response_code(403);
+    exit('Acceso denegado');
+}
 // includes/config.php
 header("Access-Control-Allow-Origin: https://canchasport.com");
 
