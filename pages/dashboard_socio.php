@@ -1590,7 +1590,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         const blancosEl = document.getElementById('equipoBlancos');
         const modal = document.getElementById('modalEquipos');
         
-        // Verificación explícita
         if (!rojosEl || !blancosEl || !modal) {
             console.error('❌ Elementos del modal no encontrados');
             alert('Error: Modal no disponible');
@@ -1636,26 +1635,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         controles.style.gap = '1rem';
         controles.style.marginTop = '1rem';
         controles.style.justifyContent = 'center';
-
-        //const btnRojosABlancos = document.createElement('button');
-        //btnRojosABlancos.textContent = '→ Rojos a Blancos';
-        //btnRojosABlancos.onclick = () => moverJugador('rojos', 'blancos');
-        //btnRojosABlancos.style.padding = '0.3rem 0.6rem';
-        //btnRojosABlancos.style.background = '#2980b9';
-        //btnRojosABlancos.style.color = 'white';
-        //btnRojosABlancos.style.border = 'none';
-        //btnRojosABlancos.style.borderRadius = '4px';
-        //btnRojosABlancos.style.cursor = 'pointer';
-
-        //const btnBlancosARojos = document.createElement('button');
-        //btnBlancosARojos.textContent = '⇐ Blancos a Rojos';
-        //btnBlancosARojos.onclick = () => moverJugador('blancos', 'rojos');
-        //btnBlancosARojos.style.padding = '0.3rem 0.6rem';
-        //btnBlancosARojos.style.background = '#e74c3c';
-        //btnBlancosARojos.style.color = 'white';
-        //btnBlancosARojos.style.border = 'none';
-        //btnBlancosARojos.style.borderRadius = '4px';
-        //btnBlancosARojos.style.cursor = 'pointer';
 
         controles.appendChild(btnRojosABlancos);
         controles.appendChild(btnBlancosARojos);
