@@ -670,10 +670,19 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     Bajarse
                 </button>
                 <?php else: ?>
-                <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;"
-                        onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                    Anotarse
-                </button>
+                <div class="btn-group" style="position:relative; display:inline-block;">
+                    <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;">
+                      Anotarse
+                    </button>
+                    <button class="btn-action" style="background:#4ECDC4;padding:0.2rem 0.3rem;font-size:0.8rem;border-top-left-radius:0;border-bottom-left-radius:0;"
+                            onclick="toggleCervezaMenu(event)">
+                      ▼
+                    </button>
+                    <div id="cervezaMenu" style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; z-index:100;">
+                      <div onclick="anotarseConCerveza(false)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse</div>
+                      <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍻</div>
+                    </div>
+                  </div>
                 <?php endif; ?>
 
                 <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
@@ -1467,12 +1476,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                             const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
                             const ahora = new Date();
                             
-                            // Mostrar "Bajar" si:
-                            // - Es mi inscripción (cualquier momento)
-                            // - O soy responsable y el evento aún no ha terminado
+                            // Botón Bajar
+                            let botonBajar = '';
                             if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                                botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
+                                botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
                             }
+
+                            // Icono de cerveza (solo para responsables)
+                            let iconoCerveza = '';
+                            if (esResponsable && fechaEvento > ahora) {
+                                const emoji = row.lleva_cerveza ? '🍻' : '🍺';
+                                iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                            }
+
+                            botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
                         }
                         html += `
                             <tr>
@@ -1826,6 +1843,63 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .catch(err => {
             console.error('Error:', err);
             mostrarToast('❌ Error al procesar la baja');
+        });
+    }
+
+    function toggleCervezaMenu(e) {
+        e.stopPropagation();
+        const menu = document.getElementById('cervezaMenu');
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Cerrar menú al hacer clic fuera
+    document.addEventListener('click', () => {
+        document.getElementById('cervezaMenu').style.display = 'none';
+    });
+
+    function anotarseConCerveza(llevaCerveza) {
+        // Cierra menú
+        document.getElementById('cervezaMenu').style.display = 'none';
+        
+        // Llama a la API con el flag
+        const formData = new FormData();
+        formData.append('action', 'anotarse');
+        formData.append('id_actividad', <?= $id_reserva ?>);
+        formData.append('tipo_actividad', 'reserva');
+        formData.append('deporte', '<?= $deporte ?>');
+        formData.append('players_max', <?= $players ?>);
+        formData.append('monto_total', <?= $monto_total ?>);
+        formData.append('lleva_cerveza', llevaCerveza ? '1' : '0');
+
+        fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarToast(data.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    mostrarToast('❌ ' + data.message);
+                }
+            });
+    }
+
+    function asignarCerveza(idInscrito, estado) {
+        fetch('../api/asignar_cerveza.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({
+                id_inscrito: idInscrito,
+                lleva_cerveza: estado
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
         });
     }
     </script>

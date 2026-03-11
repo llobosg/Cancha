@@ -144,11 +144,12 @@ try {
             $monto_cuota = (float)($evento['valor_cuota'] ?? 0);
         }
 
-        // === INSERTAR EN INSCRITOS ===
+        $lleva_cerveza = $_POST['lleva_cerveza'] ?? '0';
+
         $pdo->prepare("
-            INSERT INTO inscritos (id_evento, id_socio, tipo_actividad, equipo, posicion_jugador)
-            VALUES (?, ?, ?, ?, ?)
-        ")->execute([$id_actividad, $id_socio, $tipo_actividad, $equipo_default, $posicion_default]);
+            INSERT INTO inscritos (id_evento, id_socio, tipo_actividad, equipo, posicion_jugador, lleva_cerveza)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ")->execute([$id_actividad, $id_socio, $tipo_actividad, $equipo_default, $posicion_default, $lleva_cerveza]);
 
         // === GENERAR CUOTA SI HAY MONTO ===
         if ($monto_cuota > 0 && $fecha_evento) {

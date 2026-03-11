@@ -40,11 +40,13 @@ try {
                         r.monto_total AS costo_evento,
                         s.alias as nombre,
                         i.posicion_jugador,
+                        i.lleva_cerveza,
+                        i.id_inscrito,
                         c.monto AS cuota_monto,
                         c.fecha_pago,
                         c.comentario,
                         r.id_reserva AS id_evento,
-                        s.id_socio  -- ← ¡Este campo es clave!
+                        s.id_socio
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
                     JOIN socios s ON i.id_socio = s.id_socio
@@ -78,6 +80,8 @@ try {
                         r.monto_total AS costo_evento,
                         s.alias as nombre,
                         i.posicion_jugador,
+                        i.lleva_cerveza,
+                        i.id_inscrito,
                         c.monto AS cuota_monto,
                         c.fecha_pago,
                         c.comentario,
@@ -111,6 +115,8 @@ try {
                         r.monto_total AS costo_evento,
                         '' AS nombre,
                         '' AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        0 AS id_inscrito,
                         NULL AS cuota_monto,
                         NULL AS fecha_pago,
                         '' AS comentario,
@@ -136,6 +142,8 @@ try {
                         e.valor_cuota AS costo_evento,
                         '' AS nombre,
                         '' AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        0 AS id_inscrito,
                         NULL AS cuota_monto,
                         NULL AS fecha_pago,
                         e.comentario,
@@ -159,6 +167,8 @@ try {
                         NULL AS costo_evento,
                         s.alias as nombre,
                         s.rol AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        0 AS id_inscrito,
                         NULL AS cuota_monto,
                         NULL AS fecha_pago,
                         s.email AS comentario,
