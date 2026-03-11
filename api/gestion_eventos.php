@@ -21,7 +21,7 @@ try {
     $action = $_POST['action'] ?? '';
     $id_socio = $_SESSION['id_socio'];
     $id_club = $_SESSION['club_id'];
-    $club_slug = $_SESSION['current_club'] ?? '';
+    $club_slug = $_SESSION['current_club'] ?? ($_SESSION['club_id'] ?? 'default');
 
     // Determinar el socio objetivo
     if (isset($_POST['id_socio_objetivo'])) {
@@ -163,47 +163,49 @@ try {
     }
 
     // === NOTIFICACIONES PUSH ===
-    $stmt_nombre = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
-    $stmt_nombre->execute([$id_socio]);
-    $nombre_inscrito = $stmt_nombre->fetch()['nombre'] ?? 'Un jugador';
+    if (!empty($club_slug)) {
+        $stmt_nombre = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
+        $stmt_nombre->execute([$id_socio]);
+        $nombre_inscrito = $stmt_nombre->fetch()['nombre'] ?? 'Un jugador';
 
-    $stmt_subs = $pdo->prepare("
-        SELECT sp.endpoint, sp.p256dh, sp.auth
-        FROM suscripciones_push sp
-        JOIN socios s ON sp.id_socio = s.id_socio
-        WHERE s.id_club = ? AND s.id_socio != ?
-    ");
-    $stmt_subs->execute([$id_club, $id_socio]);
-    $suscripciones = $stmt_subs->fetchAll();
+        $stmt_subs = $pdo->prepare("
+            SELECT sp.endpoint, sp.p256dh, sp.auth
+            FROM suscripciones_push sp
+            JOIN socios s ON sp.id_socio = s.id_socio
+            WHERE s.id_club = ? AND s.id_socio != ?
+        ");
+        $stmt_subs->execute([$id_club, $id_socio]);
+        $suscripciones = $stmt_subs->fetchAll();
 
-    if (!empty($suscripciones)) {
-        $webPush = new WebPush([
-            'VAPID' => [
-                'subject' => 'https://canchasport.com',
-                'publicKey' => VAPID_PUBLIC_KEY,
-                'privateKey' => VAPID_PRIVATE_KEY,
-            ],
-        ]);
+        if (!empty($suscripciones)) {
+            $webPush = new WebPush([
+                'VAPID' => [
+                    'subject' => 'https://canchasport.com',
+                    'publicKey' => VAPID_PUBLIC_KEY,
+                    'privateKey' => VAPID_PRIVATE_KEY,
+                ],
+            ]);
 
-        $msg = ($action === 'bajarse')
-            ? "{$nombre_inscrito} se ha dado de baja"
-            : "{$nombre_inscrito} se ha anotado";
+            $msg = ($action === 'bajarse')
+                ? "{$nombre_inscrito} se ha dado de baja"
+                : "{$nombre_inscrito} se ha anotado";
 
-        foreach ($suscripciones as $sub) {
-            $webPush->queueNotification(
-                $sub['endpoint'],
-                json_encode([
-                    'title' => '⚽ CanchaSport',
-                    'body' => $msg,
-                    'icon' => '/assets/icons/logo2-icon-192x192.png',
-                    'badge' => '/assets/icons/logo2-icon-192x192.png',
-                    'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
-                ]),
-                null,
-                ['TTL' => 3600]
-            );
+            foreach ($suscripciones as $sub) {
+                $webPush->queueNotification(
+                    $sub['endpoint'],
+                    json_encode([
+                        'title' => '⚽ CanchaSport',
+                        'body' => $msg,
+                        'icon' => '/assets/icons/logo2-icon-192x192.png',
+                        'badge' => '/assets/icons/logo2-icon-192x192.png',
+                        'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
+                    ]),
+                    null,
+                    ['TTL' => 3600]
+                );
+            }
+            $webPush->flush();
         }
-        $webPush->flush();
     }
 
     echo json_encode(['success' => true, 'message' => $mensaje]);

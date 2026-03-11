@@ -1627,39 +1627,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         
         modal.style.display = 'flex';
     }
-        
-        // === 👇 AQUÍ VA EL BLOQUE DE BOTONES DE MOVIMIENTO 👇 ===
-        // Eliminar controles previos si existen
-        const controlesPrevios = document.querySelector('.controles-mover');
-        if (controlesPrevios) controlesPrevios.remove();
-        
-        const controles = document.createElement('div');
-        controles.className = 'controles-mover';
-        controles.style.display = 'flex';
-        controles.style.gap = '1rem';
-        controles.style.marginTop = '1rem';
-        controles.style.justifyContent = 'center';
-
-        controles.appendChild(btnRojosABlancos);
-        controles.appendChild(btnBlancosARojos);
-        
-        // Insertar controles debajo de los equipos
-        const submodalContent = document.querySelector('.submodal-content');
-        if (submodalContent) {
-            // Buscar el último elemento antes del footer (mejor jugador/marcador)
-            const marcadorSection = document.getElementById('marcador')?.parentElement;
-            if (marcadorSection) {
-                marcadorSection.parentNode.insertBefore(controles, marcadorSection);
-            } else {
-                // Si no hay marcador, poner al final
-                submodalContent.appendChild(controles);
-            }
-        }
-        // === 👆 FIN DEL BLOQUE 👆 ===
-        
-        // Reiniciar selección
-        jugadorSeleccionado = null;
-        equipoOrigen = null;
 
     function seleccionarJugador(elemento, equipo) {
         // Quitar selección previa
