@@ -665,15 +665,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
               <div class="ficha-buttons">
                 <?php if ($ya_inscrito): ?>
-                  <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
-                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                        onclick="bajarseDesdeFicha(<?= $id_reserva ?>)">
                     Bajarse
-                  </button>
+                </button>
                 <?php else: ?>
-                  <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;"
-                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;"
+                        onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
                     Anotarse
-                  </button>
+                </button>
                 <?php endif; ?>
 
                 <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
@@ -1797,6 +1797,35 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             } else {
                 mostrarToast('❌ ' + data.message);
             }
+        });
+    }
+
+    function bajarseDesdeFicha(idReserva) {
+        if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
+        
+        const params = new URLSearchParams({
+            action: 'bajarse',
+            id_actividad: idReserva,
+            tipo_actividad: 'reserva'
+        });
+        
+        fetch('../api/gestion_eventos.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: params
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('✅ Te has dado de baja del evento');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            mostrarToast('❌ Error al procesar la baja');
         });
     }
     </script>
