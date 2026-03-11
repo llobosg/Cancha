@@ -172,7 +172,8 @@ try {
                         NULL AS cuota_monto,
                         NULL AS fecha_pago,
                         s.email AS comentario,
-                        s.id_socio AS id_evento
+                        s.id_socio AS id_evento,
+                        s.id_socio
                     FROM socios s
                     WHERE s.id_club = ?
                     ORDER BY s.nombre ASC
