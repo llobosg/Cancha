@@ -162,58 +162,71 @@ try {
         $mensaje = "✅ ¡Inscripción confirmada!";
     }
 
-    // === NOTIFICACIONES PUSH ===
-    if (!empty($club_slug)) {
-        $stmt_nombre = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
-        $stmt_nombre->execute([$id_socio]);
-        $nombre_inscrito = $stmt_nombre->fetch()['nombre'] ?? 'Un jugador';
+    // === NOTIFICACIONES PUSH (versión segura) ===
+    if (!empty($club_slug) && defined('VAPID_PUBLIC_KEY') && defined('VAPID_PRIVATE_KEY')) {
+        try {
+            $stmt_nombre = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
+            $stmt_nombre->execute([$id_socio]);
+            $nombre_inscrito = $stmt_nombre->fetch()['nombre'] ?? 'Un jugador';
 
-        $stmt_subs = $pdo->prepare("
-            SELECT sp.endpoint, sp.p256dh AS publicKey, sp.auth AS authToken
-            FROM suscripciones_push sp
-            JOIN socios s ON sp.id_socio = s.id_socio
-            WHERE s.id_club = ? AND s.id_socio != ?
-        ");
-        $stmt_subs->execute([$id_club, $id_socio]);
-        $suscripciones = $stmt_subs->fetchAll();
+            $stmt_subs = $pdo->prepare("
+                SELECT sp.endpoint, sp.p256dh AS publicKey, sp.auth AS authToken
+                FROM suscripciones_push sp
+                JOIN socios s ON sp.id_socio = s.id_socio
+                WHERE s.id_club = ? 
+                AND s.id_socio != ?
+                AND sp.endpoint IS NOT NULL
+                AND sp.p256dh IS NOT NULL
+                AND sp.auth IS NOT NULL
+            ");
+            $stmt_subs->execute([$id_club, $id_socio]);
+            $suscripciones = $stmt_subs->fetchAll();
 
-        if (!empty($suscripciones)) {
-            $webPush = new WebPush([
-                'VAPID' => [
-                    'subject' => 'https://canchasport.com',
-                    'publicKey' => VAPID_PUBLIC_KEY,
-                    'privateKey' => VAPID_PRIVATE_KEY,
-                ],
-            ]);
+            if (!empty($suscripciones)) {
+                $webPush = new WebPush([
+                    'VAPID' => [
+                        'subject' => 'https://canchasport.com',
+                        'publicKey' => VAPID_PUBLIC_KEY,
+                        'privateKey' => VAPID_PRIVATE_KEY,
+                    ],
+                ]);
 
-            $msg = ($action === 'bajarse')
-                ? "{$nombre_inscrito} se ha dado de baja"
-                : "{$nombre_inscrito} se ha anotado";
+                $msg = ($action === 'bajarse')
+                    ? "{$nombre_inscrito} se ha dado de baja"
+                    : "{$nombre_inscrito} se ha anotado";
 
-            foreach ($suscripciones as $sub) {
-                // Crear objeto Subscription válido
-                $subscription = [
-                    'endpoint' => $sub['endpoint'],
-                    'keys' => [
-                        'p256dh' => $sub['publicKey'],
-                        'auth' => $sub['authToken']
-                    ]
-                ];
+                foreach ($suscripciones as $sub) {
+                    // Validar que todos los campos existan
+                    if (empty($sub['endpoint']) || empty($sub['publicKey']) || empty($sub['authToken'])) {
+                        continue;
+                    }
 
-                $webPush->queueNotification(
-                    $subscription,  // ✅ Ahora es un array válido
-                    json_encode([
-                        'title' => '⚽ CanchaSport',
-                        'body' => $msg,
-                        'icon' => '/assets/icons/logo2-icon-192x192.png',
-                        'badge' => '/assets/icons/logo2-icon-192x192.png',
-                        'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
-                    ]),
-                    null,
-                    ['TTL' => 3600]
-                );
+                    $subscription = [
+                        'endpoint' => $sub['endpoint'],
+                        'keys' => [
+                            'p256dh' => $sub['publicKey'],
+                            'auth' => $sub['authToken']
+                        ]
+                    ];
+
+                    $webPush->queueNotification(
+                        $subscription,
+                        json_encode([
+                            'title' => '⚽ CanchaSport',
+                            'body' => $msg,
+                            'icon' => '/assets/icons/logo2-icon-192x192.png',
+                            'badge' => '/assets/icons/logo2-icon-192x192.png',
+                            'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
+                        ]),
+                        null,
+                        ['TTL' => 3600]
+                    );
+                }
+                $webPush->flush();
             }
-            $webPush->flush();
+        } catch (Exception $e) {
+            // Registrar error pero no detener la ejecución
+            error_log("Push notification error: " . $e->getMessage());
         }
     }
 
