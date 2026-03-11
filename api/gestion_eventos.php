@@ -169,7 +169,7 @@ try {
         $nombre_inscrito = $stmt_nombre->fetch()['nombre'] ?? 'Un jugador';
 
         $stmt_subs = $pdo->prepare("
-            SELECT sp.endpoint, sp.p256dh, sp.auth
+            SELECT sp.endpoint, sp.p256dh AS publicKey, sp.auth AS authToken
             FROM suscripciones_push sp
             JOIN socios s ON sp.id_socio = s.id_socio
             WHERE s.id_club = ? AND s.id_socio != ?
@@ -191,8 +191,17 @@ try {
                 : "{$nombre_inscrito} se ha anotado";
 
             foreach ($suscripciones as $sub) {
+                // Crear objeto Subscription válido
+                $subscription = [
+                    'endpoint' => $sub['endpoint'],
+                    'keys' => [
+                        'p256dh' => $sub['publicKey'],
+                        'auth' => $sub['authToken']
+                    ]
+                ];
+
                 $webPush->queueNotification(
-                    $sub['endpoint'],
+                    $subscription,  // ✅ Ahora es un array válido
                     json_encode([
                         'title' => '⚽ CanchaSport',
                         'body' => $msg,
