@@ -236,7 +236,16 @@ try {
         }
     }
 
-    echo json_encode(['success' => true, 'message' => $mensaje]);
+        echo json_encode(['success' => true, 'message' => $mensaje]);
+
+} catch (Exception $e) {
+    // Registrar error
+    error_log("Gestión eventos error: " . $e->getMessage());
+    
+    // Devolver error en formato JSON
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
 
 // Limpiar buffer de salida
 ob_end_flush();
