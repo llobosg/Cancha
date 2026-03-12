@@ -772,13 +772,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   <p><strong>Fecha:</strong> <?= $fecha_partido->format('d-m') ?> a las <?= $fecha_partido->format('H:i') ?></p>
                   
                   <?php if ($ultimo_partido['resultado_grabado'] && !$editable): ?>
-                      <!-- Resultado ya grabado -->
                       <p style="margin-top:1rem;"><strong>✅ Resultado registrado</strong></p>
-                      <p><strong>Rojos:</strong> <?= htmlspecialchars($ultimo_partido['goles_rojos'] ?? '0') ?> - 
-                        <strong>Blancos:</strong> <?= htmlspecialchars($ultimo_partido['goles_blancos'] ?? '0') ?></p>
                       <?php if (!empty($ultimo_partido['mejor_jugador_alias'])): ?>
                           <p><strong>Jugador Xperto:</strong> <?= htmlspecialchars($ultimo_partido['mejor_jugador_alias']) ?></p>
                       <?php endif; ?>
+                  <?php endif; ?>
                       
                   <?php else: ?>
                       <!-- Formulario editable -->
