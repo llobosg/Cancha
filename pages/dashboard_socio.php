@@ -619,11 +619,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
         <!-- === CONTENEDOR GRID RESPONSIVE === -->
         <div class="fichas-dashboard">
-          <!-- Próximo Evento -->
-          <?php if ($proximo_evento): ?>
-            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-              <h3>⚽ Próximo Evento</h3>
-              <?php
+          <!-- Próximo Partido -->
+          <div class="stat-card">
+            <h3>📅 Próximo Partido</h3>
+            <?php
                 $icono_deporte = '⚽';
                 if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
                     $icono_deporte = '⚽';
@@ -641,68 +640,74 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     'mensual' => 'Mensual',
                     default => 'Spot'
                 };
+            ?>
+            <div class="stat-card-content">
+              <?php
+              // Obtener próximo evento
+              $stmt_next = $pdo->prepare("
+                  SELECT 
+                      r.id_reserva,
+                      r.fecha,
+                      r.hora_inicio
+                  FROM reservas r
+                  WHERE r.id_club = ? AND r.fecha >= CURDATE()
+                  ORDER BY r.fecha ASC, r.hora_inicio ASC
+                  LIMIT 1
+              ");
+              $stmt_next->execute([$_SESSION['club_id']]);
+              $proximo_partido = $stmt_next->fetch();
+
+              if ($proximo_partido):
+                  $fecha_evento = new DateTime($proximo_partido['fecha'] . ' ' . $proximo_partido['hora_inicio']);
+                  $ahora = new DateTime();
+                  $diferencia = $ahora->diff($fecha_evento);
+                  $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
               ?>
-              <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                <div><strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> <span style="font-size:0.7em;opacity:0.7;">(<?= $tipo_reserva_label ?>)</span></div>
-                <div style="margin:0.3rem 0;"><strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> • <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?></div>
-                <div style="margin:0.3rem 0;"><strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?></div>
-                <div style="margin:0.3rem 0;"><strong>💰</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?> • <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= $players ?></div>
-                <?php if ($proximo_evento['monto_recaudacion']): ?>
-                  <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                    <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?>
-                    <br><strong>👥 Cupos:</strong> <?= (int)($proximo_evento['jugadores_esperados'] ?? $players) ?>
-                  </div>
-                <?php endif; ?>
-              </div>
+                  <p><strong>Fecha:</strong> <?= $proximo_partido['fecha'] ?> a las <?= $proximo_partido['hora_inicio'] ?></p>
+                  <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
 
-              <!-- nuevo botón armar equipos IA -->
-              <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
-                        onclick="armarEquiposIA(<?= $id_reserva ?>)">
-                  ⚽ Armar Equipos IA
-                </button>
+                  <?php
+                  // Activación de botones: lunes anterior a las 09:00
+                  $lunes_anterior = clone $fecha_evento;
+                  $lunes_anterior->modify('previous monday');
+                  $lunes_anterior->setTime(9, 0, 0);
+                  $botones_activos = ($ahora >= $lunes_anterior);
+                  ?>
+
+                  <?php if ($botones_activos): ?>
+                      <div class="btn-group" style="position:relative; display:inline-block; margin-top:1rem;">
+                          <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;">
+                              Anotarse
+                          </button>
+                          <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.2rem 0.3rem;font-size:0.8rem;border-top-left-radius:0;border-bottom-left-radius:0;"
+                                  onclick="toggleCervezaMenu(event)">
+                              ▼
+                          </button>
+                          <div id="cervezaMenu" style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; z-index:100;">
+                              <div onclick="anotarseConCerveza(false)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse</div>
+                              <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍻</div>
+                          </div>
+                      </div>
+                      <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
+                      <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
+
+                      <!-- nuevo botón armar equipos IA -->
+                      <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
+                        <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
+                                onclick="armarEquiposIA(<?= $id_reserva ?>)">
+                          ⚽ Armar Equipos IA
+                        </button>
+                      <?php endif; ?>
+                  <?php else: ?>
+                      <p style="color:#FFD700;font-weight:bold;margin-top:1rem;">
+                          📅 Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs
+                      </p>
+                  <?php endif; ?>
+              <?php else: ?>
+                  <p style="margin-top:2rem;">Próximamente disponible</p>
               <?php endif; ?>
-
-              <div class="ficha-buttons">
-                <?php if ($ya_inscrito): ?>
-                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
-                        onclick="bajarseDesdeFicha(<?= $id_reserva ?>)">
-                    Bajarse
-                </button>
-                <?php else: ?>
-                <div class="btn-group" style="position:relative; display:inline-block;">
-                    <button class="btn-action" style="background:#4ECDC4;padding:0.4rem;font-size:0.8rem;">
-                      Anotarse
-                    </button>
-                    <button class="btn-action" style="background:#4ECDC4;padding:0.2rem 0.3rem;font-size:0.8rem;border-top-left-radius:0;border-bottom-left-radius:0;"
-                            onclick="toggleCervezaMenu(event)">
-                      ▼
-                    </button>
-                    <div id="cervezaMenu" style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; z-index:100;">
-                      <div onclick="anotarseConCerveza(false)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse</div>
-                      <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍻</div>
-                    </div>
-                  </div>
-                <?php endif; ?>
-
-                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
-                        onclick="pasoEvento(<?= $id_reserva ?>)">
-                  <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
-                </button>
-
-                <?php if (!empty($socio_actual) && isset($socio_actual['es_responsable']) && ($es_responsable)): ?>
-                  <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
-                          onclick="invitarGalletas(<?= $id_reserva ?>)">
-                    Invitar Galletas
-                  </button>
-                  <button class="btn-action" style="background:#F39C12;padding:0.4rem;font-size:0.8rem;"
-                          onclick="invitarCancha(<?= $id_reserva ?>)">
-                    Invitar un Cancha
-                  </button>
-                <?php endif; ?>
-              </div>
             </div>
-          <?php endif; ?>
+          </div>
 
           <!-- Deudas Pendientes -->
           <?php if ($deuda_mas_vigente): ?>
@@ -725,103 +730,94 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             </div>
           <?php endif; ?>
 
-          <!-- Estadísticas -->
+          <!-- Último Partido -->
           <div class="stat-card">
             <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
               <?php
-              // Obtener próximo evento (no último)
-              $stmt_next = $pdo->prepare("
+              // Obtener último partido REAL (ya jugado)
+              $stmt_last = $pdo->prepare("
                   SELECT 
                       r.id_reserva,
                       r.fecha,
-                      r.hora_inicio,
-                      ep.nombre_equipo,
-                      ep.marcador_final,
-                      je.mejor_jugador,
-                      s.alias as mejor_jugador_alias,
-                      s.foto_url as foto_mejor
+                      r.hora_inicio
                   FROM reservas r
-                  LEFT JOIN equipos_partido ep ON r.id_reserva = ep.id_reserva
-                  LEFT JOIN jugadores_equipo je ON ep.id_equipo = je.id_equipo AND je.mejor_jugador = 1
-                  LEFT JOIN socios s ON je.id_socio = s.id_socio
-                  WHERE r.id_club = ? AND r.fecha >= CURDATE()
-                  ORDER BY r.fecha ASC, r.hora_inicio ASC
+                  WHERE r.id_club = ? AND r.fecha < CURDATE()
+                  ORDER BY r.fecha DESC, r.hora_inicio DESC
                   LIMIT 1
               ");
-              $stmt_next->execute([$_SESSION['club_id']]);
-              $proximo_partido = $stmt_next->fetch();
+              $stmt_last->execute([$_SESSION['club_id']]);
+              $ultimo_partido = $stmt_last->fetch();
 
-              if ($proximo_partido && $es_responsable): ?>
-                <?php
-                $fecha_evento = new DateTime($proximo_partido['fecha'] . ' ' . $proximo_partido['hora_inicio']);
-                $ahora = new DateTime();
-                $diferencia = $ahora->diff($fecha_evento);
-                $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
-                ?>
-
-                <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
-
-                <!-- Formulario post-partido -->
-                <form id="postPartidoForm" style="margin-top:1rem;">
-                  <input type="hidden" name="id_reserva" value="<?= $proximo_partido['id_reserva'] ?>">
+              if ($ultimo_partido && $es_responsable): ?>
+                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
                   
-                  <div style="display:flex;gap:1rem;margin:0.5rem 0;">
-                    <div style="flex:1;">
-                      <label style="font-weight:bold;">Rojos:</label>
-                      <input type="number" name="goles_rojos" placeholder="0" 
-                            value="<?= htmlspecialchars($proximo_partido['marcador_final'] ?? '') ?>"
-                            style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                  <!-- Formulario post-partido -->
+                  <form id="postPartidoForm" style="margin-top:1rem;">
+                    <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                    
+                    <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                      <div style="flex:1;">
+                        <label style="font-weight:bold;">Rojos:</label>
+                        <input type="number" name="goles_rojos" placeholder="0" 
+                              value="0"
+                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      </div>
+                      <div style="flex:1;">
+                        <label style="font-weight:bold;">Blancos:</label>
+                        <input type="number" name="goles_blancos" placeholder="0" 
+                              value="0"
+                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      </div>
                     </div>
-                    <div style="flex:1;">
-                      <label style="font-weight:bold;">Blancos:</label>
-                      <input type="number" name="goles_blancos" placeholder="0" 
-                            value="0"
-                            style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                    </div>
-                  </div>
 
-                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltika:</label>
-                  <select name="jugador_experto" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                    <option value="">Seleccionar...</option>
-                    <?php
-                    // Obtener todos los jugadores del próximo partido
-                    $stmt_jugadores = $pdo->prepare("
-                        SELECT s.id_socio, s.alias
-                        FROM jugadores_equipo je
-                        JOIN socios s ON je.id_socio = s.id_socio
-                        JOIN equipos_partido ep ON je.id_equipo = ep.id_equipo
-                        WHERE ep.id_reserva = ?
-                    ");
-                    $stmt_jugadores->execute([$proximo_partido['id_reserva']]);
-                    while ($jugador = $stmt_jugadores->fetch()): ?>
-                      <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
-                    <?php endwhile; ?>
-                  </select>
+                    <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
+                    <select name="jugador_experto" id="mejorJugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      <option value="">Seleccionar...</option>
+                      <?php
+                      // Cargar inscritos del último partido
+                      $stmt_inscritos = $pdo->prepare("
+                          SELECT s.id_socio, s.alias
+                          FROM inscritos i
+                          JOIN socios s ON i.id_socio = s.id_socio
+                          WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
+                          ORDER BY s.alias
+                      ");
+                      $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
+                      while ($jugador = $stmt_inscritos->fetch()): ?>
+                        <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                      <?php endwhile; ?>
+                    </select>
 
-                  <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-                    Grabar Resultado
-                  </button>
-                </form>
+                    <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+                      Grabar Resultado
+                    </button>
+                  </form>
 
-              <?php elseif ($proximo_partido): ?>
-                <!-- Mostrar resultado si ya está grabado -->
-                <p><strong>Rojos:</strong> <?= $proximo_partido['marcador_final'] ?? '0' ?> - 
-                  <strong>Blancos:</strong> <?= $proximo_partido['marcador_final'] ?? '0' ?></p>
-                
-                <?php if ($proximo_partido['mejor_jugador_alias']): ?>
-                  <p><strong>Jugador Xperto:</strong> <?= htmlspecialchars($proximo_partido['mejor_jugador_alias']) ?></p>
-                  <?php if ($proximo_partido['foto_mejor']): ?>
-                    <img src="../uploads/fotos/<?= htmlspecialchars($proximo_partido['foto_mejor']) ?>" 
-                        alt="Mejor jugador" style="width:80px;height:80px;border-radius:50%;margin-top:0.5rem;">
-                  <?php endif; ?>
-                <?php endif; ?>
-
+              <?php elseif ($ultimo_partido): ?>
+                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+                  <p style="margin-top:1rem;">Resultado aún no registrado</p>
               <?php else: ?>
-                <p style="margin-top:2rem;">Próximamente disponible</p>
+                  <p style="margin-top:2rem;">Sin partidos anteriores</p>
               <?php endif; ?>
             </div>
           </div>
+
+          <script>
+          // Cerrar menú de cerveza al hacer clic fuera
+          document.addEventListener('click', () => {
+              const menu = document.getElementById('cervezaMenu');
+              if (menu) menu.style.display = 'none';
+          });
+
+          function toggleCervezaMenu(e) {
+              e.stopPropagation();
+              const menu = document.getElementById('cervezaMenu');
+              if (menu) {
+                  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+              }
+          }
+          </script>
 
           <!-- Noticias -->
           <div class="stat-card">
