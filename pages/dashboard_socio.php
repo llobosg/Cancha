@@ -1431,90 +1431,90 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 }
 
                 let html = '';
-                data.forEach(row => {
-                    if (filtro === 'cuotas') {
-                        // Acciones para cuotas
-                        let botonAccion = '-';
-                        const esResponsable = <?= json_encode($es_responsable) ?>;
-                        if (esResponsable) {
-                            if (row.estado === 'pendiente') {
-                                botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
-                            } else if (row.estado === 'en_revision') {
-                                botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>`;
-                            }
-                        }
-
-                        html += `
-                            <tr>
-                                <td>${formatDate(row.fecha_evento)}</td>
-                                <td>-</td>
-                                <td>${row.origen || '-'}</td>
-                                <td>-</td>
-                                <td>-</td>
-                                <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                <td>${row.nombre_socio || '-'}</td>
-                                <td>-</td>
-                                <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
-                                <td>${botonAccion}</td>
-                            </tr>
-                        `;
-                    } else {
-                        // Acciones para otros filtros
-                        let botonAccion = '-';
-                        if (filtro === 'socios') {
+                try {
+                    data.forEach(row => {
+                        if (filtro === 'cuotas') {
+                            // Acciones para cuotas
+                            let botonAccion = '-';
                             const esResponsable = <?= json_encode($es_responsable) ?>;
                             if (esResponsable) {
-                                botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
-                            }
-                        } else if (filtro === 'inscritos') {
-                            // Siempre permitir al responsable ver "Bajar" en eventos FUTUROS
-                            const esResponsable = <?= json_encode($es_responsable) ?>;
-                            const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
-                            
-                            const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-                            const ahora = new Date();
-                            
-                            // Botón Bajar
-                            let botonBajar = '';
-                            if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                                botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
+                                if (row.estado === 'pendiente') {
+                                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
+                                } else if (row.estado === 'en_revision') {
+                                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>`;
+                                }
                             }
 
-                            // Icono de cerveza (solo para responsables)
-                            let iconoCerveza = '';
-                            if (esResponsable && fechaEvento > ahora) {
-                                const emoji = row.lleva_cerveza ? '🍻' : '🍺';
-                                iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
-                            }
+                            html += `
+                                <tr>
+                                    <td>${formatDate(row.fecha_evento)}</td>
+                                    <td>-</td>
+                                    <td>${row.origen || '-'}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                    <td>${row.nombre_socio || '-'}</td>
+                                    <td>-</td>
+                                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                                    <td>${botonAccion}</td>
+                                </tr>
+                            `;
+                        } else {
+                            // Acciones para otros filtros
+                            let botonAccion = '-';
+                            if (filtro === 'socios') {
+                                const esResponsable = <?= json_encode($es_responsable) ?>;
+                                if (esResponsable) {
+                                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
+                                }
+                            } else if (filtro === 'inscritos') {
+                                // Siempre permitir al responsable ver "Bajar" en eventos FUTUROS
+                                const esResponsable = <?= json_encode($es_responsable) ?>;
+                                const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                                
+                                const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                                const ahora = new Date();
+                                
+                                // Botón Bajar
+                                let botonBajar = '';
+                                if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                                    botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
+                                }
 
-                            botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
+                                // Icono de cerveza (solo para responsables)
+                                let iconoCerveza = '';
+                                if (esResponsable && fechaEvento > ahora) {
+                                    const emoji = row.lleva_cerveza ? '🍻' : '🍺';
+                                    iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                                }
+
+                                botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
+                            }
+                            html += `
+                                <tr>
+                                    <td>${formatDate(row.fecha)}</td>
+                                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                                    <td>${row.id_tipoevento || '-'}</td>
+                                    <td>${row.id_club}</td>
+                                    <td>${row.id_cancha}</td>
+                                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                    <td>${row.nombre || '-'}</td>
+                                    <td>${row.posicion_jugador || '-'}</td>
+                                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                                    <td>${row.comentario || '-'}</td>
+                                    <td>${botonAccion}</td>
+                                </tr>
+                            `;
                         }
-                        html += `
-                            <tr>
-                                <td>${formatDate(row.fecha)}</td>
-                                <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                <td>${row.id_tipoevento || '-'}</td>
-                                <td>${row.id_club}</td>
-                                <td>${row.id_cancha}</td>
-                                <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                <td>${row.nombre || '-'}</td>
-                                <td>${row.posicion_jugador || '-'}</td>
-                                <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                <td>${row.comentario || '-'}</td>
-                                <td>${botonAccion}</td>
-                            </tr>
-                        `;
-                    }
-                });
+                    });
+                    tbody.innerHTML = html;
                 } catch (e) {
                     console.error('Error renderizando fila:', e);
                     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al mostrar datos</td></tr>`;
-                    return;
                 }
-                tbody.innerHTML = html;
             })
             .catch(err => {
                 console.error('Error al cargar datos:', err);
