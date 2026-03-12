@@ -1754,47 +1754,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         if (modal) modal.style.display = 'none';
     }
 
-    // Guardar resultado post-partido
-    document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData(e.target);
-        const marcador = formData.get('marcador');
-        const mejorJugador = formData.get('mejor_jugador');
-        
-        if (!marcador || !mejorJugador) {
-            alert('Completa marcador y mejor jugador');
-            return;
-        }
-        
-        try {
-            const response = await fetch('../api/guardar_resultado_partido.php', {
-                method: 'POST',
-                body: formData
-            });
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast('✅ Resultado guardado');
-                    setTimeout(() => location.reload(), 1000); // ← Recargar para aplicar estado
-                } else {
-                    mostrarToast('❌ ' + data.message);
-                }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                mostrarToast('✅ Resultado guardado');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        } catch (error) {
-            mostrarToast('❌ Error al guardar resultado');
-            console.error('Error:', error);
-        }
-    });
-
     function revisarPago(idCuota) {
         if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
         
