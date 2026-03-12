@@ -769,7 +769,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       
                   <?php else: ?>
                       <!-- Formulario editable -->
-                      <form id="postPartidoForm" style="margin-top:1rem;">
+                      <form id="postPartidoForm" onsubmit="guardarResultado(event)" style="margin-top:1rem;">
                         <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
                         
                         <div style="display:flex;gap:1rem;margin:0.5rem 0;">
@@ -1897,6 +1897,31 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             } else {
                 mostrarToast('❌ ' + data.message);
             }
+        });
+    }
+
+    function guardarResultado(event) {
+        event.preventDefault(); // ← Evita el envío por defecto
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        fetch('../api/guardar_resultado_partido.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('✅ Resultado guardado');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                mostrarToast('❌ ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            mostrarToast('❌ Error al guardar resultado');
         });
     }
     </script>
