@@ -739,7 +739,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
               <?php
-              // Obtener último partido REAL (ya jugado)
+              // Obtener último partido REAL con datos completos
               $stmt_last = $pdo->prepare("
                   SELECT 
                       r.id_reserva,
@@ -748,11 +748,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       r.resultado_grabado,
                       er.marcador_final AS goles_rojos,
                       eb.marcador_final AS goles_blancos,
-                      je.id_socio AS mejor_jugador_id
+                      s_mejor.id_socio AS mejor_jugador_id,
+                      s_mejor.alias AS mejor_jugador_alias
                   FROM reservas r
                   LEFT JOIN equipos_partido er ON r.id_reserva = er.id_reserva AND er.nombre_equipo = 'Rojos'
                   LEFT JOIN equipos_partido eb ON r.id_reserva = eb.id_reserva AND eb.nombre_equipo = 'Blancos'
                   LEFT JOIN jugadores_equipo je ON je.id_equipo = er.id_equipo AND je.mejor_jugador = 1
+                  LEFT JOIN socios s_mejor ON je.id_socio = s_mejor.id_socio
                   WHERE r.id_club = ? AND r.fecha < CURDATE()
                   ORDER BY r.fecha DESC, r.hora_inicio DESC
                   LIMIT 1
@@ -763,15 +765,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               if ($ultimo_partido && $es_responsable): 
                   $fecha_partido = new DateTime($ultimo_partido['fecha'] . ' ' . $ultimo_partido['hora_inicio']);
                   $fin_partido = clone $fecha_partido;
-                  $fin_partido->modify('+1 hour'); // 1 hora después del inicio
+                  $fin_partido->modify('+1 hour');
                   $ahora = new DateTime();
                   $editable = ($ahora >= $fin_partido);
               ?>
                   <p><strong>Fecha:</strong> <?= $fecha_partido->format('d-m') ?> a las <?= $fecha_partido->format('H:i') ?></p>
                   
                   <?php if ($ultimo_partido['resultado_grabado'] && !$editable): ?>
-                      <!-- Resultado ya grabado y aún no editable -->
+                      <!-- Resultado ya grabado -->
                       <p style="margin-top:1rem;"><strong>✅ Resultado registrado</strong></p>
+                      <p><strong>Rojos:</strong> <?= htmlspecialchars($ultimo_partido['goles_rojos'] ?? '0') ?> - 
+                        <strong>Blancos:</strong> <?= htmlspecialchars($ultimo_partido['goles_blancos'] ?? '0') ?></p>
+                      <?php if (!empty($ultimo_partido['mejor_jugador_alias'])): ?>
+                          <p><strong>Jugador Xperto:</strong> <?= htmlspecialchars($ultimo_partido['mejor_jugador_alias']) ?></p>
+                      <?php endif; ?>
                       
                   <?php else: ?>
                       <!-- Formulario editable -->
@@ -833,22 +840,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               <?php endif; ?>
             </div>
           </div>
-
-          <script>
-          // Cerrar menú de cerveza al hacer clic fuera
-          document.addEventListener('click', () => {
-              const menu = document.getElementById('cervezaMenu');
-              if (menu) menu.style.display = 'none';
-          });
-
-          function toggleCervezaMenu(e) {
-              e.stopPropagation();
-              const menu = document.getElementById('cervezaMenu');
-              if (menu) {
-                  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-              }
-          }
-          </script>
 
           <!-- Noticias -->
           <div class="stat-card">
