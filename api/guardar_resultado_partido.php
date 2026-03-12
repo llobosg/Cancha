@@ -44,6 +44,10 @@ try {
              ->execute([$jugador_experto]);
     }
     
+    // Marcar como resultado grabado
+     $pdo->prepare("UPDATE reservas SET resultado_grabado = 1 WHERE id_reserva = ?")
+          ->execute([$id_reserva]);
+          
     echo json_encode(['success' => true]);
     
 } catch (Exception $e) {

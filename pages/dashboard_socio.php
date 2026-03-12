@@ -744,7 +744,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   SELECT 
                       r.id_reserva,
                       r.fecha,
-                      r.hora_inicio
+                      r.hora_inicio,
+                      r.resultado_grabado
                   FROM reservas r
                   WHERE r.id_club = ? AND r.fecha < CURDATE()
                   ORDER BY r.fecha DESC, r.hora_inicio DESC
@@ -753,53 +754,70 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               $stmt_last->execute([$_SESSION['club_id']]);
               $ultimo_partido = $stmt_last->fetch();
 
-              if ($ultimo_partido && $es_responsable): ?>
-                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+              if ($ultimo_partido && $es_responsable): 
+                  $fecha_partido = new DateTime($ultimo_partido['fecha'] . ' ' . $ultimo_partido['hora_inicio']);
+                  $fin_partido = clone $fecha_partido;
+                  $fin_partido->modify('+1 hour'); // 1 hora después del inicio
+                  $ahora = new DateTime();
+                  $editable = ($ahora >= $fin_partido);
+              ?>
+                  <p><strong>Fecha:</strong> <?= $fecha_partido->format('d-m') ?> a las <?= $fecha_partido->format('H:i') ?></p>
                   
-                  <!-- Formulario post-partido -->
-                  <form id="postPartidoForm" style="margin-top:1rem;">
-                    <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
-                    
-                    <div style="display:flex;gap:1rem;margin:0.5rem 0;">
-                      <div style="flex:1;">
-                        <label style="font-weight:bold;">Rojos:</label>
-                        <input type="number" name="goles_rojos" placeholder="0" 
-                              value="0"
-                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                      </div>
-                      <div style="flex:1;">
-                        <label style="font-weight:bold;">Blancos:</label>
-                        <input type="number" name="goles_blancos" placeholder="0" 
-                              value="0"
-                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                      </div>
-                    </div>
+                  <?php if ($ultimo_partido['resultado_grabado'] && !$editable): ?>
+                      <!-- Resultado ya grabado y aún no editable -->
+                      <p style="margin-top:1rem;"><strong>✅ Resultado registrado</strong></p>
+                      
+                  <?php else: ?>
+                      <!-- Formulario editable -->
+                      <form id="postPartidoForm" style="margin-top:1rem;">
+                        <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                        
+                        <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                          <div style="flex:1;">
+                            <label style="font-weight:bold;">Rojos:</label>
+                            <input type="number" name="goles_rojos" placeholder="0" 
+                                  value="0"
+                                  <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
+                                  style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                          </div>
+                          <div style="flex:1;">
+                            <label style="font-weight:bold;">Blancos:</label>
+                            <input type="number" name="goles_blancos" placeholder="0" 
+                                  value="0"
+                                  <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
+                                  style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                          </div>
+                        </div>
 
-                    <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
-                    <select name="jugador_experto" id="mejorJugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                      <option value="">Seleccionar...</option>
-                      <?php
-                      // Cargar inscritos del último partido
-                      $stmt_inscritos = $pdo->prepare("
-                          SELECT s.id_socio, s.alias
-                          FROM inscritos i
-                          JOIN socios s ON i.id_socio = s.id_socio
-                          WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
-                          ORDER BY s.alias
-                      ");
-                      $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
-                      while ($jugador = $stmt_inscritos->fetch()): ?>
-                        <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
-                      <?php endwhile; ?>
-                    </select>
+                        <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
+                        <select name="jugador_experto" id="mejorJugador" 
+                                <?= $ultimo_partido['resultado_grabado'] ? 'disabled' : '' ?>
+                                style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                          <option value="">Seleccionar...</option>
+                          <?php
+                          $stmt_inscritos = $pdo->prepare("
+                              SELECT s.id_socio, s.alias
+                              FROM inscritos i
+                              JOIN socios s ON i.id_socio = s.id_socio
+                              WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
+                              ORDER BY s.alias
+                          ");
+                          $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
+                          while ($jugador = $stmt_inscritos->fetch()): ?>
+                            <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                          <?php endwhile; ?>
+                        </select>
 
-                    <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-                      Grabar Resultado
-                    </button>
-                  </form>
+                        <?php if (!$ultimo_partido['resultado_grabado']): ?>
+                          <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+                            Grabar Resultado
+                          </button>
+                        <?php endif; ?>
+                      </form>
+                  <?php endif; ?>
 
               <?php elseif ($ultimo_partido): ?>
-                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+                  <p><strong>Fecha:</strong> <?= (new DateTime($ultimo_partido['fecha']))->format('d-m') ?></p>
                   <p style="margin-top:1rem;">Resultado aún no registrado</p>
               <?php else: ?>
                   <p style="margin-top:2rem;">Sin partidos anteriores</p>
@@ -1754,38 +1772,14 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 method: 'POST',
                 body: formData
             });
-            const data = await response.json();
-            
-            if (data.success) {
-                mostrarToast('✅ Resultado guardado');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        } catch (error) {
-            mostrarToast('❌ Error al guardar resultado');
-            console.error('Error:', error);
-        }
-    });
-
-    // Guardar resultado post-partido
-    document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData(e.target);
-        const golesRojos = formData.get('goles_rojos');
-        const golesBlancos = formData.get('goles_blancos');
-        const jugadorExperto = formData.get('jugador_experto');
-        
-        if (!golesRojos && !golesBlancos) {
-            alert('Ingresa al menos un marcador');
-            return;
-        }
-        
-        try {
-            const response = await fetch('../api/guardar_resultado_partido.php', {
-                method: 'POST',
-                body: formData
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarToast('✅ Resultado guardado');
+                    setTimeout(() => location.reload(), 1000); // ← Recargar para aplicar estado
+                } else {
+                    mostrarToast('❌ ' + data.message);
+                }
             });
             const data = await response.json();
             
