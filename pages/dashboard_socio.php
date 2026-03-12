@@ -1924,7 +1924,34 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             mostrarToast('❌ Error al guardar resultado');
         });
     }
-    </script>
+   
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('postPartidoForm');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
 
+                const formData = new FormData(form);
+                fetch('../api/guardar_resultado_partido.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarToast('✅ Resultado guardado');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        mostrarToast('❌ ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    mostrarToast('❌ Error al guardar resultado');
+                });
+            });
+        }
+    });
+    </script>
   </body>
 </html>
