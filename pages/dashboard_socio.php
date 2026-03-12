@@ -1509,6 +1509,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         `;
                     }
                 });
+                } catch (e) {
+                    console.error('Error renderizando fila:', e);
+                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al mostrar datos</td></tr>`;
+                    return;
+                }
                 tbody.innerHTML = html;
             })
             .catch(err => {
@@ -1557,9 +1562,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <?php
         $share_url = "https://canchasport.com/pages/registro_socio.php?club=" . htmlspecialchars($club_slug ?? '');
         ?>
-        <div style="margin:1rem 0;">
-          <div id="qrCodeModal" style="width:180px; height:180px; margin:0 auto; background:white; padding:8px; border-radius:8px;"></div>
-        </div>
+        
         <div style="background:#f1f1f1; padding:0.6rem; border-radius:6px; margin:1rem 0; word-break:break-all; font-family:monospace; font-size:0.9rem;">
           <?= htmlspecialchars($share_url) ?>
         </div>
