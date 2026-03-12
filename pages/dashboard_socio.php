@@ -662,8 +662,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   $ahora = new DateTime();
                   $diferencia = $ahora->diff($fecha_evento);
                   $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
-              ?>
-                  <p><strong>Fecha:</strong> <?= $proximo_partido['fecha'] ?> a las <?= $proximo_partido['hora_inicio'] ?></p>
+
+                  // Formatear fecha y hora
+                  $fecha_formateada = $fecha_evento->format('d-m');
+                  $hora_formateada = $fecha_evento->format('H:i');
+                  ?>
+                  <p><strong> <?= $fecha_formateada ?> a las <?= $hora_formateada ?> </strong></p>
                   <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
 
                   <?php

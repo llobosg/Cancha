@@ -27,11 +27,14 @@ try {
     $pdo->prepare("UPDATE equipos_partido SET marcador_final = ? WHERE id_reserva = ? AND nombre_equipo = 'Blancos'")
          ->execute([$goles_blancos, $id_reserva]);
     
-    // Marcar ganador
+    // Marcar ganador (✅ CORREGIDO: convertir booleano a entero)
+    $ganador_rojos = ($goles_rojos > $goles_blancos) ? 1 : 0;
+    $ganador_blancos = ($goles_blancos > $goles_rojos) ? 1 : 0;
+
     $pdo->prepare("UPDATE equipos_partido SET ganador = ? WHERE id_reserva = ? AND nombre_equipo = 'Rojos'")
-         ->execute([$goles_rojos > $goles_blancos, $id_reserva]);
+         ->execute([$ganador_rojos, $id_reserva]);
     $pdo->prepare("UPDATE equipos_partido SET ganador = ? WHERE id_reserva = ? AND nombre_equipo = 'Blancos'")
-         ->execute([$goles_blancos > $goles_rojos, $id_reserva]);
+         ->execute([$ganador_blancos, $id_reserva]);
     
     // Asignar jugador experto
     $pdo->prepare("UPDATE jugadores_equipo SET mejor_jugador = 0 WHERE id_equipo IN (SELECT id_equipo FROM equipos_partido WHERE id_reserva = ?)")
