@@ -745,8 +745,14 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       r.id_reserva,
                       r.fecha,
                       r.hora_inicio,
-                      r.resultado_grabado
+                      r.resultado_grabado,
+                      er.marcador_final AS goles_rojos,
+                      eb.marcador_final AS goles_blancos,
+                      je.id_socio AS mejor_jugador_id
                   FROM reservas r
+                  LEFT JOIN equipos_partido er ON r.id_reserva = er.id_reserva AND er.nombre_equipo = 'Rojos'
+                  LEFT JOIN equipos_partido eb ON r.id_reserva = eb.id_reserva AND eb.nombre_equipo = 'Blancos'
+                  LEFT JOIN jugadores_equipo je ON je.id_equipo = er.id_equipo AND je.mejor_jugador = 1
                   WHERE r.id_club = ? AND r.fecha < CURDATE()
                   ORDER BY r.fecha DESC, r.hora_inicio DESC
                   LIMIT 1
@@ -769,21 +775,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       
                   <?php else: ?>
                       <!-- Formulario editable -->
-                      <form id="postPartidoForm" onsubmit="guardarResultado(event)" style="margin-top:1rem;">
+                      <form id="postPartidoForm" style="margin-top:1rem;">
                         <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
                         
                         <div style="display:flex;gap:1rem;margin:0.5rem 0;">
                           <div style="flex:1;">
                             <label style="font-weight:bold;">Rojos:</label>
                             <input type="number" name="goles_rojos" placeholder="0" 
-                                  value="0"
+                                  value="<?= htmlspecialchars($ultimo_partido['goles_rojos'] ?? '0') ?>"
                                   <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
                                   style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                           </div>
                           <div style="flex:1;">
                             <label style="font-weight:bold;">Blancos:</label>
                             <input type="number" name="goles_blancos" placeholder="0" 
-                                  value="0"
+                                  value="<?= htmlspecialchars($ultimo_partido['goles_blancos'] ?? '0') ?>"
                                   <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
                                   style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                           </div>
@@ -804,7 +810,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                           ");
                           $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
                           while ($jugador = $stmt_inscritos->fetch()): ?>
-                            <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                            <option value="<?= $jugador['id_socio'] ?>" 
+                                    <?= ($jugador['id_socio'] == ($ultimo_partido['mejor_jugador_id'] ?? null)) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($jugador['alias']) ?>
+                            </option>
                           <?php endwhile; ?>
                         </select>
 
