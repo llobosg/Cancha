@@ -1,12 +1,16 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
-session_start(); // ← ¡Importante!
+session_start();
 
 $slug = $_GET['slug'] ?? '';
 if (!$slug || strlen($slug) !== 8) {
     http_response_code(404);
     die('Torneo no encontrado');
 }
+
+$stmt = $pdo->prepare("SELECT * FROM torneos WHERE slug = ? AND estado = 'abierto'");
+$stmt->execute([$slug]);
+$torneo = $stmt->fetch();
 
 // Buscar torneo
 $stmt = $pdo->prepare("SELECT * FROM torneos WHERE slug = ? AND estado = 'abierto'");
@@ -18,10 +22,10 @@ if (!$torneo) {
     die('Torneo cerrado o no existe');
 }
 
-// Verificar sesión
+// Redirigir a login si no hay sesión
 if (!isset($_SESSION['id_socio'])) {
     $_SESSION['torneo_slug'] = $slug;
-    header('Location: ../pages/login.php');
+    header('Location: /pages/login.php');
     exit;
 }
 ?>
@@ -31,10 +35,12 @@ if (!isset($_SESSION['id_socio'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($torneo['nombre']) ?> | CanchaSport</title>
-    <link rel="stylesheet" href="styles.css">
+    <!-- ✅ Ruta absoluta -->
+    <link rel="stylesheet" href="/styles.css">
     <style>
         body {
-            background: linear-gradient(rgba(0,20,10,.4), rgba(0,30,15,.5)), url('assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+            background: linear-gradient(rgba(0,20,10,.4), rgba(0,30,15,.5)), 
+                        url('/assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
             color: white;
             font-family: 'Segoe UI', sans-serif;
             padding: 2rem 1rem;
@@ -135,7 +141,7 @@ if (!isset($_SESSION['id_socio'])) {
     <script>
         // Cargar socios
         document.addEventListener('DOMContentLoaded', async () => {
-            const res = await fetch(`api/listar_socios_disponibles.php?slug=<?= $slug ?>`);
+            const res = await fetch(`/api/listar_socios_disponibles.php?slug=<?= $slug ?>`);
             const socios = await res.json();
             const select = document.getElementById('id_socio_2');
             select.innerHTML = '<option value="">-- Selecciona un socio --</option>';
@@ -151,7 +157,7 @@ if (!isset($_SESSION['id_socio'])) {
         document.getElementById('inscripcionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(e.target));
-            const res = await fetch('api/inscribir_pareja.php', {
+            const res = await fetch('/api/inscribir_pareja.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
