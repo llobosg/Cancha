@@ -16,6 +16,11 @@ if (!$torneo) {
     http_response_code(404);
     die('Torneo cerrado o no existe');
 }
+
+// Guardar slug en sesión para redirigir después del login
+if (!isset($_SESSION['id_socio'])) {
+    $_SESSION['torneo_slug'] = $slug;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -65,12 +70,10 @@ if (!$torneo) {
         <p><strong>🏅 Nivel:</strong> <?= $torneo['nivel'] ?></p>
 
         <?php if (isset($_SESSION['id_socio'])): ?>
-            <!-- Ya logueado -->
             <button class="btn-action" onclick="window.location.href='/api/inscribir_jugador_individual.php?slug=<?= $slug ?>'">
                 Inscribirme
             </button>
         <?php else: ?>
-            <!-- No logueado -->
             <p>Debes estar registrado en CanchaSport para participar.</p>
             <button class="btn-action" onclick="window.location.href='/pages/login_email.php'">
                 Iniciar sesión

@@ -20,8 +20,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 error_log("SESSION después de start: " . print_r($_SESSION, true));
 
-// Determinar si es modo individual
-$modo_individual = !isset($_GET['id_club']) || empty($_GET['id_club']);
+// Modo individual solo si se pide explícitamente
+$modo_individual = isset($_GET['modo']) && $_GET['modo'] === 'individual';
 error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
 if ($modo_individual) {
     error_log("✓ Modo individual detectado");
