@@ -4,17 +4,12 @@ require_once __DIR__ . '/../includes/config.php';
 session_start();
 
 try {
-    if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+    // Verificar que es administrador de recinto
+    if (!isset($_SESSION['id_recinto'])) {
         throw new Exception('Acceso no autorizado');
     }
 
-    // Verificar que el usuario es responsable del recinto
-    $stmt_check = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
-    $stmt_check->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
-    $es_responsable = $stmt_check->fetch()['es_responsable'] ?? 0;
-    if (!$es_responsable) {
-        throw new Exception('Solo el responsable puede crear torneos');
-    }
+    $id_recinto = $_SESSION['id_recinto'];
 
     // Validar datos
     $data = json_decode(file_get_contents('php://input'), true);
@@ -23,15 +18,12 @@ try {
         if (empty($data[$field])) throw new Exception("Campo requerido: {$field}");
     }
 
-    // Validar disponibilidad de canchas en el rango horario
+    // Validar fechas
     $fecha_inicio = new DateTime($data['fecha_inicio']);
     $fecha_fin = new DateTime($data['fecha_fin']);
     if ($fecha_inicio >= $fecha_fin) {
         throw new Exception('Fecha de inicio debe ser anterior a fecha de fin');
     }
-
-    // Aquí podrías agregar lógica de verificación de disponibilidad (opcional en MVP)
-    // Por ahora, asumimos que el admin ya verificó
 
     // Insertar torneo
     $pdo->beginTransaction();
@@ -42,7 +34,7 @@ try {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierto', ?, ?)
     ");
     $stmt->execute([
-        $_SESSION['club_id'],
+        $id_recinto,
         $data['nombre'],
         $data['descripcion'] ?? '',
         $data['deporte'],
@@ -57,7 +49,7 @@ try {
     $id_torneo = $pdo->lastInsertId();
     $pdo->commit();
 
-    // Generar slug único para QR
+    // Generar slug único
     $slug = substr(md5($id_torneo . time()), 0, 8);
     $pdo->prepare("UPDATE torneos SET slug = ? WHERE id_torneo = ?")->execute([$slug, $id_torneo]);
 
