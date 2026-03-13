@@ -53,6 +53,7 @@ if (!$stmt_check->fetch()) {
             display: block;
             margin-bottom: 0.4rem;
             font-weight: bold;
+            color: white; /* ✅ Esto faltaba */
         }
         input, select {
             width: 100%;
