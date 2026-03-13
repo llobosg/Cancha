@@ -57,6 +57,13 @@ $stmt_puestos = $pdo->prepare("SELECT id_puesto, puesto FROM puestos WHERE 1=1 O
 $stmt_puestos->execute();
 $puestos = $stmt_puestos->fetchAll();
 
+// Modo torneo
+$tournament_slug = $_GET['tournament'] ?? null;
+if ($tournament_slug) {
+    // Guardar en sesión para redirigir después del registro
+    $_SESSION['post_registro_torneo'] = $tournament_slug;
+}
+
 // Procesar formulario POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -378,6 +385,7 @@ $datos_completos = (bool)$socio['datos_completos'];
                 ✅ Tu perfil ya está completo. Puedes actualizar tus datos si lo deseas.
             </div>
         <?php endif; ?>
+        
         
         <form method="POST" action="">
             <div class="form-group">
