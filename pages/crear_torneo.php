@@ -2,13 +2,19 @@
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
+// Verificar que es administrador de recinto
+if (!isset($_SESSION['id_recinto'])) {
+    header('Location: ../index.php');
+    exit;
+}
 
+$id_recinto = $_SESSION['id_recinto'];
 
-$stmt_check = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
-$stmt_check->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
-$es_responsable = $stmt_check->fetch()['es_responsable'] ?? 0;
-if (!$es_responsable) {
-    header('Location: dashboard_socio.php?id_club=' . $_SESSION['current_club']);
+// Verificar que el recinto existe
+$stmt_check = $pdo->prepare("SELECT id_recinto FROM recintos_deportivos WHERE id_recinto = ?");
+$stmt_check->execute([$id_recinto]);
+if (!$stmt_check->fetch()) {
+    header('Location: ../index.php');
     exit;
 }
 ?>
@@ -180,7 +186,7 @@ if (!$es_responsable) {
             <button class="copy-btn" onclick="copiarEnlace()">📋 Copiar enlace</button>
         </div>
 
-        <a href="dashboard_socio.php?id_club=<?= $_SESSION['current_club'] ?>" class="back-link">← Volver al dashboard</a>
+        <a href="recinto_dashboard.php" class="back-link">← Volver al dashboard</a>
     </div>
 
     <script>
