@@ -57,7 +57,7 @@ try {
         'success' => true,
         'id_torneo' => $id_torneo,
         'slug' => $slug,
-        'qr_url' => "https://canchasport.com/torneo/{$slug}"
+        'qr_url' => "https://canchasport.com/torneo.php?slug={$slug}"
     ]);
 
 } catch (Exception $e) {
