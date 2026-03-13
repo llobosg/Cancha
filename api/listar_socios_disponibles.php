@@ -23,11 +23,14 @@ try {
     $id_recinto = $torneo['id_recinto'];
     $id_torneo = $torneo['id_torneo'];
 
-    // Obtener socios del recinto que NO están inscritos en este torneo
+    // Obtener socios de clubs que han reservado en este recinto
     $stmt = $pdo->prepare("
-        SELECT s.id_socio, s.alias
+        SELECT DISTINCT s.id_socio, s.alias
         FROM socios s
-        WHERE s.id_club = ?
+        JOIN clubs c ON s.id_club = c.id_club
+        JOIN reservas r ON c.id_club = r.id_club
+        JOIN canchas ca ON r.id_cancha = ca.id_cancha
+        WHERE ca.id_recinto = ?
           AND s.id_socio NOT IN (
               SELECT id_socio_1 FROM parejas_torneo WHERE id_torneo = ?
               UNION

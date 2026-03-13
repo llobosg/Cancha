@@ -3,72 +3,91 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-// Si ya hay sesión activa, redirigir al dashboard
-if (isset($_SESSION['id_socio']) && isset($_SESSION['club_id'])) {
-    // Redirigir al dashboard del club correspondiente
-    $stmt = $pdo->prepare("SELECT email_responsable FROM clubs WHERE id_club = ?");
-    $stmt->execute([$_SESSION['club_id']]);
-    $club_data = $stmt->fetch();
-    
-    if ($club_data) {
-        $club_slug = substr(md5($_SESSION['club_id'] . $club_data['email_responsable']), 0, 8);
-        header('Location: dashboard_socio.php?id_club=' . $club_slug);
+// Si ya hay sesión activa, redirigir según contexto
+if (isset($_SESSION['id_socio'])) {
+    if (!empty($_SESSION['torneo_slug'])) {
+        $slug = $_SESSION['torneo_slug'];
+        unset($_SESSION['torneo_slug']);
+        header('Location: /torneo.php?slug=' . urlencode($slug));
         exit;
     }
+    // Redirigir al dashboard si hay club en sesión
+    if (!empty($_SESSION['current_club'])) {
+        header('Location: dashboard_socio.php?id_club=' . $_SESSION['current_club']);
+        exit;
+    }
+    header('Location: ../index.php');
+    exit;
 }
 
 $error = '';
 $success = '';
 
+// Determinar redirección de "volver"
+if (!empty($_SESSION['torneo_slug'])) {
+    $back_url = '/torneo.php?slug=' . $_SESSION['torneo_slug'];
+} else {
+    $back_url = '../index.php';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $club_slug = $_POST['club_slug'] ?? '';
-    
+    $club_slug = $_POST['club_slug'] ?? null;
+
     if (empty($email) || empty($password)) {
         $error = 'Email y contraseña son requeridos';
-    } elseif (empty($club_slug) || strlen($club_slug) !== 8) {
-        $error = 'Club no válido';
     } else {
-        // Encontrar el club correspondiente al slug
-        $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
-        $stmt_club->execute();
-        $clubs = $stmt_club->fetchAll();
-        
+        // Buscar club si se proporcionó slug
         $club_id = null;
-        foreach ($clubs as $c) {
-            $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-            if ($generated_slug === $club_slug) {
-                $club_id = (int)$c['id_club'];
-                break;
+        if ($club_slug && strlen($club_slug) === 8) {
+            $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
+            $stmt_club->execute();
+            $clubs = $stmt_club->fetchAll();
+            foreach ($clubs as $c) {
+                $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                if ($generated_slug === $club_slug) {
+                    $club_id = (int)$c['id_club'];
+                    break;
+                }
             }
         }
-        
-        if (!$club_id) {
-            $error = 'Club no encontrado';
-        } else {
-            // Verificar credenciales del socio
-            $stmt = $pdo->prepare("
-                SELECT id_socio, password_hash 
-                FROM socios 
-                WHERE email = ? AND id_club = ? AND password_hash IS NOT NULL
-            ");
-            $stmt->execute([$email, $club_id]);
-            $socio = $stmt->fetch();
-            
-            if ($socio && password_verify($password, $socio['password_hash'])) {
-                // Login exitoso
-                $_SESSION['id_socio'] = $socio['id_socio'];
+
+        // Verificar credenciales del socio
+        $sql = "SELECT id_socio, password_hash, id_club FROM socios WHERE email = ? AND password_hash IS NOT NULL";
+        $params = [$email];
+        if ($club_id) {
+            $sql .= " AND id_club = ?";
+            $params[] = $club_id;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $socio = $stmt->fetch();
+
+        if ($socio && password_verify($password, $socio['password_hash'])) {
+            // Login exitoso
+            $_SESSION['id_socio'] = $socio['id_socio'];
+            $_SESSION['user_email'] = $email;
+
+            if ($club_id) {
                 $_SESSION['club_id'] = $club_id;
-                $_SESSION['user_email'] = $email;
                 $_SESSION['current_club'] = $club_slug;
-                
-                // Redirigir al dashboard
-                header('Location: dashboard_socio.php?id_club=' . $club_slug);
-                exit;
-            } else {
-                $error = 'Credenciales incorrectas o contraseña no configurada';
             }
+
+            // Redirigir según contexto
+            if (!empty($_SESSION['torneo_slug'])) {
+                $slug = $_SESSION['torneo_slug'];
+                unset($_SESSION['torneo_slug']);
+                header('Location: /torneo.php?slug=' . urlencode($slug));
+            } elseif ($club_id) {
+                header('Location: dashboard_socio.php?id_club=' . $club_slug);
+            } else {
+                header('Location: ../index.php');
+            }
+            exit;
+        } else {
+            $error = 'Credenciales incorrectas o contraseña no configurada';
         }
     }
 }
@@ -171,12 +190,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       text-decoration: underline;
     }
 
-    /* Responsive móvil */
     @media (max-width: 768px) {
       .container {
         padding: 1rem;
       }
-      
       .login-container {
         padding: 1.5rem;
       }
@@ -196,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="hidden" name="club_slug" value="<?= htmlspecialchars($_GET['club'] ?? '') ?>">
         
         <div class="form-group">
-          <label for="email">Email **</label>
+          <label for="email">Email *</label>
           <input type="email" id="email" name="email" required 
                  value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
         </div>
@@ -209,13 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit" class="btn-submit">Iniciar Sesión</button>
       </form>
       
-      <a href="../index.php" class="back-link">← Volver al inicio</a>
-      
-      <?php if (!empty($_GET['club'])): ?>
-        <p style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
-          Club: <?= htmlspecialchars($_GET['club']) ?>
-        </p>
-      <?php endif; ?>
+      <a href="<?= htmlspecialchars($back_url) ?>" class="back-link">← Volver</a>
     </div>
   </div>
 </body>
