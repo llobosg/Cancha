@@ -2,11 +2,7 @@
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
-// Verificar que es responsable
-if (!isset($_SESSION['club_id']) || !isset($_SESSION['id_socio'])) {
-    header('Location: ../index.php');
-    exit;
-}
+
 
 $stmt_check = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
 $stmt_check->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
