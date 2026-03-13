@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+session_start(); // ← ¡Importante!
 
 $slug = $_GET['slug'] ?? '';
 if (!$slug || strlen($slug) !== 8) {
@@ -15,6 +16,13 @@ $torneo = $stmt->fetch();
 if (!$torneo) {
     http_response_code(404);
     die('Torneo cerrado o no existe');
+}
+
+// Verificar sesión
+if (!isset($_SESSION['id_socio'])) {
+    $_SESSION['torneo_slug'] = $slug;
+    header('Location: ../pages/login.php');
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -58,6 +66,7 @@ if (!$torneo) {
             display: block;
             margin-bottom: 0.4rem;
             font-weight: bold;
+            color: white;
         }
         input, select {
             width: 100%;
@@ -65,6 +74,8 @@ if (!$torneo) {
             border-radius: 8px;
             border: 1px solid #ccc;
             font-size: 1rem;
+            background: white; /* ✅ Fondo blanco para inputs */
+            color: #333;      /* ✅ Texto oscuro */
         }
         .btn-submit {
             width: 100%;
@@ -76,6 +87,15 @@ if (!$torneo) {
             font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
+        }
+        .share-link, #qrUrl {
+            background: #f1f1f1;
+            color: #333 !important; /* ← Texto oscuro */
+            padding: 0.5rem;
+            border-radius: 6px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -103,39 +123,6 @@ if (!$torneo) {
                 </select>
             </div>
 
-            <script>
-            // Cargar socios disponibles dinámicamente
-            document.addEventListener('DOMContentLoaded', async () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const slug = urlParams.get('slug');
-
-                if (!slug) return;
-
-                try {
-                    const res = await fetch(`api/listar_socios_disponibles.php?slug=${slug}`);
-                    const socios = await res.json();
-
-                    const select = document.getElementById('id_socio_2');
-                    select.innerHTML = '<option value="">-- Selecciona un socio --</option>';
-                    
-                    if (socios.length === 0) {
-                        select.innerHTML = '<option value="">No hay socios disponibles</option>';
-                        select.disabled = true;
-                    } else {
-                        socios.forEach(socio => {
-                            const option = document.createElement('option');
-                            option.value = socio.id_socio;
-                            option.textContent = socio.alias;
-                            select.appendChild(option);
-                        });
-                    }
-                } catch (err) {
-                    console.error('Error al cargar socios:', err);
-                    document.getElementById('id_socio_2').innerHTML = '<option value="">Error al cargar</option>';
-                }
-            });
-            </script>
-
             <div class="form-group">
                 <label for="nombre_pareja">Nombre de la pareja (opcional)</label>
                 <input type="text" id="nombre_pareja" name="nombre_pareja" placeholder="Ej: Los Crackers">
@@ -146,29 +133,32 @@ if (!$torneo) {
     </div>
 
     <script>
+        // Cargar socios
+        document.addEventListener('DOMContentLoaded', async () => {
+            const res = await fetch(`api/listar_socios_disponibles.php?slug=<?= $slug ?>`);
+            const socios = await res.json();
+            const select = document.getElementById('id_socio_2');
+            select.innerHTML = '<option value="">-- Selecciona un socio --</option>';
+            socios.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id_socio;
+                opt.textContent = s.alias;
+                select.appendChild(opt);
+            });
+        });
+
+        // Enviar formulario
         document.getElementById('inscripcionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData);
-
-            try {
-                const res = await fetch('api/inscribir_pareja.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-
-                if (result.success) {
-                    alert('✅ ¡Inscripción confirmada!');
-                    window.location.reload();
-                } else {
-                    alert('❌ ' + result.message);
-                }
-            } catch (err) {
-                console.error(err);
-                alert('❌ Error al inscribirse');
-            }
+            const data = Object.fromEntries(new FormData(e.target));
+            const res = await fetch('api/inscribir_pareja.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            alert(result.success ? '✅ ¡Inscripción confirmada!' : '❌ ' + result.message);
+            if (result.success) location.reload();
         });
     </script>
 </body>

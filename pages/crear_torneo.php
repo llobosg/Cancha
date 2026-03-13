@@ -116,12 +116,12 @@ if (!$stmt_check->fetch()) {
             <input type="hidden" name="id_recinto" value="<?= $_SESSION['club_id'] ?>">
 
             <div class="form-group">
-                <label for="nombre" class="back-link">Nombre del torneo *</label>
+                <label for="nombre">Nombre del torneo *</label>
                 <input type="text" id="nombre" name="nombre" required placeholder="Ej: Torneo Primavera Pádel">
             </div>
 
             <div class="form-group">
-                <label for="deporte" class="back-link">Deporte *</label>
+                <label for="deporte">Deporte *</label>
                 <select id="deporte" name="deporte" required>
                     <option value="padel">Pádel</option>
                     <option value="tenis">Tenis</option>
@@ -129,7 +129,7 @@ if (!$stmt_check->fetch()) {
             </div>
 
             <div class="form-group">
-                <label for="categoria" class="back-link">Categoría *</label>
+                <label for="categoria">Categoría *</label>
                 <select id="categoria" name="categoria" required>
                     <option value="masculina">Masculina</option>
                     <option value="femenina">Femenina</option>
@@ -138,7 +138,7 @@ if (!$stmt_check->fetch()) {
             </div>
 
             <div class="form-group">
-                <label for="nivel" class="back-link">Nivel *</label>
+                <label for="nivel">Nivel *</label>
                 <select id="nivel" name="nivel" required>
                     <option value="Sexta">Sexta</option>
                     <option value="Quinta">Quinta</option>
@@ -150,22 +150,22 @@ if (!$stmt_check->fetch()) {
             </div>
 
             <div class="form-group">
-                <label for="fecha_inicio" class="back-link">Fecha y hora inicio *</label>
+                <label for="fecha_inicio">Fecha y hora inicio *</label>
                 <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" required>
             </div>
 
             <div class="form-group">
-                <label for="fecha_fin" class="back-link">Fecha y hora fin *</label>
+                <label for="fecha_fin">Fecha y hora fin *</label>
                 <input type="datetime-local" id="fecha_fin" name="fecha_fin" required>
             </div>
 
             <div class="form-group">
-                <label for="num_parejas_max" class="back-link">Cantidad máxima de parejas *</label>
+                <label for="num_parejas_max">Cantidad máxima de parejas *</label>
                 <input type="number" id="num_parejas_max" name="num_parejas_max" min="2" max="32" required>
             </div>
 
             <div class="form-group">
-                <label for="premios" class="back-link">Premios (opcional)</label>
+                <label for="premios">Premios (opcional)</label>
                 <input type="text" id="premios" name="premios" placeholder="Ej: Trofeo + Vales">
             </div>
 
