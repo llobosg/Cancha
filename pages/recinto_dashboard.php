@@ -339,7 +339,7 @@ $top_canchas = $stmt_top_canchas->fetchAll();
         <button class="btn-action" onclick="window.location.href='gestion_canchas.php?id=<?= $recinto['id_recinto'] ?>'">Gestionar Canchas</button>
         <button class="btn-action" onclick="window.location.href='calendario_reservas.php?id=<?= $recinto['id_recinto'] ?>'">Calendario Reservas</button>
         <button class="btn-action" onclick="window.location.href='crear_reserva_manual.php?id=<?= $recinto['id_recinto'] ?>'">Reserva Manual</button>
-        <button class="btn-action" onclick="window.location.href='crear_torneo.php'">Crear Americano</button>
+        <button class="btn-action" onclick="window.location.href='/pages/crear_torneo.php'">Crear Americano</button>
         <button class="btn-action" onclick="window.location.href='estadisticas_avanzadas.php?id=<?= $recinto['id_recinto'] ?>'">Estadísticas Avanzadas</button>
       </div>
     </div>
