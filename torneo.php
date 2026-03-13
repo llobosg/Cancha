@@ -8,10 +8,6 @@ if (!$slug || strlen($slug) !== 8) {
     die('Torneo no encontrado');
 }
 
-$stmt = $pdo->prepare("SELECT * FROM torneos WHERE slug = ? AND estado = 'abierto'");
-$stmt->execute([$slug]);
-$torneo = $stmt->fetch();
-
 // Buscar torneo
 $stmt = $pdo->prepare("SELECT * FROM torneos WHERE slug = ? AND estado = 'abierto'");
 $stmt->execute([$slug]);
@@ -22,10 +18,27 @@ if (!$torneo) {
     die('Torneo cerrado o no existe');
 }
 
-// Redirigir a login si no hay sesión
+// Obtener club_slug desde id_recinto
+$stmt_club = $pdo->prepare("
+    SELECT c.id_club, c.email_responsable 
+    FROM clubs c 
+    JOIN recintos_deportivos r ON c.id_club = r.id_club 
+    WHERE r.id_recinto = ?
+");
+$stmt_club->execute([$torneo['id_recinto']]);
+$club_data = $stmt_club->fetch();
+
+if (!$club_data) {
+    header('Location: /index.php');
+    exit;
+}
+
+$club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
+
+// Verificar sesión
 if (!isset($_SESSION['id_socio'])) {
     $_SESSION['torneo_slug'] = $slug;
-    header('Location: /pages/login.php');
+    header('Location: /pages/login_email.php?club=' . $club_slug);
     exit;
 }
 ?>
@@ -35,7 +48,6 @@ if (!isset($_SESSION['id_socio'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($torneo['nombre']) ?> | CanchaSport</title>
-    <!-- ✅ Ruta absoluta -->
     <link rel="stylesheet" href="/styles.css">
     <style>
         body {
@@ -54,55 +66,9 @@ if (!isset($_SESSION['id_socio'])) {
             box-shadow: 0 6px 20px rgba(0,0,0,0.4);
             text-align: center;
         }
-        h1 {
-            color: #FFD700;
-            margin-bottom: 1.5rem;
-        }
-        .info {
-            background: rgba(255,255,255,0.15);
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-        .form-group {
-            margin: 1rem 0;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.4rem;
-            font-weight: bold;
-            color: white;
-        }
-        input, select {
-            width: 100%;
-            padding: 0.6rem;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 1rem;
-            background: white; /* ✅ Fondo blanco para inputs */
-            color: #333;      /* ✅ Texto oscuro */
-        }
-        .btn-submit {
-            width: 100%;
-            padding: 0.8rem;
-            background: #00cc66;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .share-link, #qrUrl {
-            background: #f1f1f1;
-            color: #333 !important; /* ← Texto oscuro */
-            padding: 0.5rem;
-            border-radius: 6px;
-            word-break: break-all;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
+        label { color: white; display: block; margin-bottom: 0.4rem; font-weight: bold; }
+        input, select { width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid #ccc; background: white; color: #333; }
+        .btn-submit { width: 100%; padding: 0.8rem; background: #00cc66; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
