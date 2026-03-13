@@ -211,10 +211,14 @@ if (!$stmt_check->fetch()) {
                     qrUrlEl.textContent = result.qr_url;
                     qrSection.style.display = 'block';
 
-                    // Generar QR
-                    QRCode.toCanvas(document.getElementById('qrCanvas'), result.qr_url, { width: 200 }, function (error) {
-                        if (error) console.error(error);
-                    });
+                    if (typeof QRCode !== 'undefined') {
+                        QRCode.toCanvas(document.getElementById('qrCanvas'), result.qr_url, { width: 200 }, function (error) {
+                            if (error) console.error(error);
+                        });
+                    } else {
+                        console.warn('QRCode no disponible');
+                        document.getElementById('qrCanvas').outerHTML = '<p style="color:white;">⚠️ QR no disponible</p>';
+                    }
 
                     // Scroll to QR
                     qrSection.scrollIntoView({ behavior: 'smooth' });
