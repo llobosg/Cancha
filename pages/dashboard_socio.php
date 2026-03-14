@@ -137,7 +137,7 @@ if (!$modo_individual) {
     $_SESSION['current_club'] = $club_slug;
 }
 
-// === PRÓXIMO EVENTO (solo si hay club_id) ===
+// === PRÓXIMO EVENTO ===
 $proximo_evento = null;
 if (!$modo_individual && isset($_SESSION['club_id'])) {
     $stmt_evento = $pdo->prepare("
@@ -498,12 +498,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       display: flex;
       flex-direction: column;
     }
-
     .stat-card h3 {
       margin-bottom: 0.5rem;
       opacity: 0.9;
     }
-
     .stat-card-content {
       flex: 1;
       overflow-y: auto;
@@ -538,6 +536,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     }
     .btn-share:hover {
       background: rgba(255,255,255,0.3);
+    }
+    /* Columna Acción centrada */
+    .dynamic-table td:nth-child(12),
+    .dynamic-table th:nth-child(12) {
+      vertical-align: middle;
+      text-align: center;
     }
   </style>
 </head>
@@ -574,11 +578,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <div class="dashboard-upper">
       <!-- Sub sección izquierda -->
       <div class="upper-left">
-
         <div class="fichas-dashboard">
           <!-- Próximo Partido -->
           <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-            <h3 style="color: white;">📅 Próximo Partido</h3>
+            <h3 style="color: white;">⚽ Próximo Partido</h3>
             <div class="stat-card-content">
               <?php if ($proximo_evento): ?>
                 <?php
@@ -608,8 +611,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍺</div>
                     </div>
                   </div>
-                  <!--<button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
-                  <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button> -->
+                  <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
                     <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                   <?php endif; ?>
@@ -625,8 +628,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <!-- Deudas Pendientes -->
           <?php if ($deuda_mas_vigente): ?>
             <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
-            <h3>⚠️ Deuda Pendiente</h3>
-            <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
+              <h3>💰 Deuda Pendiente</h3>
+              <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
                 <strong><?= htmlspecialchars($deuda_mas_vigente['detalle_origen']) ?></strong><br>
                 <strong>📅</strong> <?= date('d/m', strtotime($deuda_mas_vigente['fecha_evento'])) ?> –
                 <strong>💲</strong> $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?><br>
@@ -645,7 +648,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               <?php
               // Obtener último partido REAL (ya jugado)
               $stmt_last = $pdo->prepare("
-                  SELECT 
+                  SELECT
                       r.id_reserva,
                       r.fecha,
                       r.hora_inicio
@@ -656,57 +659,51 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               ");
               $stmt_last->execute([$_SESSION['club_id']]);
               $ultimo_partido = $stmt_last->fetch();
-
               if ($ultimo_partido && $es_responsable): ?>
-                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
-                  
-                  <!-- Formulario post-partido -->
-                  <form id="postPartidoForm" style="margin-top:1rem;">
-                    <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
-                    
-                    <div style="display:flex;gap:1rem;margin:0.5rem 0;">
-                      <div style="flex:1;">
-                        <label style="font-weight:bold;">Rojos:</label>
-                        <input type="number" name="goles_rojos" placeholder="0" 
-                              value="0"
-                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                      </div>
-                      <div style="flex:1;">
-                        <label style="font-weight:bold;">Blancos:</label>
-                        <input type="number" name="goles_blancos" placeholder="0" 
-                              value="0"
-                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                      </div>
+                <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+                <!-- Formulario post-partido -->
+                <form id="postPartidoForm" style="margin-top:1rem;">
+                  <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                  <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                    <div style="flex:1;">
+                      <label style="font-weight:bold;">Rojos:</label>
+                      <input type="number" name="goles_rojos" placeholder="0"
+                        value="0"
+                        style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                     </div>
-
-                    <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
-                    <select name="jugador_experto" id="mejorJugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                      <option value="">Seleccionar...</option>
-                      <?php
-                      // Cargar inscritos del último partido
-                      $stmt_inscritos = $pdo->prepare("
-                          SELECT s.id_socio, s.alias
-                          FROM inscritos i
-                          JOIN socios s ON i.id_socio = s.id_socio
-                          WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
-                          ORDER BY s.alias
-                      ");
-                      $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
-                      while ($jugador = $stmt_inscritos->fetch()): ?>
-                        <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
-                      <?php endwhile; ?>
-                    </select>
-
-                    <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-                      Grabar Resultado
-                    </button>
-                  </form>
-
+                    <div style="flex:1;">
+                      <label style="font-weight:bold;">Blancos:</label>
+                      <input type="number" name="goles_blancos" placeholder="0"
+                        value="0"
+                        style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                    </div>
+                  </div>
+                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
+                  <select name="jugador_experto" id="mejorJugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                    <option value="">Seleccionar...</option>
+                    <?php
+                    // Cargar inscritos del último partido
+                    $stmt_inscritos = $pdo->prepare("
+                        SELECT s.id_socio, s.alias
+                        FROM inscritos i
+                        JOIN socios s ON i.id_socio = s.id_socio
+                        WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
+                        ORDER BY s.alias
+                    ");
+                    $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
+                    while ($jugador = $stmt_inscritos->fetch()): ?>
+                      <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                    <?php endwhile; ?>
+                  </select>
+                  <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+                    Grabar Resultado
+                  </button>
+                </form>
               <?php elseif ($ultimo_partido): ?>
-                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
-                  <p style="margin-top:1rem;">Resultado aún no registrado</p>
+                <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+                <p style="margin-top:1rem;">Resultado aún no registrado</p>
               <?php else: ?>
-                  <p style="margin-top:2rem;">Sin partidos anteriores</p>
+                <p style="margin-top:2rem;">Sin partidos anteriores</p>
               <?php endif; ?>
             </div>
           </div>
@@ -714,7 +711,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <!-- Noticias -->
           <div class="stat-card">
             <h3>Noticias</h3>
-            <div class="stat-card-content" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #071289;">
+            <div class="stat-card-content">
               <div style="text-align:left;font-size:0.85rem;line-height:1.4;">
                 <div>• Bienvenidos a la temporada 2026</div>
                 <div>• Nuevas reglas para inscripciones</div>
@@ -1095,17 +1092,124 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       }
 
       // === ACCIONES DE EVENTOS ===
-    function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
-      const formData = new FormData();
-      formData.append('action', 'anotarse');
-      formData.append('id_actividad', idActividad);
-      formData.append('tipo_actividad', tipoActividad);
-      formData.append('deporte', deporte);
-      formData.append('players_max', playersMax);
-      formData.append('monto_total', montoTotal);
+      function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+        const formData = new FormData();
+        formData.append('action', 'anotarse');
+        formData.append('id_actividad', idActividad);
+        formData.append('tipo_actividad', tipoActividad);
+        formData.append('deporte', deporte);
+        formData.append('players_max', playersMax);
+        formData.append('monto_total', montoTotal);
+        fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              mostrarToast(data.message);
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              mostrarToast('❌ ' + data.message);
+            }
+          })
+          .catch(error => {
+            mostrarToast('❌ Error al procesar la inscripción');
+            console.error('Error:', error);
+          });
+      }
 
-      fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-        .then(response => response.json())
+      function pasoEvento(idReserva) {
+        const card = event.target.closest('.stat-card');
+        if (card) {
+          const pasoBtn = event.target;
+          pasoBtn.textContent = 'Paso esta semana';
+          pasoBtn.disabled = true;
+          pasoBtn.style.opacity = '0.7';
+        }
+      }
+
+      function invitarGalletas(idReserva) {
+        alert('Función "Invitar Galletas" en desarrollo');
+      }
+
+      function invitarCancha(idReserva) {
+        alert('Función "Invitar un Cancha" en desarrollo');
+      }
+
+      function pagarCuota(idCuota) {
+        window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+      }
+
+      // === ARMAR EQUIPOS IA ===
+      function armarEquiposIA(idReserva) {
+        console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
+        fetch('../api/armar_equipos_ia.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_reserva: idReserva})
+        })
+        .then(response => {
+          console.log('ℹ️ [Frontend] Respuesta recibida, status:', response.status);
+          if (!response.ok) {
+            throw new Error('Respuesta no OK: ' + response.status);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('🤖 [Frontend] Datos recibidos:', data);
+          if (data.success) {
+            console.log('🤖 [Frontend] Llamando a mostrarModalEquipos()');
+            mostrarModalEquipos(data.equipos);
+          } else {
+            console.error('🤖 [Frontend] Error desde API:', data.message);
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(err => {
+          console.error('🤖 [Frontend] Error en armado de equipos:', err);
+          alert('Error al armar equipos: ' + err.message);
+        });
+      }
+
+      // === EDITAR PERFIL SOCIO ===
+      function editarPerfilSocio(idSocio) {
+        window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
+      }
+
+      // === ELIMINAR SOCIO ===
+      function eliminarSocio(idSocio) {
+        if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
+        fetch('../api/eliminar_socio.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_socio: idSocio})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            mostrarToast('✅ Socio eliminado');
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        });
+      }
+
+      // === BAJARSE DE EVENTO ===
+      function bajarseEvento(idReserva, idSocioObjetivo = null) {
+        if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
+        const params = new URLSearchParams({
+          action: 'bajarse',
+          id_actividad: idReserva,
+          tipo_actividad: 'reserva'
+        });
+        if (idSocioObjetivo) {
+          params.append('id_socio_objetivo', idSocioObjetivo);
+        }
+        fetch('../api/gestion_eventos.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: params
+        })
+        .then(r => r.json())
         .then(data => {
           if (data.success) {
             mostrarToast(data.message);
@@ -1114,73 +1218,145 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             mostrarToast('❌ ' + data.message);
           }
         })
-        .catch(error => {
-          mostrarToast('❌ Error al procesar la inscripción');
-          console.error('Error:', error);
+        .catch(err => {
+          console.error('Error:', err);
+          mostrarToast('❌ Error al procesar la baja');
         });
-    }
-
-    function pasoEvento(idReserva) {
-      const card = event.target.closest('.stat-card');
-      if (card) {
-        const pasoBtn = event.target;
-        pasoBtn.textContent = 'Paso esta semana';
-        pasoBtn.disabled = true;
-        pasoBtn.style.opacity = '0.7';
-      }
-    }
-
-    function invitarGalletas(idReserva) {
-      alert('Función "Invitar Galletas" en desarrollo');
-    }
-
-    function invitarCancha(idReserva) {
-      alert('Función "Invitar un Cancha" en desarrollo');
-    }
-    
-      function pagarCuota(idCuota) {
-        window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
       }
 
-      // === ARMAR EQUIPOS IA ===
-      function armarEquiposIA(idReserva) {
-          console.log('🔍 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
-          
-          fetch('../api/armar_equipos_ia.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: new URLSearchParams({id_reserva: idReserva})
+      // === VALIDAR PAGO ===
+      function validarPago(idCuota) {
+        if (!confirm('¿Confirmar pago como válido?')) return;
+        fetch('../api/validar_pago.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_cuota: idCuota})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            mostrarToast('✅ Pago validado');
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        });
+      }
+
+      // === REVISAR PAGO ===
+      function revisarPago(idCuota) {
+        if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
+        fetch('../api/revisar_pago.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_cuota: idCuota})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            mostrarToast('✅ Cuota en revisión');
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        });
+      }
+
+      // === ASIGNAR CERVEZA ===
+      function asignarCerveza(idInscrito, estado) {
+        fetch('../api/asignar_cerveza.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({
+            id_inscrito: idInscrito,
+            lleva_cerveza: estado
           })
-          .then(response => {
-              console.log('✅ [Frontend] Respuesta recibida, status:', response.status);
-              if (!response.ok) {
-                  throw new Error('Respuesta no OK: ' + response.status);
-              }
-              return response.json();
-          })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida');
+            setTimeout(() => location.reload(), 1000);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        });
+      }
+
+      // === ANOTARSE CON CERVEZA ===
+      function anotarseConCerveza(llevaCerveza) {
+        // Cierra menú
+        document.getElementById('cervezaMenu').style.display = 'none';
+        // Llama a la API con el flag
+        const formData = new FormData();
+        formData.append('action', 'anotarse');
+        formData.append('id_actividad', <?= $id_reserva ?? 0 ?>);
+        formData.append('tipo_actividad', 'reserva');
+        formData.append('deporte', '<?= $deporte ?? '' ?>');
+        formData.append('players_max', <?= $players ?? 0 ?>);
+        formData.append('monto_total', <?= $monto_total ?? 0 ?>);
+        formData.append('lleva_cerveza', llevaCerveza ? '1' : '0');
+        fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+          .then(r => r.json())
           .then(data => {
-              console.log('📊 [Frontend] Datos recibidos:', data);
-              if (data.success) {
-                  console.log('🟢 [Frontend] Llamando a mostrarModalEquipos()');
-                  mostrarModalEquipos(data.equipos);
-              } else {
-                  console.error('🔴 [Frontend] Error desde API:', data.message);
-                  alert('Error: ' + data.message);
-              }
-          })
-          .catch(err => {
-              console.error('💥 [Frontend] Error en armado de equipos:', err);
-              alert('Error al armar equipos: ' + err.message);
+            if (data.success) {
+              mostrarToast(data.message);
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              mostrarToast('❌ ' + data.message);
+            }
           });
       }
 
+      // === TOGGLE CERVEZA MENU ===
+      function toggleCervezaMenu(e) {
+        e.stopPropagation();
+        const menu = document.getElementById('cervezaMenu');
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+      }
+
+      // Cerrar menú al hacer clic fuera
+      document.addEventListener('click', () => {
+        const menu = document.getElementById('cervezaMenu');
+        if (menu) menu.style.display = 'none';
+      });
+
+      // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
+      document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const golesRojos = formData.get('goles_rojos');
+        const golesBlancos = formData.get('goles_blancos');
+        const jugadorExperto = formData.get('jugador_experto');
+        if (!golesRojos && !golesBlancos) {
+          alert('Ingresa al menos un marcador');
+          return;
+        }
+        try {
+          const response = await fetch('../api/guardar_resultado_partido.php', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await response.json();
+          if (data.success) {
+            mostrarToast('✅ Resultado guardado');
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        } catch (error) {
+          mostrarToast('❌ Error al guardar resultado');
+          console.error('Error:', error);
+        }
+      });
+
+      // === CARGAR DETALLE EVENTOS ===
       function formatDate(dateStr) {
         if (!dateStr) return '-';
         const [y, m, d] = dateStr.split('-');
         return `${d}/${m}`;
       }
 
-      // === CARGAR DETALLE EVENTOS ===
       function cargarDetalleEventos(filtro = 'inscritos') {
         let url = '';
         if (filtro === 'cuotas') {
@@ -1207,7 +1383,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             let html = '';
             data.forEach(row => {
               let botonAccion = '-';
-
               if (filtro === 'cuotas') {
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 if (esResponsable) {
@@ -1217,7 +1392,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
                   }
                 }
-
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha_evento)}</td>
@@ -1234,19 +1408,17 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>${botonAccion}</td>
                   </tr>
                 `;
-              } 
+              }
               else if (filtro === 'socios') {
-                  const esResponsable = <?= json_encode($es_responsable) ?>;
-                  if (esResponsable) {
-                    botonAccion = `
-                      <div style="display:flex; justify-content:center; gap:0.6rem; align-items:center;">
-                        <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
-                        <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
-                      </div>
-                    `;
-                  }
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                if (esResponsable) {
+                  botonAccion = `
+                    <div style="display:flex; justify-content:center; gap:0.6rem; align-items:center;">
+                      <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
+                      <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
+                    </div>
+                  `;
                 }
-
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha)}</td>
@@ -1263,7 +1435,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>${botonAccion}</td>
                   </tr>
                 `;
-              } 
+              }
               else if (filtro === 'inscritos') {
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
@@ -1279,7 +1451,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
                 }
                 botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
-
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha)}</td>
@@ -1296,7 +1467,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>${botonAccion}</td>
                   </tr>
                 `;
-              } 
+              }
               else {
                 // Otros filtros (reservas, eventos, etc.)
                 html += `
@@ -1342,122 +1513,118 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         requestNotificationPermission();
       });
 
-      function eliminarSocio(idSocio) {
-          if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
-          
-          fetch('../api/eliminar_socio.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: new URLSearchParams({id_socio: idSocio})
-          })
-          .then(r => r.json())
-          .then(data => {
-              if (data.success) {
-                  mostrarToast('✅ Socio eliminado');
-                  setTimeout(() => location.reload(), 1500);
-              } else {
-                  mostrarToast('❌ ' + data.message);
-              }
-          });
-      }
-
-      // === EDITAR PERFIL SOCIO ===
-      function editarPerfilSocio(idSocio) {
-        window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
-      }
-
-      // === BAJARSE DE EVENTO ===
-    function bajarseEvento(idReserva, idSocioObjetivo = null) {
-      if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
-      
-      const params = new URLSearchParams({
-          action: 'bajarse',
-          id_actividad: idReserva,
-          tipo_actividad: 'reserva'
-      });
-      if (idSocioObjetivo) {
-          params.append('id_socio_objetivo', idSocioObjetivo);
-      }
-      
-      fetch('../api/gestion_eventos.php', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: params
-      })
-      .then(r => r.json())
-      .then(data => {
-          if (data.success) {
-              mostrarToast(data.message);
-              setTimeout(() => location.reload(), 1500);
-          } else {
-              mostrarToast('❌ ' + data.message);
-          }
-      })
-      .catch(err => {
-          console.error('Error:', err);
-          mostrarToast('❌ Error al procesar la baja');
-      });
-    }
-
-    // === VALIDAR PAGO ===
-    function validarPago(idCuota) {
-      if (!confirm('¿Confirmar pago como válido?')) return;
-      
-      fetch('../api/validar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          mostrarToast('✅ Pago validado');
-          setTimeout(() => location.reload(), 1500);
-        } else {
-          mostrarToast('❌ ' + data.message);
-        }
-      });
-    }
-
-    function moverJugador(de, a) {
-        const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
-        const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
-        
-        // Obtener jugador seleccionado (por ahora el último)
-        if (origen.children.length > 0) {
-            const jugador = origen.removeChild(origen.lastElementChild);
-            destino.appendChild(jugador);
-        }
-    }
-
-      // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
-      document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const golesRojos = formData.get('goles_rojos');
-        const golesBlancos = formData.get('goles_blancos');
-        const jugadorExperto = formData.get('jugador_experto');
-        if (!golesRojos && !golesBlancos) {
-          alert('Ingresa al menos un marcador');
+      // === MODAL EQUIPOS IA ===
+      function mostrarModalEquipos(equipos) {
+        const rojosEl = document.getElementById('equipoRojos');
+        const blancosEl = document.getElementById('equipoBlancos');
+        const modal = document.getElementById('modalEquipos');
+        if (!rojosEl || !blancosEl || !modal) {
+          console.error('❌ Elementos del modal no encontrados');
+          alert('Error: Modal no disponible');
           return;
         }
-        try {
-          const response = await fetch('../api/guardar_resultado_partido.php', {
-            method: 'POST',
-            body: formData
-          });
-          const data = await response.json();
+        rojosEl.innerHTML = '';
+        blancosEl.innerHTML = '';
+        equipos.rojos.forEach(j => {
+          const li = document.createElement('li');
+          li.textContent = j.alias;
+          li.dataset.idSocio = j.id_socio;
+          li.style.padding = '0.3rem';
+          li.style.cursor = 'pointer';
+          li.onclick = () => seleccionarJugador(li, 'rojos');
+          rojosEl.appendChild(li);
+        });
+        equipos.blancos.forEach(j => {
+          const li = document.createElement('li');
+          li.textContent = j.alias;
+          li.dataset.idSocio = j.id_socio;
+          li.style.padding = '0.3rem';
+          li.style.cursor = 'pointer';
+          li.onclick = () => seleccionarJugador(li, 'blancos');
+          blancosEl.appendChild(li);
+        });
+        modal.style.display = 'flex';
+      }
+
+      let jugadorSeleccionado = null;
+      let equipoOrigen = null;
+
+      function seleccionarJugador(elemento, equipo) {
+        document.querySelectorAll('#equipoRojos li, #equipoBlancos li').forEach(el => {
+          el.style.border = '1px solid transparent';
+          el.style.backgroundColor = '';
+        });
+        elemento.style.border = '2px solid #3498DB';
+        elemento.style.backgroundColor = '#d6eaf8';
+        jugadorSeleccionado = elemento.dataset.idSocio;
+        equipoOrigen = equipo;
+      }
+
+      function moverJugador(de, a) {
+        if (!jugadorSeleccionado) {
+          alert('Selecciona un jugador primero');
+          return;
+        }
+        const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
+        const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
+        if (destino.children.length >= 7) {
+          alert('El equipo ya tiene 7 jugadores');
+          return;
+        }
+        let elementoSeleccionado = null;
+        Array.from(origen.children).forEach(li => {
+          if (li.dataset.idSocio == jugadorSeleccionado) {
+            elementoSeleccionado = li;
+          }
+        });
+        if (elementoSeleccionado) {
+          destino.appendChild(elementoSeleccionado);
+          jugadorSeleccionado = null;
+          equipoOrigen = null;
+          elementoSeleccionado.style.border = '1px solid transparent';
+          elementoSeleccionado.style.backgroundColor = '';
+        }
+      }
+
+      function guardarEquipos() {
+        const rojos = Array.from(document.getElementById('equipoRojos').children).map(li =>
+          li.dataset.idSocio
+        );
+        const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li =>
+          li.dataset.idSocio
+        );
+        if (rojos.length === 0 || blancos.length === 0) {
+          alert('Ambos equipos deben tener al menos un jugador');
+          return;
+        }
+        fetch('../api/guardar_equipos_manual.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            id_reserva: <?= $id_reserva ?? 0 ?>,
+            rojos: rojos,
+            blancos: blancos
+          })
+        })
+        .then(r => r.json())
+        .then(data => {
           if (data.success) {
-            mostrarToast('✅ Resultado guardado');
+            mostrarToast('✅ Equipos guardados');
             setTimeout(() => location.reload(), 1500);
           } else {
             mostrarToast('❌ ' + data.message);
           }
-        } catch (error) {
-          mostrarToast('❌ Error al guardar resultado');
-          console.error('Error:', error);
-        }
-      });
+        })
+        .catch(err => {
+          console.error('Error:', err);
+          mostrarToast('❌ Error al guardar equipos');
+        });
+      }
+
+      function cerrarModalEquipos() {
+        const modal = document.getElementById('modalEquipos');
+        if (modal) modal.style.display = 'none';
+      }
     </script>
 
     <!-- Modal Compartir Club -->
@@ -1470,6 +1637,34 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         </div>
         <button onclick="copiarEnlace()" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; margin-right:0.5rem;">📋 Copiar</button>
         <button onclick="cerrarModalCompartir()" style="background:#6c757d; color:white; border:none; padding:0.5rem 1rem; border-radius:6px;">Cerrar</button>
+      </div>
+    </div>
+
+    <!-- Modal Equipos IA -->
+    <div id="modalEquipos" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+      <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
+        <h3>🤖 Equipos Futbolito</h3>
+        <div style="display:flex;gap:2rem;margin:1.5rem 0;">
+          <div style="flex:1;background:#ffebee;padding:1rem;border-radius:8px;">
+            <h4 style="color:#e74c3c;">🔴 Rojos</h4>
+            <ul id="equipoRojos" style="list-style:none;padding:0;"></ul>
+            <button onclick="moverJugador('rojos', 'blancos')"
+              style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+              ➡️ Mover a Blancos
+            </button>
+          </div>
+          <div style="flex:1;background:#e3f2fd;padding:1rem;border-radius:8px;">
+            <h4 style="color:#2980b9;">⚪ Blancos</h4>
+            <ul id="equipoBlancos" style="list-style:none;padding:0;"></ul>
+            <button onclick="moverJugador('blancos', 'rojos')"
+              style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+              ➡️ Mover a Rojos
+            </button>
+          </div>
+        </div>
+        <h4>👉 Seleccionar un jugador y dar click en barra para mover a los Rojos o Blancos</h4>
+        <button onclick="guardarEquipos()" class="btn-submit" style="margin-top:1.5rem;">Guardar Equipos</button>
+        <button onclick="cerrarModalEquipos()" style="margin-top:0.5rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
       </div>
     </div>
   </div>
