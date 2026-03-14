@@ -18,40 +18,26 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
-error_log("SESSION después de start: " . (isset($_SESSION) ? print_r($_SESSION, true) : 'NO DEFINIDA'));
+error_log("SESSION después de start: " . print_r($_SESSION, true));
 
 // === DETECTAR MODO INDIVIDUAL O CLUB ===
 $club_slug_from_url = $_GET['id_club'] ?? null;
 $modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
 
 if (!$modo_individual) {
-    // Validar slug
     if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-        error_log("❌ Slug inválido: " . $club_slug_from_url);
+        error_log("❌ Slug inválido, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
-}
-
-if ($modo_individual) {
-    error_log("✅ Modo individual detectado");
-    $club_id = null;
-    $club_nombre = '';
-    $club_logo = null;
-    $club_slug = null;
-} else {
-    error_log("Modo club detectado");
     // Buscar club
     $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
     $stmt_club->execute();
     $clubs = $stmt_club->fetchAll();
-    error_log("Clubs encontrados: " . count($clubs));
-
     $club_id = null;
     $club_nombre = '';
     $club_logo = '';
     $club_slug = null;
-
     foreach ($clubs as $c) {
         $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
         if ($generated_slug === $club_slug_from_url) {
@@ -62,24 +48,26 @@ if ($modo_individual) {
             break;
         }
     }
-
     if (!$club_id) {
         error_log("❌ Club no encontrado, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
     error_log("✅ Club cargado: " . $club_nombre);
+} else {
+    error_log("✅ Modo individual detectado");
+    $club_id = null;
+    $club_nombre = '';
+    $club_logo = null;
+    $club_slug = null;
 }
 
-// === FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS ===
+// === OBTENCIÓN DE ID_SOCIO ===
 $id_socio = null;
 $socio_actual = null;
 
-// Verificar si ya tenemos id_socio en sesión y es válido
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
-    error_log("ID_SOCIO desde sesión: " . $id_socio);
-
     if ($modo_individual) {
         $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL");
         $stmt_validate->execute([$id_socio]);
@@ -87,29 +75,20 @@ if (isset($_SESSION['id_socio'])) {
         $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ?");
         $stmt_validate->execute([$id_socio, $club_id]);
     }
-
     $socio_actual = $stmt_validate->fetch();
-    error_log("Socio actual encontrado: " . ($socio_actual ? 'true' : 'false'));
-
     if (!$socio_actual) {
         $id_socio = null;
         $socio_actual = null;
-        error_log("❌ Socio no válido, limpiando ID");
     }
 }
 
 if (!$id_socio) {
-    error_log("No hay ID_SOCIO válido, buscando por email...");
     $user_email = null;
-
     if (isset($_SESSION['google_email'])) {
         $user_email = $_SESSION['google_email'];
-        error_log("Email desde Google: " . $user_email);
     } elseif (isset($_SESSION['user_email'])) {
         $user_email = $_SESSION['user_email'];
-        error_log("Email desde sesión: " . $user_email);
     }
-
     if ($user_email) {
         if ($modo_individual) {
             $stmt_socio = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club IS NULL");
@@ -118,16 +97,11 @@ if (!$id_socio) {
             $stmt_socio = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
             $stmt_socio->execute([$user_email, $club_id]);
         }
-
         $socio_data = $stmt_socio->fetch();
-        error_log("Socio encontrado por email: " . ($socio_data ? 'true' : 'false'));
-
         if ($socio_data) {
             $id_socio = $socio_data['id_socio'];
             $_SESSION['id_socio'] = $id_socio;
-            error_log("✅ ID_SOCIO guardado en sesión: " . $id_socio);
         } else {
-            error_log("❌ Socio no existe, redirigiendo a completar_perfil");
             if ($modo_individual) {
                 header('Location: completar_perfil.php?modo=individual');
             } else {
@@ -136,18 +110,15 @@ if (!$id_socio) {
             exit;
         }
     } else {
-        error_log("❌ No hay email en sesión, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
 } else {
     $_SESSION['id_socio'] = $id_socio;
-    error_log("✅ ID_SOCIO ya existía en sesión");
 }
 
-// Asegurar que $socio_actual esté definida
+// Asegurar socio_actual
 if (!$socio_actual) {
-    error_log("Cargando socio_actual desde fallback...");
     if ($modo_individual) {
         $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL LIMIT 1");
         $stmt_fallback->execute([$_SESSION['id_socio']]);
@@ -156,34 +127,17 @@ if (!$socio_actual) {
         $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
     }
     $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
-    error_log("Socio actual fallback: " . ($socio_actual ? 'cargado' : 'predeterminado'));
 }
 
-// Asegurar que $socio_actual esté definida
-if (!$socio_actual) {
-    error_log("Cargando socio_actual desde fallback...");
-    if ($modo_individual) {
-        $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL LIMIT 1");
-        $stmt_fallback->execute([$_SESSION['id_socio']]);
-    } else {
-        $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ? LIMIT 1");
-        $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
-    }
-    $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
-    error_log("Socio actual fallback: " . ($socio_actual ? 'cargado' : 'predeterminado'));
-}
-
-// Definir $es_responsable
 $es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1;
 
 // Guardar en sesión
 if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
     $_SESSION['current_club'] = $club_slug;
-    error_log("✅ Datos de club guardados en sesión");
 }
 
-// === CONSULTA PARA PRÓXIMO EVENTO ===
+// === PRÓXIMO EVENTO (solo si hay club_id) ===
 $proximo_evento = null;
 if (!$modo_individual && isset($_SESSION['club_id'])) {
     $stmt_evento = $pdo->prepare("
@@ -229,6 +183,53 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     ");
     $stmt_evento->execute([$_SESSION['club_id']]);
     $proximo_evento = $stmt_evento->fetch();
+}
+
+// === DEUDAS PENDIENTES ===
+$stmt_deudas = $pdo->prepare("
+    SELECT
+        c.id_cuota,
+        c.monto,
+        c.fecha_vencimiento,
+        CASE
+            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+            ELSE 'Sin detalle'
+        END as detalle_origen,
+        COALESCE(r.fecha, e.fecha) as fecha_evento
+    FROM cuotas c
+    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+    WHERE c.id_socio = ? AND c.estado = 'pendiente'
+    ORDER BY c.fecha_vencimiento ASC
+    LIMIT 1
+");
+$stmt_deudas->execute([$_SESSION['id_socio']]);
+$deuda_mas_vigente = $stmt_deudas->fetch();
+
+$stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
+$stmt_count->execute([$_SESSION['id_socio']]);
+$total_deudas = (int)$stmt_count->fetchColumn();
+
+// === ÚLTIMO PARTIDO ===
+$ultimo_partido = null;
+if (!$modo_individual && isset($_SESSION['club_id'])) {
+    $stmt_last = $pdo->prepare("
+        SELECT
+            r.id_reserva,
+            r.fecha,
+            r.hora_inicio,
+            r.resultado_grabado
+        FROM reservas r
+        WHERE r.id_club = ? AND r.fecha < CURDATE()
+        ORDER BY r.fecha DESC, r.hora_inicio DESC
+        LIMIT 1
+    ");
+    $stmt_last->execute([$_SESSION['club_id']]);
+    $ultimo_partido = $stmt_last->fetch();
 }
 ?>
 <!DOCTYPE html>
@@ -283,7 +284,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       font-size: 2rem;
       text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    /* Resto de tu CSS igual... */
     .dashboard-upper {
       display: flex;
       height: auto;
@@ -357,6 +357,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     .filter-btn.active {
       background: #667eea;
       border-color: #667eea;
+    }
+    .dynamic-table-container {
+      overflow-x: auto;
     }
     .dynamic-table {
       width: 100%;
@@ -566,162 +569,51 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     <!-- MITAD SUPERIOR -->
     <div class="dashboard-upper">
-      <!-- Sub sección izquierda (75% en desktop) -->
+      <!-- Sub sección izquierda -->
       <div class="upper-left">
-        <?php
-        // === INICIALIZACIÓN: Verificar inscripción y cuota pendiente ===
-        $ya_inscrito = false;
-        $id_cuota = null;
-        $id_reserva = null;
-        $players = 0;
-        $monto_total = 0;
-        $deporte = '';
-        if ($proximo_evento) {
-            $id_reserva = $proximo_evento['id_reserva'];
-            $players = (int)$proximo_evento['players'];
-            $monto_total = (float)$proximo_evento['monto_total'];
-            $deporte = $proximo_evento['id_deporte'];
-            $stmt_check = $pdo->prepare("
-                SELECT 1
-                FROM inscritos
-                WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'
-            ");
-            $stmt_check->execute([$id_reserva, $_SESSION['id_socio']]);
-            $ya_inscrito = (bool) $stmt_check->fetch();
-            if ($ya_inscrito) {
-                $stmt_cuota = $pdo->prepare("
-                    SELECT id_cuota
-                    FROM cuotas
-                    WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva' AND estado = 'pendiente'
-                ");
-                $stmt_cuota->execute([$id_reserva, $_SESSION['id_socio']]);
-                $cuota_row = $stmt_cuota->fetch();
-                $id_cuota = $cuota_row ? $cuota_row['id_cuota'] : null;
-            }
-        }
-
-        $stmt_deudas = $pdo->prepare("
-            SELECT
-                c.id_cuota,
-                c.monto,
-                c.fecha_vencimiento,
-                CASE
-                    WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-                    WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-                    ELSE 'Sin detalle'
-                END as detalle_origen,
-                COALESCE(r.fecha, e.fecha) as fecha_evento
-            FROM cuotas c
-            LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-            LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-            LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-            LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-            WHERE c.id_socio = ? AND c.estado = 'pendiente'
-            ORDER BY c.fecha_vencimiento ASC  -- La más antigua (más urgente)
-            LIMIT 1
-        ");
-        $stmt_deudas->execute([$_SESSION['id_socio']]);
-        $deuda_mas_vigente = $stmt_deudas->fetch(); // Solo una
-
-        // Contar total de deudas pendientes
-        $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
-        $stmt_count->execute([$_SESSION['id_socio']]);
-        $total_deudas = (int)$stmt_count->fetchColumn();
-        ?>
-
-        <!-- === CONTENEDOR GRID RESPONSIVE === -->
         <div class="fichas-dashboard">
           <!-- Próximo Partido -->
           <div class="stat-card">
-            <h3>📅 Próximo Partido</h3>
-            <?php
-                $icono_deporte = '⚽';
-                if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
-                    $icono_deporte = '⚽';
-                } elseif (in_array($deporte, ['padel', 'pádel', 'tenis'])) {
-                    $icono_deporte = '🎾';
-                } elseif (in_array($deporte, ['volley', 'voleibol', 'volleyball'])) {
-                    $icono_deporte = '🏐';
-                } elseif ($deporte === 'gimnasio') {
-                    $icono_deporte = '🏋️';
-                } elseif ($deporte === 'piscina') {
-                    $icono_deporte = '🏊';
-                }
-                $tipo_reserva_label = match($proximo_evento['tipo_reserva']) {
-                    'semanal' => 'Semanal',
-                    'mensual' => 'Mensual',
-                    default => 'Spot'
-                };
-            ?>
+            <h3>⚽ Próximo Partido</h3>
             <div class="stat-card-content">
-              <?php
-              // Obtener próximo evento
-              $stmt_next = $pdo->prepare("
-                  SELECT 
-                      r.id_reserva,
-                      r.fecha,
-                      r.hora_inicio
-                  FROM reservas r
-                  WHERE r.id_club = ? AND r.fecha >= CURDATE()
-                  ORDER BY r.fecha ASC, r.hora_inicio ASC
-                  LIMIT 1
-              ");
-              $stmt_next->execute([$_SESSION['club_id']]);
-              $proximo_partido = $stmt_next->fetch();
-
-              if ($proximo_partido):
-                  $fecha_evento = new DateTime($proximo_partido['fecha'] . ' ' . $proximo_partido['hora_inicio']);
-                  $ahora = new DateTime();
-                  $diferencia = $ahora->diff($fecha_evento);
-                  $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
-
-                  // Formatear fecha y hora
-                  $fecha_formateada = $fecha_evento->format('d-m');
-                  $hora_formateada = $fecha_evento->format('H:i');
-                  ?>
-                  <p><strong> <?= $fecha_formateada ?> a las <?= $hora_formateada ?> </strong></p>
-                  <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
-
-                  <?php
-                  // Activación de botones: lunes anterior a las 09:00
-                  $lunes_anterior = clone $fecha_evento;
-                  $lunes_anterior->modify('previous monday');
-                  $lunes_anterior->setTime(9, 0, 0);
-                  $botones_activos = ($ahora >= $lunes_anterior);
-                  ?>
-
-                  <?php if ($botones_activos): ?>
-                      <div class="btn-group" style="position:relative; display:inline-block; margin-top:1rem;">
-                          <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;">
-                              Anotarse
-                          </button>
-                          <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.2rem 0.3rem;font-size:0.8rem;border-top-left-radius:0;border-bottom-left-radius:0;"
-                                  onclick="toggleCervezaMenu(event)">
-                              ▼
-                          </button>
-                          <div id="cervezaMenu" style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; z-index:100;">
-                              <div onclick="anotarseConCerveza(false)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse</div>
-                              <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍻</div>
-                          </div>
-                      </div>
-                      <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
-                      <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
-
-                      <!-- nuevo botón armar equipos IA -->
-                      <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                        <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;"
-                                onclick="armarEquiposIA(<?= $id_reserva ?>)">
-                          ⚽ Armar Equipos IA
-                        </button>
-                      <?php endif; ?>
-                  <?php else: ?>
-                      <p style="color:#FFD700;font-weight:bold;margin-top:1rem;">
-                          📅 Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs
-                      </p>
+              <?php if ($proximo_evento): ?>
+                <?php
+                $id_reserva = $proximo_evento['id_reserva'];
+                $players = (int)$proximo_evento['players'];
+                $monto_total = (float)$proximo_evento['monto_total'];
+                $deporte = $proximo_evento['id_deporte'];
+                $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
+                $ahora = new DateTime();
+                $diferencia = $ahora->diff($fecha_evento);
+                $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
+                $fecha_formateada = $fecha_evento->format('d-m');
+                $hora_formateada = $fecha_evento->format('H:i');
+                $lunes_anterior = clone $fecha_evento;
+                $lunes_anterior->modify('previous monday');
+                $lunes_anterior->setTime(9, 0, 0);
+                $botones_activos = ($ahora >= $lunes_anterior);
+                ?>
+                <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
+                <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
+                <?php if ($botones_activos): ?>
+                  <div class="btn-group" style="position:relative; display:inline-block; margin-top:1rem;">
+                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;">Anotarse</button>
+                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.2rem 0.3rem;font-size:0.8rem;border-top-left-radius:0;border-bottom-left-radius:0;" onclick="toggleCervezaMenu(event)">🍺</button>
+                    <div id="cervezaMenu" style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; z-index:100;">
+                      <div onclick="anotarseConCerveza(false)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse</div>
+                      <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍺</div>
+                    </div>
+                  </div>
+                  <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
+                  <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
+                    <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                   <?php endif; ?>
+                <?php else: ?>
+                  <p style="color:#FFD700;font-weight:bold;margin-top:1rem;">⏰ Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs</p>
+                <?php endif; ?>
               <?php else: ?>
-                  <p style="margin-top:2rem;">Próximamente disponible</p>
+                <p style="margin-top:2rem;">Próximamente disponible</p>
               <?php endif; ?>
             </div>
           </div>
@@ -729,20 +621,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <!-- Deudas Pendientes -->
           <?php if ($deuda_mas_vigente): ?>
             <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
-              <h3>⚠️ Deuda Pendiente</h3>
+              <h3>💰 Deuda Pendiente</h3>
               <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
                 <strong><?= htmlspecialchars($deuda_mas_vigente['detalle_origen']) ?></strong><br>
-                <strong>📅</strong> <?= date('d/m', strtotime($deuda_mas_vigente['fecha_evento'])) ?> •
-                <strong>💰</strong> $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?><br>
-                <button class="btn-action" style="background:#E74C3C;margin-top:0.5rem;font-size:0.8rem;color:white;"
-                        onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">
-                  Pagar ahora
-                </button>
+                <strong>📅</strong> <?= date('d/m', strtotime($deuda_mas_vigente['fecha_evento'])) ?> –
+                <strong>💲</strong> $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?><br>
+                <button class="btn-action" style="background:#E74C3C;margin-top:0.5rem;font-size:0.8rem;color:white;" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">Pagar ahora</button>
               </div>
               <?php if ($total_deudas > 1): ?>
-                <p style="font-size:0.8rem; margin-top:0.8rem; opacity:0.8;">
-                  ⚠️ Existens más cuotas pendientes, las puedes revisar en <strong>Detalle Eventos → Cuotas</strong>
-                </p>
+                <p style="font-size:0.8rem; margin-top:0.8rem; opacity:0.8;">⚠️ Existen más cuotas pendientes, las puedes revisar en <strong>Detalle Eventos → Cuotas</strong></p>
               <?php endif; ?>
             </div>
           <?php endif; ?>
@@ -751,105 +638,62 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <div class="stat-card">
             <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
-              <?php
-              // Obtener último partido REAL con datos completos
-              $stmt_last = $pdo->prepare("
-                  SELECT 
-                      r.id_reserva,
-                      r.fecha,
-                      r.hora_inicio,
-                      r.resultado_grabado,
-                      er.marcador_final AS goles_rojos,
-                      eb.marcador_final AS goles_blancos,
-                      s_mejor.id_socio AS mejor_jugador_id,
-                      s_mejor.alias AS mejor_jugador_alias
-                  FROM reservas r
-                  LEFT JOIN equipos_partido er ON r.id_reserva = er.id_reserva AND er.nombre_equipo = 'Rojos'
-                  LEFT JOIN equipos_partido eb ON r.id_reserva = eb.id_reserva AND eb.nombre_equipo = 'Blancos'
-                  LEFT JOIN jugadores_equipo je ON je.id_equipo = er.id_equipo AND je.mejor_jugador = 1
-                  LEFT JOIN socios s_mejor ON je.id_socio = s_mejor.id_socio
-                  WHERE r.id_club = ? AND r.fecha < CURDATE()
-                  ORDER BY r.fecha DESC, r.hora_inicio DESC
-                  LIMIT 1
-              ");
-              $stmt_last->execute([$_SESSION['club_id']]);
-              $ultimo_partido = $stmt_last->fetch();
-
-              if ($ultimo_partido && $es_responsable): 
-                  $fecha_partido = new DateTime($ultimo_partido['fecha'] . ' ' . $ultimo_partido['hora_inicio']);
-                  $fin_partido = clone $fecha_partido;
-                  $fin_partido->modify('+1 hour');
-                  $ahora = new DateTime();
-                  $editable = ($ahora >= $fin_partido);
-              ?>
-                  <p><strong>Fecha:</strong> <?= $fecha_partido->format('d-m') ?> a las <?= $fecha_partido->format('H:i') ?></p>
-                  
-                  <?php if ($ultimo_partido['resultado_grabado'] && !$editable): ?>
-                      <!-- Resultado ya grabado -->
-                      <p style="margin-top:1rem;"><strong>✅ Resultado registrado</strong></p>
-                      <p><strong>Rojos:</strong> <?= htmlspecialchars($ultimo_partido['goles_rojos'] ?? '0') ?> - 
-                        <strong>Blancos:</strong> <?= htmlspecialchars($ultimo_partido['goles_blancos'] ?? '0') ?></p>
-                      <?php if (!empty($ultimo_partido['mejor_jugador_alias'])): ?>
-                          <p><strong>Jugador Xperto:</strong> <?= htmlspecialchars($ultimo_partido['mejor_jugador_alias']) ?></p>
-                      <?php endif; ?>
-                      
-                  <?php else: ?>
-                      <!-- Formulario editable -->
-                      <form id="postPartidoForm" style="margin-top:1rem;">
-                        <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
-                        
-                        <div style="display:flex;gap:1rem;margin:0.5rem 0;">
-                          <div style="flex:1;">
-                            <label style="font-weight:bold;">Rojos:</label>
-                            <input type="number" name="goles_rojos" placeholder="0" 
-                                  value="<?= htmlspecialchars($ultimo_partido['goles_rojos'] ?? '0') ?>"
-                                  <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
-                                  style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                          </div>
-                          <div style="flex:1;">
-                            <label style="font-weight:bold;">Blancos:</label>
-                            <input type="number" name="goles_blancos" placeholder="0" 
-                                  value="<?= htmlspecialchars($ultimo_partido['goles_blancos'] ?? '0') ?>"
-                                  <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
-                                  style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                          </div>
-                        </div>
-
-                        <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
-                        <select name="jugador_experto" id="mejorJugador" 
-                                <?= $ultimo_partido['resultado_grabado'] ? 'disabled' : '' ?>
-                                style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                          <option value="">Seleccionar...</option>
-                          <?php
-                          $stmt_inscritos = $pdo->prepare("
-                              SELECT s.id_socio, s.alias
-                              FROM inscritos i
-                              JOIN socios s ON i.id_socio = s.id_socio
-                              WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
-                              ORDER BY s.alias
-                          ");
-                          $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
-                          while ($jugador = $stmt_inscritos->fetch()): ?>
-                            <option value="<?= $jugador['id_socio'] ?>" 
-                                    <?= ($jugador['id_socio'] == ($ultimo_partido['mejor_jugador_id'] ?? null)) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($jugador['alias']) ?>
-                            </option>
-                          <?php endwhile; ?>
-                        </select>
-
-                        <?php if (!$ultimo_partido['resultado_grabado']): ?>
-                          <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-                            Grabar Resultado
-                          </button>
-                        <?php endif; ?>
-                      </form>
-                  <?php endif; ?>
-
+              <?php if ($ultimo_partido && $es_responsable): ?>
+                <?php
+                $fecha_partido = new DateTime($ultimo_partido['fecha'] . ' ' . $ultimo_partido['hora_inicio']);
+                $fin_partido = clone $fecha_partido;
+                $fin_partido->modify('+1 hour');
+                $ahora = new DateTime();
+                $editable = ($ahora >= $fin_partido);
+                ?>
+                <p><strong>Fecha:</strong> <?= $fecha_partido->format('d-m') ?> a las <?= $fecha_partido->format('H:i') ?></p>
+                <?php if ($ultimo_partido['resultado_grabado'] && !$editable): ?>
+                  <p style="margin-top:1rem;"><strong>✅ Resultado registrado</strong></p>
+                <?php else: ?>
+                  <form id="postPartidoForm" style="margin-top:1rem;">
+                    <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                    <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                      <div style="flex:1;">
+                        <label style="font-weight:bold;">Rojos:</label>
+                        <input type="number" name="goles_rojos" placeholder="0" value="0"
+                          <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
+                          style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      </div>
+                      <div style="flex:1;">
+                        <label style="font-weight:bold;">Blancos:</label>
+                        <input type="number" name="goles_blancos" placeholder="0" value="0"
+                          <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
+                          style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      </div>
+                    </div>
+                    <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
+                    <select name="jugador_experto" id="mejorJugador"
+                      <?= $ultimo_partido['resultado_grabado'] ? 'disabled' : '' ?>
+                      style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      <option value="">Seleccionar...</option>
+                      <?php
+                      $stmt_inscritos = $pdo->prepare("
+                          SELECT s.id_socio, s.alias
+                          FROM inscritos i
+                          JOIN socios s ON i.id_socio = s.id_socio
+                          WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
+                          ORDER BY s.alias
+                      ");
+                      $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
+                      while ($jugador = $stmt_inscritos->fetch()): ?>
+                        <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                      <?php endwhile; ?>
+                    </select>
+                    <?php if (!$ultimo_partido['resultado_grabado']): ?>
+                      <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">Grabar Resultado</button>
+                    <?php endif; ?>
+                  </form>
+                <?php endif; ?>
               <?php elseif ($ultimo_partido): ?>
-                  <p><strong>Fecha:</strong> <?= (new DateTime($ultimo_partido['fecha']))->format('d-m') ?></p>
-                  <p style="margin-top:1rem;">Resultado aún no registrado</p>
+                <p><strong>Fecha:</strong> <?= (new DateTime($ultimo_partido['fecha']))->format('d-m') ?></p>
+                <p style="margin-top:1rem;">Resultado aún no registrado</p>
               <?php else: ?>
-                  <p style="margin-top:2rem;">Sin partidos anteriores</p>
+                <p style="margin-top:2rem;">Sin partidos anteriores</p>
               <?php endif; ?>
             </div>
           </div>
@@ -887,57 +731,27 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       </div>
     </div>
 
-    <!-- CSS RESPONSIVE CORREGIDO -->
+    <!-- CSS RESPONSIVE -->
     <style>
-      /* Asegurar layout flexible en desktop */
       @media (min-width: 1024px) {
-        .dashboard-upper {
-          display: flex;
-          gap: 1.8rem;
-          margin-top: 1.2rem;
-        }
-        .upper-left {
-          flex: 4; /* ~80% del ancho */
-          max-width: none;
-          margin-left: 20px;
-        }
-        .upper-right {
-          flex: 1; /* ~20% del ancho */
-          display: flex;
-          flex-direction: column;
-          gap: 0.8rem;
-          margin-right: 20px;
-        }
+        .dashboard-upper { display: flex; gap: 1.8rem; margin-top: 1.2rem; }
+        .upper-left { flex: 4; max-width: none; margin-left: 20px; }
+        .upper-right { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-right: 20px; }
       }
-      /* Contenedor de fichas */
       .fichas-dashboard {
         display: grid;
         gap: 1.4rem;
         width: 100%;
-        /* Móvil: 1 columna */
         grid-template-columns: 1fr;
       }
-      /* Tablet: 2 columnas */
       @media (min-width: 768px) and (max-width: 1023px) {
-        .fichas-dashboard {
-          grid-template-columns: repeat(2, 1fr);
-        }
+        .fichas-dashboard { grid-template-columns: repeat(2, 1fr); }
       }
-      /* Desktop: 4 columnas */
       @media (min-width: 1024px) {
-        .fichas-dashboard {
-          grid-template-columns: repeat(4, 1fr);
-        }
+        .fichas-dashboard { grid-template-columns: repeat(4, 1fr); }
       }
-      /* Asegurar que las tarjetas usen todo el ancho */
-      .fichas-dashboard > .stat-card {
-        width: 100%;
-        min-width: 0;
-      }
-      /* Ajuste adicional: asegurar que upper-left no use grid directamente */
-      .upper-left {
-        display: block; /* o flex, pero NO grid */
-      }
+      .fichas-dashboard > .stat-card { width: 100%; min-width: 0; }
+      .upper-left { display: block; }
     </style>
 
     <!-- MITAD INFERIOR -->
@@ -980,9 +794,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       </div>
     </div>
 
-    <!-- Sección de compartir y logout -->
+    <!-- SCRIPTS COMPLETOS -->
     <script>
-    // === FUNCIONES DE NOTIFICACIÓN ===
+      // === FUNCIONES DE NOTIFICACIÓN ===
       function mostrarNotificacion(mensaje, tipo = 'info') {
         const toast = document.getElementById('toast');
         const msg = document.getElementById('toast-message');
@@ -998,6 +812,243 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         }, 5000);
       }
 
+      // === VALIDAR EDAD ===
+      function validarEdad(fechaNac) {
+        if (!fechaNac) return true;
+        const hoy = new Date();
+        const nacimiento = new Date(fechaNac);
+        let edad = hoy.getFullYear() - nacimiento.getFullYear();
+        const mes = hoy.getMonth() - nacimiento.getMonth();
+        if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+        return edad >= 14;
+      }
+
+      // === MANEJO DEL FORMULARIO ===
+      document.getElementById('registroForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fechaNacInput = document.getElementById('fecha_nac');
+        if (fechaNacInput && !validarEdad(fechaNacInput.value)) {
+          mostrarNotificacion('❌ La edad mínima es 14 años', 'error');
+          return;
+        }
+        const password = document.getElementById('password')?.value;
+        const passwordConfirm = document.getElementById('password_confirm')?.value;
+        if (password !== passwordConfirm) {
+          mostrarNotificacion('❌ Las contraseñas no coinciden', 'error');
+          return;
+        }
+        if (password && password.length < 6) {
+          mostrarNotificacion('❌ Contraseña debe tener al menos 6 caracteres', 'error');
+          return;
+        }
+        const formData = new FormData(e.target);
+        const btn = e.submitter;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Enviando...';
+        btn.disabled = true;
+        try {
+          const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
+          const textResponse = await response.text();
+          let data;
+          try { data = JSON.parse(textResponse); } catch (e) { throw new Error('Error interno del servidor'); }
+          if (data.success) {
+            mostrarNotificacion('✅ Código enviado a tu correo', 'exito');
+            setTimeout(() => {
+              if (data.club_slug && data.club_slug.trim() !== '') {
+                window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
+              } else {
+                window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
+              }
+            }, 2000);
+          } else {
+            mostrarNotificacion('❌ ' + data.message, 'error');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          mostrarNotificacion('❌ Error al enviar el código', 'error');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      });
+
+      // === CARGAR PUESTOS POR DEPORTE ===
+      function cargarPuestosPorDeporte(deporte) {
+        const url = deporte
+          ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
+          : '../api/get_puestos.php';
+        fetch(url)
+          .then(r => r.json())
+          .then(puestos => {
+            const select = document.getElementById('id_puesto');
+            if (!select) return;
+            select.innerHTML = '<option value="">Seleccionar</option>';
+            puestos.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id_puesto;
+              opt.textContent = p.puesto;
+              select.appendChild(opt);
+            });
+          })
+          .catch(error => console.error('Error al cargar puestos:', error));
+      }
+
+      // === INICIALIZAR PUESTOS ===
+      document.addEventListener('DOMContentLoaded', () => {
+        const deporteSelect = document.getElementById('deporte');
+        if (deporteSelect?.value) {
+          cargarPuestosPorDeporte(deporteSelect.value);
+        }
+        deporteSelect?.addEventListener('change', function() {
+          cargarPuestosPorDeporte(this.value);
+        });
+      });
+
+      // === TOAST PERSONALIZADO ===
+      function mostrarToast(mensaje) {
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+          toastContainer = document.createElement('div');
+          toastContainer.id = 'toast-container';
+          toastContainer.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+          `;
+          document.body.appendChild(toastContainer);
+        }
+        const toast = document.createElement('div');
+        toast.textContent = mensaje;
+        toast.style.cssText = `
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-bottom: 10px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+          font-size: 14px;
+        `;
+        toastContainer.appendChild(toast);
+        setTimeout(() => {
+          if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 5000);
+      }
+
+      // === ANIMACIONES CSS ===
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+
+      // === REGIONES DINÁMICAS ===
+      let datosChile = {};
+      fetch('../api/get_regiones.php')
+        .then(response => response.json())
+        .then(data => { datosChile = data; })
+        .catch(error => console.error('Error al cargar regiones:', error));
+
+      function actualizarCiudades() {
+        const region = document.getElementById('region');
+        const ciudadSelect = document.getElementById('ciudad');
+        const comunaSelect = document.getElementById('comuna');
+        if (!region || !ciudadSelect || !comunaSelect) return;
+        ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+        comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+        ciudadSelect.disabled = !region.value;
+        comunaSelect.disabled = true;
+        if (region.value && datosChile[region.value]) {
+          Object.entries(datosChile[region.value].ciudades).forEach(([codigo, nombre]) => {
+            const option = document.createElement('option');
+            option.value = codigo;
+            option.textContent = nombre;
+            ciudadSelect.appendChild(option);
+          });
+          ciudadSelect.disabled = false;
+        }
+      }
+
+      document.getElementById('region')?.addEventListener('change', actualizarCiudades);
+      document.getElementById('ciudad')?.addEventListener('change', function() {
+        const region = document.getElementById('region')?.value;
+        const ciudad = this.value;
+        const comunaSelect = document.getElementById('comuna');
+        if (!comunaSelect) return;
+        comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+        comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
+        if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
+          datosChile[region].comunas[ciudad].forEach(comuna => {
+            const option = document.createElement('option');
+            option.value = comuna.toLowerCase().replace(/\s+/g, '_');
+            option.textContent = comuna;
+            comunaSelect.appendChild(option);
+          });
+          comunaSelect.disabled = false;
+        }
+      });
+
+      // === SERVICE WORKER ===
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registrado:', reg.scope))
+            .catch(err => console.log('Error SW:', err));
+        });
+      }
+
+      // === PUSH NOTIFICATIONS ===
+      function requestNotificationPermission() {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') {
+          subscribeToPush();
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') subscribeToPush();
+          });
+        }
+      }
+
+      function subscribeToPush() {
+        const vapidKey = '<?= VAPID_PUBLIC_KEY ?>';
+        if (!vapidKey || vapidKey === 'VAPID_PUBLIC_KEY') {
+          console.warn('VAPID key not configured');
+          return;
+        }
+        navigator.serviceWorker.ready.then(registration => {
+          return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey)
+          });
+        }).then(subscription => {
+          fetch('../api/guardar_suscripcion.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              id_socio: <?= (int)($_SESSION['id_socio'] ?? 0) ?>,
+              subscription: subscription
+            })
+          });
+        });
+      }
+
+      function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+      }
+
       // === LIMPIAR SESIÓN ===
       function limpiarSesion() {
         localStorage.removeItem('cancha_session');
@@ -1010,17 +1061,160 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         if (modal) modal.style.display = 'flex';
       }
 
-      // === VALIDAR EDAD ===
-      function validarEdad(fechaNac) {
-        if (!fechaNac) return true;
-        const hoy = new Date();
-        const nacimiento = new Date(fechaNac);
-        let edad = hoy.getFullYear() - nacimiento.getFullYear();
-        const mes = hoy.getMonth() - nacimiento.getMonth();
-        if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-          edad--;
+      function cerrarModalCompartir() {
+        const modal = document.getElementById('modalCompartir');
+        if (modal) modal.style.display = 'none';
+      }
+
+      function copiarEnlace() {
+        const url = '<?= json_encode("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>';
+        navigator.clipboard.writeText(url)
+          .then(() => alert('✅ Enlace copiado!'))
+          .catch(err => console.error('Error al copiar:', err));
+      }
+
+      // === CERRAR MODAL AL HACER CLICK FUERA ===
+      const modalCompartir = document.getElementById('modalCompartir');
+      if (modalCompartir) {
+        modalCompartir.addEventListener('click', function(e) {
+          if (e.target === this) cerrarModalCompartir();
+        });
+      }
+
+      // === ACCIONES DE EVENTOS ===
+      function pagarCuota(idCuota) {
+        window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+      }
+
+      // === ARMAR EQUIPOS IA ===
+      function armarEquiposIA(idReserva) {
+        fetch('../api/armar_equipos_ia.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_reserva: idReserva})
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            mostrarModalEquipos(data.equipos);
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(err => {
+          console.error('Error en armado de equipos:', err);
+          alert('Error al armar equipos: ' + err.message);
+        });
+      }
+
+      // === CARGAR DETALLE EVENTOS ===
+      function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}`;
+      }
+
+      function cargarDetalleEventos(filtro = 'inscritos') {
+        let url = '';
+        if (filtro === 'cuotas') {
+          const esResponsable = <?= json_encode($es_responsable) ?>;
+          url = esResponsable
+            ? '../api/cargar_cuotas_responsable.php'
+            : '../api/cargar_cuotas_socio.php';
+        } else {
+          url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
         }
-        return edad >= 14;
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            const tbody = document.querySelector('.dynamic-table tbody');
+            if (!tbody) return;
+            if (data.error) {
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">${data.error}</td></tr>`;
+              return;
+            }
+            if (data.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:1.5rem;">Sin datos para mostrar</td></tr>`;
+              return;
+            }
+            let html = '';
+            data.forEach(row => {
+              if (filtro === 'cuotas') {
+                let botonAccion = '-';
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                if (esResponsable) {
+                  if (row.estado === 'pendiente') {
+                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
+                  } else if (row.estado === 'en_revision') {
+                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
+                  }
+                }
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha_evento)}</td>
+                    <td>-</td>
+                    <td>${row.origen || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre_socio || '-'}</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              } else {
+                let botonAccion = '-';
+                if (filtro === 'socios') {
+                  const esResponsable = <?= json_encode($es_responsable) ?>;
+                  if (esResponsable) {
+                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">✏️ Editar</button>';
+                  }
+                } else if (filtro === 'inscritos') {
+                  const esResponsable = <?= json_encode($es_responsable) ?>;
+                  const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                  const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                  const ahora = new Date();
+                  let botonBajar = '';
+                  if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                    botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
+                  }
+                  let iconoCerveza = '';
+                  if (esResponsable && fechaEvento > ahora) {
+                    const emoji = row.lleva_cerveza ? '🍺' : '🥤';
+                    iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                  }
+                  botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
+                }
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha)}</td>
+                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                    <td>${row.id_tipoevento || '-'}</td>
+                    <td>${row.id_club || '-'}</td>
+                    <td>${row.id_cancha || '-'}</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre || '-'}</td>
+                    <td>${row.posicion_jugador || '-'}</td>
+                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.comentario || '-'}</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              }
+            });
+            tbody.innerHTML = html;
+          })
+          .catch(err => {
+            console.error('Error al cargar datos:', err);
+            const tbody = document.querySelector('.dynamic-table tbody');
+            if (tbody) {
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al cargar datos</td></tr>`;
+            }
+          });
       }
 
       // === INICIALIZAR AL CARGAR LA PÁGINA ===
@@ -1034,921 +1228,51 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             cargarDetalleEventos(filtro);
           });
         });
-
-        // Solicitar permiso para notificaciones
         requestNotificationPermission();
       });
 
-    // === MANEJO DEL FORMULARIO ===
-    document.getElementById('registroForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const fechaNacInput = document.getElementById('fecha_nac');
-      if (fechaNacInput && !validarEdad(fechaNacInput.value)) {
-        mostrarNotificacion('❌ La edad mínima es 14 años', 'error');
-        return;
-      }
-
-      const password = document.getElementById('password')?.value;
-      const passwordConfirm = document.getElementById('password_confirm')?.value;
-      if (password !== passwordConfirm) {
-        mostrarNotificacion('❌ Las contraseñas no coinciden', 'error');
-        return;
-      }
-      if (password && password.length < 6) {
-        mostrarNotificacion('❌ Contraseña debe tener al menos 6 caracteres', 'error');
-        return;
-      }
-
-      const formData = new FormData(e.target);
-      const btn = e.submitter;
-      const originalText = btn.innerHTML;
-      btn.innerHTML = 'Enviando...';
-      btn.disabled = true;
-
-      try {
-        const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-        const textResponse = await response.text();
-        let data;
+      // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
+      document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const golesRojos = formData.get('goles_rojos');
+        const golesBlancos = formData.get('goles_blancos');
+        const jugadorExperto = formData.get('jugador_experto');
+        if (!golesRojos && !golesBlancos) {
+          alert('Ingresa al menos un marcador');
+          return;
+        }
         try {
-          data = JSON.parse(textResponse);
-        } catch (e) {
-          throw new Error('Error interno del servidor');
-        }
-
-        if (data.success) {
-          mostrarNotificacion('✅ Código enviado a tu correo', 'exito');
-          setTimeout(() => {
-            if (data.club_slug && data.club_slug.trim() !== '') {
-              window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
-            } else {
-              window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
-            }
-          }, 2000);
-        } else {
-          mostrarNotificacion('❌ ' + data.message, 'error');
-          btn.innerHTML = originalText;
-          btn.disabled = false;
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        mostrarNotificacion('❌ Error al enviar el código', 'error');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    });
-
-    // === CARGAR PUESTOS POR DEPORTE ===
-    function cargarPuestosPorDeporte(deporte) {
-      const url = deporte 
-          ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
-          : '../api/get_puestos.php';
-      
-      fetch(url)
-        .then(r => r.json())
-        .then(puestos => {
-          const select = document.getElementById('id_puesto');
-          if (!select) return;
-          select.innerHTML = '<option value="">Seleccionar</option>';
-          puestos.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id_puesto;
-            opt.textContent = p.puesto;
-            select.appendChild(opt);
+          const response = await fetch('../api/guardar_resultado_partido.php', {
+            method: 'POST',
+            body: formData
           });
-        })
-        .catch(error => console.error('Error al cargar puestos:', error));
-    }
-
-    // === INICIALIZAR PUESTOS ===
-    document.addEventListener('DOMContentLoaded', () => {
-      const deporteSelect = document.getElementById('deporte');
-      if (deporteSelect?.value) {
-        cargarPuestosPorDeporte(deporteSelect.value);
-      }
-      deporteSelect?.addEventListener('change', function() {
-        cargarPuestosPorDeporte(this.value);
-      });
-    });
-
-    // === TOAST PERSONALIZADO ===
-    function mostrarToast(mensaje) {
-      let toastContainer = document.getElementById('toast-container');
-      if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.style.cssText = `
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          z-index: 1000;
-          max-width: 300px;
-        `;
-        document.body.appendChild(toastContainer);
-      }
-      
-      const toast = document.createElement('div');
-      toast.textContent = mensaje;
-      toast.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
-        font-size: 14px;
-      `;
-      toastContainer.appendChild(toast);
-      
-      setTimeout(() => {
-        if (toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 5000);
-    }
-
-    // === ANIMACIONES CSS ===
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-      @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    // === REGIONES DINÁMICAS ===
-    let datosChile = {};
-    fetch('../api/get_regiones.php')
-      .then(response => response.json())
-      .then(data => { datosChile = data; })
-      .catch(error => console.error('Error al cargar regiones:', error));
-
-    function actualizarCiudades() {
-      const region = document.getElementById('region');
-      const ciudadSelect = document.getElementById('ciudad');
-      const comunaSelect = document.getElementById('comuna');
-      if (!region || !ciudadSelect || !comunaSelect) return;
-
-      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
-      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-      ciudadSelect.disabled = !region.value;
-      comunaSelect.disabled = true;
-
-      if (region.value && datosChile[region.value]) {
-        Object.entries(datosChile[region.value].ciudades).forEach(([codigo, nombre]) => {
-          const option = document.createElement('option');
-          option.value = codigo;
-          option.textContent = nombre;
-          ciudadSelect.appendChild(option);
-        });
-        ciudadSelect.disabled = false;
-      }
-    }
-
-    document.getElementById('region')?.addEventListener('change', actualizarCiudades);
-    document.getElementById('ciudad')?.addEventListener('change', function() {
-      const region = document.getElementById('region')?.value;
-      const ciudad = this.value;
-      const comunaSelect = document.getElementById('comuna');
-      if (!comunaSelect) return;
-
-      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-      comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
-
-      if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
-        datosChile[region].comunas[ciudad].forEach(comuna => {
-          const option = document.createElement('option');
-          option.value = comuna.toLowerCase().replace(/\s+/g, '_');
-          option.textContent = comuna;
-          comunaSelect.appendChild(option);
-        });
-        comunaSelect.disabled = false;
-      }
-    });
-
-    // === SERVICE WORKER ===
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registrado:', reg.scope))
-          .catch(err => console.log('Error SW:', err));
-      });
-    }
-
-    // === PUSH NOTIFICATIONS ===
-    function requestNotificationPermission() {
-      if (!('Notification' in window)) return;
-      if (Notification.permission === 'granted') {
-        subscribeToPush();
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') subscribeToPush();
-        });
-      }
-    }
-
-    function subscribeToPush() {
-        const vapidKey = '<?= VAPID_PUBLIC_KEY ?>';
-        if (!vapidKey || vapidKey === 'VAPID_PUBLIC_KEY') {
-            console.warn('VAPID key not configured');
-            return;
-        }
-        
-        navigator.serviceWorker.ready.then(registration => {
-            return registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey)
-            });
-        }).then(subscription => {
-            fetch('../api/guardar_suscripcion.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    id_socio: <?= (int)($_SESSION['id_socio'] ?? 0) ?>,
-                    subscription: subscription
-                })
-            });
-        });
-    }
-
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = atob(base64);
-      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-    }
-
-    // === LIMPIAR SESIÓN ===
-    function limpiarSesion() {
-      localStorage.removeItem('cancha_session');
-      localStorage.removeItem('cancha_club');
-    }
-
-    // === MODAL COMPARTIR ===
-    function abrirModalCompartir() {
-      const modal = document.getElementById('modalCompartir');
-      if (modal) modal.style.display = 'flex';
-    }
-
-    function cerrarModalCompartir() {
-      const modal = document.getElementById('modalCompartir');
-      if (modal) modal.style.display = 'none';
-    }
-
-    function copiarEnlace() {
-      const url = '<?= json_encode($share_url ?? '') ?>';
-      navigator.clipboard.writeText(url)
-        .then(() => alert('¡Enlace copiado!'))
-        .catch(err => console.error('Error al copiar:', err));
-    }
-
-    // === CERRAR MODAL AL HACER CLICK FUERA ===
-    const modalCompartir = document.getElementById('modalCompartir');
-    if (modalCompartir) {
-      modalCompartir.addEventListener('click', function(e) {
-        if (e.target === this) cerrarModalCompartir();
-      });
-    }
-
-    // === ACCIONES DE EVENTOS ===
-    function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
-      const formData = new FormData();
-      formData.append('action', 'anotarse');
-      formData.append('id_actividad', idActividad);
-      formData.append('tipo_actividad', tipoActividad);
-      formData.append('deporte', deporte);
-      formData.append('players_max', playersMax);
-      formData.append('monto_total', montoTotal);
-
-      fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-        .then(response => response.json())
-        .then(data => {
+          const data = await response.json();
           if (data.success) {
-            mostrarToast(data.message);
+            mostrarToast('✅ Resultado guardado');
             setTimeout(() => location.reload(), 1500);
           } else {
             mostrarToast('❌ ' + data.message);
           }
-        })
-        .catch(error => {
-          mostrarToast('❌ Error al procesar la inscripción');
+        } catch (error) {
+          mostrarToast('❌ Error al guardar resultado');
           console.error('Error:', error);
-        });
-    }
-
-    function pasoEvento(idReserva) {
-      const card = event.target.closest('.stat-card');
-      if (card) {
-        const pasoBtn = event.target;
-        pasoBtn.textContent = 'Paso esta semana';
-        pasoBtn.disabled = true;
-        pasoBtn.style.opacity = '0.7';
-      }
-    }
-
-    function invitarGalletas(idReserva) {
-      alert('Función "Invitar Galletas" en desarrollo');
-    }
-
-    function invitarCancha(idReserva) {
-      alert('Función "Invitar un Cancha" en desarrollo');
-    }
-
-    function pagarCuota(idCuota) {
-      window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-    }
-
-    // === ARMAR EQUIPOS IA ===
-    function armarEquiposIA(idReserva) {
-        console.log('🔍 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
-        
-        fetch('../api/armar_equipos_ia.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_reserva: idReserva})
-        })
-        .then(response => {
-            console.log('✅ [Frontend] Respuesta recibida, status:', response.status);
-            if (!response.ok) {
-                throw new Error('Respuesta no OK: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 [Frontend] Datos recibidos:', data);
-            if (data.success) {
-                console.log('🟢 [Frontend] Llamando a mostrarModalEquipos()');
-                mostrarModalEquipos(data.equipos);
-            } else {
-                console.error('🔴 [Frontend] Error desde API:', data.message);
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(err => {
-            console.error('💥 [Frontend] Error en armado de equipos:', err);
-            alert('Error al armar equipos: ' + err.message);
-        });
-    }
-
-    // === EDITAR PERFIL SOCIO ===
-    function editarPerfilSocio(idSocio) {
-      window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
-    }
-
-    // === BAJARSE DE EVENTO ===
-    function bajarseEvento(idReserva, idSocioObjetivo = null) {
-      if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
-      
-      const params = new URLSearchParams({
-          action: 'bajarse',
-          id_actividad: idReserva,
-          tipo_actividad: 'reserva'
-      });
-      if (idSocioObjetivo) {
-          params.append('id_socio_objetivo', idSocioObjetivo);
-      }
-      
-      fetch('../api/gestion_eventos.php', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: params
-      })
-      .then(r => r.json())
-      .then(data => {
-          if (data.success) {
-              mostrarToast(data.message);
-              setTimeout(() => location.reload(), 1500);
-          } else {
-              mostrarToast('❌ ' + data.message);
-          }
-      })
-      .catch(err => {
-          console.error('Error:', err);
-          mostrarToast('❌ Error al procesar la baja');
-      });
-    }
-
-    // === VALIDAR PAGO ===
-    function validarPago(idCuota) {
-      if (!confirm('¿Confirmar pago como válido?')) return;
-      
-      fetch('../api/validar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          mostrarToast('✅ Pago validado');
-          setTimeout(() => location.reload(), 1500);
-        } else {
-          mostrarToast('❌ ' + data.message);
         }
       });
-    }
-
-    // === CARGAR DETALLE EVENTOS ===
-    function formatDate(dateStr) {
-      if (!dateStr) return '-';
-      const [y, m, d] = dateStr.split('-');
-      return `${d}/${m}`;
-    }
-
-    function cargarDetalleEventos(filtro = 'inscritos') {
-        let url = '';
-
-        // Determinar qué API usar según el filtro
-        if (filtro === 'cuotas') {
-            const esResponsable = <?= json_encode($es_responsable) ?>;
-            url = esResponsable 
-                ? '../api/cargar_cuotas_responsable.php'
-                : '../api/cargar_cuotas_socio.php';
-        } else {
-            url = `../api/cargar_detalle_eventos.php?filtro=${filtro}`;
-        }
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const tbody = document.querySelector('.dynamic-table tbody');
-                if (!tbody) return;
-
-                if (data.error) {
-                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">${data.error}</td></tr>`;
-                    return;
-                }
-                if (data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:1.5rem;">Sin datos para mostrar</td></tr>`;
-                    return;
-                }
-
-                let html = '';
-                try {
-                    data.forEach(row => {
-                        if (filtro === 'cuotas') {
-                            // Acciones para cuotas
-                            let botonAccion = '-';
-                            const esResponsable = <?= json_encode($es_responsable) ?>;
-                            if (esResponsable) {
-                                if (row.estado === 'pendiente') {
-                                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
-                                } else if (row.estado === 'en_revision') {
-                                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✓ Validar</button>`;
-                                }
-                            }
-
-                            html += `
-                                <tr>
-                                    <td>${formatDate(row.fecha_evento)}</td>
-                                    <td>-</td>
-                                    <td>${row.origen || '-'}</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                    <td>${row.nombre_socio || '-'}</td>
-                                    <td>-</td>
-                                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
-                                    <td>${botonAccion}</td>
-                                </tr>
-                            `;
-                        } else {
-                            // Acciones para otros filtros
-                            let botonAccion = '-';
-                            if (filtro === 'socios') {
-                                const esResponsable = <?= json_encode($es_responsable) ?>;
-                                if (esResponsable) {
-                                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">👤 Editar</button>';
-                                }
-                            } else if (filtro === 'inscritos') {
-                                // Siempre permitir al responsable ver "Bajar" en eventos FUTUROS
-                                const esResponsable = <?= json_encode($es_responsable) ?>;
-                                const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
-                                
-                                const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-                                const ahora = new Date();
-                                
-                                // Botón Bajar
-                                let botonBajar = '';
-                                if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                                    botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
-                                }
-
-                                // Icono de cerveza (solo para responsables)
-                                let iconoCerveza = '';
-                                if (esResponsable && fechaEvento > ahora) {
-                                    const emoji = row.lleva_cerveza ? '🍻' : '🍺';
-                                    iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
-                                }
-
-                                botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
-                            }
-                            html += `
-                                <tr>
-                                    <td>${formatDate(row.fecha)}</td>
-                                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                    <td>${row.id_tipoevento || '-'}</td>
-                                    <td>${row.id_club}</td>
-                                    <td>${row.id_cancha}</td>
-                                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                    <td>${row.nombre || '-'}</td>
-                                    <td>${row.posicion_jugador || '-'}</td>
-                                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                    <td>${row.comentario || '-'}</td>
-                                    <td>${botonAccion}</td>
-                                </tr>
-                            `;
-                        }
-                    });
-                    tbody.innerHTML = html;
-                } catch (e) {
-                    console.error('Error renderizando fila:', e);
-                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al mostrar datos</td></tr>`;
-                }
-            })
-            .catch(err => {
-                console.error('Error al cargar datos:', err);
-                const tbody = document.querySelector('.dynamic-table tbody');
-                if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#ff6b6b;">Error al cargar datos</td></tr>`;
-                }
-            });
-    }
-
-    // === INICIALIZAR AL CARGAR LA PÁGINA ===
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarDetalleEventos('inscritos');
-      
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const filtro = btn.getAttribute('data-filter');
-          cargarDetalleEventos(filtro);
-        });
-      });
-
-      // Solicitar permiso para notificaciones
-      requestNotificationPermission();
-    });
-
-    function moverJugador(de, a) {
-        const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
-        const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
-        
-        // Obtener jugador seleccionado (por ahora el último)
-        if (origen.children.length > 0) {
-            const jugador = origen.removeChild(origen.lastElementChild);
-            destino.appendChild(jugador);
-        }
-    }
-  </script>
+    </script>
 
     <!-- Modal Compartir Club -->
     <div id="modalCompartir" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
       <div style="background:white; color:#071289; padding:2rem; border-radius:14px; max-width:400px; width:90%;">
         <h3 style="margin-top:0;">🔗 Compartir tu club</h3>
         <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
-        <?php
-        $share_url = "https://canchasport.com/pages/registro_socio.php?club=" . htmlspecialchars($club_slug ?? '');
-        ?>
         <div style="background:#f1f1f1; padding:0.6rem; border-radius:6px; margin:1rem 0; word-break:break-all; font-family:monospace; font-size:0.9rem;">
-          <?= htmlspecialchars($share_url) ?>
+          <?= htmlspecialchars("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>
         </div>
         <button onclick="copiarEnlace()" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; margin-right:0.5rem;">📋 Copiar</button>
         <button onclick="cerrarModalCompartir()" style="background:#6c757d; color:white; border:none; padding:0.5rem 1rem; border-radius:6px;">Cerrar</button>
       </div>
     </div>
-
-    <!-- Modal Equipos IA - ÚNICA INSTANCIA -->
-    <div id="modalEquipos" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
-      <div class="submodal-content" style="background:white; color:#333; padding:2rem; border-radius:16px; max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
-        <h3>⚽ Equipos Futbolito</h3>
-        
-        <div style="display:flex;gap:2rem;margin:1.5rem 0;">
-          <div style="flex:1;background:#ffebee;padding:1rem;border-radius:8px;">
-            <h4 style="color:#e74c3c;">🔴 Rojos</h4>
-            <ul id="equipoRojos" style="list-style:none;padding:0;"></ul>
-            <button onclick="moverJugador('rojos', 'blancos')" 
-                    style="margin-top:0.5rem;background:#2980b9;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-              → Mover a Blancos
-            </button>
-          </div>
-
-          <div style="flex:1;background:#e3f2fd;padding:1rem;border-radius:8px;">
-            <h4 style="color:#2980b9;">⚪ Blancos</h4>
-            <ul id="equipoBlancos" style="list-style:none;padding:0;"></ul>
-            <button onclick="moverJugador('blancos', 'rojos')" 
-                    style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-              ← Mover a Rojos
-            </button>
-          </div>
-        </div>
-
-        <h4>⚽ Seleccionar un jugador y dar click en barra para mover a los Rojos o Blancos</h4>
-
-        <button onclick="guardarEquipos()" class="btn-submit" style="margin-top:1.5rem;">Guardar Equipos</button>
-        <button onclick="cerrarModalEquipos()" style="margin-top:0.5rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
-      </div>
-    </div>
-
-    <script>
-    // Variables globales para seguimiento
-    let jugadorSeleccionado = null;
-    let equipoOrigen = null;
-
-    function mostrarModalEquipos(equipos) {
-        const rojosEl = document.getElementById('equipoRojos');
-        const blancosEl = document.getElementById('equipoBlancos');
-        const modal = document.getElementById('modalEquipos');
-        
-        if (!rojosEl || !blancosEl || !modal) {
-            console.error('❌ Elementos del modal no encontrados');
-            alert('Error: Modal no disponible');
-            return;
-        }
-
-        // Limpiar contenedores
-        rojosEl.innerHTML = '';
-        blancosEl.innerHTML = '';
-        
-        // Crear elementos
-        equipos.rojos.forEach(j => {
-            const li = document.createElement('li');
-            li.textContent = j.alias;
-            li.dataset.idSocio = j.id_socio;
-            li.style.padding = '0.3rem';
-            li.style.cursor = 'pointer';
-            li.onclick = () => seleccionarJugador(li, 'rojos');
-            rojosEl.appendChild(li);
-        });
-        
-        equipos.blancos.forEach(j => {
-            const li = document.createElement('li');
-            li.textContent = j.alias;
-            li.dataset.idSocio = j.id_socio;
-            li.style.padding = '0.3rem';
-            li.style.cursor = 'pointer';
-            li.onclick = () => seleccionarJugador(li, 'blancos');
-            blancosEl.appendChild(li);
-        });
-        
-        modal.style.display = 'flex';
-    }
-
-    function seleccionarJugador(elemento, equipo) {
-        // Quitar selección previa
-        document.querySelectorAll('#equipoRojos li, #equipoBlancos li').forEach(el => {
-            el.style.border = '1px solid transparent';
-            el.style.backgroundColor = '';
-        });
-        
-        // Aplicar selección actual
-        elemento.style.border = '2px solid #3498DB';
-        elemento.style.backgroundColor = '#d6eaf8';
-        
-        jugadorSeleccionado = elemento.dataset.idSocio;
-        equipoOrigen = equipo;
-    }
-
-    function moverJugador(de, a) {
-        if (!jugadorSeleccionado) {
-            alert('Selecciona un jugador primero');
-            return;
-        }
-        
-        const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
-        const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
-        
-        if (destino.children.length >= 7) {
-            alert('El equipo ya tiene 7 jugadores');
-            return;
-        }
-        
-        // Encontrar el elemento seleccionado
-        let elementoSeleccionado = null;
-        Array.from(origen.children).forEach(li => {
-            if (li.dataset.idSocio == jugadorSeleccionado) {
-                elementoSeleccionado = li;
-            }
-        });
-        
-        if (elementoSeleccionado) {
-            destino.appendChild(elementoSeleccionado);
-            // Limpiar selección
-            jugadorSeleccionado = null;
-            equipoOrigen = null;
-            elementoSeleccionado.style.border = '1px solid transparent';
-            elementoSeleccionado.style.backgroundColor = '';
-        }
-    }
-
-    function guardarEquipos() {
-        const rojos = Array.from(document.getElementById('equipoRojos').children).map(li => 
-            li.dataset.idSocio
-        );
-        const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li => 
-            li.dataset.idSocio
-        );
-        
-        if (rojos.length === 0 || blancos.length === 0) {
-            alert('Ambos equipos deben tener al menos un jugador');
-            return;
-        }
-        
-        fetch('../api/guardar_equipos_manual.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                id_reserva: <?= $id_reserva ?? 0 ?>,
-                rojos: rojos,
-                blancos: blancos
-            })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast('✅ Equipos guardados');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            mostrarToast('❌ Error al guardar equipos');
-        });
-    }
-
-    function cerrarModalEquipos() {
-        const modal = document.getElementById('modalEquipos');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function revisarPago(idCuota) {
-        if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
-        
-        fetch('../api/revisar_pago.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_cuota: idCuota})
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast('✅ Cuota en revisión');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        });
-    }
-
-    function bajarseDesdeFicha(idReserva) {
-        if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
-        
-        const params = new URLSearchParams({
-            action: 'bajarse',
-            id_actividad: idReserva,
-            tipo_actividad: 'reserva'
-        });
-        
-        fetch('../api/gestion_eventos.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: params
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast('✅ Te has dado de baja del evento');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            mostrarToast('❌ Error al procesar la baja');
-        });
-    }
-
-    function toggleCervezaMenu(e) {
-        e.stopPropagation();
-        const menu = document.getElementById('cervezaMenu');
-        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-    }
-
-    // Cerrar menú al hacer clic fuera
-    document.addEventListener('click', () => {
-        document.getElementById('cervezaMenu').style.display = 'none';
-    });
-
-    function anotarseConCerveza(llevaCerveza) {
-        // Cierra menú
-        document.getElementById('cervezaMenu').style.display = 'none';
-        
-        // Llama a la API con el flag
-        const formData = new FormData();
-        formData.append('action', 'anotarse');
-        formData.append('id_actividad', <?= $id_reserva ?>);
-        formData.append('tipo_actividad', 'reserva');
-        formData.append('deporte', '<?= $deporte ?>');
-        formData.append('players_max', <?= $players ?>);
-        formData.append('monto_total', <?= $monto_total ?>);
-        formData.append('lleva_cerveza', llevaCerveza ? '1' : '0');
-
-        fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast(data.message);
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    mostrarToast('❌ ' + data.message);
-                }
-            });
-    }
-
-    function asignarCerveza(idInscrito, estado) {
-        fetch('../api/asignar_cerveza.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({
-                id_inscrito: idInscrito,
-                lleva_cerveza: estado
-            })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        });
-    }
-
-    function guardarResultado(event) {
-        event.preventDefault(); // ← Evita el envío por defecto
-
-        const form = event.target;
-        const formData = new FormData(form);
-
-        fetch('../api/guardar_resultado_partido.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast('✅ Resultado guardado');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                mostrarToast('❌ ' + data.message);
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            mostrarToast('❌ Error al guardar resultado');
-        });
-    }
-   
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('postPartidoForm');
-        if (form) {
-            form.addEventListener('submit', function(event) {
-                event.preventDefault();
-
-                const formData = new FormData(form);
-                fetch('../api/guardar_resultado_partido.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        mostrarToast('✅ Resultado guardado');
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        mostrarToast('❌ ' + data.message);
-                    }
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    mostrarToast('❌ Error al guardar resultado');
-                });
-            });
-        }
-    });
-    </script>
-  </body>
+  </div>
+</body>
 </html>
