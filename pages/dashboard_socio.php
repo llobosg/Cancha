@@ -1,11 +1,11 @@
 <?php
 error_log("=== INICIO DASHBOARD_SOCIO.PHP ===");
 error_log("GET recibido: " . print_r($_GET, true));
-error_log("SESSION inicial: " . (isset($_SESSION) ? print_r($_SESSION, true) : 'NO DEFINIDA'));
 require_once __DIR__ . '/../includes/config.php';
 if (!defined('VAPID_PUBLIC_KEY')) {
     define('VAPID_PUBLIC_KEY', '');
 }
+
 // Configuración robusta de sesiones
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -18,34 +18,40 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
-error_log("SESSION después de start: " . print_r($_SESSION, true));
+error_log("SESSION después de start: " . (isset($_SESSION) ? print_r($_SESSION, true) : 'NO DEFINIDA'));
 
-// Modo individual solo si se pide explícitamente
-$modo_individual = isset($_GET['modo']) && $_GET['modo'] === 'individual';
-error_log("MODO INDIVIDUAL: " . ($modo_individual ? 'true' : 'false'));
+// === DETECTAR MODO INDIVIDUAL O CLUB ===
+$club_slug_from_url = $_GET['id_club'] ?? null;
+$modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
+
+if (!$modo_individual) {
+    // Validar slug
+    if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+        error_log("❌ Slug inválido: " . $club_slug_from_url);
+        header('Location: ../index.php');
+        exit;
+    }
+}
+
 if ($modo_individual) {
-    error_log("✓ Modo individual detectado");
+    error_log("✅ Modo individual detectado");
     $club_id = null;
     $club_nombre = '';
     $club_logo = null;
     $club_slug = null;
 } else {
     error_log("Modo club detectado");
-    $club_slug_from_url = $_GET['id_club'];
-    if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-        error_log("❌ Slug inválido, redirigiendo a index.php");
-        header('Location: ../index.php');
-        exit;
-    }
     // Buscar club
     $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
     $stmt_club->execute();
     $clubs = $stmt_club->fetchAll();
     error_log("Clubs encontrados: " . count($clubs));
+
     $club_id = null;
     $club_nombre = '';
     $club_logo = '';
     $club_slug = null;
+
     foreach ($clubs as $c) {
         $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
         if ($generated_slug === $club_slug_from_url) {
@@ -56,14 +62,16 @@ if ($modo_individual) {
             break;
         }
     }
+
     if (!$club_id) {
         error_log("❌ Club no encontrado, redirigiendo a index.php");
         header('Location: ../index.php');
         exit;
     }
-    error_log("✓ Club cargado: " . $club_nombre);
+    error_log("✅ Club cargado: " . $club_nombre);
 }
-// 🔥 FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS 🔥
+
+// === FLUJO COMPLETO DE OBTENCIÓN DE ID_SOCIO CON DATOS COMPLETOS ===
 $id_socio = null;
 $socio_actual = null;
 
@@ -71,6 +79,7 @@ $socio_actual = null;
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     error_log("ID_SOCIO desde sesión: " . $id_socio);
+
     if ($modo_individual) {
         $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL");
         $stmt_validate->execute([$id_socio]);
@@ -78,8 +87,10 @@ if (isset($_SESSION['id_socio'])) {
         $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ?");
         $stmt_validate->execute([$id_socio, $club_id]);
     }
+
     $socio_actual = $stmt_validate->fetch();
     error_log("Socio actual encontrado: " . ($socio_actual ? 'true' : 'false'));
+
     if (!$socio_actual) {
         $id_socio = null;
         $socio_actual = null;
@@ -90,6 +101,7 @@ if (isset($_SESSION['id_socio'])) {
 if (!$id_socio) {
     error_log("No hay ID_SOCIO válido, buscando por email...");
     $user_email = null;
+
     if (isset($_SESSION['google_email'])) {
         $user_email = $_SESSION['google_email'];
         error_log("Email desde Google: " . $user_email);
@@ -97,6 +109,7 @@ if (!$id_socio) {
         $user_email = $_SESSION['user_email'];
         error_log("Email desde sesión: " . $user_email);
     }
+
     if ($user_email) {
         if ($modo_individual) {
             $stmt_socio = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club IS NULL");
@@ -105,12 +118,14 @@ if (!$id_socio) {
             $stmt_socio = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
             $stmt_socio->execute([$user_email, $club_id]);
         }
+
         $socio_data = $stmt_socio->fetch();
         error_log("Socio encontrado por email: " . ($socio_data ? 'true' : 'false'));
+
         if ($socio_data) {
             $id_socio = $socio_data['id_socio'];
             $_SESSION['id_socio'] = $id_socio;
-            error_log("✓ ID_SOCIO guardado en sesión: " . $id_socio);
+            error_log("✅ ID_SOCIO guardado en sesión: " . $id_socio);
         } else {
             error_log("❌ Socio no existe, redirigiendo a completar_perfil");
             if ($modo_individual) {
@@ -127,7 +142,7 @@ if (!$id_socio) {
     }
 } else {
     $_SESSION['id_socio'] = $id_socio;
-    error_log("✓ ID_SOCIO ya existía en sesión");
+    error_log("✅ ID_SOCIO ya existía en sesión");
 }
 
 // Asegurar que $socio_actual esté definida
@@ -144,20 +159,32 @@ if (!$socio_actual) {
     error_log("Socio actual fallback: " . ($socio_actual ? 'cargado' : 'predeterminado'));
 }
 
-// ✅ DEFINIR $es_responsable UNA SOLA VEZ (CORRECCIÓN CLAVE)
+// Asegurar que $socio_actual esté definida
+if (!$socio_actual) {
+    error_log("Cargando socio_actual desde fallback...");
+    if ($modo_individual) {
+        $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL LIMIT 1");
+        $stmt_fallback->execute([$_SESSION['id_socio']]);
+    } else {
+        $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ? LIMIT 1");
+        $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
+    }
+    $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
+    error_log("Socio actual fallback: " . ($socio_actual ? 'cargado' : 'predeterminado'));
+}
+
+// Definir $es_responsable
 $es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1;
 
 // Guardar en sesión
 if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
     $_SESSION['current_club'] = $club_slug;
-    error_log("✓ Datos de club guardados en sesión");
+    error_log("✅ Datos de club guardados en sesión");
 }
-error_log("=== FIN INICIO DASHBOARD_SOCIO.PHP ===");
 
-// 🔥 CONSULTA PARA PRÓXIMO EVENTO 🔥
+// === CONSULTA PARA PRÓXIMO EVENTO ===
 $proximo_evento = null;
-// Solo cargar eventos si es socio de club (no individual)
 if (!$modo_individual && isset($_SESSION['club_id'])) {
     $stmt_evento = $pdo->prepare("
         SELECT
@@ -256,12 +283,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       font-size: 2rem;
       text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    /* Ajustar proporción: más espacio para fichas, menos para botones */
+    /* Resto de tu CSS igual... */
     .dashboard-upper {
       display: flex;
-      height: auto; /* ← Cambiado de 75vh a auto */
+      height: auto;
       gap: 2rem;
-      margin-bottom: 1.5rem; /* ← Reducido de 2rem a 1.5rem */
+      margin-bottom: 1.5rem;
     }
     .upper-right {
       flex: 0 0 15%;
@@ -271,7 +298,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       overflow-y: auto;
       margin-right: 20px;
     }
-    /* BOTONES SUPERIOR DERECHA - MÁS CORTOS */
     .btn-action {
       padding: 0.4rem 1rem;
       background: #00cc66;
@@ -289,7 +315,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       background: #00aa55;
       transform: translateY(-2px);
     }
-    /* SUBIR DETALLE EVENTOS - POSICIÓN CERCANA A FICHAS */
     .dashboard-lower {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
@@ -297,11 +322,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       border-radius: 14px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       overflow-y: auto;
-      max-height: 600px; /* ≈14 filas */
+      max-height: 600px;
       margin: 0 auto 2rem auto;
       max-width: 1400px;
     }
-    /* Asegurar que la tabla no se desborde */
     .dynamic-table-container {
       max-height: 500px;
       overflow-y: auto;
@@ -311,7 +335,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       text-align: left;
       font-size: 1.3rem;
     }
-    /* FILTROS */
     .filters {
       display: flex;
       gap: 0.5rem;
@@ -335,10 +358,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       background: #667eea;
       border-color: #667eea;
     }
-    /* TABLA DINÁMICA */
-    .dynamic-table-container {
-      overflow-x: auto;
-    }
     .dynamic-table {
       width: 100%;
       border-collapse: collapse;
@@ -355,7 +374,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       position: sticky;
       top: 0;
     }
-    /* Share section y logout */
     .share-section {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
@@ -390,7 +408,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       cursor: pointer;
       margin-top: 0.5rem;
     }
-    /* CERRAR SESIÓN EN HEADER */
     .header-right {
       display: flex;
       align-items: center;
@@ -439,7 +456,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     .update-profile-btn:hover {
       background: #050d6b;
     }
-    /* Mobile responsive */
     @media (max-width: 768px) {
       .dashboard-upper {
         flex-direction: column;
@@ -448,7 +464,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       }
       .upper-left {
         flex: 1;
-        grid-template-columns: repeat(2, 1fr); /* 2 columnas en móvil */
+        grid-template-columns: repeat(2, 1fr);
         height: auto;
         margin-left: 0;
       }
@@ -467,7 +483,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         justify-content: center;
       }
     }
-    /* ALTURA FIJA PARA FICHAS */
     .stat-card {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
@@ -475,7 +490,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 260px; /* Altura fija para todas las fichas */
+      height: 260px;
       display: flex;
       flex-direction: column;
     }
@@ -487,20 +502,18 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       flex: 1;
       overflow-y: auto;
     }
-    /* BOTONES DENTRO DE FICHA - LAYOUT EN PARES */
     .ficha-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0.5rem;
       margin-top: 1rem;
     }
-    /* Ajuste para botones dentro de fichas */
     .ficha-buttons .btn-action {
       padding: 0.4rem;
       font-size: 0.8rem;
       min-width: auto;
       width: 100%;
-      box-sizing: border-box; /* ← clave para respetar el ancho del contenedor */
+      box-sizing: border-box;
     }
     @media (max-width: 768px) {
       .ficha-buttons {
@@ -862,7 +875,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         </div>
       </div>
 
-      <!-- Sub sección derecha (25% en desktop) -->
+      <!-- Sub sección derecha -->
       <div class="upper-right">
         <?php if ($es_responsable): ?>
           <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
@@ -970,35 +983,61 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- Sección de compartir y logout -->
     <script>
     // === FUNCIONES DE NOTIFICACIÓN ===
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-      const toast = document.getElementById('toast');
-      const msg = document.getElementById('toast-message');
-      if (!toast || !msg) return;
-
-      msg.textContent = mensaje;
-      toast.className = 'toast ' + (tipo === 'exito' ? 'success' : tipo === 'error' ? 'error' : 'info');
-      toast.style.display = 'flex';
-      void toast.offsetWidth;
-      toast.classList.add('show');
-
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.style.display = 'none', 400);
-      }, 5000);
-    }
-
-    // === VALIDAR EDAD ===
-    function validarEdad(fechaNac) {
-      if (!fechaNac) return true;
-      const hoy = new Date();
-      const nacimiento = new Date(fechaNac);
-      let edad = hoy.getFullYear() - nacimiento.getFullYear();
-      const mes = hoy.getMonth() - nacimiento.getMonth();
-      if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-        edad--;
+      function mostrarNotificacion(mensaje, tipo = 'info') {
+        const toast = document.getElementById('toast');
+        const msg = document.getElementById('toast-message');
+        if (!toast || !msg) return;
+        msg.textContent = mensaje;
+        toast.className = 'toast ' + (tipo === 'exito' ? 'success' : tipo === 'error' ? 'error' : 'info');
+        toast.style.display = 'flex';
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.style.display = 'none', 400);
+        }, 5000);
       }
-      return edad >= 14;
-    }
+
+      // === LIMPIAR SESIÓN ===
+      function limpiarSesion() {
+        localStorage.removeItem('cancha_session');
+        localStorage.removeItem('cancha_club');
+      }
+
+      // === MODAL COMPARTIR ===
+      function abrirModalCompartir() {
+        const modal = document.getElementById('modalCompartir');
+        if (modal) modal.style.display = 'flex';
+      }
+
+      // === VALIDAR EDAD ===
+      function validarEdad(fechaNac) {
+        if (!fechaNac) return true;
+        const hoy = new Date();
+        const nacimiento = new Date(fechaNac);
+        let edad = hoy.getFullYear() - nacimiento.getFullYear();
+        const mes = hoy.getMonth() - nacimiento.getMonth();
+        if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+          edad--;
+        }
+        return edad >= 14;
+      }
+
+      // === INICIALIZAR AL CARGAR LA PÁGINA ===
+      document.addEventListener('DOMContentLoaded', () => {
+        cargarDetalleEventos('inscritos');
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const filtro = btn.getAttribute('data-filter');
+            cargarDetalleEventos(filtro);
+          });
+        });
+
+        // Solicitar permiso para notificaciones
+        requestNotificationPermission();
+      });
 
     // === MANEJO DEL FORMULARIO ===
     document.getElementById('registroForm')?.addEventListener('submit', async (e) => {
@@ -1575,12 +1614,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- Modal Compartir Club -->
     <div id="modalCompartir" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
       <div style="background:white; color:#071289; padding:2rem; border-radius:14px; max-width:400px; width:90%;">
-        <h3 style="margin-top:0;">📤 Compartir tu club</h3>
+        <h3 style="margin-top:0;">🔗 Compartir tu club</h3>
         <p>Envía este enlace a tus compañeros para que se inscriban fácilmente:</p>
         <?php
         $share_url = "https://canchasport.com/pages/registro_socio.php?club=" . htmlspecialchars($club_slug ?? '');
         ?>
-        
         <div style="background:#f1f1f1; padding:0.6rem; border-radius:6px; margin:1rem 0; word-break:break-all; font-family:monospace; font-size:0.9rem;">
           <?= htmlspecialchars($share_url) ?>
         </div>
