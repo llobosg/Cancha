@@ -70,9 +70,20 @@ if (!isset($_SESSION['id_socio'])) {
         <p><strong>🏅 Nivel:</strong> <?= $torneo['nivel'] ?></p>
 
         <?php if (isset($_SESSION['id_socio'])): ?>
-            <button class="btn-action" onclick="window.location.href='/api/inscribir_jugador_individual.php?slug=<?= $slug ?>'">
-                Inscribirme
-            </button>
+            <button class="btn-action" id="btnInscribirme">Inscribirme</button>
+
+            <script>
+            document.getElementById('btnInscribirme').addEventListener('click', async () => {
+                const slug = '<?= $slug ?>';
+                const res = await fetch(`/api/inscribir_jugador_individual.php?slug=${slug}`);
+                const data = await res.json();
+                if (data.success && data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert('❌ ' + (data.message || 'Error al inscribirse'));
+                }
+            });
+            </script>
         <?php else: ?>
             <p>Debes estar registrado en CanchaSport para participar.</p>
             <button class="btn-action" onclick="window.location.href='/pages/login_email.php'">
