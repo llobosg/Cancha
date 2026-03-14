@@ -486,6 +486,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         justify-content: center;
       }
     }
+    /* ALTURA FIJA PARA FICHAS */
     .stat-card {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
@@ -493,7 +494,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 260px;
+      height: 260px; /* Altura fija para todas las fichas */
       display: flex;
       flex-direction: column;
     }
@@ -604,13 +605,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍺</div>
                     </div>
                   </div>
-                  <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
-                  <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
+                  <!--<button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button> -->
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
                     <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                   <?php endif; ?>
                 <?php else: ?>
-                  <p style="color:#FFD700;font-weight:bold;margin-top:1rem;">⏰ Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs</p>
+                  <p style="color:#FFD700;margin-top:1rem;">⏰ Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs</p>
                 <?php endif; ?>
               <?php else: ?>
                 <p style="margin-top:2rem;">Próximamente disponible</p>
