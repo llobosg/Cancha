@@ -574,6 +574,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <div class="dashboard-upper">
       <!-- Sub sección izquierda -->
       <div class="upper-left">
+
         <div class="fichas-dashboard">
           <!-- Próximo Partido -->
           <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -624,8 +625,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <!-- Deudas Pendientes -->
           <?php if ($deuda_mas_vigente): ?>
             <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
-              <h3>💰 Deuda Pendiente</h3>
-              <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
+            <h3>⚠️ Deuda Pendiente</h3>
+            <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
                 <strong><?= htmlspecialchars($deuda_mas_vigente['detalle_origen']) ?></strong><br>
                 <strong>📅</strong> <?= date('d/m', strtotime($deuda_mas_vigente['fecha_evento'])) ?> –
                 <strong>💲</strong> $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?><br>
@@ -641,40 +642,48 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <div class="stat-card">
             <h3>📊 Último Partido</h3>
             <div class="stat-card-content">
-              <?php if ($ultimo_partido && $es_responsable): ?>
-                <?php
-                $fecha_partido = new DateTime($ultimo_partido['fecha'] . ' ' . $ultimo_partido['hora_inicio']);
-                $fin_partido = clone $fecha_partido;
-                $fin_partido->modify('+1 hour');
-                $ahora = new DateTime();
-                $editable = ($ahora >= $fin_partido);
-                ?>
-                <p><strong>Fecha:</strong> <?= $fecha_partido->format('d-m') ?> a las <?= $fecha_partido->format('H:i') ?></p>
-                <?php if ($ultimo_partido['resultado_grabado'] && !$editable): ?>
-                  <p style="margin-top:1rem;"><strong>✅ Resultado registrado</strong></p>
-                <?php else: ?>
+              <?php
+              // Obtener último partido REAL (ya jugado)
+              $stmt_last = $pdo->prepare("
+                  SELECT 
+                      r.id_reserva,
+                      r.fecha,
+                      r.hora_inicio
+                  FROM reservas r
+                  WHERE r.id_club = ? AND r.fecha < CURDATE()
+                  ORDER BY r.fecha DESC, r.hora_inicio DESC
+                  LIMIT 1
+              ");
+              $stmt_last->execute([$_SESSION['club_id']]);
+              $ultimo_partido = $stmt_last->fetch();
+
+              if ($ultimo_partido && $es_responsable): ?>
+                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+                  
+                  <!-- Formulario post-partido -->
                   <form id="postPartidoForm" style="margin-top:1rem;">
                     <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                    
                     <div style="display:flex;gap:1rem;margin:0.5rem 0;">
                       <div style="flex:1;">
                         <label style="font-weight:bold;">Rojos:</label>
-                        <input type="number" name="goles_rojos" placeholder="0" value="0"
-                          <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
-                          style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                        <input type="number" name="goles_rojos" placeholder="0" 
+                              value="0"
+                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                       </div>
                       <div style="flex:1;">
                         <label style="font-weight:bold;">Blancos:</label>
-                        <input type="number" name="goles_blancos" placeholder="0" value="0"
-                          <?= $ultimo_partido['resultado_grabado'] ? 'readonly' : '' ?>
-                          style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                        <input type="number" name="goles_blancos" placeholder="0" 
+                              value="0"
+                              style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                       </div>
                     </div>
+
                     <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
-                    <select name="jugador_experto" id="mejorJugador"
-                      <?= $ultimo_partido['resultado_grabado'] ? 'disabled' : '' ?>
-                      style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                    <select name="jugador_experto" id="mejorJugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
                       <option value="">Seleccionar...</option>
                       <?php
+                      // Cargar inscritos del último partido
                       $stmt_inscritos = $pdo->prepare("
                           SELECT s.id_socio, s.alias
                           FROM inscritos i
@@ -687,16 +696,17 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
                       <?php endwhile; ?>
                     </select>
-                    <?php if (!$ultimo_partido['resultado_grabado']): ?>
-                      <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">Grabar Resultado</button>
-                    <?php endif; ?>
+
+                    <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+                      Grabar Resultado
+                    </button>
                   </form>
-                <?php endif; ?>
+
               <?php elseif ($ultimo_partido): ?>
-                <p><strong>Fecha:</strong> <?= (new DateTime($ultimo_partido['fecha']))->format('d-m') ?></p>
-                <p style="margin-top:1rem;">Resultado aún no registrado</p>
+                  <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
+                  <p style="margin-top:1rem;">Resultado aún no registrado</p>
               <?php else: ?>
-                <p style="margin-top:2rem;">Sin partidos anteriores</p>
+                  <p style="margin-top:2rem;">Sin partidos anteriores</p>
               <?php endif; ?>
             </div>
           </div>
@@ -704,7 +714,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           <!-- Noticias -->
           <div class="stat-card">
             <h3>Noticias</h3>
-            <div class="stat-card-content">
+            <div class="stat-card-content" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #071289;">
               <div style="text-align:left;font-size:0.85rem;line-height:1.4;">
                 <div>• Bienvenidos a la temporada 2026</div>
                 <div>• Nuevas reglas para inscripciones</div>
@@ -1262,6 +1272,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           console.error('Error:', error);
         }
       });
+
+      function eliminarSocio(idSocio) {
+          if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
+          
+          fetch('../api/eliminar_socio.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: new URLSearchParams({id_socio: idSocio})
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  mostrarToast('✅ Socio eliminado');
+                  setTimeout(() => location.reload(), 1500);
+              } else {
+                  mostrarToast('❌ ' + data.message);
+              }
+          });
+      }
     </script>
 
     <!-- Modal Compartir Club -->

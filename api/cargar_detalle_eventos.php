@@ -180,7 +180,35 @@ try {
                     LIMIT 50
                 ";
                 $params = [$club_id];
-                break;
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $socios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Verificar si el usuario actual es responsable
+                $es_responsable = false;
+                if (isset($_SESSION['id_socio'])) {
+                    $stmt_resp = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
+                    $stmt_resp->execute([$_SESSION['id_socio'], $club_id]);
+                    $row = $stmt_resp->fetch();
+                    $es_responsable = $row && $row['es_responsable'] == 1;
+                }
+
+                // Construir acciones
+                $resultados = [];
+                foreach ($socios as $socio) {
+                    $acciones = '-';
+                    if ($es_responsable) {
+                        $acciones = '
+                            <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' . $socio['id_socio'] . ')">✏️</button>
+                            <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#E74C3C;margin-top:0.2rem;" onclick="eliminarSocio(' . $socio['id_socio'] . ')">🗑️</button>
+                        ';
+                    }
+                    $socio['accion'] = $acciones;
+                    $resultados[] = $socio;
+                }
+
+                echo json_encode($resultados);
+                exit;
 
             default:
                 echo json_encode([]);
