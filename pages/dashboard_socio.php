@@ -1180,10 +1180,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 `;
               } else {
                 let botonAccion = '-';
-                if (filtro === 'socios') {
-                  const esResponsable = <?= json_encode($es_responsable) ?>;
-                  if (esResponsable) {
-                    botonAccion = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' + row.id_evento + ')">✏️ Editar</button>';
+                  if (filtro === 'socios') {
+                    const esResponsable = <?= json_encode($es_responsable) ?>;
+                    if (esResponsable) {
+                      botonAccion = `
+                        <div style="display:flex; justify-content:center; gap:0.4rem; align-items:center;">
+                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(${row.id_evento})">✏️</button>
+                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#E74C3C;" onclick="eliminarSocio(${row.id_evento})">🗑️</button>
+                        </div>
+                      `;
+                    }
                   }
                 } else if (filtro === 'inscritos') {
                   const esResponsable = <?= json_encode($es_responsable) ?>;
