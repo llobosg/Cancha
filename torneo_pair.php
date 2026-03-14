@@ -182,7 +182,8 @@ if (!$pareja) {
                 <button class="btn-action" style="background:#071289;" onclick="window.location.href='/pages/login_email.php'">
                     Iniciar sesión
                 </button>
-                <button class="btn-action" style="background:#6c757d;" onclick="window.location.href='/pages/completar_perfil.php?modo=individual&tournament=<?= $slug ?>'">
+                <button class="btn-action" style="background:#6c757d;" 
+                        onclick="window.location.href='/registro_socio.php?modo=torneo&slug=<?= $slug ?>&code=<?= $code ?>'">
                     Registrarme
                 </button>
             <?php endif; ?>
