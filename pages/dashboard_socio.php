@@ -573,8 +573,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <div class="upper-left">
         <div class="fichas-dashboard">
           <!-- Próximo Partido -->
-          <div class="stat-card">
-            <h3>⚽ Próximo Partido</h3>
+          <div class="stat-card" style="background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%); color: white;">
+            <h3 style="color: white;">📅 Próximo Partido</h3>
             <div class="stat-card-content">
               <?php if ($proximo_evento): ?>
                 <?php
@@ -607,7 +607,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
                   <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                    <button class="btn-action" style="background:#9B59B6;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
+                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                   <?php endif; ?>
                 <?php else: ?>
                   <p style="color:#FFD700;font-weight:bold;margin-top:1rem;">⏰ Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs</p>
