@@ -494,14 +494,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      height: 260px; /* Altura fija para todas las fichas */
+      height: 310px; /* Altura fija para todas las fichas */
       display: flex;
       flex-direction: column;
     }
+
     .stat-card h3 {
       margin-bottom: 0.5rem;
       opacity: 0.9;
     }
+
     .stat-card-content {
       flex: 1;
       overflow-y: auto;
@@ -574,7 +576,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <div class="upper-left">
         <div class="fichas-dashboard">
           <!-- Próximo Partido -->
-          <div class="stat-card" style="background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%); color: white;">
+          <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <h3 style="color: white;">📅 Próximo Partido</h3>
             <div class="stat-card-content">
               <?php if ($proximo_evento): ?>
