@@ -1152,8 +1152,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             }
             let html = '';
             data.forEach(row => {
+              let botonAccion = '-';
+
               if (filtro === 'cuotas') {
-                let botonAccion = '-';
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 if (esResponsable) {
                   if (row.estado === 'pendiente') {
@@ -1162,6 +1163,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
                   }
                 }
+
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha_evento)}</td>
@@ -1178,35 +1180,51 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>${botonAccion}</td>
                   </tr>
                 `;
-              } else {
-                let botonAccion = '-';
-                  if (filtro === 'socios') {
-                    const esResponsable = <?= json_encode($es_responsable) ?>;
-                    if (esResponsable) {
-                      botonAccion = `
-                        <div style="display:flex; justify-content:center; gap:0.4rem; align-items:center;">
-                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(${row.id_evento})">✏️</button>
-                          <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#E74C3C;" onclick="eliminarSocio(${row.id_evento})">🗑️</button>
-                        </div>
-                      `;
-                    }
-                  }
-                } else if (filtro === 'inscritos') {
-                  const esResponsable = <?= json_encode($es_responsable) ?>;
-                  const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
-                  const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-                  const ahora = new Date();
-                  let botonBajar = '';
-                  if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                    botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
-                  }
-                  let iconoCerveza = '';
-                  if (esResponsable && fechaEvento > ahora) {
-                    const emoji = row.lleva_cerveza ? '🍺' : '🥤';
-                    iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
-                  }
-                  botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
+              } 
+              else if (filtro === 'socios') {
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                if (esResponsable) {
+                  botonAccion = `
+                    <div style="display:flex; justify-content:center; gap:0.4rem; align-items:center;">
+                      <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(${row.id_evento})">✏️</button>
+                      <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#E74C3C;" onclick="eliminarSocio(${row.id_evento})">🗑️</button>
+                    </div>
+                  `;
                 }
+
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha)}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>${row.nombre || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              } 
+              else if (filtro === 'inscritos') {
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                const ahora = new Date();
+                let botonBajar = '';
+                if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                  botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
+                }
+                let iconoCerveza = '';
+                if (esResponsable && fechaEvento > ahora) {
+                  const emoji = row.lleva_cerveza ? '🍺' : '🥤';
+                  iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                }
+                botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
+
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha)}</td>
@@ -1221,6 +1239,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
                     <td>${row.comentario || '-'}</td>
                     <td>${botonAccion}</td>
+                  </tr>
+                `;
+              } 
+              else {
+                // Otros filtros (reservas, eventos, etc.)
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha)}</td>
+                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                    <td>${row.id_tipoevento || '-'}</td>
+                    <td>${row.id_club || '-'}</td>
+                    <td>${row.id_cancha || '-'}</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre || '-'}</td>
+                    <td>${row.posicion_jugador || '-'}</td>
+                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.comentario || '-'}</td>
+                    <td>-</td>
                   </tr>
                 `;
               }
@@ -1250,6 +1287,25 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         requestNotificationPermission();
       });
 
+      function eliminarSocio(idSocio) {
+          if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
+          
+          fetch('../api/eliminar_socio.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: new URLSearchParams({id_socio: idSocio})
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  mostrarToast('✅ Socio eliminado');
+                  setTimeout(() => location.reload(), 1500);
+              } else {
+                  mostrarToast('❌ ' + data.message);
+              }
+          });
+      }
+
       // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
       document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1278,25 +1334,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           console.error('Error:', error);
         }
       });
-
-      function eliminarSocio(idSocio) {
-          if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
-          
-          fetch('../api/eliminar_socio.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: new URLSearchParams({id_socio: idSocio})
-          })
-          .then(r => r.json())
-          .then(data => {
-              if (data.success) {
-                  mostrarToast('✅ Socio eliminado');
-                  setTimeout(() => location.reload(), 1500);
-              } else {
-                  mostrarToast('❌ ' + data.message);
-              }
-          });
-      }
     </script>
 
     <!-- Modal Compartir Club -->
