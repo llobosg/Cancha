@@ -49,7 +49,7 @@ try {
     // Redirigir a la página de invitación
     echo json_encode([
         'success' => true,
-        'redirect' => "/torneo/{$slug}/pair?code={$codigo_pareja}"
+        'redirect' => "/torneo_pair.php?slug={$slug}&code={$codigo_pareja}"
     ]);
 
 } catch (Exception $e) {
