@@ -1135,7 +1135,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       }
 
       function pagarCuota(idCuota) {
-        window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+          // Obtener monto y tipo desde la tabla (si es posible)
+          // O redirigir con parámetros mínimos
+          window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
       }
 
       // === ARMAR EQUIPOS IA ===

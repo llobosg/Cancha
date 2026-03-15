@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/config_mercadopago.php'; // Asegúrate de crear este archivo
 
 session_start();
 
@@ -11,71 +12,48 @@ if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
 $id_cuota = (int)$_GET['id_cuota'];
 $id_socio = $_SESSION['id_socio'];
 
-// === Paso 1: Obtener tipo_actividad ===
-$stmt_check = $pdo->prepare("SELECT tipo_actividad FROM cuotas WHERE id_cuota = ? AND id_socio = ?");
+// === Paso 1: Obtener tipo_actividad y datos completos de la cuota ===
+$stmt_check = $pdo->prepare("
+    SELECT 
+        c.id_cuota,
+        c.monto,
+        c.fecha_vencimiento,
+        c.estado,
+        c.tipo_actividad,
+        c.id_evento,
+        s.nombre AS socio_nombre,
+        s.email AS socio_email,
+        s.id_club,
+        cl.nombre AS club_nombre,
+        cl.email_responsable,
+        CASE
+            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+            ELSE 'Sin detalle'
+        END as detalle_origen,
+        COALESCE(r.fecha, e.fecha) AS fecha_origen
+    FROM cuotas c
+    INNER JOIN socios s ON c.id_socio = s.id_socio
+    INNER JOIN clubs cl ON s.id_club = cl.id_club
+    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+    WHERE c.id_cuota = ? AND c.id_socio = ?
+    LIMIT 1
+");
 $stmt_check->execute([$id_cuota, $id_socio]);
-$tipo_actividad = $stmt_check->fetchColumn();
+$cuota = $stmt_check->fetch();
 
-if (!$tipo_actividad) {
-    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
-}
-
-// === Paso 2: Ejecutar consulta específica ===
-if ($tipo_actividad === 'reserva') {
-    $stmt = $pdo->prepare("
-        SELECT 
-            c.id_cuota,
-            c.monto,
-            c.fecha_vencimiento,
-            c.estado,
-            s.nombre AS socio_nombre,
-            s.email AS socio_email,
-            cl.nombre AS club_nombre,
-            cl.email_responsable,
-            rd.nombre AS detalle_origen,
-            r.fecha AS fecha_origen
-        FROM cuotas c
-        INNER JOIN socios s ON c.id_socio = s.id_socio
-        INNER JOIN clubs cl ON s.id_club = cl.id_club
-        INNER JOIN reservas r ON c.id_evento = r.id_reserva
-        INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
-        INNER JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-        WHERE c.id_cuota = ? AND c.id_socio = ?
-        LIMIT 1
-    ");
-} else {
-    $stmt = $pdo->prepare("
-        SELECT 
-            c.id_cuota,
-            c.monto,
-            c.fecha_vencimiento,
-            c.estado,
-            s.nombre AS socio_nombre,
-            s.email AS socio_email,
-            cl.nombre AS club_nombre,
-            cl.email_responsable,
-            te.tipoevento AS detalle_origen,
-            e.fecha AS fecha_origen
-        FROM cuotas c
-        INNER JOIN socios s ON c.id_socio = s.id_socio
-        INNER JOIN clubs cl ON s.id_club = cl.id_club
-        INNER JOIN eventos e ON c.id_evento = e.id_evento
-        INNER JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-        WHERE c.id_cuota = ? AND c.id_socio = ?
-        LIMIT 1
-    ");
-}
-
-$stmt->execute([$id_cuota, $id_socio]);
-$cuota = $stmt->fetch();
-
-if (!$cuota) {
-    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
+if (!$cuota || $cuota['estado'] !== 'pendiente') {
+    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada o ya pagada</h2>');
 }
 
 $error = '';
 $success = '';
 
+// === Procesar pago manual (POST) ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_pago = $_POST['fecha_pago'] ?? '';
     $comentario = trim($_POST['comentario'] ?? '');
@@ -104,8 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$error) {
-            // Actualizar cuota
-            // Si es una reserva y es evento recaudatorio, sumar al fondo del club
+            // Actualizar cuota a "en_revision"
+            $pdo->prepare("
+                UPDATE cuotas 
+                SET estado = 'en_revision', fecha_pago = ?, comentario = ?, adjunto = ?
+                WHERE id_cuota = ?
+            ")->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+
+            // Si es reserva recaudatoria, sumar fondos
             if ($cuota['tipo_actividad'] === 'reserva') {
                 $stmt_check = $pdo->prepare("
                     SELECT r.monto_recaudacion 
@@ -113,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE r.id_reserva = ? AND r.monto_recaudacion IS NOT NULL
                 ");
                 $stmt_check->execute([$cuota['id_evento']]);
-                
                 if ($stmt_check->fetch()) {
                     $pdo->prepare("
                         UPDATE clubs 
@@ -215,6 +198,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 1.5rem;
     }
 
+    .payment-options {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-mp {
+      flex: 1;
+      padding: 0.8rem;
+      background: #E74C3C;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-mp:hover {
+      background: #c0392b;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 1rem 0;
+      color: #aaa;
+    }
+
     .error { background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem; }
     .success { background: #e8f5e9; color: #2e7d32; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.9rem; }
 
@@ -283,6 +294,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
+      <!-- Opción de pago con Mercado Pago -->
+      <div class="payment-options">
+        <button class="btn-mp" id="btnMercadoPago">Pagar con Mercado Pago</button>
+      </div>
+
+      <div class="divider">— o —</div>
+
+      <!-- Formulario de pago manual -->
       <form method="POST" enctype="multipart/form-data">
         <!-- Datos no editables -->
         <div class="form-group">
@@ -316,11 +335,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <textarea id="comentario" name="comentario" rows="2"></textarea>
         </div>
         
-        <button type="submit" class="btn-submit">Registrar Pago</button>
+        <button type="submit" class="btn-submit">Registrar Pago Manual</button>
       </form>
       
       <a href="javascript:history.back()" class="close-btn">Cancelar</a>
     <?php endif; ?>
   </div>
+
+  <script>
+    document.getElementById('btnMercadoPago').addEventListener('click', async () => {
+      try {
+        const res = await fetch('../api/crear_pago.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id_cuota: <?= $cuota['id_cuota'] ?>,
+            monto: <?= $cuota['monto'] ?>,
+            descripcion: 'Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>'
+          })
+        });
+        const data = await res.json();
+        if (data.init_point) {
+          window.location.href = data.init_point;
+        } else {
+          alert('❌ Error al iniciar el pago con Mercado Pago');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error de conexión');
+      }
+    });
+  </script>
 </body>
 </html>
