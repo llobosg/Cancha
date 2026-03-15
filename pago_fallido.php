@@ -17,7 +17,7 @@
   <div class="container">
     <div class="error">❌</div>
     <h1>El pago no pudo ser procesado</h1>
-    <p>Por favor, inténtalo nuevamente o contacta al administrador.</p>
+    <p>Por favor, inténtalo nuevamente con una tarjeta de prueba o contacta al administrador.</p>
     <a href="javascript:history.back()" class="btn">Volver e intentar de nuevo</a>
   </div>
 </body>
