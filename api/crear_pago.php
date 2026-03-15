@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/config_mercadopago.php';
+require_once __DIR__ . '/../vendor/autoload.php'; // ← ¡Clave!
 session_start();
 
 use MercadoPago\MercadoPagoConfig;
@@ -21,7 +22,7 @@ try {
         throw new Exception('Datos incompletos');
     }
 
-    // Verificar que la cuota pertenece al socio
+    // Verificar cuota
     $stmt = $pdo->prepare("
         SELECT id_cuota, monto, estado 
         FROM cuotas 
