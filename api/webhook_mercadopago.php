@@ -2,12 +2,13 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/config_mercadopago.php';
 
+$payload = file_get_contents('php://input');
+
 // === OBTENER ID DE PAGO ===
 $payment_id = null;
 
 // Caso 1: Notificación real (POST + JSON)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $payload = file_get_contents('php://input');
     $data = json_decode($payload, true);
     if ($data && isset($data['data']['id'])) {
         $payment_id = $data['data']['id'];
@@ -23,8 +24,8 @@ if (!$payment_id) {
     exit;
 }
 
-// === VALIDAR FIRMA (solo en POST) ===
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// === VALIDAR FIRMA SOLO EN PRODUCCIÓN ===
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && MERCADOPAGO_ACCESS_TOKEN !== 'TEST-...') {
     $signature = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
     $webhook_secret = 'e8f35ec458e3db7c104198628f25b0906d90babc91b0743b74a97d982baa0ddd';
     
