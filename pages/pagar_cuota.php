@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/config_mercadopago.php';
 
 session_start();
 
@@ -12,47 +11,71 @@ if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
 $id_cuota = (int)$_GET['id_cuota'];
 $id_socio = $_SESSION['id_socio'];
 
-// Obtener datos completos de la cuota
-$stmt = $pdo->prepare("
-    SELECT 
-        c.id_cuota,
-        c.monto,
-        c.estado,
-        c.tipo_actividad,
-        c.id_evento,
-        s.nombre AS socio_nombre,
-        s.email AS socio_email,
-        s.id_club,
-        cl.nombre AS club_nombre,
-        cl.email_responsable,
-        CASE
-            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-            ELSE 'Sin detalle'
-        END as detalle_origen,
-        COALESCE(r.fecha, e.fecha) AS fecha_origen
-    FROM cuotas c
-    INNER JOIN socios s ON c.id_socio = s.id_socio
-    INNER JOIN clubs cl ON s.id_club = cl.id_club
-    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-    WHERE c.id_cuota = ? AND c.id_socio = ?
-    LIMIT 1
-");
+// === Paso 1: Obtener tipo_actividad ===
+$stmt_check = $pdo->prepare("SELECT tipo_actividad FROM cuotas WHERE id_cuota = ? AND id_socio = ?");
+$stmt_check->execute([$id_cuota, $id_socio]);
+$tipo_actividad = $stmt_check->fetchColumn();
+
+if (!$tipo_actividad) {
+    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
+}
+
+// === Paso 2: Ejecutar consulta específica ===
+if ($tipo_actividad === 'reserva') {
+    $stmt = $pdo->prepare("
+        SELECT 
+            c.id_cuota,
+            c.monto,
+            c.fecha_vencimiento,
+            c.estado,
+            s.nombre AS socio_nombre,
+            s.email AS socio_email,
+            cl.nombre AS club_nombre,
+            cl.email_responsable,
+            rd.nombre AS detalle_origen,
+            r.fecha AS fecha_origen
+        FROM cuotas c
+        INNER JOIN socios s ON c.id_socio = s.id_socio
+        INNER JOIN clubs cl ON s.id_club = cl.id_club
+        INNER JOIN reservas r ON c.id_evento = r.id_reserva
+        INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
+        INNER JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+        WHERE c.id_cuota = ? AND c.id_socio = ?
+        LIMIT 1
+    ");
+} else {
+    $stmt = $pdo->prepare("
+        SELECT 
+            c.id_cuota,
+            c.monto,
+            c.fecha_vencimiento,
+            c.estado,
+            s.nombre AS socio_nombre,
+            s.email AS socio_email,
+            cl.nombre AS club_nombre,
+            cl.email_responsable,
+            te.tipoevento AS detalle_origen,
+            e.fecha AS fecha_origen
+        FROM cuotas c
+        INNER JOIN socios s ON c.id_socio = s.id_socio
+        INNER JOIN clubs cl ON s.id_club = cl.id_club
+        INNER JOIN eventos e ON c.id_evento = e.id_evento
+        INNER JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+        WHERE c.id_cuota = ? AND c.id_socio = ?
+        LIMIT 1
+    ");
+}
+
 $stmt->execute([$id_cuota, $id_socio]);
 $cuota = $stmt->fetch();
 
-if (!$cuota || $cuota['estado'] !== 'pendiente') {
-    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada o ya pagada</h2>');
+if (!$cuota) {
+    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
 }
 
 $error = '';
 $success = '';
 
-// === Procesar pago manual (POST) ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_pago = $_POST['fecha_pago'] ?? '';
     $comentario = trim($_POST['comentario'] ?? '');
@@ -81,14 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$error) {
-            // Actualizar cuota a "en_revision"
-            $pdo->prepare("
-                UPDATE cuotas 
-                SET estado = 'en_revision', fecha_pago = ?, comentario = ?, adjunto = ?
-                WHERE id_cuota = ?
-            ")->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
-
-            // Si es reserva recaudatoria, sumar fondos
+            // Actualizar cuota
+            // Si es una reserva y es evento recaudatorio, sumar al fondo del club
             if ($cuota['tipo_actividad'] === 'reserva') {
                 $stmt_check = $pdo->prepare("
                     SELECT r.monto_recaudacion 
@@ -96,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE r.id_reserva = ? AND r.monto_recaudacion IS NOT NULL
                 ");
                 $stmt_check->execute([$cuota['id_evento']]);
+                
                 if ($stmt_check->fetch()) {
                     $pdo->prepare("
                         UPDATE clubs 
@@ -160,183 +178,149 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
   <link rel="stylesheet" href="../styles.css">
-  <!-- SDK de Mercado Pago -->
-  <script src="https://sdk.mercadopago.com/js/v2"></script>
   <style>
     body {
-      background: linear-gradient(rgba(0,20,10,.65), rgba(0,30,15,.75)),
-                  url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 2rem 1rem;
+      background: 
+        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
+        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+      background-blend-mode: multiply;
       margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
     }
-    .container {
+
+    .form-container {
+      width: 95%;
       max-width: 500px;
-      margin: 0 auto;
-      background: rgba(0, 51, 102, 0.85);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
       padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-      text-align: center;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     }
-    h1 {
+
+    .form-title {
       color: #FFD700;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+
+    .error { background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem; }
+    .success { background: #e8f5e9; color: #2e7d32; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.9rem; }
+
+    .form-group {
       margin-bottom: 1.5rem;
     }
-    .info {
-      background: rgba(255,255,255,0.15);
-      padding: 1.2rem;
-      border-radius: 10px;
-      margin-bottom: 1.5rem;
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 0.5rem;
       text-align: left;
     }
-    .divider {
-      text-align: center;
-      margin: 1.2rem 0;
-      color: #aaa;
-    }
-    .btn-action {
-      display: block;
+
+    .form-group input, .form-group textarea {
       width: 100%;
-      padding: 0.8rem;
-      background: #E74C3C;
+      padding: 0.9rem;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      color: #071289;
+      font-size: 1rem;
+      background: white;
+    }
+
+    .readonly {
+      background: #eee;
+      cursor: not-allowed;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 1rem;
+      background: #071289;
       color: white;
       border: none;
       border-radius: 8px;
       font-size: 1.1rem;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 1rem;
+      transition: background 0.2s;
     }
-    .btn-action:hover {
-      background: #c0392b;
-    }
-    .readonly {
-      background: #eee;
-      color: #071289;
-      padding: 0.6rem;
-      border-radius: 6px;
-      margin-bottom: 1rem;
-      text-align: left;
-    }
-    .back-link {
+
+    .close-btn {
       display: block;
+      text-align: center;
       margin-top: 1rem;
       color: #FFD700;
-      text-decoration: none;
-    }
-    #bricks_container {
-      margin: 1.5rem 0;
+      text-decoration: underline;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>💳 Pagar Cuota</h1>
+  <div class="form-container">
+    <h2 class="form-title">💳 Pagar Cuota</h2>
     
-    <div class="info">
-      <div class="readonly"><strong>Detalle:</strong> <?= htmlspecialchars($cuota['detalle_origen']) ?></div>
-      <div class="readonly"><strong>Fecha:</strong> <?= date('d/m/Y', strtotime($cuota['fecha_origen'])) ?></div>
-      <div class="readonly"><strong>Monto:</strong> $<?= number_format($cuota['monto'], 0, ',', '.') ?></div>
-    </div>
+    <?php if ($success): ?>
+      <div class="success">
+        ¡Pago registrado! Se ha enviado una confirmación a tu correo.<br>
+        El responsable del club revisará tu comprobante.
+      </div>
+      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-btn">Volver al dashboard</a>
+    <?php else: ?>
+      <?php if ($error): ?>
+        <div class="error"><?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
 
-    <!-- === PAGO CON MERCADO PAGO BRICKS === -->
-    <div id="bricks_container"></div>
+      <form method="POST" enctype="multipart/form-data">
+        <!-- Datos no editables -->
+        <div class="form-group">
+          <label>Detalle</label>
+          <input type="text" value="<?= htmlspecialchars($cuota['detalle_origen']) ?>" class="readonly" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="text" value="<?= date('d/m/Y', strtotime($cuota['fecha_origen'])) ?>" class="readonly" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label>Monto</label>
+          <input type="text" value="$<?= number_format($cuota['monto'], 0, ',', '.') ?>" class="readonly" readonly>
+        </div>
 
-    <div class="divider">— o —</div>
-
-    <!-- === PAGO MANUAL (COMPROBANTE) === -->
-    <form method="POST" enctype="multipart/form-data">
-      <!-- Toast container -->
-      <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:1000;"></div>
-      <input type="hidden" name="fecha_pago" value="<?= date('Y-m-d') ?>">
-      <label style="display:block;margin-bottom:0.5rem;color:white;">Comprobante (opcional)</label>
-      <input type="file" name="adjunto" accept=".jpg,.jpeg,.png,.pdf" style="margin-bottom:1rem;">
-      <label style="display:block;margin-bottom:0.5rem;color:white;">Comentario (opcional)</label>
-      <textarea name="comentario" rows="2" style="width:100%;padding:0.6rem;border-radius:6px;"></textarea>
-      <button type="submit" class="btn-action" style="background:#071289;">Registrar Pago Manual</button>
-    </form>
-
-    <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="back-link">← Volver al Dashboard</a>
+        <!-- Campos editables -->
+        <div class="form-group">
+          <label for="fecha_pago">Fecha de pago *</label>
+          <input type="date" id="fecha_pago" name="fecha_pago" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="adjunto">Comprobante (opcional)</label>
+          <input type="file" id="adjunto" name="adjunto" accept=".jpg,.jpeg,.png,.pdf">
+        </div>
+        
+        <div class="form-group">
+          <label for="comentario">Comentario (opcional)</label>
+          <textarea id="comentario" name="comentario" rows="2"></textarea>
+        </div>
+        
+        <button type="submit" class="btn-submit">Registrar Pago</button>
+      </form>
+      
+      <a href="javascript:history.back()" class="close-btn">Cancelar</a>
+    <?php endif; ?>
   </div>
-
-  <script>
-    // === INICIALIZAR BRICKS ===
-    const mp = new MercadoPago('<?= MERCADOPAGO_ACCESS_TOKEN ?>');
-    const bricksBuilder = mp.bricks();
-
-    bricksBuilder.create('cardPayment', 'bricks_container', {
-      initialization: {
-        amount: <?= $cuota['monto'] ?>,
-        payer: {
-          email: '<?= $_SESSION['user_email'] ?>'
-        }
-      },
-      onSubmit: async (formData) => {
-        try {
-          const response = await fetch('../api/procesar_pago_brick.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...formData,
-              id_cuota: <?= $cuota['id_cuota'] ?>,
-              description: 'Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>'
-            })
-          });
-          const data = await response.json();
-          if (data.status === 'approved') {
-            alert('✅ Pago aprobado');
-            window.location.href = '../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>';
-          } else {
-            alert('❌ Pago rechazado: ' + (data.message || 'Error desconocido'));
-          }
-        } catch (err) {
-          console.error(err);
-          alert('❌ Error al procesar el pago');
-        }
-      },
-      onError: (error) => {
-        console.error('Error en Brick:', error);
-        alert('❌ Error en el formulario de pago');
-      },
-      customization: {
-        visual: {
-          style: {
-            theme: 'default',
-            texts: {
-              formTitle: 'Paga con tu tarjeta',
-              submit: 'Pagar ahora'
-            }
-          }
-        }
-      }
-    });
-
-    function mostrarToast(mensaje) {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;';
-            document.body.appendChild(container);
-        }
-        const toast = document.createElement('div');
-        toast.textContent = mensaje;
-        toast.style.cssText = `
-            background: #28a745; color: white; padding: 12px 16px;
-            border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: fadeIn 0.3s;
-        `;
-        container.appendChild(toast);
-        setTimeout(() => {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 3000);
-    }
-  </script>
 </body>
 </html>
