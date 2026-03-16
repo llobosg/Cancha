@@ -394,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         amount: <?= (float)$cuota['monto'] ?>,
         payer: {
           email: '<?= $_SESSION['user_email'] ?? $cuota['socio_email'] ?>'
-        }
+        },
         locale: "es-CL"
       },
 
