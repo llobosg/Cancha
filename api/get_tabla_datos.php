@@ -18,152 +18,209 @@ if (!$club_id) {
 }
 
 try {
-    $data = [];
+    $filtro = $_GET['filtro'] ?? 'inscritos';
+    $sql = "";
+    $params = [];
 
-    if ($filtro === 'inscritos') {
-        // Inscritos: reservas futuras con socios inscritos
-        $stmt = $pdo->prepare("
-            SELECT 
-                r.id_reserva AS id_evento,
-                r.fecha,
-                r.hora_inicio,
-                te.tipoevento AS id_tipoevento,
-                cl.nombre AS id_club,
-                ca.id_cancha,
-                r.monto_total AS costo_evento,
-                s.alias AS nombre,
-                i.posicion_jugador,
-                i.id_inscrito,
-                i.lleva_cerveza,
-                i.id_socio
-            FROM reservas r
-            INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            INNER JOIN clubs cl ON ca.id_recinto = cl.id_club
-            LEFT JOIN tipoeventos te ON cl.deporte = te.tipoevento
-            LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
-            LEFT JOIN socios s ON i.id_socio = s.id_socio
-            WHERE cl.id_club = ? AND r.fecha >= CURDATE()
-            ORDER BY r.fecha ASC, r.hora_inicio ASC
-            LIMIT 20
-        ");
-        $stmt->execute([$club_id]);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // === Modo individual: solo mostrar datos del socio ===
+    if (!isset($_SESSION['club_id'])) {
+        switch ($filtro) {
+            case 'inscritos':
+                $sql = "
+                    SELECT 
+                        r.fecha,
+                        r.hora_inicio,
+                        te.tipoevento AS id_tipoevento,
+                        NULL AS id_club,
+                        r.id_cancha,
+                        r.monto_total AS costo_evento,
+                        s.alias as nombre,
+                        i.posicion_jugador,
+                        i.lleva_cerveza,
+                        i.id_inscrito,
+                        c.monto AS cuota_monto,
+                        c.fecha_pago,
+                        c.comentario,
+                        r.id_reserva AS id_evento,
+                        s.id_socio
+                    FROM reservas r
+                    JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
+                    JOIN socios s ON i.id_socio = s.id_socio
+                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
+                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE s.id_socio = ?
+                    ORDER BY r.fecha DESC, r.hora_inicio DESC
+                    LIMIT 50
+                ";
+                $params = [$_SESSION['id_socio']];
+                break;
 
-    } elseif ($filtro === 'cuotas') {
-        $stmt = $pdo->prepare("
-            SELECT 
-                c.id_cuota,
-                COALESCE(r.fecha, e.fecha) AS fecha_evento,
-                CASE 
-                    WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-                    WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-                    ELSE 'Sin detalle'
-                END AS origen,
-                c.monto AS costo_evento,
-                s.nombre AS nombre_socio,
-                c.monto,
-                c.fecha_pago,
-                c.estado,
-                c.comentario
-            FROM cuotas c
-            INNER JOIN socios s ON c.id_socio = s.id_socio
-            INNER JOIN clubs cl ON s.id_club = cl.id_club
-            LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-            LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-            LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-            LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-            WHERE cl.id_club = ? AND c.estado IN ('pendiente', 'en_revision')
-            ORDER BY c.fecha_vencimiento DESC
-            LIMIT 50
-        ");
-        $stmt->execute([$club_id]);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            default:
+                echo json_encode([]);
+                exit;
+        }
+    } 
+    // === Modo club: mostrar datos del club ===
+    else {
+        $club_id = $_SESSION['club_id'];
+        switch ($filtro) {
+            case 'inscritos':
+                $sql = "
+                    SELECT 
+                        r.fecha,
+                        r.hora_inicio,
+                        te.tipoevento AS id_tipoevento,
+                        r.id_club,
+                        r.id_cancha,
+                        r.monto_total AS costo_evento,
+                        s.alias as nombre,
+                        i.posicion_jugador,
+                        i.lleva_cerveza,
+                        i.id_inscrito,
+                        c.monto AS cuota_monto,
+                        c.fecha_pago,
+                        c.comentario,
+                        r.id_reserva AS id_evento,
+                        s.id_socio
+                    FROM reservas r
+                    JOIN inscritos i ON r.id_reserva = i.id_evento
+                    JOIN socios s ON i.id_socio = s.id_socio
+                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
+                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE r.id_club = ? 
+                    AND (
+                        r.fecha > CURDATE() 
+                        OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
+                    )
+                    ORDER BY r.fecha ASC, r.hora_inicio ASC
+                    LIMIT 50
+                ";
+                $params = [$club_id];
+                break;
 
-    } elseif ($filtro === 'socios') {
-        $stmt = $pdo->prepare("
-            SELECT 
-                s.id_socio AS id_evento,
-                s.alias AS nombre,
-                s.rol,
-                s.activo
-            FROM socios s
-            WHERE s.id_club = ?
-            ORDER BY s.alias
-        ");
-        $stmt->execute([$club_id]);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            case 'reservas':
+                $sql = "
+                    SELECT 
+                        r.fecha,
+                        r.hora_inicio,
+                        te.tipoevento AS id_tipoevento,
+                        r.id_club,
+                        r.id_cancha,
+                        r.monto_total AS costo_evento,
+                        '' AS nombre,
+                        '' AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        0 AS id_inscrito,
+                        NULL AS cuota_monto,
+                        NULL AS fecha_pago,
+                        '' AS comentario,
+                        r.id_reserva AS id_evento
+                    FROM reservas r
+                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE r.id_club = ? AND r.fecha >= CURDATE()
+                    ORDER BY r.fecha DESC
+                    LIMIT 50
+                ";
+                $params = [$club_id];
+                break;
 
-    } elseif ($filtro === 'reservas') {
-        $stmt = $pdo->prepare("
-            SELECT 
-                r.id_reserva AS id_evento,
-                r.fecha,
-                r.hora_inicio,
-                te.tipoevento AS id_tipoevento,
-                cl.nombre AS id_club,
-                ca.id_cancha,
-                r.monto_total AS costo_evento,
-                r.estado
-            FROM reservas r
-            INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            INNER JOIN clubs cl ON ca.id_recinto = cl.id_club
-            LEFT JOIN tipoeventos te ON cl.deporte = te.tipoevento
-            WHERE cl.id_club = ?
-            ORDER BY r.fecha DESC
-            LIMIT 30
-        ");
-        $stmt->execute([$club_id]);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            case 'eventos':
+                $sql = "
+                    SELECT 
+                        e.fecha,
+                        e.hora,
+                        e.id_tipoevento,
+                        e.id_club,
+                        e.lugar AS id_cancha,
+                        e.valor_cuota AS costo_evento,
+                        '' AS nombre,
+                        '' AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        0 AS id_inscrito,
+                        NULL AS cuota_monto,
+                        NULL AS fecha_pago,
+                        e.comentario,
+                        e.id_evento
+                    FROM eventos e
+                    WHERE e.id_club = ? AND e.fecha >= CURDATE()
+                    ORDER BY e.fecha DESC
+                    LIMIT 50
+                ";
+                $params = [$club_id];
+                break;
 
-    } elseif ($filtro === 'eventos') {
-        $stmt = $pdo->prepare("
-            SELECT 
-                e.id_evento,
-                e.fecha,
-                te.tipoevento AS id_tipoevento,
-                cl.nombre AS id_club,
-                e.valor_cuota AS costo_evento,
-                COUNT(i.id_inscrito) AS inscritos
-            FROM eventos e
-            INNER JOIN clubs cl ON e.id_club = cl.id_club
-            INNER JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-            LEFT JOIN inscritos i ON e.id_evento = i.id_evento AND i.tipo_actividad = 'evento'
-            WHERE cl.id_club = ?
-            GROUP BY e.id_evento
-            ORDER BY e.fecha DESC
-            LIMIT 30
-        ");
-        $stmt->execute([$club_id]);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            case 'socios':
+                $sql = "
+                    SELECT 
+                        NULL AS fecha,
+                        NULL AS hora_inicio,
+                        NULL AS id_tipoevento,
+                        s.id_club,
+                        NULL AS id_cancha,
+                        NULL AS costo_evento,
+                        s.alias as nombre,
+                        s.rol AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        0 AS id_inscrito,
+                        NULL AS cuota_monto,
+                        NULL AS fecha_pago,
+                        s.email AS comentario,
+                        s.id_socio AS id_evento,
+                        s.id_socio
+                    FROM socios s
+                    WHERE s.id_club = ?
+                    ORDER BY s.nombre ASC
+                    LIMIT 50
+                ";
+                $params = [$club_id];
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $socios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    } elseif ($filtro === 'equipos') {
-        // Equipos IA: partidos pasados con equipos generados
-        $stmt = $pdo->prepare("
-            SELECT 
-                r.id_reserva AS id_evento,
-                r.fecha,
-                r.hora_inicio,
-                'Futbolito' AS id_tipoevento,
-                cl.nombre AS id_club,
-                'Equipos armados' AS costo_evento
-            FROM reservas r
-            INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            INNER JOIN clubs cl ON ca.id_recinto = cl.id_club
-            WHERE cl.id_club = ? AND r.fecha < CURDATE()
-            ORDER BY r.fecha DESC
-            LIMIT 10
-        ");
-        $stmt->execute([$club_id]);
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Verificar si el usuario actual es responsable
+                $es_responsable = false;
+                if (isset($_SESSION['id_socio'])) {
+                    $stmt_resp = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
+                    $stmt_resp->execute([$_SESSION['id_socio'], $club_id]);
+                    $row = $stmt_resp->fetch();
+                    $es_responsable = $row && $row['es_responsable'] == 1;
+                }
 
+                // Construir acciones
+                $resultados = [];
+                foreach ($socios as $socio) {
+                    $acciones = '-';
+                    if ($es_responsable) {
+                        $acciones = '
+                            <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' . $socio['id_socio'] . ')">✏️</button>
+                            <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#E74C3C;margin-top:0.2rem;" onclick="eliminarSocio(' . $socio['id_socio'] . ')">🗑️</button>
+                        ';
+                    }
+                    $socio['accion'] = $acciones;
+                    $resultados[] = $socio;
+                }
+
+                echo json_encode($resultados);
+                exit;
+
+            default:
+                echo json_encode([]);
+                exit;
+        }
     }
 
-    echo json_encode($data);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode($resultados);
 
 } catch (Exception $e) {
-    error_log("Error en get_tabla_datos.php: " . $e->getMessage());
+    error_log("Error en cargar_detalle_eventos.php: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Error al cargar los datos']);
+    echo json_encode(['error' => 'Error interno del servidor']);
 }
 ?>
