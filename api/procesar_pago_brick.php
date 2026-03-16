@@ -117,6 +117,7 @@ try {
     $payment_client = new PaymentClient();
 
     $payment_data = [
+        "statement_descriptor" => "CANCHASPORT",
         "transaction_amount" => (float)$monto,
         "token" => $token,
         "description" => $data['description'] ?? 'Pago cuota',
@@ -128,11 +129,18 @@ try {
         "external_reference" => "cuota_" . $id_cuota
     ];
 
+    if ($issuerId) {
+        $payment_data["issuer_id"] = (int)$issuerId;
+    }
+
     error_log("MP payment_data: " . json_encode($payment_data));
 
     $payment = $payment_client->create($payment_data);
 
     $estado = $payment->status;
+
+    onSubmit: async (formData) => {
+    console.log("Brick data:", formData);
 
     /* -------- Actualizar cuota -------- */
 
