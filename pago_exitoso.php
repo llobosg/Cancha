@@ -39,7 +39,7 @@ if ($id_cuota > 0) {
       <p>Tu cuota de <strong>$<?= number_format($cuota['monto'], 0, ',', '.') ?></strong> ha sido registrada.</p>
       <p>Gracias por confiar en CanchaSport.</p>
     <?php endif; ?>
-    <a href="pages/dashboard_socio.php" class="btn">Volver al Dashboard</a>
+    <a href="pages/dashboard_socio.php?id_club=<?= htmlspecialchars($_GET['id_club'] ?? $_SESSION['current_club'] ?? '') ?>" class="btn">Volver al Dashboard</a>
   </div>
 </body>
 </html>

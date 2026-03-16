@@ -578,6 +578,69 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <div class="dashboard-upper">
       <!-- Sub sección izquierda -->
       <div class="upper-left">
+        <?php
+            // === INICIALIZACIÓN: Verificar inscripción y cuota pendiente ===
+            $ya_inscrito = false;
+            $id_cuota = null;
+            $id_reserva = null;
+            $players = 0;
+            $monto_total = 0;
+            $deporte = '';
+            if ($proximo_evento) {
+                $id_reserva = $proximo_evento['id_reserva'];
+                $players = (int)$proximo_evento['players'];
+                $monto_total = (float)$proximo_evento['monto_total'];
+                $deporte = $proximo_evento['id_deporte'];
+
+                $stmt_check = $pdo->prepare("
+                    SELECT 1 
+                    FROM inscritos 
+                    WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'
+                ");
+                $stmt_check->execute([$id_reserva, $_SESSION['id_socio']]);
+                $ya_inscrito = (bool) $stmt_check->fetch();
+
+                if ($ya_inscrito) {
+                    $stmt_cuota = $pdo->prepare("
+                        SELECT id_cuota 
+                        FROM cuotas 
+                        WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva' AND estado = 'pendiente'
+                    ");
+                    $stmt_cuota->execute([$id_reserva, $_SESSION['id_socio']]);
+                    $cuota_row = $stmt_cuota->fetch();
+                    $id_cuota = $cuota_row ? $cuota_row['id_cuota'] : null;
+                }
+            }
+
+            $stmt_deudas = $pdo->prepare("
+                SELECT 
+                    c.id_cuota,
+                    c.monto,
+                    c.fecha_vencimiento,
+                    CASE 
+                        WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                        WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+                        ELSE 'Sin detalle'
+                    END as detalle_origen,
+                    COALESCE(r.fecha, e.fecha) as fecha_evento
+                FROM cuotas c
+                LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+                LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+                LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+                WHERE c.id_socio = ? AND c.estado = 'pendiente'
+                ORDER BY c.fecha_vencimiento ASC  -- La más antigua (más urgente)
+                LIMIT 1
+            ");
+            $stmt_deudas->execute([$_SESSION['id_socio']]);
+            $deuda_mas_vigente = $stmt_deudas->fetch(); // Solo una
+
+            // Contar total de deudas pendientes
+            $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
+            $stmt_count->execute([$_SESSION['id_socio']]);
+            $total_deudas = (int)$stmt_count->fetchColumn();
+        ?>
         <div class="fichas-dashboard">
 
           <!-- Próximo Partido -->
@@ -613,14 +676,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
                 <?php if ($despues_del_lunes_09): ?> 
                   <!-- Botones de inscripción (activos desde lunes 09:00)  -->
-                  <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                    Anotarse
-                  </button>
-                  <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
-                          onclick="anotarseConCerveza(true)">
-                    🍺 Anotarse + Cerveza
-                  </button>
+                  <?php if ($ya_inscrito): ?>
+                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                      onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                      Bajarse
+                    </button>
+                  <?php else: ?>
+                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                            onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                      Anotarse
+                    </button>
+                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
+                            onclick="anotarseConCerveza(true)">
+                      🍺 Anotarse + Cerveza
+                    </button>
+                  <?php endif; ?>
 
                   <!-- Botón IA si aplica -->
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
@@ -630,12 +700,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     </button>
                   <?php endif; ?>
 
-                <?php else: ?>
-                  <!-- Antes del lunes 09:00: solo botón "Paso" -->
-                  <button class="btn-action" style="background:#FFD700;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                          onclick="pasoEvento(<?= $id_reserva ?>)">
-                    Paso esta semana
+                  <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                    onclick="pasoEvento(<?= $id_reserva ?>)">
+                    <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
                   </button>
+
+                <?php else: ?>
                   <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
                     ⏰ Los botones de inscripción se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
                   </p>

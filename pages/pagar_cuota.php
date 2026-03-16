@@ -309,6 +309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php else: ?>
       <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
+        <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-btn">Volver al dashboard</a>
       <?php endif; ?>
 
       <!-- === PAGO MANUAL === -->
