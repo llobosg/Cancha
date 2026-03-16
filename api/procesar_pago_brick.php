@@ -118,6 +118,7 @@ try {
     $payment_client = new PaymentClient();
 
     $payment_data = [
+        "statement_descriptor" => "CANCHASPORT",
         "transaction_amount" => $monto,
         "token" => $token,
         "description" => $data['description'] ?? 'Pago cuota',
@@ -128,7 +129,7 @@ try {
             "first_name" => "Cliente",
             "last_name" => "CanchaSport",
             "identification" => [
-                "type" => "RUT",
+                "type" => "RUN",
                 "number" => "11111111-1"
             ]
         ],
