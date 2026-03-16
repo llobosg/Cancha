@@ -924,7 +924,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               <th>Acción</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="tablaContenido">
             <tr>
               <td colspan="12" style="text-align: center; padding: 2rem;">Selecciona un filtro para ver los datos</td>
             </tr>
@@ -1815,7 +1815,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           if (tab) tab.classList.add('active');
         }
 
-        fetch(`api/get_tabla_datos.php?filtro=${filtro}`)
+        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
           .then(r => r.json())
           .then(data => {
             let html = '';
