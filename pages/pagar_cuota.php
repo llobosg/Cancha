@@ -197,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
   <link rel="stylesheet" href="../styles.css">
+  <link rel="icon" href="/assets/favicon.ico">
   <!-- SDK de Mercado Pago -->
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <style>
@@ -413,6 +414,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         },
 
         onSubmit: (cardFormData) => {
+
+          document.querySelector("button").disabled = true;
 
           return new Promise((resolve, reject) => {
 

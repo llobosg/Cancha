@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/config_mercadopago.php';
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Exceptions\MPApiException;
+use MercadoPago\Client\Common\RequestOptions;
 
 MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
 
@@ -125,11 +126,16 @@ try {
         $payment_data["issuer_id"] = $issuerId;
     }
 
+    use MercadoPago\Client\Common\RequestOptions;
+
+    $request_options = new RequestOptions();
+    $request_options->setCustomHeaders([
+        "X-Idempotency-Key: " . uniqid('mp_', true)
+    ]);
+
     $payment = $payment_client->create(
         $payment_data,
-        [
-            "X-Idempotency-Key" => uniqid('mp_', true)
-        ]
+        $request_options
     );
 
     $estado = $payment->status;
