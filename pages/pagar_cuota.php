@@ -390,7 +390,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     initialization: {
       amount: <?= $cuota['monto'] ?>,
       payer: {
-        email: '<?= $_SESSION['user_email'] ?>'
+        email: '<?= $_SESSION['user_email'] ?? $cuota['socio_email'] ?>'
       }
     },
     callbacks: {
