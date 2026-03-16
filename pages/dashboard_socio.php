@@ -671,7 +671,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 // ¿Ya pasó el lunes 09:00?
                 $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
                 ?>
-                <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                 <?php
                   $icono_deporte = '⚽';
                   if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
@@ -1570,36 +1569,40 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 `;
               }
               else if (filtro === 'inscritos') {
-                const esResponsable = <?= json_encode($es_responsable) ?>;
-                const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
-                const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-                const ahora = new Date();
-                let botonBajar = '';
-                if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                  botonBajar = '<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-bottom:0.2rem;" onclick="bajarseEvento(' + row.id_evento + ', ' + (esResponsable && !esMiInscripcion ? row.id_socio : 'null') + ')">Bajar</button>';
-                }
-                let iconoCerveza = '';
-                if (esResponsable && fechaEvento > ahora) {
-                  const emoji = row.lleva_cerveza ? '🍺' : '🥤';
-                  iconoCerveza = `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
-                }
-                botonAccion = botonBajar + (iconoCerveza ? '<br>' + iconoCerveza : '');
-                html += `
-                  <tr>
-                    <td>${formatDate(row.fecha)}</td>
-                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                    <td>${row.id_tipoevento || '-'}</td>
-                    <td>${row.id_club || '-'}</td>
-                    <td>${row.id_cancha || '-'}</td>
-                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                    <td>${row.nombre || '-'}</td>
-                    <td>${row.posicion_jugador || '-'}</td>
-                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                    <td>${row.comentario || '-'}</td>
-                    <td>${botonAccion}</td>
-                  </tr>
-                `;
+                  const esResponsable = <?= json_encode($es_responsable) ?>;
+                  const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                  const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                  const ahora = new Date();
+                  let acciones = '';
+
+                  // Botón "Bajar"
+                  if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                      acciones += `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-right:0.3rem;" onclick="bajarseEvento(${row.id_evento}, ${esResponsable && !esMiInscripcion ? row.id_socio : 'null'})">Bajar</button>`;
+                  }
+
+                  // Icono de cerveza (solo para responsable y antes del evento)
+                  if (esResponsable && fechaEvento > ahora) {
+                      const emoji = row.lleva_cerveza ? '🍺' : '';
+                      acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                  }
+
+                  botonAccion = acciones || '-';
+                  html += `
+                      <tr>
+                          <td>${formatDate(row.fecha)}</td>
+                          <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                          <td>${row.id_tipoevento || '-'}</td>
+                          <td>${row.id_club || '-'}</td>
+                          <td>${row.id_cancha || '-'}</td>
+                          <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                          <td>${row.nombre || '-'}</td>
+                          <td>${row.posicion_jugador || '-'}</td>
+                          <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                          <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                          <td>${row.comentario || '-'}</td>
+                          <td>${botonAccion}</td>
+                      </tr>
+                  `;
               }
               else {
                 // Otros filtros (reservas, eventos, etc.)
