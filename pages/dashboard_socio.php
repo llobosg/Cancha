@@ -896,14 +896,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- MITAD INFERIOR -->
     <div class="dashboard-lower" style="margin-top: 8rem;">
       <h3>Detalle Eventos</h3>
+      <!-- Filtros -->
       <div class="filters">
-        <button class="filter-btn active" data-filter="inscritos">Inscritos Próximo evento</button>
-        <button class="filter-btn" data-filter="equipos">Equipos IA</button>
+        <button class="filter-btn" data-filtro="inscritos">Inscritos Próximo evento</button>
+        <button class="filter-btn" data-filtro="equipos">Equipos IA</button>
         <?php if (!$modo_individual): ?>
-          <button class="filter-btn" data-filter="reservas">Reservas</button>
-          <button class="filter-btn" data-filter="cuotas" onclick="cargarTabla('cuotas')">Cuotas</button>
-          <button class="filter-btn" data-filter="eventos">Eventos</button>
-          <button class="filter-btn" data-filter="socios">Socios</button>
+          <button class="filter-btn" data-filtro="reservas">Reservas</button>
+          <button class="filter-btn" data-filtro="cuotas">Cuotas</button>
+          <button class="filter-btn" data-filtro="eventos">Eventos</button>
+          <button class="filter-btn" data-filtro="socios">Socios</button>
         <?php endif; ?>
       </div>
       <div class="dynamic-table-container">
@@ -1378,18 +1379,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .then(data => {
           if (data.success) {
             mostrarToast('✅ Cuota en revisión');
-            // ✅ Actualizar solo la tabla de cuotas
-            setTimeout(() => {
-              cargarTabla('cuotas');
-              document.querySelector('.stat-card-content table')?.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+            setTimeout(() => cargarTabla('cuotas'), 1000);
           } else {
             mostrarToast('❌ ' + data.message);
           }
-        })
-        .catch(err => {
-          console.error(err);
-          mostrarToast('❌ Error al procesar la acción');
         });
       }
 
@@ -1404,17 +1397,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .then(data => {
           if (data.success) {
             mostrarToast('✅ Pago validado');
-            setTimeout(() => {
-              cargarTabla('cuotas');
-              document.querySelector('.stat-card-content table')?.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+            setTimeout(() => cargarTabla('cuotas'), 1000);
           } else {
             mostrarToast('❌ ' + data.message);
           }
-        })
-        .catch(err => {
-          console.error(err);
-          mostrarToast('❌ Error al procesar la acción');
         });
       }
 
@@ -1807,33 +1793,88 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         }
       });
 
+      // === CARGAR TABLA ÚNICA ===
       function cargarTabla(filtro) {
-        // Activar visualmente la pestaña correcta
-        document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('active'));
-        if (filtro === 'cuotas') {
-          const tab = document.getElementById('tab-cuotas');
-          if (tab) tab.classList.add('active');
-        }
+        // Activar visualmente el botón seleccionado
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.filtro === filtro);
+        });
+
+        const tbody = document.getElementById('tablaContenido');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;">Cargando...</td></tr>';
 
         fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
           .then(r => r.json())
           .then(data => {
-            let html = '';
             if (data.error) {
-              html = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-            } else {
-              data.forEach(row => {
-                // Tu lógica actual de generación de filas
-                // (la que ya tienes para 'inscritos' y 'cuotas')
-              });
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+              return;
             }
-            document.getElementById('tablaContenido').innerHTML = html;
+            if (!Array.isArray(data) || data.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+              return;
+            }
+
+            let html = '';
+            data.forEach(row => {
+              let botonAccion = '-';
+              if (filtro === 'cuotas') {
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                if (esResponsable) {
+                  if (row.estado === 'pendiente') {
+                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
+                  } else if (row.estado === 'en_revision') {
+                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
+                  }
+                }
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha_evento)}</td>
+                    <td>-</td>
+                    <td>${row.origen || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre_socio || '-'}</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              }
+              // ... (otros filtros si los necesitas)
+            });
+            tbody.innerHTML = html;
           })
           .catch(err => {
-            console.error(err);
-            document.getElementById('tablaContenido').innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
+            console.error('Error:', err);
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
           });
       }
+
+      // === INICIALIZAR AL CARGAR ===
+      document.addEventListener('DOMContentLoaded', () => {
+        // Activar "Inscritos" por defecto
+        document.querySelector('.filter-btn[data-filtro="inscritos"]').classList.add('active');
+        
+        // Asignar eventos a los botones
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            cargarTabla(btn.dataset.filtro);
+          });
+        });
+
+        // Si viene con ?filtro=cuotas, activarlo
+        const urlParams = new URLSearchParams(window.location.search);
+        const filtro = urlParams.get('filtro');
+        if (filtro && document.querySelector(`.filter-btn[data-filtro="${filtro}"]`)) {
+          cargarTabla(filtro);
+        }
+      });
     </script>
 
     <!-- Modal Compartir Club -->
