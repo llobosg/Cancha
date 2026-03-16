@@ -35,7 +35,7 @@ try {
                 i.id_socio
             FROM reservas r
             INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            INNER JOIN clubs cl ON ca.id_recinto = cl.id_recinto
+            INNER JOIN clubs cl ON ca.id_recinto = cl.id_club
             LEFT JOIN tipoeventos te ON cl.deporte = te.tipoevento
             LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
             LEFT JOIN socios s ON i.id_socio = s.id_socio
