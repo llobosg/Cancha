@@ -1,414 +1,310 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-
 session_start();
 
-// Verificar autenticación de administrador de recinto
-if (!isset($_SESSION['id_recinto'])) {
+// Validar sesión y rol
+if (!isset($_SESSION['id_socio']) || empty($_SESSION['es_responsable'])) {
     header('Location: ../index.php');
     exit;
 }
 
-$id_recinto = $_SESSION['id_recinto'];
-
-// Obtener datos del recinto
-$stmt = $pdo->prepare("SELECT * FROM recintos_deportivos WHERE id_recinto = ?");
-$stmt->execute([$id_recinto]);
-$recinto = $stmt->fetch();
-
-if (!$recinto) {
+$club_id = $_SESSION['club_id'] ?? null;
+if (!$club_id) {
     header('Location: ../index.php');
     exit;
 }
 
-// Estadísticas generales
-$stmt_stats = $pdo->prepare("
-    SELECT 
-        COUNT(*) as total_canchas,
-        SUM(CASE WHEN r.estado = 'confirmada' THEN 1 ELSE 0 END) as reservas_activas,
-        COALESCE(SUM(CASE WHEN r.estado = 'confirmada' THEN r.monto_total ELSE 0 END), 0) as ingresos_hoy
-    FROM canchas c
-    LEFT JOIN reservas r ON c.id_cancha = r.id_cancha AND DATE(r.fecha) = CURDATE()
-    WHERE c.id_recinto = ?
-");
-$stmt_stats->execute([$id_recinto]);
-$stats = $stmt_stats->fetch();
-
-// Tasa de ocupación (últimos 7 días)
-$stmt_ocupacion = $pdo->prepare("
-    SELECT 
-        DATE(fecha) as fecha,
-        COUNT(CASE WHEN id_reserva IS NOT NULL THEN 1 END) as reservadas,
-        COUNT(*) as totales
-    FROM disponibilidad_canchas dc
-    JOIN canchas c ON dc.id_cancha = c.id_cancha
-    WHERE c.id_recinto = ? AND fecha BETWEEN CURDATE() - INTERVAL 6 DAY AND CURDATE()
-    GROUP BY DATE(fecha)
-    ORDER BY fecha
-");
-$stmt_ocupacion->execute([$id_recinto]);
-$ocupacion_data = $stmt_ocupacion->fetchAll();
-
-// Ingresos últimos 30 días
-$stmt_ingresos = $pdo->prepare("
-    SELECT 
-        DATE(created_at) as fecha,
-        SUM(monto_total) as ingresos
-    FROM reservas 
-    WHERE id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
-      AND estado = 'confirmada'
-      AND created_at >= CURDATE() - INTERVAL 29 DAY
-    GROUP BY DATE(created_at)
-    ORDER BY fecha
-");
-$stmt_ingresos->execute([$id_recinto]);
-$ingresos_data = $stmt_ingresos->fetchAll();
-
-// Canchas más rentables
-$stmt_top_canchas = $pdo->prepare("
-    SELECT 
-        c.nro_cancha,
-        c.id_deporte,
-        COUNT(r.id_reserva) as reservas,
-        COALESCE(SUM(r.monto_total), 0) as ingresos
-    FROM canchas c
-    LEFT JOIN reservas r ON c.id_cancha = r.id_cancha AND r.estado = 'confirmada'
-    WHERE c.id_recinto = ?
-    GROUP BY c.id_cancha
-    ORDER BY ingresos DESC
-    LIMIT 5
-");
-$stmt_top_canchas->execute([$id_recinto]);
-$top_canchas = $stmt_top_canchas->fetchAll();
+// === Cargar datos del club ===
+$stmt_club = $pdo->prepare("SELECT nombre, logo FROM clubs WHERE id_club = ?");
+$stmt_club->execute([$club_id]);
+$club = $stmt_club->fetch();
+$club_nombre = $club['nombre'] ?? 'Recinto';
+$club_logo = $club['logo'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - <?= htmlspecialchars($recinto['nombre']) ?> | Cancha</title>
-  <link rel="stylesheet" href="../styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | CanchaSport</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
   <style>
+    :root {
+      --bg-primary: #071289;
+      --accent: #4ECDC4;
+      --gold: #FFD700;
+      --success: #2ECC71;
+      --warning: #FF6B6B;
+      --card-bg: rgba(255, 255, 255, 0.15);
+      --text-light: white;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: 
-        linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+      background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)),
+                  url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       background-blend-mode: multiply;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-light);
+      font-family: 'Segoe UI', system-ui, sans-serif;
       min-height: 100vh;
-      color: white;
+      padding: 1rem;
     }
-    
-    .dashboard-container {
-      max-width: 1200px;
+    .container {
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 2rem;
     }
-    
-    .header {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
+    header {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 2rem;
-      margin-bottom: 2.5rem;
+      margin-bottom: 1.5rem;
       padding-bottom: 1rem;
       border-bottom: 2px solid rgba(255,255,255,0.3);
     }
-
-    @media (max-width: 768px) {
-      .header {
-        grid-template-columns: 1fr;
-        text-align: center;
-        gap: 1rem;
-      }
+    .logo {
+      width: 60px; height: 60px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
     }
-    
-    .logo-recinto {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: #FFD700;
+    .filters-bar {
+      display: flex; gap: 0.5rem; margin-bottom: 1.2rem;
     }
-    
+    .filter-btn {
+      padding: 0.4rem 0.8rem;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      color: white;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2.5rem;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
     }
-    
+    @media (min-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
     .stat-card {
-      background: rgba(255, 255, 255, 0.15);
+      background: var(--card-bg);
       backdrop-filter: blur(10px);
-      padding: 1.5rem;
+      padding: 1.2rem;
       border-radius: 14px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    
-    .stat-card h3 {
-      margin-bottom: 0.5rem;
+    .stat-title {
+      font-size: 0.95rem;
       opacity: 0.9;
+      margin-bottom: 0.8rem;
     }
-    
-    .stat-card .number {
-      font-size: 2rem;
-      font-weight: bold;
+    .chart {
+      height: 60px;
+      margin: 0.5rem 0;
     }
-    
-    .charts-section {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 2rem;
-      border-radius: 14px;
-      margin-bottom: 2.5rem;
-    }
-    
-    .charts-grid {
+    .quick-actions {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 2rem;
-    }
-    
-    .chart-container {
-      height: 300px;
-    }
-    
-    .top-canchas {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 2rem;
-      border-radius: 14px;
-    }
-    
-    .top-canchas table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    
-    .top-canchas th, .top-canchas td {
-      padding: 0.8rem;
-      text-align: left;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .top-canchas th {
-      color: #FFD700;
-    }
-    
-    .actions-section {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 2rem;
-      border-radius: 14px;
-      margin-top: 2rem;
-    }
-    
-    .action-buttons {
-      display: flex;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 1rem;
-      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
     }
-    
-    .btn-action {
-      padding: 0.8rem 1.5rem;
-      background: #00cc66;
-      color: white;
+    .action-btn {
+      padding: 0.8rem 0.5rem;
+      background: var(--accent);
+      color: var(--bg-primary);
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: 10px;
       font-weight: bold;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: transform 0.2s;
     }
-    
-    .btn-action:hover {
-      background: #00aa55;
+    .action-btn:hover {
       transform: translateY(-2px);
     }
-    
-    .logout {
-      text-align: center;
-      margin-top: 2.5rem;
+    .dynamic-panel {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 14px;
+      min-height: 200px;
     }
-    
-    .logout a {
-      color: #ffcc00;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 1.1rem;
+    .submodal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .submodal-content {
+      background: white;
+      color: #071289;
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .close {
+      float: right;
+      font-size: 1.5rem;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="dashboard-container">
-    <div class="header">
-      <div>
-        <h1 style="margin: 0; color: #FFD700; font-size: 2.8rem;">⚽ Cancha</h1>
-        <p style="margin: 0.5rem 0 0 0; color: rgba(255,255,255,0.8); font-size: 1.1rem;">
-          Administración Recintos Deportivos
-        </p>
-      </div>
-      <div style="text-align: center; margin-top: 1rem;">
-        <?php if (!empty($recinto['logorecinto'])): ?>
-          <img src="../uploads/logos_recintos/<?= htmlspecialchars($recinto['logorecinto']) ?>" 
-              alt="Logo <?= htmlspecialchars($recinto['nombre']) ?>"
-              style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; background: rgba(255,255,255,0.2);">
-        <?php else: ?>
-          <div style="width: 80px; height: 80px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
-            🏟️
-          </div>
-        <?php endif; ?>
-        <h2 style="margin: 0.5rem 0 0 0; color: white; font-size: 1.4rem;">
-          <?= htmlspecialchars($recinto['nombre']) ?>
-        </h2>
-    </div>
-
-    <!-- Estadísticas generales -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <h3>Total Canchas</h3>
-        <div class="number"><?= $stats['total_canchas'] ?></div>
-      </div>
-      <div class="stat-card">
-        <h3>Reservas Hoy</h3>
-        <div class="number"><?= $stats['reservas_activas'] ?></div>
-      </div>
-      <div class="stat-card">
-        <h3>Ingresos Hoy</h3>
-        <div class="number">$<?= number_format($stats['ingresos_hoy'] ?? 0, 0, ',', '.') ?></div>
-      </div>
-      <div class="stat-card">
-        <h3>Ocupación Semanal</h3>
-        <div class="number">
-          <?php 
-          $total_reservadas = array_sum(array_column($ocupacion_data, 'reservadas'));
-          $total_disponibles = array_sum(array_column($ocupacion_data, 'totales'));
-          $ocupacion_pct = $total_disponibles > 0 ? round(($total_reservadas / $total_disponibles) * 100, 1) : 0;
-          echo $ocupacion_pct . '%';
-          ?>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="logo">🏟️</div>
+        <div>
+          <h1><?= htmlspecialchars($club_nombre) ?></h1>
+          <p>Panel de Administración</p>
         </div>
       </div>
+      <a href="../index.php" class="filter-btn" style="background:#FF6B6B;">Salir</a>
+    </header>
+
+    <!-- Filtros -->
+    <div class="filters-bar">
+      <button class="filter-btn active" data-period="month">Mes</button>
+      <button class="filter-btn" data-period="week">Semana</button>
+      <button class="filter-btn" data-period="day">Hoy</button>
     </div>
 
     <!-- Gráficos -->
-    <div class="charts-section">
-      <h2>Estadísticas</h2>
-      <div class="charts-grid">
-        <div class="chart-container">
-          <canvas id="ocupacionChart"></canvas>
+    <div class="stats-grid">
+      <!-- Canchas -->
+      <div class="stat-card">
+        <div class="stat-title">Canchas disponibles</div>
+        <div class="chart">
+          <svg viewBox="0 0 100 20" style="width:100%; height:100%;">
+            <rect x="0" y="0" width="100" height="20" fill="rgba(255,255,255,0.2)" rx="3"/>
+            <rect x="0" y="0" width="60" height="20" fill="var(--accent)" rx="3"/>
+          </svg>
         </div>
-        <div class="chart-container">
-          <canvas id="ingresosChart"></canvas>
-        </div>
+        <div>6/10 reservadas</div>
       </div>
-    </div>
 
-    <!-- Top canchas -->
-    <div class="top-canchas">
-      <h2>Canchas Más Rentables</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Cancha</th>
-            <th>Deporte</th>
-            <th>Reservas</th>
-            <th>Ingresos</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($top_canchas as $cancha): ?>
-          <tr>
-            <td><?= htmlspecialchars($cancha['nro_cancha']) ?></td>
-            <td><?= ucfirst($cancha['id_deporte']) ?></td>
-            <td><?= $cancha['reservas'] ?></td>
-            <td>$<?= number_format($cancha['ingresos'] ?? 0, 0, ',', '.') ?></td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+      <!-- Ingresos -->
+      <div class="stat-card">
+        <div class="stat-title">Ingresos este mes</div>
+        <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
+        <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
+      </div>
+
+      <!-- Ocupación -->
+      <div class="stat-card">
+        <div class="stat-title">Ocupación MTD</div>
+        <div class="chart">
+          <svg viewBox="0 0 100 100" style="width:80px; height:80px; margin:0 auto;">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
+            <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8"
+                    stroke-dasharray="282" stroke-dashoffset="<?= 282 * (1 - 0.72) ?>" transform="rotate(-90 50 50)"/>
+            <text x="50" y="55" text-anchor="middle" fill="white" font-size="16">72%</text>
+          </svg>
+        </div>
+        <div>+7% vs mes anterior</div>
+      </div>
     </div>
 
     <!-- Acciones rápidas -->
-    <div class="actions-section">
-      <h2>Acciones Rápidas</h2>
-      <div class="action-buttons">
-        <button class="btn-action" onclick="window.location.href='gestion_canchas.php?id=<?= $recinto['id_recinto'] ?>'">Gestionar Canchas</button>
-        <button class="btn-action" onclick="window.location.href='calendario_reservas.php?id=<?= $recinto['id_recinto'] ?>'">Calendario Reservas</button>
-        <button class="btn-action" onclick="window.location.href='crear_reserva_manual.php?id=<?= $recinto['id_recinto'] ?>'">Reserva Manual</button>
-        <button class="btn-action" onclick="window.location.href='/pages/crear_torneo.php'">Crear Americano</button>
-        <button class="btn-action" onclick="window.location.href='estadisticas_avanzadas.php?id=<?= $recinto['id_recinto'] ?>'">Estadísticas Avanzadas</button>
-      </div>
+    <div class="quick-actions">
+      <button class="action-btn" onclick="gestionarCancha()">Gestionar cancha</button>
+      <button class="action-btn" onclick="calendarioReservas()">Calendario reservas</button>
+      <button class="action-btn" onclick="reservaManual()">Reserva Manual</button>
+      <button class="action-btn" onclick="crearAmericano()">Crear Americano</button>
     </div>
 
-    <div class="logout">
-      <a href="recinto_logout.php">Cerrar sesión</a>
+    <!-- Panel dinámico -->
+    <div class="dynamic-panel" id="dynamicPanel">
+      <h3>📋 Bienvenido al panel de administración</h3>
+      <p>Selecciona una acción rápida para comenzar.</p>
+    </div>
+  </div>
+
+  <!-- Submodal genérico -->
+  <div class="submodal" id="submodalGenerico">
+    <div class="submodal-content">
+      <span class="close" onclick="cerrarSubmodal()">&times;</span>
+      <div id="submodalContenido"></div>
     </div>
   </div>
 
   <script>
-    // Datos para gráficos
-    const ocupacionData = <?= json_encode($ocupacion_data) ?>;
-    const ingresosData = <?= json_encode($ingresos_data) ?>;
-    
-    // Formatear fechas para los gráficos
-    const ocupacionLabels = ocupacionData.map(item => new Date(item.fecha).toLocaleDateString('es-ES', {weekday: 'short'}));
-    const ocupacionValues = ocupacionData.map(item => item.totales > 0 ? Math.round((item.reservadas / item.totales) * 100) : 0);
-    
-    const ingresosLabels = ingresosData.map(item => new Date(item.fecha).toLocaleDateString('es-ES', {day: 'numeric'}));
-    const ingresosValues = ingresosData.map(item => parseFloat(item.ingresos));
-    
-    // Gráfico de ocupación
-    const ocupacionCtx = document.getElementById('ocupacionChart').getContext('2d');
-    new Chart(ocupacionCtx, {
-        type: 'bar',
-        data: {
-            labels: ocupacionLabels,
-            datasets: [{
-                label: 'Tasa de Ocupación (%)',
-                data: ocupacionValues,
-                backgroundColor: 'rgba(255, 215, 0, 0.7)',
-                borderColor: 'rgba(255, 215, 0, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-    
-    // Gráfico de ingresos
-    const ingresosCtx = document.getElementById('ingresosChart').getContext('2d');
-    new Chart(ingresosCtx, {
-        type: 'line',
-        data: {
-            labels: ingresosLabels,
-            datasets: [{
-                label: 'Ingresos Diarios ($)',
-                data: ingresosValues,
-                borderColor: 'rgba(0, 204, 102, 1)',
-                backgroundColor: 'rgba(0, 204, 102, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+    // === FUNCIONES DE ACCIÓN ===
+    function gestionarCancha() {
+      document.getElementById('submodalContenido').innerHTML = `
+        <h3>🛠️ Gestionar canchas</h3>
+        <p>Próximamente: formulario para editar horarios, precios y disponibilidad.</p>
+        <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
+      `;
+      document.getElementById('submodalGenerico').style.display = 'flex';
+    }
+
+    function calendarioReservas() {
+      document.getElementById('submodalContenido').innerHTML = `
+        <h3>📅 Calendario de reservas</h3>
+        <p>Próximamente: vista semanal/mensual con gestión de reservas.</p>
+        <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
+      `;
+      document.getElementById('submodalGenerico').style.display = 'flex';
+    }
+
+    function reservaManual() {
+      alert('Función en desarrollo: Reserva Manual');
+    }
+
+    function crearAmericano() {
+      document.getElementById('submodalContenido').innerHTML = `
+        <h3>🏆 Crear campeonato americano</h3>
+        <form id="formAmericano" style="margin-top:1rem;">
+          <label>Nombre del torneo:</label>
+          <input type="text" placeholder="Ej: Torneo Primavera 2026" style="width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:6px; border:1px solid #ccc;">
+          
+          <label>Deporte:</label>
+          <select style="width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:6px; border:1px solid #ccc;">
+            <option>Fútbol</option>
+            <option>Futsal</option>
+            <option>Pádel</option>
+          </select>
+          
+          <label>Número de equipos:</label>
+          <input type="number" min="4" max="16" value="8" style="width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:6px; border:1px solid #ccc;">
+          
+          <button type="submit" class="action-btn" style="margin-top:1rem; width:100%;">Crear torneo</button>
+        </form>
+      `;
+      document.getElementById('submodalGenerico').style.display = 'flex';
+
+      document.getElementById('formAmericano')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('✅ Torneo creado exitosamente');
+        cerrarSubmodal();
+      });
+    }
+
+    function cerrarSubmodal() {
+      document.getElementById('submodalGenerico').style.display = 'none';
+    }
+
+    // === FILTROS ===
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Aquí iría la lógica para recargar datos según el período
+        console.log('Filtro:', btn.dataset.period);
+      });
     });
   </script>
 </body>

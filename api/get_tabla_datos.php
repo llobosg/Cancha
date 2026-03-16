@@ -192,7 +192,7 @@ try {
                         s.id_club,
                         NULL AS id_cancha,
                         NULL AS costo_evento,
-                        s.alias as nombre,
+                        s.nombre AS nombre_socio,
                         s.rol AS posicion_jugador,
                         0 AS lleva_cerveza,
                         0 AS id_inscrito,
