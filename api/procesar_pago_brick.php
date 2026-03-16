@@ -134,19 +134,21 @@ try {
 
     $client = new PaymentClient();
 
+    // Limpiar el RUT: solo números y letra K
+    $rut_clean = preg_replace('/[^0-9kK]/', '', $data["payer"]["identification"]["number"]);
+
     $payment_data = [
-        "transaction_amount" => $monto,
+        "transaction_amount" => (float)$monto,
         "token" => $token,
-        "description" =>
-            $data["description"] ??
-            "Pago cuota CanchaSport",
+        "description" => $data["description"] ?? "Pago cuota CanchaSport",
         "installments" => (int)$installments,
         "payment_method_id" => $paymentMethodId,
+        "issuer_id" => $data["issuer_id"] ?? null, // INDISPENSABLE si viene en el brick
         "payer" => [
             "email" => $email,
             "identification" => [
-                "type" => "RUN",
-                "number" => $data["payer"]["identification"]["number"]
+                "type" => "RUT", // Cambiado de RUN a RUT
+                "number" => $rut_clean
             ]
         ],
         "external_reference" => "cuota_" . $id_cuota,
@@ -154,19 +156,20 @@ try {
         "binary_mode" => true
     ];
 
-    if (!empty($data["payer"]["identification"]["number"])) {
-        $payment_data["payer"]["identification"] = [
-            "type" => "RUN",
-            "number" => $data["payer"]["identification"]["number"]
-        ];
+    // Opciones para incluir la Idempotencia
+    $request_options = new \MercadoPago\Resources\RequestOptions();
+    $request_options->setCustomHeaders([
+        "X-Idempotency-Key" => "pay_" . $id_cuota . "_" . time() 
+    ]);
+
+    try {
+        $payment = $client->create($payment_data, $request_options);
+        $estado = $payment->status;
+    } catch (\Exception $e) {
+        error_log("Error detallado MP: " . $e->getMessage());
+        // Aquí verás si es un problema de credenciales o de parámetros
     }
 
-
-    error_log("MP payment_data: " . json_encode($payment_data));
-
-    $payment = $client->create($payment_data);
-
-    $estado = $payment->status ?? "unknown";
 
     error_log("MP status: " . $estado);
 
