@@ -37,7 +37,7 @@ try {
             INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
             INNER JOIN clubs cl ON ca.id_recinto = cl.id_recinto
             INNER JOIN tipoeventos te ON r.id_tipoevento = te.id_tipoevento
-            LEFT JOIN inscritos i ON r.id_reserva = i.id_reserva
+            LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
             LEFT JOIN socios s ON i.id_socio = s.id_socio
             WHERE cl.id_club = ? AND r.fecha >= CURDATE()
             ORDER BY r.fecha, r.hora_inicio
