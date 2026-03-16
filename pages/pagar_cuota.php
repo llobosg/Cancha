@@ -360,33 +360,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:1000;"></div>
 
   <script>
-    // === TOAST ===
-    function mostrarToast(mensaje) {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;';
-            document.body.appendChild(container);
-        }
-        const toast = document.createElement('div');
-        toast.textContent = mensaje;
-        toast.style.cssText = `
-            background: #28a745; color: white; padding: 12px 16px;
-            border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: fadeIn 0.3s;
-        `;
-        container.appendChild(toast);
-        setTimeout(() => {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 3000);
-    }
+  // === TOAST ===
+  function mostrarToast(mensaje) {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+          container = document.createElement('div');
+          container.id = 'toast-container';
+          container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;';
+          document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.textContent = mensaje;
+      toast.style.cssText = `
+          background: #28a745; color: white; padding: 12px 16px;
+          border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          animation: fadeIn 0.3s;
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+          if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 3000);
+  }
 
-    // === INICIALIZAR BRICKS CON PUBLIC KEY ===
-    const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>'); // ← ¡Clave!
-    const bricksBuilder = mp.bricks();
+  // === INICIALIZAR BRICKS ===
+  const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>');
 
-    bricksBuilder.create('cardPayment', 'bricks_container', {
+  mp.bricks().create(
+    "cardPayment",
+    "bricks_container",
+    {
       initialization: {
         amount: <?= $cuota['monto'] ?>,
         payer: {
@@ -418,8 +420,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           mostrarToast('❌ Error al procesar el pago');
         }
       },
+      // ✅ CALLBACKS OBLIGATORIOS (nivel raíz)
       onReady: () => {
-        // Opcional: puedes ocultar un loader aquí si lo usas
         console.log('Brick listo');
       },
       onError: (error) => {
@@ -437,7 +439,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
         }
       }
-    });
-  </script>
+    }
+  );
+</script>
 </body>
 </html>
