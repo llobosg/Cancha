@@ -384,65 +384,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // === INICIALIZAR BRICKS ===
   const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>');
+
   const bricksBuilder = mp.bricks();
 
-  bricksBuilder.create('cardPayment', 'bricks_container', {
-    initialization: {
-      amount: <?= $cuota['monto'] ?>,
-      payer: {
-        email: '<?= $_SESSION['user_email'] ?? $cuota['socio_email'] ?>'
-      }
-    },
-    callbacks: {
-      onSubmit: async (formData) => {
-        try {
-          const response = await fetch('../api/procesar_pago_brick.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...formData,
-              id_cuota: <?= $cuota['id_cuota'] ?>,
-              description: 'Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>'
+  const renderCardPaymentBrick = async () => {
+
+    const settings = {
+      initialization: {
+        amount: <?= (float)$cuota['monto'] ?>,
+        payer: {
+          email: '<?= $_SESSION['user_email'] ?? $cuota['socio_email'] ?>'
+        }
+        locale: "es-CL"
+      },
+
+      customization: {
+        visual: {
+          style: {
+            theme: "default"
+          }
+        }
+      },
+
+      callbacks: {
+
+        onReady: () => {
+          console.log("Brick listo");
+        },
+
+        onSubmit: (cardFormData) => {
+
+          return new Promise((resolve, reject) => {
+
+            fetch('../api/procesar_pago_brick.php', {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                ...cardFormData,
+                id_cuota: <?= $cuota['id_cuota'] ?>,
+                description: "Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>"
+              })
             })
+            .then(response => response.json())
+            .then(data => {
+
+              console.log("Respuesta backend:", data);
+
+              if (data.status === "approved") {
+
+                mostrarToast("✅ Pago aprobado");
+
+                setTimeout(() => {
+                  window.location.href =
+                    "../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>";
+                }, 1500);
+
+              }
+              else if (data.status === "pending" || data.status === "in_process") {
+
+                mostrarToast("⏳ Pago en proceso");
+
+              }
+              else {
+
+                mostrarToast("❌ Pago rechazado: " + (data.message || "Error"));
+
+              }
+
+              resolve();
+
+            })
+            .catch(error => {
+
+              console.error("Error pago:", error);
+
+              mostrarToast("❌ Error procesando pago");
+
+              reject();
+
+            });
+
           });
 
-          const data = await response.json();
+        },
 
-          if (data.status === 'approved') {
-            mostrarToast('✅ Pago aprobado');
-
-            setTimeout(() => {
-              window.location.href = '../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>';
-            }, 1500);
-
-          } else {
-            mostrarToast('❌ Pago rechazado: ' + (data.message || 'Error desconocido'));
-          }
-
-        } catch (err) {
-          console.error(err);
-          mostrarToast('❌ Error al procesar el pago');
+        onError: (error) => {
+          console.error("Error Brick:", error);
+          mostrarToast("❌ Error en formulario de pago");
         }
-      },
 
-      onReady: () => {
-        console.log('Brick listo');
-      },
-
-      onError: (error) => {
-        console.error('Error en Brick:', error);
-        mostrarToast('❌ Error en el formulario de pago: ' + (error?.message || 'Desconocido'));
       }
-    },
 
-    customization: {
-      visual: {
-        style: {
-          theme: 'default'
-        }
-      }
-    }
-  });
+    };
+
+    window.cardPaymentBrickController =
+      await bricksBuilder.create("cardPayment", "bricks_container", settings);
+  };
+
+  renderCardPaymentBrick();
 </script>
 </body>
 </html>

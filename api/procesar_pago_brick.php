@@ -18,76 +18,111 @@ if (!$data) {
     http_response_code(400);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Datos inválidos'
+        'message' => 'JSON inválido'
     ]);
     exit;
 }
 
 $id_cuota = (int)($data['id_cuota'] ?? 0);
 
-if (
-    empty($data['token']) ||
-    empty($data['paymentMethodId']) ||
-    empty($data['payer']['email']) ||
-    !$id_cuota
-) {
+/* -------- Normalizar campos de Brick -------- */
+
+$token = $data['token'] ?? null;
+
+$paymentMethodId =
+    $data['paymentMethodId'] ??
+    $data['payment_method_id'] ??
+    null;
+
+$issuerId =
+    $data['issuerId'] ??
+    $data['issuer_id'] ??
+    null;
+
+$installments =
+    $data['installments'] ??
+    1;
+
+$email =
+    $data['payer']['email'] ??
+    null;
+
+/* -------- Validación -------- */
+
+if (!$token || !$paymentMethodId || !$email || !$id_cuota) {
+
     http_response_code(400);
+
     echo json_encode([
         'status' => 'error',
-        'message' => 'Datos incompletos'
+        'message' => 'Datos incompletos',
+        'debug' => [
+            'token' => !!$token,
+            'paymentMethodId' => !!$paymentMethodId,
+            'email' => !!$email,
+            'id_cuota' => !!$id_cuota
+        ]
     ]);
+
     exit;
 }
 
 try {
 
-    // Obtener datos de la cuota desde DB (seguridad)
+    /* -------- Obtener monto real desde DB -------- */
+
     $stmt = $pdo->prepare("
         SELECT monto, estado
         FROM cuotas
         WHERE id_cuota = ?
         LIMIT 1
     ");
+
     $stmt->execute([$id_cuota]);
     $cuota = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$cuota) {
+
         http_response_code(404);
+
         echo json_encode([
             'status' => 'error',
             'message' => 'Cuota no encontrada'
         ]);
+
         exit;
     }
 
-    // Evitar pagar cuotas ya pagadas
     if ($cuota['estado'] === 'pagado') {
+
         echo json_encode([
             'status' => 'approved',
             'message' => 'La cuota ya fue pagada'
         ]);
+
         exit;
     }
 
     $monto = (float)$cuota['monto'];
 
+    /* -------- Crear pago en MercadoPago -------- */
+
     $payment_client = new PaymentClient();
 
     $payment_data = [
         "transaction_amount" => $monto,
-        "token" => $data['token'],
+        "token" => $token,
         "description" => $data['description'] ?? 'Pago cuota',
-        "installments" => (int)($data['installments'] ?? 1),
-        "payment_method_id" => $data['paymentMethodId'],
+        "installments" => (int)$installments,
+        "payment_method_id" => $paymentMethodId,
         "payer" => [
-            "email" => $data['payer']['email']
+            "email" => $email
         ],
         "external_reference" => "cuota_" . $id_cuota
     ];
 
-    // issuer_id necesario para algunas tarjetas
-    if (!empty($data['issuerId'])) {
-        $payment_data["issuer_id"] = $data['issuerId'];
+    if ($issuerId) {
+        $payment_data["issuer_id"] = $issuerId;
     }
 
     $payment = $payment_client->create(
@@ -99,7 +134,8 @@ try {
 
     $estado = $payment->status;
 
-    // Actualizar estado según resultado
+    /* -------- Actualizar cuota -------- */
+
     if ($estado === 'approved') {
 
         $pdo->prepare("
@@ -155,4 +191,3 @@ try {
         'message' => $e->getMessage()
     ]);
 }
-?>
