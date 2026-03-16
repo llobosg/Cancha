@@ -16,8 +16,8 @@ try {
             cl.email_responsable,
             -- Detalle del origen
             CASE 
-                WHEN c.tipo_actividad = 'reserva' THEN ca.id_deporte
-                WHEN c.tipo_actividad = 'evento' THEN e.nombre
+                WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
                 ELSE 'Sin detalle'
             END as detalle_origen,
             CASE 
@@ -30,7 +30,9 @@ try {
         JOIN clubs cl ON s.id_club = cl.id_club
         LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
         LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+        LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
         LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+        LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
         WHERE c.estado = 'pendiente'
         AND c.fecha_vencimiento <= CURDATE() - INTERVAL 3 DAY
         AND s.email_verified = 1
@@ -45,6 +47,12 @@ try {
 
     foreach ($cuotas as $cuota) {
         try {
+            // Generar slug del club para el enlace
+            $stmt_slug = $pdo->prepare("SELECT email_responsable FROM clubs WHERE id_club = ?");
+            $stmt_slug->execute([$cuota['id_club']]);
+            $club_data = $stmt_slug->fetch();
+            $club_slug = $club_data ? substr(md5($cuota['id_club'] . $club_data['email_responsable']), 0, 8) : '';
+
             require_once __DIR__ . '/../includes/brevo_mailer.php';
             $mail = new BrevoMailer();
             $mail->setTo($cuota['email'], $cuota['nombre']);
