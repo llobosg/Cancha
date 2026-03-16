@@ -107,12 +107,14 @@ try {
     $monto = (float)$cuota['monto'];
 
     /* -------- Crear pago en MercadoPago -------- */
+    if ($cuota['estado'] !== 'pendiente') {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'La cuota ya fue procesada'
+        ]);
+        exit;
+    }
     error_log("MP payment_data: " . json_encode($payment_data));
-
-    $payment = $payment_client->create(
-        $payment_data,
-        $request_options
-    );
 
     $payment_client = new PaymentClient();
 
@@ -132,10 +134,7 @@ try {
         $payment_data["issuer_id"] = $issuerId;
     }
 
-    $request_options = new RequestOptions();
-    $request_options->setCustomHeaders([
-        "X-Idempotency-Key: " . uniqid('mp_', true)
-    ]);
+    error_log("MP payment_data: " . json_encode($payment_data));
 
     $payment = $payment_client->create(
         $payment_data,

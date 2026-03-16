@@ -611,8 +611,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍺</div>
                     </div>
                   </div>
+                  <!-- Opciones adicionales solo para responsables
                   <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
                   <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
+                  -->
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
                     <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                   <?php endif; ?>
