@@ -1369,8 +1369,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === REVISAR PAGO ===
       function revisarPago(idCuota) {
-        if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
-        
         fetch('../api/revisar_pago.php', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1381,7 +1379,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           if (data.success) {
             mostrarToast('✅ Cuota en revisión');
             // ✅ Actualizar solo la tabla de cuotas
-            setTimeout(() => cargarTabla('cuotas'), 1500);
+            setTimeout(() => {
+              cargarTabla('cuotas');
+              document.querySelector('.stat-card-content table')?.scrollIntoView({ behavior: 'smooth' });
+            }, 1500);
           } else {
             mostrarToast('❌ ' + data.message);
           }
@@ -1394,8 +1395,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === VALIDAR PAGO ===
       function validarPago(idCuota) {
-        if (!confirm('¿Confirmar pago como válido?')) return;
-        
         fetch('../api/validar_pago.php', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1405,7 +1404,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .then(data => {
           if (data.success) {
             mostrarToast('✅ Pago validado');
-            setTimeout(() => cargarTabla('cuotas'), 1500);
+            setTimeout(() => {
+              cargarTabla('cuotas');
+              document.querySelector('.stat-card-content table')?.scrollIntoView({ behavior: 'smooth' });
+            }, 1500);
           } else {
             mostrarToast('❌ ' + data.message);
           }
@@ -1806,6 +1808,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       });
 
       function cargarTabla(filtro) {
+        // Activar visualmente la pestaña correcta
+        document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('active'));
+        if (filtro === 'cuotas') {
+          const tab = document.getElementById('tab-cuotas');
+          if (tab) tab.classList.add('active');
+        }
+
         fetch(`api/get_tabla_datos.php?filtro=${filtro}`)
           .then(r => r.json())
           .then(data => {
