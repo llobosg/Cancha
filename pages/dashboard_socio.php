@@ -579,6 +579,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <!-- Sub sección izquierda -->
       <div class="upper-left">
         <div class="fichas-dashboard">
+          
           <!-- Próximo Partido -->
           <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <h3 style="color: white;">⚽ Próximo Partido</h3>
@@ -595,42 +596,48 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 $horas_restantes = ($diferencia->days * 24) + $diferencia->h;
                 $fecha_formateada = $fecha_evento->format('d-m');
                 $hora_formateada = $fecha_evento->format('H:i');
+
+                // Lunes anterior a las 09:00 del evento
                 $lunes_anterior = clone $fecha_evento;
                 $lunes_anterior->modify('previous monday');
                 $lunes_anterior->setTime(9, 0, 0);
-                $botones_activos = ($ahora >= $lunes_anterior);
+
+                // ¿Ya pasó el lunes 09:00?
+                $despues_del_lunes_09 = ($ahora >= $lunes_anterior);
                 ?>
                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                 <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
-                <?php if ($botones_activos): ?>
-                  <div class="btn-group" style="position:relative; display:inline-block; margin-top:1rem;">
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                            onclick="anotarse(false)">
-                      Anotarse
-                    </button>
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
-                            onclick="anotarseConCerveza(true)">
-                      🍺 Anotarse + Cerveza
-                    </button>
 
-                    <!-- Botón "Paso" (solo si no está inscrito y es antes del lunes 09:00) -->
-                    <?php if (!$botones_activos): ?>
-                      <button class="btn-action" style="background:#FFD700;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                              onclick="pasoEvento(<?= $id_reserva ?>)">
-                        Paso esta semana
-                      </button>
-                    <?php endif; ?>
-                  </div>
-                  <!-- Opciones adicionales solo para responsables
-                  <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>
-                  <button class="btn-action" style="background:#4ECDC4;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar un Cancha</button>
-                  -->
+                <?php if ($despues_del_lunes_09): ?>
+                  <!-- Botones de inscripción (activos desde lunes 09:00) -->
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                    Anotarse
+                  </button>
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
+                          onclick="anotarseConCerveza(true)">
+                    🍺 Anotarse + Cerveza
+                  </button>
+
+                  <!-- Botón IA si aplica -->
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
+                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                            onclick="armarEquiposIA(<?= $id_reserva ?>)">
+                      🤖 Armar Equipos IA
+                    </button>
                   <?php endif; ?>
+
                 <?php else: ?>
-                  <p style="color:#FFD700;margin-top:1rem;">⏰ Los botones se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs</p>
+                  <!-- Antes del lunes 09:00: solo botón "Paso" -->
+                  <button class="btn-action" style="background:#FFD700;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                          onclick="pasoEvento(<?= $id_reserva ?>)">
+                    Paso esta semana
+                  </button>
+                  <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
+                    ⏰ Los botones de inscripción se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs
+                  </p>
                 <?php endif; ?>
+
               <?php else: ?>
                 <p style="margin-top:2rem;">Próximamente disponible</p>
               <?php endif; ?>

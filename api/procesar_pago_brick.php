@@ -118,12 +118,12 @@ try {
     $payment_client = new PaymentClient();
 
     $payment_data = [
-        "statement_descriptor" => "CANCHASPORT",
-        "transaction_amount" => $monto,
+        "transaction_amount" => (float)$monto,
         "token" => $token,
         "description" => $data['description'] ?? 'Pago cuota',
         "installments" => (int)$installments,
         "payment_method_id" => $paymentMethodId,
+        "statement_descriptor" => "CANCHASPORT",
         "payer" => [
             "email" => $email,
             "first_name" => "Cliente",
@@ -135,10 +135,6 @@ try {
         ],
         "external_reference" => "cuota_" . $id_cuota
     ];
-
-    if ($issuerId) {
-        $payment_data["issuer_id"] = $issuerId;
-    }
 
     error_log("MP payment_data: " . json_encode($payment_data));
 
