@@ -694,7 +694,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
                 ?>
                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
-                <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
                   <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?>
                   <?php if ($proximo_evento['monto_recaudacion']): ?>
@@ -936,6 +935,18 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     <!-- SCRIPTS COMPLETOS -->
     <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filtro = urlParams.get('filtro');
+        
+        if (filtro === 'cuotas') {
+          // Simular clic en la pestaña "Cuotas"
+          const tabCuotas = document.querySelector('[onclick*="cargarTabla(\'cuotas\')"]');
+          if (tabCuotas) {
+            tabCuotas.click();
+          }
+        }
+      });
       // === FUNCIONES DE NOTIFICACIÓN ===
       function mostrarNotificacion(mensaje, tipo = 'info') {
         const toast = document.getElementById('toast');
@@ -1359,6 +1370,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       // === VALIDAR PAGO ===
       function validarPago(idCuota) {
         if (!confirm('¿Confirmar pago como válido?')) return;
+        
         fetch('../api/validar_pago.php', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1368,7 +1380,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .then(data => {
           if (data.success) {
             mostrarToast('✅ Pago validado');
-            setTimeout(() => location.reload(), 1500);
+            // Forzar recarga en la pestaña "Cuotas"
+            const url = new URL(window.location);
+            url.searchParams.set('filtro', 'cuotas');
+            window.location.href = url.toString();
           } else {
             mostrarToast('❌ ' + data.message);
           }
@@ -1378,6 +1393,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       // === REVISAR PAGO ===
       function revisarPago(idCuota) {
         if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
+        
         fetch('../api/revisar_pago.php', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1387,7 +1403,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .then(data => {
           if (data.success) {
             mostrarToast('✅ Cuota en revisión');
-            setTimeout(() => location.reload(), 1500);
+            // Forzar recarga en la pestaña "Cuotas"
+            const url = new URL(window.location);
+            url.searchParams.set('filtro', 'cuotas');
+            window.location.href = url.toString();
           } else {
             mostrarToast('❌ ' + data.message);
           }
