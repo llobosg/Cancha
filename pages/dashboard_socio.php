@@ -1695,6 +1695,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             let html = '';
             data.forEach(row => {
               let botonAccion = '-';
+              let comentario = '-';
+
               if (filtro === 'cuotas') {
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 if (esResponsable) {
@@ -1704,6 +1706,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
                   }
                 }
+                comentario = row.comentario || '-';
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha_evento)}</td>
@@ -1716,10 +1719,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>-</td>
                     <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
                     <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                    <td>${row.estado}${comentario !== '-' ? ' - ' + comentario : ''}</td>
                     <td>${botonAccion}</td>
                   </tr>
                 `;
+
               } else if (filtro === 'socios') {
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 if (esResponsable) {
@@ -1730,6 +1734,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     </div>
                   `;
                 }
+                comentario = row.email || '-'; // ✅ Email como comentario
                 html += `
                   <tr>
                     <td>-</td>
@@ -1742,10 +1747,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>${row.rol || '-'}</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>${row.activo === 'Si' ? '✅ Activo' : '❌ Inactivo'}</td>
+                    <td>${comentario}</td>
                     <td>${botonAccion}</td>
                   </tr>
                 `;
+
               } else if (filtro === 'inscritos') {
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
@@ -1761,7 +1767,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
                 }
                 botonAccion = acciones || '-';
-
+                comentario = row.comentario || '-'; // ✅ Comentario de la cuota
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha)}</td>
@@ -1772,14 +1778,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                     <td>${row.nombre || '-'}</td>
                     <td>${row.posicion_jugador || '-'}</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
+                    <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${comentario}</td>
                     <td>${botonAccion}</td>
                   </tr>
                 `;
+
               } else {
-                // Equipos IA, Reservas, Eventos → sin acciones
+                // Equipos IA, Reservas, Eventos → sin acciones ni comentario
                 html += `
                   <tr>
                     <td>${formatDate(row.fecha)}</td>
