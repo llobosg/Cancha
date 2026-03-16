@@ -1,10 +1,11 @@
 <?php
-require_once __DIR__ . '/../includes/config.php'; // ← Ruta corregida
+require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/config_mercadopago.php';
+
 session_start();
 
 if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
-    header('Location: index.php');
+    header('Location: ../index.php');
     exit;
 }
 
@@ -47,20 +48,128 @@ $cuota = $stmt->fetch();
 if (!$cuota || $cuota['estado'] !== 'pendiente') {
     die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada o ya pagada</h2>');
 }
+
+$error = '';
+$success = '';
+
+// === Procesar pago manual (POST) ===
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $fecha_pago = $_POST['fecha_pago'] ?? '';
+    $comentario = trim($_POST['comentario'] ?? '');
+    $adjunto = null;
+
+    if (empty($fecha_pago)) {
+        $error = 'La fecha de pago es obligatoria';
+    } else {
+        // Subir adjunto si existe
+        if (!empty($_FILES['adjunto']['name'])) {
+            $target_dir = __DIR__ . '/../uploads/comprobantes/';
+            if (!is_dir($target_dir)) mkdir($target_dir, 0755, true);
+            
+            $file_name = 'comprobante_' . $id_cuota . '_' . time() . '_' . basename($_FILES['adjunto']['name']);
+            $target_file = $target_dir . $file_name;
+            
+            $allowed_types = ['jpg', 'jpeg', 'png', 'pdf'];
+            $ext = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowed_types)) {
+                $error = 'Solo se permiten JPG, PNG o PDF';
+            } elseif (!move_uploaded_file($_FILES['adjunto']['tmp_name'], $target_file)) {
+                $error = 'Error al subir el comprobante';
+            } else {
+                $adjunto = $file_name;
+            }
+        }
+
+        if (!$error) {
+            // Actualizar cuota a "en_revision"
+            $pdo->prepare("
+                UPDATE cuotas 
+                SET estado = 'en_revision', fecha_pago = ?, comentario = ?, adjunto = ?
+                WHERE id_cuota = ?
+            ")->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+
+            // Si es reserva recaudatoria, sumar fondos
+            if ($cuota['tipo_actividad'] === 'reserva') {
+                $stmt_check = $pdo->prepare("
+                    SELECT r.monto_recaudacion 
+                    FROM reservas r 
+                    WHERE r.id_reserva = ? AND r.monto_recaudacion IS NOT NULL
+                ");
+                $stmt_check->execute([$cuota['id_evento']]);
+                if ($stmt_check->fetch()) {
+                    $pdo->prepare("
+                        UPDATE clubs 
+                        SET fondos_acumulados = COALESCE(fondos_acumulados, 0) + ?
+                        WHERE id_club = ?
+                    ")->execute([$cuota['monto'], $cuota['id_club']]);
+                }
+            }
+
+            // Enviar correo al socio
+            require_once __DIR__ . '/../includes/brevo_mailer.php';
+            $mail = new BrevoMailer();
+            $mail->setTo($cuota['socio_email'], $cuota['socio_nombre']);
+            $mail->setSubject('✅ Pago registrado - ' . $cuota['club_nombre']);
+            $mail->setHtmlBody("
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 12px;'>
+                    <div style='text-align: center; background: #2ECC71; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
+                        <h2>✅ Pago Registrado</h2>
+                    </div>
+                    <p>¡Hola {$cuota['socio_nombre']}!</p>
+                    <p>Tu pago ha sido registrado y está en revisión:</p>
+                    <p>
+                        <strong>Detalle:</strong> {$cuota['detalle_origen']}<br>
+                        <strong>Fecha:</strong> " . date('d/m/Y', strtotime($cuota['fecha_origen'])) . "<br>
+                        <strong>Monto:</strong> $" . number_format($cuota['monto'], 0, ',', '.') . "<br>
+                        <strong>Fecha de pago:</strong> " . date('d/m/Y', strtotime($fecha_pago)) . "
+                    </p>
+                    <p>El responsable del club revisará tu comprobante y confirmará el pago.</p>
+                </div>
+            ");
+            $mail->send();
+
+            // Enviar copia al responsable
+            if ($cuota['email_responsable']) {
+                $mail2 = new BrevoMailer();
+                $mail2->setTo($cuota['email_responsable'], 'Responsable ' . $cuota['club_nombre']);
+                $mail2->setSubject('📋 Nuevo pago en revisión - ' . $cuota['socio_nombre']);
+                $mail2->setHtmlBody("
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 12px;'>
+                        <div style='text-align: center; background: #3498DB; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
+                            <h2>📋 Pago en Revisión</h2>
+                        </div>
+                        <p><strong>{$cuota['socio_nombre']}</strong> ha registrado un pago:</p>
+                        <p>
+                            <strong>Club:</strong> {$cuota['club_nombre']}<br>
+                            <strong>Detalle:</strong> {$cuota['detalle_origen']}<br>
+                            <strong>Monto:</strong> $" . number_format($cuota['monto'], 0, ',', '.') . "<br>
+                            <strong>Fecha pago:</strong> " . date('d/m/Y', strtotime($fecha_pago)) . "
+                        </p>
+                        <p>Revisa el comprobante en el dashboard y confirma el pago.</p>
+                    </div>
+                ");
+                $mail2->send();
+            }
+
+            $success = true;
+        }
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../styles.css">
   <!-- SDK de Mercado Pago -->
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <style>
     body {
       background: linear-gradient(rgba(0,20,10,.65), rgba(0,30,15,.75)),
-                  url('assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+                  url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
       color: white;
       font-family: 'Segoe UI', sans-serif;
       padding: 2rem 1rem;
@@ -138,12 +247,11 @@ if (!$cuota || $cuota['estado'] !== 'pendiente') {
 
     <!-- === PAGO CON MERCADO PAGO BRICKS === -->
     <div id="bricks_container"></div>
-    <button id="btnPagarBrick" class="btn-action" style="display:none;">Pagar ahora con tarjeta</button>
 
     <div class="divider">— o —</div>
 
     <!-- === PAGO MANUAL (COMPROBANTE) === -->
-    <form method="POST" enctype="multipart/form-data" id="formPagoManual">
+    <form method="POST" enctype="multipart/form-data">
       <input type="hidden" name="fecha_pago" value="<?= date('Y-m-d') ?>">
       <label style="display:block;margin-bottom:0.5rem;color:white;">Comprobante (opcional)</label>
       <input type="file" name="adjunto" accept=".jpg,.jpeg,.png,.pdf" style="margin-bottom:1rem;">
@@ -152,7 +260,7 @@ if (!$cuota || $cuota['estado'] !== 'pendiente') {
       <button type="submit" class="btn-action" style="background:#071289;">Registrar Pago Manual</button>
     </form>
 
-    <a href="pages/dashboard_socio.php" class="back-link">← Volver al Dashboard</a>
+    <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="back-link">← Volver al Dashboard</a>
   </div>
 
   <script>
@@ -169,7 +277,7 @@ if (!$cuota || $cuota['estado'] !== 'pendiente') {
       },
       onSubmit: async (formData) => {
         try {
-          const response = await fetch('api/procesar_pago_brick.php', {
+          const response = await fetch('../api/procesar_pago_brick.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -181,7 +289,7 @@ if (!$cuota || $cuota['estado'] !== 'pendiente') {
           const data = await response.json();
           if (data.status === 'approved') {
             alert('✅ Pago aprobado');
-            window.location.href = 'pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>';
+            window.location.href = '../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>';
           } else {
             alert('❌ Pago rechazado: ' + (data.message || 'Error desconocido'));
           }
@@ -204,29 +312,6 @@ if (!$cuota || $cuota['estado'] !== 'pendiente') {
             }
           }
         }
-      }
-    });
-
-    // === ENVIAR PAGO MANUAL ===
-    document.getElementById('formPagoManual').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      formData.append('id_cuota', <?= $cuota['id_cuota'] ?>);
-      
-      try {
-        const res = await fetch('api/registrar_pago_manual.php', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('✅ Pago registrado. El responsable revisará tu comprobante.');
-          window.location.href = 'pages/dashboard_socio.php';
-        } else {
-          alert('❌ ' + data.message);
-        }
-      } catch (err) {
-        alert('❌ Error al registrar el pago');
       }
     });
   </script>

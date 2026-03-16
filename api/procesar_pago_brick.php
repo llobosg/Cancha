@@ -14,20 +14,20 @@ try {
     $payment = $payment_client->create([
         "transaction_amount" => (float)$data['transactionAmount'],
         "token" => $data['token'],
-        "description" => $data['description'] ?? 'Cuota CanchaSport',
+        "description" => $data['description'],
         "installments" => (int)$data['installments'],
         "payment_method_id" => $data['paymentMethodId'],
         "payer" => [
-            "email" => $data['payer']['email'],
-            "identification" => $data['payer']['identification'] ?? null
+            "email" => $data['payer']['email']
         ],
         "external_reference" => "cuota_" . $data['id_cuota']
     ]);
 
-    echo json_encode([
-        'status' => $payment->status,
-        'message' => $payment->status_detail
-    ]);
+    // Actualizar estado en DB
+    $pdo->prepare("UPDATE cuotas SET estado = 'pagado', fecha_pago = NOW(), transaccion_id = ? WHERE id_cuota = ?")
+        ->execute([$payment->id, $data['id_cuota']]);
+
+    echo json_encode(['status' => $payment->status, 'message' => $payment->status_detail]);
 
 } catch (Exception $e) {
     http_response_code(500);
