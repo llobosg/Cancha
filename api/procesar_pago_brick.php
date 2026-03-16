@@ -160,9 +160,7 @@ try {
             "number" => $data["payer"]["identification"]["number"]
         ];
     }
-    if ($issuerId) {
-        $payment_data["issuer_id"] = (int)$issuerId;
-    }
+
 
     error_log("MP payment_data: " . json_encode($payment_data));
 
