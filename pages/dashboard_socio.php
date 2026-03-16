@@ -612,7 +612,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
 
                 <?php if ($despues_del_lunes_09): ?>
-                  <!-- Botones de inscripción (activos desde lunes 09:00) -->
+                  <!-- Botones de inscripción (activos desde lunes 09:00) 
                   <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
                           onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
                     Anotarse
@@ -620,7 +620,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
                           onclick="anotarseConCerveza(true)">
                     🍺 Anotarse + Cerveza
-                  </button>
+                  </button> -->
 
                   <!-- Botón IA si aplica -->
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
