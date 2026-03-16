@@ -111,7 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$error) {
-            // Actualizar cuota
+            // ✅ ACTUALIZAR LA CUOTA A "en_revision" ANTES DE ENVIAR CORREOS
+            $pdo->prepare("
+                UPDATE cuotas 
+                SET estado = 'en_revision', 
+                    fecha_pago = ?, 
+                    comentario = ?, 
+                    adjunto = ?
+                WHERE id_cuota = ?
+            ")->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+
+            // Si es reserva recaudatoria, sumar fondos
             if ($cuota['tipo_actividad'] === 'reserva') {
                 $stmt_check = $pdo->prepare("
                     SELECT r.monto_recaudacion 
@@ -119,7 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE r.id_reserva = ? AND r.monto_recaudacion IS NOT NULL
                 ");
                 $stmt_check->execute([$cuota['id_evento']]);
-                
                 if ($stmt_check->fetch()) {
                     $pdo->prepare("
                         UPDATE clubs 
