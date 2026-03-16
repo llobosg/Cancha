@@ -690,7 +690,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       'mensual' => 'Mensual',
                       default => 'Spot'
                   };
+
+                // Cupos llenos
+                $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
                 ?>
+                <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
+                <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
                   <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?>
                   <?php if ($proximo_evento['monto_recaudacion']): ?>
@@ -709,14 +714,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       Bajarse
                     </button>
                   <?php else: ?>
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                            onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Anotarse
-                    </button>
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
-                            onclick="anotarseConCerveza(true)">
-                      Anotarse + llevo 🍺🍺  
-                    </button>
+                    <?php if ($cupos_llenos): ?>
+                       <!-- Cupos llenos -->
+                      <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">
+                        ❌ No se aceptan más inscripciones hasta que uno de los anotados decida "Bajarse".
+                      </p>
+                    <?php else: ?>
+                          <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                                  onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                            Anotarse
+                          </button>
+                          <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
+                                  onclick="anotarseConCerveza(true)">
+                            Anotarse + llevo 🍺🍺  
+                          </button>
+                    <?php endif; ?>
                     <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
                       onclick="pasoEvento(<?= $id_reserva ?>)">
                       <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
