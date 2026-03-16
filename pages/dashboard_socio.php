@@ -798,10 +798,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <?php if (!is_null($ultimo_partido['goles_rojos'])): ?>
                   <!-- Resultado ya grabado -->
                   <div style="margin-top:1rem;">
-                    <p><strong>Rojos:</strong> <?= (int)$ultimo_partido['goles_rojos'] ?></p>
+                    <p style="color: #071289;font-weight:bold;">Resultado final</p>
+                    <p style="color: #98180aff;font-weight:bold;"><strong>Rojos:</strong> <?= (int)$ultimo_partido['goles_rojos'] ?></p>
                     <p><strong>Blancos:</strong> <?= (int)$ultimo_partido['goles_blancos'] ?></p>
                     <?php if (!empty($ultimo_partido['jugador_experto'])): ?>
-                      <p><strong>Jugador Xperto Baltica:</strong> 
+                      <p><strong>Jugador Xperto Baltica:</strong>
+                      <p style="color: #071289;font-weight:bold;"> 
                         <?php
                           $stmt_jug = $pdo->prepare("SELECT alias FROM socios WHERE id_socio = ?");
                           $stmt_jug->execute([$ultimo_partido['jugador_experto']]);
@@ -809,7 +811,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         ?>
                       </p>
                     <?php endif; ?>
-                    <p style="margin-top:1rem;color:#2ECC71;font-weight:bold;">✅ Resultado registrado</p>
                   </div>
 
                 <?php elseif ($es_responsable): ?>
