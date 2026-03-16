@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/config_mercadopago.php';
 
@@ -7,6 +8,7 @@ use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Exceptions\MPApiException;
 
 header('Content-Type: application/json');
+ini_set('display_errors', 0);
 
 MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
 
