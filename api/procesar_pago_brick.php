@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 /* IMPORTACIONES PHP */
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Payment\PaymentClient;
+use MercadoPago\Client\Common\RequestOptions;
 use MercadoPago\Exceptions\MPApiException;
 
 /* DEPENDENCIAS */
@@ -134,21 +135,19 @@ try {
 
     $client = new PaymentClient();
 
-    // Limpiar el RUT: solo números y letra K
-    $rut_clean = preg_replace('/[^0-9kK]/', '', $data["payer"]["identification"]["number"]);
-
     $payment_data = [
-        "transaction_amount" => (float)$monto,
+        "transaction_amount" => $monto,
         "token" => $token,
-        "description" => $data["description"] ?? "Pago cuota CanchaSport",
+        "description" =>
+            $data["description"] ??
+            "Pago cuota CanchaSport",
         "installments" => (int)$installments,
         "payment_method_id" => $paymentMethodId,
-        "issuer_id" => $data["issuer_id"] ?? null, // INDISPENSABLE si viene en el brick
         "payer" => [
             "email" => $email,
             "identification" => [
-                "type" => "RUT", // Cambiado de RUN a RUT
-                "number" => $rut_clean
+                "type" => "RUN",
+                "number" => $data["payer"]["identification"]["number"]
             ]
         ],
         "external_reference" => "cuota_" . $id_cuota,
@@ -156,22 +155,40 @@ try {
         "binary_mode" => true
     ];
 
-    // Opciones para incluir la Idempotencia
-    $request_options = new \MercadoPago\Resources\RequestOptions();
-    $request_options->setCustomHeaders([
-        "X-Idempotency-Key" => "pay_" . $id_cuota . "_" . time() 
-    ]);
-
-    try {
-        $payment = $client->create($payment_data, $request_options);
-        $estado = $payment->status;
-    } catch (\Exception $e) {
-        error_log("Error detallado MP: " . $e->getMessage());
-        // Aquí verás si es un problema de credenciales o de parámetros
+    if (!empty($data["payer"]["identification"]["number"])) {
+        $payment_data["payer"]["identification"] = [
+            "type" => "RUN",
+            "number" => $data["payer"]["identification"]["number"]
+        ];
     }
 
+    $request_options = new RequestOptions();
+    $request_options->setCustomHeaders([
+        "X-Idempotency-Key" => "pay_" . $id_cuota . "_" . time()
+    ]);
+
+    $payment = $client->create($payment_data);
+    $estado = $payment->status ?? "unknown";
 
     error_log("MP status: " . $estado);
+    error_log("MP payment_data: " . json_encode($payment_data));
+    try {
+        error_log("Enviando pago a MP: " . json_encode($payment_data));
+        
+        $payment = $client->create($payment_data, $request_options);
+        
+        // El estado puede ser 'approved', 'rejected', etc.
+        $estado = $payment->status ?? "unknown";
+        
+    } catch (\MercadoPago\Exceptions\MPApiException $e) {
+        // Esto te dará el detalle real del error de la API (ej: parámetros inválidos)
+        $api_response = $e->getApiResponse();
+        error_log("MP API ERROR: " . json_encode($api_response->getContent()));
+        $estado = "error_api";
+    } catch (\Exception $e) {
+        error_log("MP GENERAL ERROR: " . $e->getMessage());
+        $estado = "error_general";
+    }
 
     /* -----------------------------------------
        Actualizar estado de cuota
