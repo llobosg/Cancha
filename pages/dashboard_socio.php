@@ -605,7 +605,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <?php if ($botones_activos): ?>
                   <div class="btn-group" style="position:relative; display:inline-block; margin-top:1rem;">
                     <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                            onclick="anotarseEvento(false)">
+                            onclick="anotarse(false)">
                       Anotarse
                     </button>
                     <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
