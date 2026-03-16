@@ -5,10 +5,17 @@ header('Content-Type: application/json');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-/* -----------------------------------------
-   Evita que errores HTML rompan el JSON
-------------------------------------------*/
+/* IMPORTACIONES PHP */
+use MercadoPago\MercadoPagoConfig;
+use MercadoPago\Client\Payment\PaymentClient;
+use MercadoPago\Exceptions\MPApiException;
 
+/* DEPENDENCIAS */
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/config_mercadopago.php';
+
+/* BUFFER para evitar HTML en JSON */
 ob_start();
 
 function json_response($data, $http = 200)
@@ -19,18 +26,6 @@ function json_response($data, $http = 200)
 }
 
 try {
-
-    /* -----------------------------------------
-       Cargar dependencias
-    ------------------------------------------*/
-
-    require_once __DIR__ . '/../vendor/autoload.php';
-    require_once __DIR__ . '/../includes/config.php';
-    require_once __DIR__ . '/../includes/config_mercadopago.php';
-
-    use MercadoPago\MercadoPagoConfig;
-    use MercadoPago\Client\Payment\PaymentClient;
-    use MercadoPago\Exceptions\MPApiException;
 
     MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
 
