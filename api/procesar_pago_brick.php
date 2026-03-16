@@ -135,28 +135,26 @@ try {
     $client = new PaymentClient();
 
     $payment_data = [
-
         "transaction_amount" => $monto,
-
         "token" => $token,
-
         "description" =>
             $data["description"] ??
             "Pago cuota CanchaSport",
-
         "installments" => (int)$installments,
-
         "payment_method_id" => $paymentMethodId,
-
         "payer" => [
             "email" => $email
         ],
-
         "external_reference" => "cuota_" . $id_cuota,
-
         "statement_descriptor" => "CANCHASPORT"
     ];
 
+    if (!empty($data["payer"]["identification"])) {
+        $payment_data["payer"]["identification"] = [
+            "type" => $data["payer"]["identification"]["type"],
+            "number" => $data["payer"]["identification"]["number"]
+        ];
+    }
     if ($issuerId) {
         $payment_data["issuer_id"] = (int)$issuerId;
     }

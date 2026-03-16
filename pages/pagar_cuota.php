@@ -311,11 +311,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
-      <!-- === MERCADO PAGO BRICKS === -->
-      <div id="bricks_container"></div>
-
-      <div class="divider">— o —</div>
-
       <!-- === PAGO MANUAL === -->
       <form method="POST" enctype="multipart/form-data">
         <!-- Datos no editables -->
@@ -355,6 +350,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       
       <a href="javascript:history.back()" class="close-btn">Cancelar</a>
     <?php endif; ?>
+
+    <!-- === MERCADO PAGO BRICKS === -->
+      <div class="divider">— o —</div>
+      <div id="bricks_container"></div>
+
   </div>
 
   <!-- Toast container -->
