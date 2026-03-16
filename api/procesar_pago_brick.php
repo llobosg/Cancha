@@ -126,8 +126,6 @@ try {
         $payment_data["issuer_id"] = $issuerId;
     }
 
-    use MercadoPago\Client\Common\RequestOptions;
-
     $request_options = new RequestOptions();
     $request_options->setCustomHeaders([
         "X-Idempotency-Key: " . uniqid('mp_', true)
