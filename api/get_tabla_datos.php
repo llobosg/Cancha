@@ -27,7 +27,7 @@ try {
                 te.tipoevento AS id_tipoevento,
                 cl.nombre AS id_club,
                 ca.id_cancha,
-                r.costo_total AS costo_evento,
+                r.monto_total AS costo_evento,
                 s.nombre,
                 s.posicion_jugador,
                 i.id_inscrito,
