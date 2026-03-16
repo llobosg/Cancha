@@ -29,7 +29,7 @@ try {
                 ca.id_cancha,
                 r.monto_total AS costo_evento,
                 s.nombre,
-                s.posicion_jugador,
+                i.posicion_jugador,
                 i.id_inscrito,
                 i.lleva_cerveza,
                 i.id_socio
