@@ -23,7 +23,6 @@ try {
         "external_reference" => "cuota_" . $data['id_cuota']
     ]);
 
-    // Actualizar estado en DB
     $pdo->prepare("UPDATE cuotas SET estado = 'pagado', fecha_pago = NOW(), transaccion_id = ? WHERE id_cuota = ?")
         ->execute([$payment->id, $data['id_cuota']]);
 

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/config_mercadopago.php'; // Asegúrate de tener este archivo
 
 session_start();
 
@@ -105,7 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$error) {
             // Actualizar cuota
-            // Si es una reserva y es evento recaudatorio, sumar al fondo del club
             if ($cuota['tipo_actividad'] === 'reserva') {
                 $stmt_check = $pdo->prepare("
                     SELECT r.monto_recaudacion 
@@ -182,6 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
   <link rel="stylesheet" href="../styles.css">
+  <!-- SDK de Mercado Pago -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
   <style>
     body {
       background: 
@@ -213,6 +215,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       text-align: center;
       margin-bottom: 1.5rem;
       font-size: 1.5rem;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 1rem 0;
+      color: #aaa;
     }
 
     .error { background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem; }
@@ -266,6 +274,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       text-decoration: underline;
       font-size: 0.9rem;
     }
+
+    #bricks_container {
+      margin-bottom: 1.5rem;
+    }
   </style>
 </head>
 <body>
@@ -283,6 +295,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
+      <!-- === MERCADO PAGO BRICKS === -->
+      <div id="bricks_container"></div>
+
+      <div class="divider">— o —</div>
+
+      <!-- === PAGO MANUAL === -->
       <form method="POST" enctype="multipart/form-data">
         <!-- Datos no editables -->
         <div class="form-group">
@@ -316,11 +334,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <textarea id="comentario" name="comentario" rows="2"></textarea>
         </div>
         
-        <button type="submit" class="btn-submit">Registrar Pago</button>
+        <button type="submit" class="btn-submit">Registrar Pago Manual</button>
       </form>
       
       <a href="javascript:history.back()" class="close-btn">Cancelar</a>
     <?php endif; ?>
   </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:1000;"></div>
+
+  <script>
+    // === TOAST ===
+    function mostrarToast(mensaje) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.textContent = mensaje;
+        toast.style.cssText = `
+            background: #28a745; color: white; padding: 12px 16px;
+            border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: fadeIn 0.3s;
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 3000);
+    }
+
+    // === INICIALIZAR BRICKS ===
+    const mp = new MercadoPago('<?= MERCADOPAGO_ACCESS_TOKEN ?>');
+    const bricksBuilder = mp.bricks();
+
+    bricksBuilder.create('cardPayment', 'bricks_container', {
+      initialization: {
+        amount: <?= $cuota['monto'] ?>,
+        payer: {
+          email: '<?= $_SESSION['user_email'] ?>'
+        }
+      },
+      onSubmit: async (formData) => {
+        try {
+          const response = await fetch('../api/procesar_pago_brick.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...formData,
+              id_cuota: <?= $cuota['id_cuota'] ?>,
+              description: 'Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>'
+            })
+          });
+          const data = await response.json();
+          if (data.status === 'approved') {
+            mostrarToast('✅ Pago aprobado');
+            setTimeout(() => {
+              window.location.href = '../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>';
+            }, 1500);
+          } else {
+            mostrarToast('❌ Pago rechazado: ' + (data.message || 'Error desconocido'));
+          }
+        } catch (err) {
+          console.error(err);
+          mostrarToast('❌ Error al procesar el pago');
+        }
+      },
+      onError: (error) => {
+        console.error('Error en Brick:', error);
+        mostrarToast('❌ Error en el formulario de pago');
+      },
+      customization: {
+        visual: {
+          style: {
+            theme: 'default',
+            texts: {
+              formTitle: 'Paga con tu tarjeta',
+              submit: 'Pagar ahora'
+            }
+          }
+        }
+      }
+    });
+  </script>
 </body>
 </html>
