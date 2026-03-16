@@ -597,13 +597,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 $fecha_formateada = $fecha_evento->format('d-m');
                 $hora_formateada = $fecha_evento->format('H:i');
 
-                // Calcular el LUNES DE LA SEMANA DEL EVENTO a las 09:00
+                // Lunes de la semana del evento a las 09:00
                 $lunes_semana_evento = clone $fecha_evento;
-                $lunes_semana_evento->modify('this week monday'); // Lunes de la semana del evento
+                $lunes_semana_evento->modify('this week monday');
                 $lunes_semana_evento->setTime(9, 0, 0);
 
-                // Si hoy es domingo o antes del lunes 09:00 → botones inactivos
-                $botones_activos = ($ahora >= $lunes_semana_evento);
+                // ¿Ya pasó el lunes 09:00?
+                $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
                 ?>
                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                 <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
@@ -634,7 +634,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     Paso esta semana
                   </button>
                   <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
-                    ⏰ Los botones de inscripción se activarán el lunes <?= $lunes_anterior->format('d/m') ?> a las 09:00 hrs
+                    ⏰ Los botones de inscripción se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
                   </p>
                 <?php endif; ?>
 
