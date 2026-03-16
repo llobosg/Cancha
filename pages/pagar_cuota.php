@@ -384,17 +384,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // === INICIALIZAR BRICKS ===
   const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>');
+  const bricksBuilder = mp.bricks();
 
-  mp.bricks().create(
-    "cardPayment",
-    "bricks_container",
-    {
-      initialization: {
-        amount: <?= $cuota['monto'] ?>,
-        payer: {
-          email: '<?= $_SESSION['user_email'] ?>'
-        }
-      },
+  bricksBuilder.create('cardPayment', 'bricks_container', {
+    initialization: {
+      amount: <?= $cuota['monto'] ?>,
+      payer: {
+        email: '<?= $_SESSION['user_email'] ?>'
+      }
+    },
+    callbacks: {
       onSubmit: async (formData) => {
         try {
           const response = await fetch('../api/procesar_pago_brick.php', {
@@ -406,41 +405,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               description: 'Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>'
             })
           });
+
           const data = await response.json();
+
           if (data.status === 'approved') {
             mostrarToast('✅ Pago aprobado');
+
             setTimeout(() => {
               window.location.href = '../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>';
             }, 1500);
+
           } else {
             mostrarToast('❌ Pago rechazado: ' + (data.message || 'Error desconocido'));
           }
+
         } catch (err) {
           console.error(err);
           mostrarToast('❌ Error al procesar el pago');
         }
       },
-      // ✅ CALLBACKS OBLIGATORIOS (nivel raíz)
+
       onReady: () => {
         console.log('Brick listo');
       },
+
       onError: (error) => {
         console.error('Error en Brick:', error);
         mostrarToast('❌ Error en el formulario de pago: ' + (error?.message || 'Desconocido'));
-      },
-      customization: {
-        visual: {
-          style: {
-            theme: 'default',
-            texts: {
-              formTitle: 'Paga con tu tarjeta',
-              submit: 'Pagar ahora'
-            }
-          }
+      }
+    },
+
+    customization: {
+      visual: {
+        style: {
+          theme: 'default'
         }
       }
     }
-  );
+  });
 </script>
 </body>
 </html>
