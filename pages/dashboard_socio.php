@@ -780,7 +780,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   SELECT
                       r.id_reserva,
                       r.fecha,
-                      r.hora_inicio
+                      r.hora_inicio,
+                      r.goles_rojos,
+                      r.goles_blancos,
+                      r.jugador_experto
                   FROM reservas r
                   WHERE r.id_club = ? AND r.fecha < CURDATE()
                   ORDER BY r.fecha DESC, r.hora_inicio DESC
@@ -788,49 +791,71 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
               ");
               $stmt_last->execute([$_SESSION['club_id']]);
               $ultimo_partido = $stmt_last->fetch();
-              if ($ultimo_partido && $es_responsable): ?>
-                <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
-                <!-- Formulario post-partido -->
-                <form id="postPartidoForm" style="margin-top:1rem;">
-                  <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
-                  <div style="display:flex;gap:1rem;margin:0.5rem 0;">
-                    <div style="flex:1;">
-                      <label style="font-weight:bold;">Rojos:</label>
-                      <input type="number" name="goles_rojos" placeholder="0"
-                        value="0"
-                        style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                    </div>
-                    <div style="flex:1;">
-                      <label style="font-weight:bold;">Blancos:</label>
-                      <input type="number" name="goles_blancos" placeholder="0"
-                        value="0"
-                        style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                    </div>
+
+              if ($ultimo_partido): ?>
+                <p><strong>Fecha:</strong> <?= htmlspecialchars($ultimo_partido['fecha']) ?></p>
+
+                <?php if (!is_null($ultimo_partido['goles_rojos'])): ?>
+                  <!-- Resultado ya grabado -->
+                  <div style="margin-top:1rem;">
+                    <p><strong>Rojos:</strong> <?= (int)$ultimo_partido['goles_rojos'] ?></p>
+                    <p><strong>Blancos:</strong> <?= (int)$ultimo_partido['goles_blancos'] ?></p>
+                    <?php if (!empty($ultimo_partido['jugador_experto'])): ?>
+                      <p><strong>Jugador Xperto Baltica:</strong> 
+                        <?php
+                          $stmt_jug = $pdo->prepare("SELECT alias FROM socios WHERE id_socio = ?");
+                          $stmt_jug->execute([$ultimo_partido['jugador_experto']]);
+                          echo htmlspecialchars($stmt_jug->fetchColumn() ?: '—');
+                        ?>
+                      </p>
+                    <?php endif; ?>
+                    <p style="margin-top:1rem;color:#2ECC71;font-weight:bold;">✅ Resultado registrado</p>
                   </div>
-                  <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
-                  <select name="jugador_experto" id="mejorJugador" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
-                    <option value="">Seleccionar...</option>
-                    <?php
-                    // Cargar inscritos del último partido
-                    $stmt_inscritos = $pdo->prepare("
-                        SELECT s.id_socio, s.alias
-                        FROM inscritos i
-                        JOIN socios s ON i.id_socio = s.id_socio
-                        WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
-                        ORDER BY s.alias
-                    ");
-                    $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
-                    while ($jugador = $stmt_inscritos->fetch()): ?>
-                      <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
-                    <?php endwhile; ?>
-                  </select>
-                  <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
-                    Grabar Resultado
-                  </button>
-                </form>
-              <?php elseif ($ultimo_partido): ?>
-                <p><strong>Fecha:</strong> <?= $ultimo_partido['fecha'] ?></p>
-                <p style="margin-top:1rem;">Resultado aún no registrado</p>
+
+                <?php elseif ($es_responsable): ?>
+                  <!-- Formulario para registrar resultado -->
+                  <form id="postPartidoForm" style="margin-top:1rem;">
+                    <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                    <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                      <div style="flex:1;">
+                        <label style="font-weight:bold;">Rojos:</label>
+                        <input type="number" name="goles_rojos" placeholder="0" min="0"
+                          value="0"
+                          style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      </div>
+                      <div style="flex:1;">
+                        <label style="font-weight:bold;">Blancos:</label>
+                        <input type="number" name="goles_blancos" placeholder="0" min="0"
+                          value="0"
+                          style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      </div>
+                    </div>
+                    <label style="display:block;margin:0.5rem 0;font-weight:bold;">Jugador Xperto Baltica:</label>
+                    <select name="jugador_experto" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;">
+                      <option value="">Seleccionar...</option>
+                      <?php
+                      $stmt_inscritos = $pdo->prepare("
+                          SELECT s.id_socio, s.alias
+                          FROM inscritos i
+                          JOIN socios s ON i.id_socio = s.id_socio
+                          WHERE i.id_evento = ? AND i.tipo_actividad = 'reserva'
+                          ORDER BY s.alias
+                      ");
+                      $stmt_inscritos->execute([$ultimo_partido['id_reserva']]);
+                      while ($jugador = $stmt_inscritos->fetch()):
+                      ?>
+                        <option value="<?= $jugador['id_socio'] ?>"><?= htmlspecialchars($jugador['alias']) ?></option>
+                      <?php endwhile; ?>
+                    </select>
+                    <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">
+                      Grabar Resultado
+                    </button>
+                  </form>
+
+                <?php else: ?>
+                  <p style="margin-top:1rem;">Resultado aún no registrado</p>
+                <?php endif; ?>
+
               <?php else: ?>
                 <p style="margin-top:2rem;">Sin partidos anteriores</p>
               <?php endif; ?>
