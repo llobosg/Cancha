@@ -800,9 +800,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   <div style="margin-top:1rem;">
                     <p style="color: #071289;font-weight:bold;">Resultado final</p>
                     <p style="color: #98180aff;font-weight:bold;"><strong>Rojos:</strong> <?= (int)$ultimo_partido['goles_rojos'] ?></p>
-                    <p><strong>Blancos:</strong> <?= (int)$ultimo_partido['goles_blancos'] ?></p>
+                    <p><strong>Blancos: <?= (int)$ultimo_partido['goles_blancos'] ?></strong></p>
+
+                    <div style="margin-top:1rem;">
                     <?php if (!empty($ultimo_partido['jugador_experto'])): ?>
-                      <p><strong>Jugador Xperto Baltica:</strong>
+                      <p><strong>⚽ Jugador Xperto Baltica:</strong>
                       <p style="color: #071289;font-weight:bold;"> 
                         <?php
                           $stmt_jug = $pdo->prepare("SELECT alias FROM socios WHERE id_socio = ?");
