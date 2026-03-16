@@ -57,7 +57,7 @@ DELIMITER;"
 
 
 git add .
-git commit -m "mercadopago,2"
+git commit -m "mercadopago brick,19"
 git push
 
 <label>Ingresa el código enviado al correo registrado</label>
@@ -94,38 +94,25 @@ Altura ficha Próximo eventos
 "privateKey": "LfRtDHMIWYhXODl9qSSVOBmKl6nN1qqU36UlOHT8ZEQ"
 }
 
-              <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                <div><strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> <span style="font-size:0.7em;opacity:0.7;">(<?= $tipo_reserva_label ?>)</span></div>
-                <div style="margin:0.3rem 0;"><strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> • <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?></div>
-                <div style="margin:0.3rem 0;"><strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?></div>
-                <div style="margin:0.3rem 0;"><strong>💰</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?> • <strong>👥</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>/<?= $players ?></div>
-                <?php if ($proximo_evento['monto_recaudacion']): ?>
-                  <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                    <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?>
-                    <br><strong>👥 Cupos:</strong> <?= (int)($proximo_evento['jugadores_esperados'] ?? $players) ?>
-                  </div>
-                <?php endif; ?>
-              </div>
+
+Autorizo el uso de mis datos personales conforme a la Declaración de Privacidad y certifico que mi cuenta usa las herramientas de Mercado Pago de acuerdo con los Términos y Condiciones
 
 
-              Autorizo el uso de mis datos personales conforme a la Declaración de Privacidad y certifico que mi cuenta usa las herramientas de Mercado Pago de acuerdo con los Términos y Condiciones
-
-
-              MercadoPago 
+MercadoPago 
               
-              Credenciales Producción
+Credenciales Producción
               
-              publicKey  APP_USR-a69c3aff-80f1-4ccb-9362-5fe5bdae749a
-              Access Token  APP_USR-1904742350539733-031510-a480897a0bede3ccf5e57348d24656e6-33994642
+publicKey  APP_USR-a69c3aff-80f1-4ccb-9362-5fe5bdae749a
+Access Token  APP_USR-1904742350539733-031510-a480897a0bede3ccf5e57348d24656e6-33994642
 
-              Client ID  1904742350539733
-              Client Secet  x9WVBggpLTBg94lYhe11WKwh12MeyPgu
+Client ID  1904742350539733
+Client Secet  x9WVBggpLTBg94lYhe11WKwh12MeyPgu
 
-              Credenciales TEST
-              publicKey  TEST-8f7e32f2-0835-426a-84d2-6fbc2d0ccb8b
-              Access Token  TEST-1904742350539733-031510-147347996ab76a0054d00a6e18f25680-33994642
+Credenciales TEST
+publicKey  TEST-8f7e32f2-0835-426a-84d2-6fbc2d0ccb8b
+Access Token  TEST-1904742350539733-031510-147347996ab76a0054d00a6e18f25680-33994642
 
-              webhooks: https://canchasport.com/api/webhook_mercadopago.php
-              IPN: e8f35ec458e3db7c104198628f25b0906d90babc91b0743b74a97d982baa0ddd
+webhooks: https://canchasport.com/api/webhook_mercadopago.php
+IPN: e8f35ec458e3db7c104198628f25b0906d90babc91b0743b74a97d982baa0ddd
 
 

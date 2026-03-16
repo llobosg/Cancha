@@ -382,8 +382,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }, 3000);
     }
 
-    // === INICIALIZAR BRICKS ===
-    const mp = new MercadoPago('<?= MERCADOPAGO_ACCESS_TOKEN ?>');
+    // === INICIALIZAR BRICKS CON PUBLIC KEY ===
+    const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>'); // ← ¡Clave!
     const bricksBuilder = mp.bricks();
 
     bricksBuilder.create('cardPayment', 'bricks_container', {
