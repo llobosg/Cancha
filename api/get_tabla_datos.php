@@ -3,7 +3,6 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
-// Validar sesión
 if (!isset($_SESSION['id_socio'])) {
     http_response_code(403);
     echo json_encode(['error' => 'Acceso no autorizado']);
@@ -22,6 +21,7 @@ try {
     $data = [];
 
     if ($filtro === 'inscritos') {
+        // Inscritos: reservas futuras con socios inscritos
         $stmt = $pdo->prepare("
             SELECT 
                 r.id_reserva AS id_evento,
@@ -31,7 +31,7 @@ try {
                 cl.nombre AS id_club,
                 ca.id_cancha,
                 r.monto_total AS costo_evento,
-                s.nombre,
+                s.alias AS nombre,
                 i.posicion_jugador,
                 i.id_inscrito,
                 i.lleva_cerveza,
@@ -43,7 +43,7 @@ try {
             LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
             LEFT JOIN socios s ON i.id_socio = s.id_socio
             WHERE cl.id_club = ? AND r.fecha >= CURDATE()
-            ORDER BY r.fecha, r.hora_inicio
+            ORDER BY r.fecha ASC, r.hora_inicio ASC
             LIMIT 20
         ");
         $stmt->execute([$club_id]);
@@ -84,14 +84,12 @@ try {
         $stmt = $pdo->prepare("
             SELECT 
                 s.id_socio AS id_evento,
-                s.nombre,
-                s.alias,
-                s.email,
+                s.alias AS nombre,
                 s.rol,
                 s.activo
             FROM socios s
             WHERE s.id_club = ?
-            ORDER BY s.nombre
+            ORDER BY s.alias
         ");
         $stmt->execute([$club_id]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -140,7 +138,7 @@ try {
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } elseif ($filtro === 'equipos') {
-        // Equipos IA: listar partidos con equipos generados
+        // Equipos IA: partidos pasados con equipos generados
         $stmt = $pdo->prepare("
             SELECT 
                 r.id_reserva AS id_evento,

@@ -922,7 +922,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- MITAD INFERIOR -->
     <div class="dashboard-lower" style="margin-top: 8rem;">
       <h3>Detalle Eventos</h3>
-      
+
       <!-- Filtros -->
       <button class="filter-btn" data-filter="inscritos">Inscritos Próximo evento</button>
       <button class="filter-btn" data-filter="equipos">Equipos IA</button>
@@ -1525,7 +1525,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         const [y, m, d] = dateStr.split('-');
         return `${d}/${m}`;
       }
-
 
       // === INICIALIZAR AL CARGAR LA PÁGINA ===
       document.addEventListener('DOMContentLoaded', () => {
