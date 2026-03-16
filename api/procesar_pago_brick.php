@@ -1,75 +1,108 @@
 <?php
+
 header('Content-Type: application/json');
+
 ini_set('display_errors', 0);
+error_reporting(E_ALL);
 
-require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/config_mercadopago.php';
+/* -----------------------------------------
+   Evita que errores HTML rompan el JSON
+------------------------------------------*/
 
-use MercadoPago\MercadoPagoConfig;
-use MercadoPago\Client\Payment\PaymentClient;
-use MercadoPago\Exceptions\MPApiException;
+ob_start();
 
-MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
-
-$data = json_decode(file_get_contents('php://input'), true);
-
-if (!$data) {
-    http_response_code(400);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'JSON inválido'
-    ]);
-    exit;
-}
-
-$id_cuota = (int)($data['id_cuota'] ?? 0);
-
-/* -------- Normalizar campos de Brick -------- */
-
-$token = $data['token'] ?? null;
-
-$paymentMethodId =
-    $data['paymentMethodId'] ??
-    $data['payment_method_id'] ??
-    null;
-
-$issuerId =
-    $data['issuerId'] ??
-    $data['issuer_id'] ??
-    null;
-
-$installments =
-    $data['installments'] ??
-    1;
-
-$email =
-    $data['payer']['email'] ??
-    null;
-
-/* -------- Validación -------- */
-
-if (!$token || !$paymentMethodId || !$email || !$id_cuota) {
-
-    http_response_code(400);
-
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Datos incompletos',
-        'debug' => [
-            'token' => !!$token,
-            'paymentMethodId' => !!$paymentMethodId,
-            'email' => !!$email,
-            'id_cuota' => !!$id_cuota
-        ]
-    ]);
-
+function json_response($data, $http = 200)
+{
+    http_response_code($http);
+    echo json_encode($data);
     exit;
 }
 
 try {
 
-    /* -------- Obtener monto real desde DB -------- */
+    /* -----------------------------------------
+       Cargar dependencias
+    ------------------------------------------*/
+
+    require_once __DIR__ . '/../vendor/autoload.php';
+    require_once __DIR__ . '/../includes/config.php';
+    require_once __DIR__ . '/../includes/config_mercadopago.php';
+
+    use MercadoPago\MercadoPagoConfig;
+    use MercadoPago\Client\Payment\PaymentClient;
+    use MercadoPago\Exceptions\MPApiException;
+
+    MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
+
+    /* -----------------------------------------
+       Leer JSON enviado por el Brick
+    ------------------------------------------*/
+
+    $input = file_get_contents("php://input");
+
+    if (!$input) {
+        json_response([
+            "status" => "error",
+            "message" => "Body vacío"
+        ], 400);
+    }
+
+    $data = json_decode($input, true);
+
+    if (!$data) {
+        json_response([
+            "status" => "error",
+            "message" => "JSON inválido"
+        ], 400);
+    }
+
+    error_log("Brick payload: " . json_encode($data));
+
+    /* -----------------------------------------
+       Normalizar datos del Brick
+    ------------------------------------------*/
+
+    $token = $data["token"] ?? null;
+
+    $paymentMethodId =
+        $data["paymentMethodId"] ??
+        $data["payment_method_id"] ??
+        null;
+
+    $issuerId =
+        $data["issuerId"] ??
+        $data["issuer_id"] ??
+        null;
+
+    $installments =
+        $data["installments"] ??
+        1;
+
+    $email =
+        $data["payer"]["email"] ??
+        null;
+
+    $id_cuota =
+        $data["id_cuota"] ??
+        null;
+
+    if (!$token || !$paymentMethodId || !$email || !$id_cuota) {
+
+        json_response([
+            "status" => "error",
+            "message" => "Datos incompletos",
+            "debug" => [
+                "token" => !!$token,
+                "paymentMethodId" => !!$paymentMethodId,
+                "email" => !!$email,
+                "id_cuota" => !!$id_cuota
+            ]
+        ], 400);
+    }
+
+    /* -----------------------------------------
+       Obtener monto real desde DB
+    ------------------------------------------*/
 
     $stmt = $pdo->prepare("
         SELECT monto, estado
@@ -79,54 +112,54 @@ try {
     ");
 
     $stmt->execute([$id_cuota]);
+
     $cuota = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$cuota) {
 
-        http_response_code(404);
-
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Cuota no encontrada'
-        ]);
-
-        exit;
+        json_response([
+            "status" => "error",
+            "message" => "Cuota no encontrada"
+        ], 404);
     }
 
-    if ($cuota['estado'] === 'pagado') {
+    if ($cuota["estado"] === "pagado") {
 
-        echo json_encode([
-            'status' => 'approved',
-            'message' => 'La cuota ya fue pagada'
+        json_response([
+            "status" => "approved",
+            "message" => "La cuota ya está pagada"
         ]);
-
-        exit;
     }
 
-    $monto = (float)$cuota['monto'];
+    $monto = (float)$cuota["monto"];
 
-    /* -------- Crear pago en MercadoPago -------- */
-    if ($cuota['estado'] !== 'pendiente') {
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'La cuota ya fue procesada'
-        ]);
-        exit;
-    }
+    /* -----------------------------------------
+       Crear pago en MercadoPago
+    ------------------------------------------*/
 
-    $payment_client = new PaymentClient();
+    $client = new PaymentClient();
 
     $payment_data = [
-        "statement_descriptor" => "CANCHASPORT",
-        "transaction_amount" => (float)$monto,
+
+        "transaction_amount" => $monto,
+
         "token" => $token,
-        "description" => $data['description'] ?? 'Pago cuota',
+
+        "description" =>
+            $data["description"] ??
+            "Pago cuota CanchaSport",
+
         "installments" => (int)$installments,
+
         "payment_method_id" => $paymentMethodId,
+
         "payer" => [
             "email" => $email
         ],
-        "external_reference" => "cuota_" . $id_cuota
+
+        "external_reference" => "cuota_" . $id_cuota,
+
+        "statement_descriptor" => "CANCHASPORT"
     ];
 
     if ($issuerId) {
@@ -135,16 +168,17 @@ try {
 
     error_log("MP payment_data: " . json_encode($payment_data));
 
-    $payment = $payment_client->create($payment_data);
+    $payment = $client->create($payment_data);
 
-    $estado = $payment->status;
+    $estado = $payment->status ?? "unknown";
 
-    onSubmit: async (formData) => {
-    console.log("Brick data:", formData);
+    error_log("MP status: " . $estado);
 
-    /* -------- Actualizar cuota -------- */
+    /* -----------------------------------------
+       Actualizar estado de cuota
+    ------------------------------------------*/
 
-    if ($estado === 'approved') {
+    if ($estado === "approved") {
 
         $pdo->prepare("
             UPDATE cuotas
@@ -154,7 +188,7 @@ try {
             WHERE id_cuota = ?
         ")->execute([$payment->id, $id_cuota]);
 
-    } elseif (in_array($estado, ['pending','in_process'])) {
+    } elseif (in_array($estado, ["pending", "in_process"])) {
 
         $pdo->prepare("
             UPDATE cuotas
@@ -163,7 +197,7 @@ try {
             WHERE id_cuota = ?
         ")->execute([$payment->id, $id_cuota]);
 
-    } elseif (in_array($estado, ['rejected','cancelled'])) {
+    } elseif (in_array($estado, ["rejected", "cancelled"])) {
 
         $pdo->prepare("
             UPDATE cuotas
@@ -173,17 +207,21 @@ try {
         ")->execute([$payment->id, $id_cuota]);
     }
 
-    echo json_encode([
-        'status' => $estado,
-        'message' => $payment->status_detail ?? '',
-        'payment_id' => $payment->id
+    /* -----------------------------------------
+       Respuesta al frontend
+    ------------------------------------------*/
+
+    json_response([
+        "status" => $estado,
+        "status_detail" => $payment->status_detail ?? null,
+        "payment_id" => $payment->id ?? null
     ]);
 
 } catch (MPApiException $e) {
 
     $apiResponse = $e->getApiResponse();
 
-    $detalle = $e->getMessage();
+    $error = $e->getMessage();
 
     if ($apiResponse) {
 
@@ -191,28 +229,28 @@ try {
 
         if (is_array($content)) {
 
-            $detalle = $content['message'] ??
-                       $content['error'] ??
-                       json_encode($content);
-
-        } else {
-
-            $detalle = $content;
-
+            $error =
+                $content["message"] ??
+                $content["error"] ??
+                json_encode($content);
         }
     }
 
-    echo json_encode([
-        'status' => 'rejected',
-        'message' => $detalle
+    error_log("MP ERROR: " . $error);
+
+    json_response([
+        "status" => "rejected",
+        "message" => $error
     ]);
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
 
-    http_response_code(500);
+    error_log("SERVER ERROR: " . $e->getMessage());
 
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+    json_response([
+        "status" => "error",
+        "message" => "Error interno del servidor"
+    ], 500);
 }
+
+ob_end_flush();

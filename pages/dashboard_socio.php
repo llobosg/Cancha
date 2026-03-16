@@ -597,10 +597,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 $fecha_formateada = $fecha_evento->format('d-m');
                 $hora_formateada = $fecha_evento->format('H:i');
 
-                // Lunes de la semana del evento a las 09:00
+                // Calcular el LUNES DE LA SEMANA DEL EVENTO a las 09:00
                 $lunes_semana_evento = clone $fecha_evento;
-                $lunes_semana_evento->modify('this week monday');
+                $lunes_semana_evento->modify('this week monday'); // Lunes de la semana del evento
                 $lunes_semana_evento->setTime(9, 0, 0);
+
+                // ¿Ya pasó el lunes 09:00?
+                $botones_activos = ($ahora >= $lunes_semana_evento);
 
                 // ¿Ya pasó el lunes 09:00?
                 $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
