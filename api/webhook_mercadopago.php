@@ -2,16 +2,22 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/config_mercadopago.php';
 
-// === SOLO USAR PARÁMETROS GET (formato real de Mercado Pago) ===
+// Leer parámetros de la URL
 $topic = $_GET['topic'] ?? '';
 $id = $_GET['id'] ?? '';
 
-if ($topic !== 'payment' || !$id) {
+// Ignorar merchant_order (solo procesar "payment")
+if ($topic !== 'payment') {
+    http_response_code(200); // Responder 200 para que MP deje de reintentar
+    exit;
+}
+
+if (!$id) {
     http_response_code(400);
     exit;
 }
 
-// === CONSULTAR PAGO EN MERCADO PAGO ===
+// Consultar pago en Mercado Pago
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, "https://api.mercadopago.com/v1/payments/$id");
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -29,7 +35,7 @@ if (!$payment || !isset($payment['status'])) {
     exit;
 }
 
-// === EXTRAER ID DE CUOTA ===
+// Extraer ID de cuota
 $external_ref = $payment['external_reference'] ?? '';
 if (!preg_match('/^cuota_(\d+)$/', $external_ref, $matches)) {
     error_log("Webhook: referencia externa inválida: $external_ref");
@@ -38,7 +44,7 @@ if (!preg_match('/^cuota_(\d+)$/', $external_ref, $matches)) {
 }
 $id_cuota = (int)$matches[1];
 
-// === ACTUALIZAR ESTADO ===
+// Actualizar estado de la cuota
 $estado_pago = $payment['status'];
 if ($estado_pago === 'approved') {
     $pdo->prepare("
