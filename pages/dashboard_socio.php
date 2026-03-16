@@ -645,7 +645,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
           <!-- Próximo Partido -->
           <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-            <h3 style="color: white;">⚽ Próximo Partido</h3>
+            <h3 style="color: white;">Próximo Partido</h3>
             <div class="stat-card-content">
               <?php if ($proximo_evento): ?>
                 <?php
@@ -673,6 +673,37 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 ?>
                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                 <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
+                <?php
+                  $icono_deporte = '⚽';
+                  if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
+                      $icono_deporte = '⚽';
+                  } elseif (in_array($deporte, ['padel', 'pádel', 'tenis'])) {
+                      $icono_deporte = '🎾';
+                  } elseif (in_array($deporte, ['volley', 'voleibol', 'volleyball'])) {
+                      $icono_deporte = '🏐';
+                  } elseif ($deporte === 'gimnasio') {
+                      $icono_deporte = '🏋️';
+                  } elseif ($deporte === 'piscina') {
+                      $icono_deporte = '🏊';
+                  }
+                  $tipo_reserva_label = match($proximo_evento['tipo_reserva']) {
+                      'semanal' => 'Semanal',
+                      'mensual' => 'Mensual',
+                      default => 'Spot'
+                  };
+                ?>
+                <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
+                  <div><strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> <span style="font-size:0.7em;opacity:0.7;">(<?= $tipo_reserva_label ?>)</span></div>
+                  <div style="margin:0.3rem 0;"><strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> • <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?></div>
+                  <div style="margin:0.3rem 0;"><strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?></div>
+                  <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?>
+                  <?php if ($proximo_evento['monto_recaudacion']): ?>
+                  <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
+                    <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?>
+                    <br><strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?></div>
+                  </div>
+                  <?php endif; ?>
+                </div>
 
                 <?php if ($despues_del_lunes_09): ?> 
                   <!-- Botones de inscripción (activos desde lunes 09:00)  -->
@@ -690,6 +721,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                             onclick="anotarseConCerveza(true)">
                       🍺 Anotarse + Cerveza
                     </button>
+                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                      onclick="pasoEvento(<?= $id_reserva ?>)">
+                      <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
+                    </button>
                   <?php endif; ?>
 
                   <!-- Botón IA si aplica -->
@@ -699,11 +734,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                       🤖 Armar Equipos IA
                     </button>
                   <?php endif; ?>
-
-                  <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
-                    onclick="pasoEvento(<?= $id_reserva ?>)">
-                    <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
-                  </button>
+                
 
                 <?php else: ?>
                   <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
