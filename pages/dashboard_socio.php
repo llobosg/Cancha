@@ -693,9 +693,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   };
                 ?>
                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                  <div><strong><?= $icono_deporte ?> <?= htmlspecialchars($proximo_evento['tipo_evento']) ?></strong> <span style="font-size:0.7em;opacity:0.7;">(<?= $tipo_reserva_label ?>)</span></div>
-                  <div style="margin:0.3rem 0;"><strong>📅</strong> <?= date('d/m', strtotime($proximo_evento['fecha'])) ?> • <strong>⏰</strong> <?= substr($proximo_evento['hora_inicio'], 0, 5) ?></div>
-                  <div style="margin:0.3rem 0;"><strong>🏟️</strong> <?= htmlspecialchars($proximo_evento['nombre_cancha'] ?? 'N/A') ?></div>
                   <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?>
                   <?php if ($proximo_evento['monto_recaudacion']): ?>
                   <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
