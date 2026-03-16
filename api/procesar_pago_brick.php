@@ -8,8 +8,8 @@ require_once __DIR__ . '/../includes/config_mercadopago.php';
 
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Payment\PaymentClient;
-use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\Client\Common\RequestOptions;
+use MercadoPago\Exceptions\MPApiException;
 
 MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
 
