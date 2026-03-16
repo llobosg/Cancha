@@ -143,15 +143,20 @@ try {
         "installments" => (int)$installments,
         "payment_method_id" => $paymentMethodId,
         "payer" => [
-            "email" => $email
+            "email" => $email,
+            "identification" => [
+                "type" => "RUN",
+                "number" => $data["payer"]["identification"]["number"]
+            ]
         ],
         "external_reference" => "cuota_" . $id_cuota,
-        "statement_descriptor" => "CANCHASPORT"
+        "statement_descriptor" => "CANCHASPORT",
+        "binary_mode" => true
     ];
 
-    if (!empty($data["payer"]["identification"])) {
+    if (!empty($data["payer"]["identification"]["number"])) {
         $payment_data["payer"]["identification"] = [
-            "type" => $data["payer"]["identification"]["type"],
+            "type" => "RUN",
             "number" => $data["payer"]["identification"]["number"]
         ];
     }
