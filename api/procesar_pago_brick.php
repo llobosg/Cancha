@@ -163,12 +163,7 @@ try {
     }
 
     $request_options = new RequestOptions();
-    $request_options->setCustomHeaders([
-        "X-Idempotency-Key" => "pay_" . $id_cuota . "_" . time()
-    ]);
-
-    $payment = $client->create($payment_data);
-    $estado = $payment->status ?? "unknown";
+    $request_options->setIdempotencyKey("pay_" . $id_cuota . "_" . time());
 
     error_log("MP payment_data: " . json_encode($payment_data));
 
@@ -184,7 +179,6 @@ try {
         error_log("MP GENERAL ERROR: " . $e->getMessage());
         $estado = "error_general";
     }
-
     /* -----------------------------------------
        Actualizar estado de cuota
     ------------------------------------------*/
