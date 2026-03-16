@@ -922,15 +922,18 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     <!-- MITAD INFERIOR -->
     <div class="dashboard-lower" style="margin-top: 8rem;">
       <h3>Detalle Eventos</h3>
+      
       <!-- Filtros -->
-      <button class="filter-btn" onclick="cargarTabla('inscritos')">Inscritos Próximo evento</button>
-      <button class="filter-btn" onclick="cargarTabla('equipos')">Equipos IA</button>
+      <button class="filter-btn" data-filter="inscritos">Inscritos Próximo evento</button>
+      <button class="filter-btn" data-filter="equipos">Equipos IA</button>
+
       <?php if (!$modo_individual): ?>
-        <button class="filter-btn" onclick="cargarTabla('reservas')">Reservas</button>
-        <button class="filter-btn" onclick="cargarTabla('cuotas')">Cuotas</button>
-        <button class="filter-btn" onclick="cargarTabla('eventos')">Eventos</button>
-        <button class="filter-btn" onclick="cargarTabla('socios')">Socios</button>
+        <button class="filter-btn" data-filter="reservas">Reservas</button>
+        <button class="filter-btn" data-filter="cuotas">Cuotas</button>
+        <button class="filter-btn" data-filter="eventos">Eventos</button>
+        <button class="filter-btn" data-filter="socios">Socios</button>
       <?php endif; ?>
+
       <div class="dynamic-table-container">
         <table class="dynamic-table">
           <thead>
@@ -1526,7 +1529,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === INICIALIZAR AL CARGAR LA PÁGINA ===
       document.addEventListener('DOMContentLoaded', () => {
-        cargarTabla('inscritos');
+        cargarTabla('inscritos'); // ← Carga por defecto
         document.querySelectorAll('.filter-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1535,7 +1538,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             cargarTabla(filtro);
           });
         });
-        requestNotificationPermission();
       });
 
       // === MODAL EQUIPOS IA ===
@@ -1674,160 +1676,136 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === CARGAR TABLA ÚNICA ===
       function cargarTabla(filtro) {
-      // Activar botón visualmente
-      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-      event?.currentTarget?.classList.add('active');
+        const tbody = document.getElementById('tablaContenido');
+        if (!tbody) return;
 
-      const tbody = document.getElementById('tablaContenido');
-      if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;">Cargando...</td></tr>';
 
-      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;">Cargando...</td></tr>';
+        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.error) {
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+              return;
+            }
+            if (!Array.isArray(data) || data.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+              return;
+            }
 
-      fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.error) {
-            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-            return;
-          }
-          if (!Array.isArray(data) || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-            return;
-          }
-
-          let html = '';
-          data.forEach(row => {
-            let botonAccion = '-';
-            if (filtro === 'cuotas') {
-              const esResponsable = <?= json_encode($es_responsable) ?>;
-              if (esResponsable) {
-                if (row.estado === 'pendiente') {
-                  botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
-                } else if (row.estado === 'en_revision') {
-                  botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
+            let html = '';
+            data.forEach(row => {
+              let botonAccion = '-';
+              if (filtro === 'cuotas') {
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                if (esResponsable) {
+                  if (row.estado === 'pendiente') {
+                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
+                  } else if (row.estado === 'en_revision') {
+                    botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
+                  }
                 }
-              }
-              html += `
-                <tr>
-                  <td>${formatDate(row.fecha_evento)}</td>
-                  <td>-</td>
-                  <td>${row.origen || '-'}</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                  <td>${row.nombre_socio || '-'}</td>
-                  <td>-</td>
-                  <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                  <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                  <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
-                  <td>${botonAccion}</td>
-                </tr>
-              `;
-            } else if (filtro === 'socios') {
-              const esResponsable = <?= json_encode($es_responsable) ?>;
-              if (esResponsable) {
-                botonAccion = `
-                  <div style="display:flex;gap:0.6rem;justify-content:center;">
-                    <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
-                    <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
-                  </div>
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha_evento)}</td>
+                    <td>-</td>
+                    <td>${row.origen || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre_socio || '-'}</td>
+                    <td>-</td>
+                    <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                    <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
+                    <td>${row.estado}${row.comentario ? ' - ' + row.comentario : ''}</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              } else if (filtro === 'socios') {
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                if (esResponsable) {
+                  botonAccion = `
+                    <div style="display:flex;gap:0.6rem;justify-content:center;">
+                      <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
+                      <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
+                    </div>
+                  `;
+                }
+                html += `
+                  <tr>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>${row.alias || row.nombre || '-'}</td>
+                    <td>${row.rol || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>${row.activo === 'Si' ? '✅ Activo' : '❌ Inactivo'}</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              } else if (filtro === 'inscritos') {
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                const ahora = new Date();
+                let acciones = '';
+
+                if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                  acciones += `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-right:0.3rem;" onclick="bajarseEvento(${row.id_evento}, ${esResponsable && !esMiInscripcion ? row.id_socio : 'null'})">Bajar</button>`;
+                }
+                if (esResponsable && fechaEvento > ahora) {
+                  const emoji = row.lleva_cerveza ? '🍺' : '';
+                  acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                }
+                botonAccion = acciones || '-';
+
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha)}</td>
+                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                    <td>${row.id_tipoevento || '-'}</td>
+                    <td>${row.id_club || '-'}</td>
+                    <td>${row.id_cancha || '-'}</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre || '-'}</td>
+                    <td>${row.posicion_jugador || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>${botonAccion}</td>
+                  </tr>
+                `;
+              } else {
+                // Equipos IA, Reservas, Eventos → sin acciones
+                html += `
+                  <tr>
+                    <td>${formatDate(row.fecha)}</td>
+                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                    <td>${row.id_tipoevento || '-'}</td>
+                    <td>${row.id_club || '-'}</td>
+                    <td>${row.id_cancha || '-'}</td>
+                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                    <td>${row.nombre || '-'}</td>
+                    <td>${row.posicion_jugador || '-'}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                  </tr>
                 `;
               }
-              html += `
-                <tr>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>${row.alias || row.nombre || '-'}</td>
-                  <td>${row.rol || '-'}</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>${row.activo === 'Si' ? '✅ Activo' : '❌ Inactivo'}</td>
-                  <td>${botonAccion}</td>
-                </tr>
-              `;
-            } else if (filtro === 'inscritos') {
-              const esResponsable = <?= json_encode($es_responsable) ?>;
-              const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
-              const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-              const ahora = new Date();
-              let acciones = '';
-
-              if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                acciones += `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-right:0.3rem;" onclick="bajarseEvento(${row.id_evento}, ${esResponsable && !esMiInscripcion ? row.id_socio : 'null'})">Bajar</button>`;
-              }
-              if (esResponsable && fechaEvento > ahora) {
-                const emoji = row.lleva_cerveza ? '🍺' : '';
-                acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
-              }
-              botonAccion = acciones || '-';
-
-              html += `
-                <tr>
-                  <td>${formatDate(row.fecha)}</td>
-                  <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                  <td>${row.id_tipoevento || '-'}</td>
-                  <td>${row.id_club || '-'}</td>
-                  <td>${row.id_cancha || '-'}</td>
-                  <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                  <td>${row.nombre || '-'}</td>
-                  <td>${row.posicion_jugador || '-'}</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>${botonAccion}</td>
-                </tr>
-              `;
-            } else {
-              // Otros filtros: reservas, eventos, equipos
-              html += `
-                <tr>
-                  <td>${formatDate(row.fecha)}</td>
-                  <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                  <td>${row.id_tipoevento || '-'}</td>
-                  <td>${row.id_club || '-'}</td>
-                  <td>${row.id_cancha || '-'}</td>
-                  <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                </tr>
-              `;
-            }
+            });
+            tbody.innerHTML = html;
+          })
+          .catch(err => {
+            console.error('Error:', err);
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
           });
-          tbody.innerHTML = html;
-        })
-        .catch(err => {
-          console.error('Error:', err);
-          document.getElementById('tablaContenido').innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
-        });
-    }
-
-      // === INICIALIZAR AL CARGAR ===
-      document.addEventListener('DOMContentLoaded', () => {
-        // Activar "Inscritos" por defecto
-        document.querySelector('.filter-btn[data-filtro="inscritos"]').classList.add('active');
-        
-        // Asignar eventos a los botones
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            cargarTabla(btn.dataset.filtro);
-          });
-        });
-
-        // Si viene con ?filtro=cuotas, activarlo
-        const urlParams = new URLSearchParams(window.location.search);
-        const filtro = urlParams.get('filtro');
-        if (filtro && document.querySelector(`.filter-btn[data-filtro="${filtro}"]`)) {
-          cargarTabla(filtro);
-        }
-      });
+      }
     </script>
 
     <!-- Modal Compartir Club -->
