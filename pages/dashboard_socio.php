@@ -604,12 +604,22 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
                 <?php if ($botones_activos): ?>
                   <div class="btn-group" style="position:relative; display:inline-block; margin-top:1rem;">
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;">Anotarse</button>
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.2rem 0.3rem;font-size:0.8rem;border-top-left-radius:0;border-bottom-left-radius:0;" onclick="toggleCervezaMenu(event)">🍺</button>
-                    <div id="cervezaMenu" style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; z-index:100;">
-                      <div onclick="anotarseConCerveza(false)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse</div>
-                      <div onclick="anotarseConCerveza(true)" style="padding:0.5rem; cursor:pointer; white-space:nowrap;">Anotarse + 🍺</div>
-                    </div>
+                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                            onclick="anotarseConCerveza(false)">
+                      Anotarse
+                    </button>
+                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
+                            onclick="anotarseConCerveza(true)">
+                      🍺 Anotarse + Cerveza
+                    </button>
+
+                    <!-- Botón "Paso" (solo si no está inscrito y es antes del lunes 09:00) -->
+                    <?php if (!$botones_activos): ?>
+                      <button class="btn-action" style="background:#FFD700;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                              onclick="pasoEvento(<?= $id_reserva ?>)">
+                        Paso esta semana
+                      </button>
+                    <?php endif; ?>
                   </div>
                   <!-- Opciones adicionales solo para responsables
                   <button class="btn-action" style="background:#FFD700;color:#071289;margin-top:0.5rem;display:block;width:100%;">Invitar Galleta</button>

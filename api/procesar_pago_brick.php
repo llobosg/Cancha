@@ -114,7 +114,6 @@ try {
         ]);
         exit;
     }
-    error_log("MP payment_data: " . json_encode($payment_data));
 
     $payment_client = new PaymentClient();
 
@@ -125,7 +124,13 @@ try {
         "installments" => (int)$installments,
         "payment_method_id" => $paymentMethodId,
         "payer" => [
-            "email" => $email
+            "email" => $email,
+            "first_name" => "Cliente",
+            "last_name" => "CanchaSport",
+            "identification" => [
+                "type" => "RUT",
+                "number" => "11111111-1"
+            ]
         ],
         "external_reference" => "cuota_" . $id_cuota
     ];
