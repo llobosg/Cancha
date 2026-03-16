@@ -660,80 +660,49 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 $fecha_formateada = $fecha_evento->format('d-m');
                 $hora_formateada = $fecha_evento->format('H:i');
 
-                // Calcular el LUNES DE LA SEMANA DEL EVENTO a las 09:00
+                // Lunes de la semana del evento a las 09:00
                 $lunes_semana_evento = clone $fecha_evento;
-                $lunes_semana_evento->modify('this week monday'); // Lunes de la semana del evento
+                $lunes_semana_evento->modify('this week monday');
                 $lunes_semana_evento->setTime(9, 0, 0);
-
-                // ¿Ya pasó el lunes 09:00?
-                $botones_activos = ($ahora >= $lunes_semana_evento);
-
-                // ¿Ya pasó el lunes 09:00?
                 $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+
+                // Cupos llenos
+                $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
                 ?>
                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                 <p><strong>Quedan <?= $horas_restantes ?> horas</strong></p>
-                <?php
-                  $icono_deporte = '⚽';
-                  if (in_array($deporte, ['futbol', 'fútbol', 'futbolito', 'futsal'])) {
-                      $icono_deporte = '⚽';
-                  } elseif (in_array($deporte, ['padel', 'pádel', 'tenis'])) {
-                      $icono_deporte = '🎾';
-                  } elseif (in_array($deporte, ['volley', 'voleibol', 'volleyball'])) {
-                      $icono_deporte = '🏐';
-                  } elseif ($deporte === 'gimnasio') {
-                      $icono_deporte = '🏋️';
-                  } elseif ($deporte === 'piscina') {
-                      $icono_deporte = '🏊';
-                  }
-                  $tipo_reserva_label = match($proximo_evento['tipo_reserva']) {
-                      'semanal' => 'Semanal',
-                      'mensual' => 'Mensual',
-                      default => 'Spot'
-                  };
-                ?>
-                <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                  <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?>
-                  <?php if ($proximo_evento['monto_recaudacion']): ?>
-                  <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                    <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?>
-                    <br><strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?></div>
-                  </div>
-                  <?php endif; ?>
-                </div>
+                <br><strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados:</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?></div>
 
-                <?php if ($despues_del_lunes_09): ?> 
-                  <!-- Botones de inscripción (activos desde lunes 09:00)  -->
-                  <?php if ($ya_inscrito): ?>
-                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
-                      onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Bajarse
-                    </button>
-                  <?php else: ?>
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
-                            onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
-                      Anotarse
-                    </button>
-                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
-                            onclick="anotarseConCerveza(true)">
-                      🍺 Anotarse + Cerveza
-                    </button>
-                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
-                      onclick="pasoEvento(<?= $id_reserva ?>)">
-                      <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
-                    </button>
-                  <?php endif; ?>
+                <?php if ($cupos_llenos): ?>
+                  <!-- Cupos llenos -->
+                  <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">
+                    ❌ No se aceptan más inscripciones hasta que uno de los anotados decida "Bajarse".
+                  </p>
 
-                  <!-- Botón IA si aplica -->
+                <?php elseif ($despues_del_lunes_09): ?>
+                  <!-- Botones de inscripción (solo si hay cupos) -->
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                          onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                    Anotarse
+                  </button>
+                  <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
+                          onclick="anotarseConCerveza(true)">
+                    🍺 Anotarse + Cerveza
+                  </button>
+
                   <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
                     <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
                             onclick="armarEquiposIA(<?= $id_reserva ?>)">
                       🤖 Armar Equipos IA
                     </button>
                   <?php endif; ?>
-                
 
                 <?php else: ?>
+                  <!-- Antes del lunes 09:00: solo botón "Paso" -->
+                  <button class="btn-action" style="background:#FFD700;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                          onclick="pasoEvento(<?= $id_reserva ?>)">
+                    Paso esta semana
+                  </button>
                   <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
                     ⏰ Los botones de inscripción se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
                   </p>
