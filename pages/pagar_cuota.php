@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/includes/config.php';
-require_once __DIR__ . '/includes/config_mercadopago.php'; // Asegúrate de tener este archivo
+require_once __DIR__ . '/../includes/config.php'; // ← Ruta corregida
+require_once __DIR__ . '/../includes/config_mercadopago.php';
 session_start();
 
 if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
