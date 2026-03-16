@@ -170,18 +170,13 @@ try {
     $payment = $client->create($payment_data);
     $estado = $payment->status ?? "unknown";
 
-    error_log("MP status: " . $estado);
     error_log("MP payment_data: " . json_encode($payment_data));
+
     try {
-        error_log("Enviando pago a MP: " . json_encode($payment_data));
-        
         $payment = $client->create($payment_data, $request_options);
-        
-        // El estado puede ser 'approved', 'rejected', etc.
         $estado = $payment->status ?? "unknown";
-        
+        error_log("MP status: " . $estado);
     } catch (\MercadoPago\Exceptions\MPApiException $e) {
-        // Esto te dará el detalle real del error de la API (ej: parámetros inválidos)
         $api_response = $e->getApiResponse();
         error_log("MP API ERROR: " . json_encode($api_response->getContent()));
         $estado = "error_api";
