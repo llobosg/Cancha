@@ -8,7 +8,6 @@ require_once __DIR__ . '/../includes/config_mercadopago.php';
 
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Payment\PaymentClient;
-use MercadoPago\Client\Common\RequestOptions;
 use MercadoPago\Exceptions\MPApiException;
 
 MercadoPagoConfig::setAccessToken(MERCADOPAGO_ACCESS_TOKEN);
@@ -123,25 +122,15 @@ try {
         "description" => $data['description'] ?? 'Pago cuota',
         "installments" => (int)$installments,
         "payment_method_id" => $paymentMethodId,
-        "statement_descriptor" => "CANCHASPORT",
         "payer" => [
-            "email" => $email,
-            "first_name" => "Cliente",
-            "last_name" => "CanchaSport",
-            "identification" => [
-                "type" => "RUN",
-                "number" => "11111111-1"
-            ]
+            "email" => $email
         ],
         "external_reference" => "cuota_" . $id_cuota
     ];
 
     error_log("MP payment_data: " . json_encode($payment_data));
 
-    $payment = $payment_client->create(
-        $payment_data,
-        $request_options
-    );
+    $payment = $payment_client->create($payment_data);
 
     $estado = $payment->status;
 
