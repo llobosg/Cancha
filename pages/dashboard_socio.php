@@ -1716,7 +1716,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <td>-</td>
                     <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                     <td>${row.nombre_socio || '-'}</td>
-                    <td>-</td>
+                    <td>${row.rol || '-'}</td>
                     <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
                     <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
                     <td>${row.estado}${comentario !== '-' ? ' - ' + comentario : ''}</td>
@@ -1725,33 +1725,32 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 `;
 
               } else if (filtro === 'socios') {
-                const esResponsable = <?= json_encode($es_responsable) ?>;
-                if (esResponsable) {
-                  botonAccion = `
-                    <div style="display:flex;gap:0.6rem;justify-content:center;">
-                      <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
-                      <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
-                    </div>
-                  `;
-                }
+                  const esResponsable = <?= json_encode($es_responsable) ?>;
+                  if (esResponsable) {
+                    botonAccion = `
+                      <div style="display:flex;gap:0.6rem;justify-content:center;">
+                        <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
+                        <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
+                      </div>
+                    `;
+                  }
                 comentario = row.email || '-'; // ✅ Email como comentario
                 html += `
                   <tr>
+                    <td>${formatDate(row.created_at)}</td>
                     <td>-</td>
                     <td>-</td>
+                    <td>${row.club_nombre || '-'}</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>${row.alias || row.nombre || '-'}</td>
+                    <td>${row.nombre || '-'}</td>
                     <td>${row.rol || '-'}</td>
                     <td>-</td>
                     <td>-</td>
-                    <td>${comentario}</td>
+                    <td>${row.email || '-'}</td>
                     <td>${botonAccion}</td>
                   </tr>
                 `;
-
               } else if (filtro === 'inscritos') {
                 const esResponsable = <?= json_encode($es_responsable) ?>;
                 const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);

@@ -201,7 +201,9 @@ try {
                         s.email AS comentario,
                         s.id_socio AS id_evento,
                         s.id_socio
+                        cl.nombre AS club_nombre
                     FROM socios s
+                    INNER JOIN clubs cl ON s.id_club = cl.id_club
                     WHERE s.id_club = ?
                     ORDER BY s.nombre ASC
                     LIMIT 50
