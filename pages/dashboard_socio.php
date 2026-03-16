@@ -901,7 +901,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <button class="filter-btn" data-filter="equipos">Equipos IA</button>
         <?php if (!$modo_individual): ?>
           <button class="filter-btn" data-filter="reservas">Reservas</button>
-          <button class="filter-btn" data-filter="cuotas">Cuotas</button>
+          <button class="filter-btn" data-filter="cuotas" onclick="cargarTabla('cuotas')">Cuotas</button>
           <button class="filter-btn" data-filter="eventos">Eventos</button>
           <button class="filter-btn" data-filter="socios">Socios</button>
         <?php endif; ?>
@@ -1369,7 +1369,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === VALIDAR PAGO ===
       function validarPago(idCuota) {
-        if (!confirm('¿Confirmar pago como válido?')) return;
+        // if (!confirm('¿Confirmar pago como válido?')) return;
         
         fetch('../api/validar_pago.php', {
           method: 'POST',
@@ -1392,26 +1392,31 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
       // === REVISAR PAGO ===
       function revisarPago(idCuota) {
-        if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
-        
-        fetch('../api/revisar_pago.php', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: new URLSearchParams({id_cuota: idCuota})
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            mostrarToast('✅ Cuota en revisión');
-            // Forzar recarga en la pestaña "Cuotas"
-            const url = new URL(window.location);
-            url.searchParams.set('filtro', 'cuotas');
-            window.location.href = url.toString();
-          } else {
-            mostrarToast('❌ ' + data.message);
-          }
-        });
-      }
+      // if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
+      
+      fetch('../api/revisar_pago.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_cuota: idCuota})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          mostrarToast('✅ Cuota en revisión');
+          // Redirigir a la misma página, pero con ?filtro=cuotas
+          const url = new URL(window.location);
+          url.searchParams.set('filtro', 'cuotas');
+          // Eliminar otros parámetros que puedan interferir
+          window.location.replace(url.toString()); // ← Usa replace() para no guardar en historial
+        } else {
+          mostrarToast('❌ ' + data.message);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        mostrarToast('❌ Error al procesar la acción');
+      });
+    }
 
       // === ASIGNAR CERVEZA ===
       function asignarCerveza(idInscrito, estado) {
@@ -1780,6 +1785,27 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         const modal = document.getElementById('modalEquipos');
         if (modal) modal.style.display = 'none';
       }
+
+      // === ACTIVAR PESTAÑA SEGÚN PARÁMETRO DE URL AL CARGAR ===
+      document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filtro = urlParams.get('filtro');
+
+        if (filtro === 'cuotas') {
+          // Buscar el botón/tab que carga "Cuotas"
+          const tabCuotas = document.querySelector('[onclick*="cargarTabla(\'cuotas\')"]');
+          if (tabCuotas && !tabCuotas.classList.contains('active')) {
+            tabCuotas.click();
+            // Opcional: desplazar suavemente a la tabla
+            setTimeout(() => {
+              const tabla = document.querySelector('.stat-card-content table');
+              if (tabla) {
+                tabla.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 500);
+          }
+        }
+      });
     </script>
 
     <!-- Modal Compartir Club -->
