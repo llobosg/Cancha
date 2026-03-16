@@ -594,7 +594,7 @@ $_SESSION['visited_index'] = true;
           text-decoration: none;
           font-weight: bold;
           border-bottom: 1px solid #eee;
-        ">🔐 Admin Centro Deportivo</a>
+        ">🔐 Centro Deportivo</a>
         
         <!-- Botón para abrir el modal de login de socio -->
         <a href="#" onclick="toggleLoginAlternativo(); return false;" style="

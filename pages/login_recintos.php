@@ -3,8 +3,14 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-// Si ya hay sesión activa, redirigir al dashboard
-if (isset($_SESSION['id_recinto']) && isset($_SESSION['recinto_rol'])) {
+// Destruir cualquier sesión de socio para evitar conflicto
+if (isset($_SESSION['id_socio'])) {
+    session_destroy();
+    session_start();
+}
+
+// Si ya hay sesión de recinto, redirigir al dashboard
+if (isset($_SESSION['recinto_rol']) && $_SESSION['recinto_rol'] === 'admin_recinto') {
     header('Location: recinto_dashboard.php');
     exit;
 }
@@ -12,7 +18,7 @@ if (isset($_SESSION['id_recinto']) && isset($_SESSION['recinto_rol'])) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usuario = $_POST['usuario'] ?? '';
+    $usuario = trim($_POST['usuario'] ?? '');
     $contraseña = $_POST['contraseña'] ?? '';
     
     if (empty($usuario) || empty($contraseña)) {
@@ -154,7 +160,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 0.9rem;
     }
 
-    /* Responsive móvil */
     @media (max-width: 768px) {
       .login-container {
         padding: 1.5rem;
@@ -190,26 +195,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <a href="../index.php" class="close-btn">Cerrar</a>
   </div>
-  <!-- Overlay de fondo -->
-  <div id="loginOverlay" style="
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(63, 58, 58, 0.6);
-      z-index: 999;
-  "></div>
-
-  <!-- Ajustar contenedor principal para estar sobre el overlay -->
-  <style>
-    body {
-        overflow: hidden; /* Evita scroll al abrir modal */
-    }
-    .login-container {
-        position: relative;
-        z-index: 1001;
-    }
-  </style>
 </body>
 </html>
