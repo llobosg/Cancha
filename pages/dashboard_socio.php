@@ -1367,9 +1367,34 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         });
       }
 
+      // === REVISAR PAGO ===
+      function revisarPago(idCuota) {
+        if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
+        
+        fetch('../api/revisar_pago.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_cuota: idCuota})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            mostrarToast('✅ Cuota en revisión');
+            // ✅ Actualizar solo la tabla de cuotas
+            setTimeout(() => cargarTabla('cuotas'), 1500);
+          } else {
+            mostrarToast('❌ ' + data.message);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          mostrarToast('❌ Error al procesar la acción');
+        });
+      }
+
       // === VALIDAR PAGO ===
       function validarPago(idCuota) {
-        // if (!confirm('¿Confirmar pago como válido?')) return;
+        if (!confirm('¿Confirmar pago como válido?')) return;
         
         fetch('../api/validar_pago.php', {
           method: 'POST',
@@ -1380,43 +1405,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         .then(data => {
           if (data.success) {
             mostrarToast('✅ Pago validado');
-            // Forzar recarga en la pestaña "Cuotas"
-            const url = new URL(window.location);
-            url.searchParams.set('filtro', 'cuotas');
-            window.location.href = url.toString();
+            setTimeout(() => cargarTabla('cuotas'), 1500);
           } else {
             mostrarToast('❌ ' + data.message);
           }
+        })
+        .catch(err => {
+          console.error(err);
+          mostrarToast('❌ Error al procesar la acción');
         });
       }
-
-      // === REVISAR PAGO ===
-      function revisarPago(idCuota) {
-      // if (!confirm('¿Marcar esta cuota como "en revisión"?')) return;
-      
-      fetch('../api/revisar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          mostrarToast('✅ Cuota en revisión');
-          // Redirigir a la misma página, pero con ?filtro=cuotas
-          const url = new URL(window.location);
-          url.searchParams.set('filtro', 'cuotas');
-          // Eliminar otros parámetros que puedan interferir
-          window.location.replace(url.toString()); // ← Usa replace() para no guardar en historial
-        } else {
-          mostrarToast('❌ ' + data.message);
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        mostrarToast('❌ Error al procesar la acción');
-      });
-    }
 
       // === ASIGNAR CERVEZA ===
       function asignarCerveza(idInscrito, estado) {
@@ -1806,6 +1804,27 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           }
         }
       });
+
+      function cargarTabla(filtro) {
+        fetch(`api/get_tabla_datos.php?filtro=${filtro}`)
+          .then(r => r.json())
+          .then(data => {
+            let html = '';
+            if (data.error) {
+              html = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+            } else {
+              data.forEach(row => {
+                // Tu lógica actual de generación de filas
+                // (la que ya tienes para 'inscritos' y 'cuotas')
+              });
+            }
+            document.getElementById('tablaContenido').innerHTML = html;
+          })
+          .catch(err => {
+            console.error(err);
+            document.getElementById('tablaContenido').innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
+          });
+      }
     </script>
 
     <!-- Modal Compartir Club -->
