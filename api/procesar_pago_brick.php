@@ -107,6 +107,12 @@ try {
     $monto = (float)$cuota['monto'];
 
     /* -------- Crear pago en MercadoPago -------- */
+    error_log("MP payment_data: " . json_encode($payment_data));
+
+    $payment = $payment_client->create(
+        $payment_data,
+        $request_options
+    );
 
     $payment_client = new PaymentClient();
 
@@ -177,13 +183,30 @@ try {
 
 } catch (MPApiException $e) {
 
-    http_response_code(500);
-
     $apiResponse = $e->getApiResponse();
 
+    $detalle = $e->getMessage();
+
+    if ($apiResponse) {
+
+        $content = $apiResponse->getContent();
+
+        if (is_array($content)) {
+
+            $detalle = $content['message'] ??
+                       $content['error'] ??
+                       json_encode($content);
+
+        } else {
+
+            $detalle = $content;
+
+        }
+    }
+
     echo json_encode([
-        'status' => 'error',
-        'message' => $apiResponse ? $apiResponse->getContent() : $e->getMessage()
+        'status' => 'rejected',
+        'message' => $detalle
     ]);
 
 } catch (Exception $e) {
