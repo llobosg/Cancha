@@ -30,6 +30,7 @@ if ($tipo_actividad === 'reserva') {
             c.fecha_vencimiento,
             c.estado,
             c.tipo_actividad,
+            c.id_evento,  -- ← ¡Clave!
             s.nombre AS socio_nombre,
             s.email AS socio_email,
             cl.nombre AS club_nombre,
@@ -53,6 +54,7 @@ if ($tipo_actividad === 'reserva') {
             c.fecha_vencimiento,
             c.estado,
             c.tipo_actividad,
+            c.id_evento,  -- ← ¡Clave!
             s.nombre AS socio_nombre,
             s.email AS socio_email,
             cl.nombre AS club_nombre,
