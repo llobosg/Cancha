@@ -1725,16 +1725,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 `;
 
               } else if (filtro === 'socios') {
-                  const esResponsable = <?= json_encode($es_responsable) ?>;
-                  if (esResponsable) {
-                    botonAccion = `
-                      <div style="display:flex;gap:0.6rem;justify-content:center;">
-                        <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
-                        <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
-                      </div>
-                    `;
-                  }
-                comentario = row.email || '-'; // ✅ Email como comentario
+                const esResponsable = <?= json_encode($es_responsable) ?>;
+                let botonAccion = '-';
+                if (esResponsable) {
+                  botonAccion = `
+                    <div style="display:flex;gap:0.6rem;justify-content:center;">
+                      <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
+                      <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
+                    </div>
+                  `;
+                }
                 html += `
                   <tr>
                     <td>${formatDate(row.created_at)}</td>

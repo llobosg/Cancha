@@ -200,8 +200,8 @@ try {
                         NULL AS fecha_pago,
                         s.email AS comentario,
                         s.id_socio AS id_evento,
-                        s.id_socio
-                        cl.nombre AS club_nombre
+                        s.id_socio,
+                        cl.nombre AS club_nombre   -- ✅ Coma agregada arriba
                     FROM socios s
                     INNER JOIN clubs cl ON s.id_club = cl.id_club
                     WHERE s.id_club = ?
@@ -209,9 +209,7 @@ try {
                     LIMIT 50
                 ";
                 $params = [$club_id];
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute($params);
-                $socios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                break;
 
                 // Verificar si el usuario actual es responsable
                 $es_responsable = false;
