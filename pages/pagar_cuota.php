@@ -418,9 +418,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           mostrarToast('❌ Error al procesar el pago');
         }
       },
+      onReady: () => {
+        // Opcional: puedes ocultar un loader aquí si lo usas
+        console.log('Brick listo');
+      },
       onError: (error) => {
         console.error('Error en Brick:', error);
-        mostrarToast('❌ Error en el formulario de pago');
+        mostrarToast('❌ Error en el formulario de pago: ' + (error?.message || 'Desconocido'));
       },
       customization: {
         visual: {
