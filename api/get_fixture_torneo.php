@@ -37,11 +37,13 @@ try {
             p.resultado_1,
             p.resultado_2,
             p.estado,
-            pa1.alias AS equipo1,
-            pa2.alias AS equipo2
+            s1.alias AS equipo1,
+            s2.alias AS equipo2
         FROM partidos_torneo p
-        LEFT JOIN inscritos pa1 ON p.id_pareja_1 = pa1.id_inscrito
-        LEFT JOIN inscritos pa2 ON p.id_pareja_2 = pa2.id_inscrito
+        LEFT JOIN inscritos i1 ON p.id_pareja_1 = i1.id_inscrito
+        LEFT JOIN socios s1 ON i1.id_socio = s1.id_socio
+        LEFT JOIN inscritos i2 ON p.id_pareja_2 = i2.id_inscrito
+        LEFT JOIN socios s2 ON i2.id_socio = s2.id_socio
         WHERE p.id_torneo = ?
         ORDER BY p.fecha_hora_programada ASC
     ");
