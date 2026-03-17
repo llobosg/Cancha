@@ -15,15 +15,20 @@ try {
         SELECT 
             id_torneo,
             nombre,
+            descripcion,
             deporte,
             categoria,
             nivel,
             fecha_inicio,
+            fecha_fin,
             num_parejas_max,
-            estado
+            estado,
+            publico,
+            premios,
+            created_at
         FROM torneos
         WHERE id_recinto = ? 
-          AND estado IN ('abierto', 'cerrado', 'en_progreso')
+        AND estado IN ('abierto', 'cerrado', 'en_progreso')
         ORDER BY fecha_inicio DESC
     ");
     $stmt->execute([$_SESSION['id_recinto']]);
