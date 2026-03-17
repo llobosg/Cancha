@@ -107,7 +107,7 @@ if (!$invitacion) {
 
   <script>
     function aceptarInvitacion() {
-      fetch('../api/inscribir_al_torneo.php', {
+      fetch('../api/completar_pareja.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: new URLSearchParams({code: '<?= $code ?>'})
@@ -115,8 +115,8 @@ if (!$invitacion) {
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          alert('✅ ¡Pareja formada! Ya estás inscrito.');
-          window.location.href = 'torneo_publico.php?slug=<?= $invitacion['slug'] ?>';
+          alert('✅ ¡Pareja formada!');
+          window.location.href = '../';
         } else {
           alert('❌ ' + data.message);
         }
@@ -126,17 +126,17 @@ if (!$invitacion) {
     document.getElementById('registroForm')?.addEventListener('submit', e => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      fetch('../api/inscribir_al_torneo.php', {
+      fetch('../api/completar_pareja_temporal.php', {
         method: 'POST',
         body: formData
       })
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.redirect) {
-          // Redirigir a la página de invitación con el token temporal
-          window.location.href = data.redirect;
+        if (data.success) {
+          alert('✅ ' + data.message);
+          window.location.href = '../';
         } else {
-          alert('❌ ' + (data.message || 'No se pudo inscribir'));
+          alert('❌ ' + data.message);
         }
       });
     });

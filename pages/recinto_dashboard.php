@@ -339,9 +339,14 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
                 <strong>${torneo.nombre}</strong><br>
                 <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${estadoLabel} • ${torneo.premios}</small><br>
+
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verFixture(${torneo.id_torneo})">
                   Ver Fixture
+                </button>
+                <button class="action-btn" style="padding:0.35rem;font-size:0.9rem;background:#FFD700;color:#071289;flex:1;"
+                        onclick="compartirTorneo('${torneo.slug}')">
+                  Compartir link
                 </button>
               </div>
             `;
@@ -443,6 +448,43 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
     function cerrarSubmodal() {
       document.getElementById('submodalGenerico').style.display = 'none';
     }
+
+    function compartirTorneo(slug) {
+      const link = `https://canchasport.com/pages/torneo_publico.php?slug=${slug}`;
+      let qrHtml = `
+        <h3>📤 Compartir torneo</h3>
+        <p>Copia el enlace o escanea el QR para inscribirse:</p>
+        <div style="text-align:center;margin:1.5rem 0;">
+          <div id="qrTorneo" style="width:180px;height:180px;margin:0 auto;"></div>
+        </div>
+        <div style="background:#f1f1f1;padding:0.8rem;border-radius:6px;margin:1rem 0;word-break:break-all;font-family:monospace;font-size:0.9rem;">
+          ${link}
+        </div>
+        <button class="action-btn" style="margin-bottom:0.5rem;width:100%;" onclick="copiarLink('${link}')">
+          📋 Copiar enlace
+        </button>
+        <button class="action-btn" style="background:#6c757d;width:100%;" onclick="cerrarSubmodal()">
+          Cerrar
+        </button>
+      `;
+      document.getElementById('submodalContenido').innerHTML = qrHtml;
+      document.getElementById('submodalGenerico').style.display = 'flex';
+
+      // Generar QR
+      new QRCode(document.getElementById("qrTorneo"), {
+        text: link,
+        width: 160,
+        height: 160,
+        colorDark: "#071289",
+        colorLight: "#ffffff"
+      });
+    }
+
+    function copiarLink(link) {
+      navigator.clipboard.writeText(link).then(() => {
+        alert('✅ Enlace copiado al portapapeles');
+      });
+    }
   </script>
   <!-- Submodal genérico -->
   <div id="submodalGenerico" style="
@@ -473,5 +515,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <div id="submodalContenido"></div>
     </div>
   </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>
