@@ -82,7 +82,6 @@ if (!$invitacion) {
 </head>
 <body>
   <div class="container">
-    <h1>🤝 ¡Te invitaron a Jugar!</h1>
     <h1>🤝 ¡Te invitaron a jugar!</h1>
     <p><strong><?= htmlspecialchars($invitacion['nombre_socio_1'] ?? $invitacion['nombre_temp_1']) ?></strong> te invitó a participar en:</p>
     <h3><?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
