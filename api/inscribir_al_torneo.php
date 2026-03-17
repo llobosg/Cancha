@@ -83,13 +83,17 @@ try {
     // Insertar inscripción
     if ($es_socio) {
         $pdo->prepare("
-            INSERT INTO parejas_torneo (id_torneo, id_socio_1, codigo_pareja, estado)
-            VALUES (?, ?, ?, 'esperando_pareja')
+            INSERT INTO parejas_torneo (
+                id_torneo, id_socio_1, id_socio_2, id_jugador_temp_1, id_jugador_temp_2,
+                codigo_pareja, estado, nombre_pareja
+            ) VALUES (?, ?, NULL, NULL, NULL, ?, 'esperando_pareja', NULL)
         ")->execute([$torneo['id_torneo'], $id_socio, $codigo_pareja]);
     } else {
         $pdo->prepare("
-            INSERT INTO parejas_torneo (id_torneo, id_jugador_temp_1, codigo_pareja, estado)
-            VALUES (?, ?, ?, 'esperando_pareja')
+            INSERT INTO parejas_torneo (
+                id_torneo, id_socio_1, id_socio_2, id_jugador_temp_1, id_jugador_temp_2,
+                codigo_pareja, estado, nombre_pareja
+            ) VALUES (?, NULL, NULL, ?, NULL, ?, 'esperando_pareja', NULL)
         ")->execute([$torneo['id_torneo'], $id_temporal, $codigo_pareja]);
     }
 
