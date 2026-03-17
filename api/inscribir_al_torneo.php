@@ -150,14 +150,23 @@ try {
         try {
             $mailer = new BrevoMailer();
             $mailer->setTo($email_destino, $nombre_destino);
-            $mailer->setSubject('⚽ ¡Tu link de invitación para el torneo!');
+            $mailer->setSubject('🎾 ¡Tu link de invitación para el torneo Americano Pádel!');
+            if ($es_socio) {
+                $link_dashboard = 'https://canchasport.com/pages/dashboard_socio.php';
+            } else {
+                $link_dashboard = 'https://canchasport.com/pages/registro_socio.php?modo=individual';
+            }
             $html = "
                 <h2>¡Hola {$nombre_destino}!</h2>
                 <p>Te has inscrito como primer jugador en el torneo <strong>{$torneo['nombre']}</strong>.</p>
+                <p>Organizado por Pasco Club</p>
+                <p>Auspiciado por PALLAP</p>
+                <p>🎾🎾🎾🎾🎾🎾</p>
                 <p>Ahora solo falta invitar a tu pareja:</p>
                 <p><strong>Link de invitación:</strong><br>
                 <a href='{$qrLink}' style='color:#071289;word-break:break-all;'>{$qrLink}</a></p>
                 " . ($qrData ? "<p>O escanea este QR:</p><img src='data:image/png;base64,{$qrData}' alt='QR' style='max-width:200px; border:1px solid #eee; border-radius:8px;'>" : "") . "
+                <p>📊 <a href='{$link_dashboard}' style='color:#FFD700;'>Ver estadísticas y fixture</a></p>
                 <p>¡Mucha suerte en el torneo!</p>
                 <hr style='margin:20px 0; border:0; border-top:1px solid #eee;'>
                 <small>Este mensaje fue generado automáticamente por CanchaSport.</small>

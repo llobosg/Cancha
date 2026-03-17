@@ -30,7 +30,7 @@ if (!$registro) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🤝 Invita a tu pareja - <?= htmlspecialchars($registro['nombre']) ?></title>
+  <title style="color: #071289;">🤝 Invita a tu pareja - <?= htmlspecialchars($registro['nombre']) ?></title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -63,7 +63,7 @@ if (!$registro) {
       border-radius: 8px;
     }
     .share-link {
-      background: #bd2be9;
+      background: #d473f1;
       padding: 0.8rem;
       border-radius: 6px;
       margin: 1rem 0;
@@ -85,8 +85,8 @@ if (!$registro) {
 </head>
 <body>
   <div class="container">
-    <h1>🤝 ¡Casi listos!</h1>
-    <p>Comparte este código o QR con tu pareja para completar la inscripción:</p>
+    <h1 style="color: #071289;">🤝 ¡Casi listos!</h1>
+    <p style="color: #071289;">Comparte este código o QR con tu pareja para completar la inscripción:</p>
     
     <div style="font-size: 1.8rem; font-weight: bold; margin: 1rem 0; color: #071289;">
       <?= htmlspecialchars($code) ?>
@@ -94,13 +94,13 @@ if (!$registro) {
 
     <div class="qr-code" id="qrcode"></div>
 
-    <p>O envía este enlace:</p>
+    <p style="color: #071289;">O envía este enlace:</p>
     <div class="share-link" id="shareLink">
       https://canchasport.com/pages/torneo_invite.php?code=<?= urlencode($code) ?>
     </div>
 
     <button class="btn" onclick="copiarEnlace()">📋 Copiar enlace</button>
-    <button class="btn" style="background:#6c757d;margin-top:0.5rem;" onclick="window.location.href='/'">Volver al inicio</button>
+    <button class="btn" style="background: #6c757d;margin-top:0.5rem;" onclick="window.location.href='/'">Volver al inicio</button>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

@@ -335,10 +335,12 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               'finalizado': 'Finalizado'
             };
             const estadoLabel = estadoMap[torneo.estado] || torneo.estado;
+            const progreso = `${torneo.parejas_inscritas}/${torneo.num_parejas_max} parejas`;
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
                 <strong>${torneo.nombre}</strong><br>
-                <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${estadoLabel} • ${torneo.premios}</small><br>
+                <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${progreso} • ${estadoLabel} • ${torneo.premios}</small>
+                <div><strong>👥 Inscritos:</strong> ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div><br>
 
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verFixture(${torneo.id_torneo})">
