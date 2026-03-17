@@ -92,7 +92,7 @@ if (!$torneo) {
     <?php else: ?>
       <form id="registroForm">
         <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
-        <input type="text" name="nombre" placeholder="Tu nombre completo" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
+        <input type="text" name="nombre" placeholder="Tu nombre o Alias" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
         <input type="email" name="email" placeholder="Tu email" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
 
         <button class="btn" type="submit">Inscribirme</button>
@@ -100,8 +100,8 @@ if (!$torneo) {
         <p style="margin-bottom:1rem;">¿Ya te inscribiste pero perdiste el link de invitación?</p>
         <form id="recuperarForm">
           <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
-          <input type="text" name="nombre" placeholder="Tu nombre" required style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
-          <input type="email" name="email" placeholder="Tu email" required style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+          <input type="text" name="nombre" placeholder="Tu nombre o Alias" required style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+          <input type="email" name="email" placeholder="Tu email" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
           <button type="submit" class="btn" style="background:#FFD700;color:#071289;margin-top:0.5rem;">Recuperar link</button>
         </form>
       </div>
