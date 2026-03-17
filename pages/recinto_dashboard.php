@@ -432,5 +432,34 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       document.getElementById('submodalGenerico').style.display = 'none';
     }
   </script>
+  <!-- Submodal genérico -->
+  <div id="submodalGenerico" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  ">
+    <div style="
+      background: white;
+      color: #071289;
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    ">
+      <span style="
+        float: right;
+        font-size: 1.5rem;
+        cursor: pointer;
+      " onclick="cerrarSubmodal()">&times;</span>
+      <div id="submodalContenido"></div>
+    </div>
+  </div>
 </body>
 </html>
