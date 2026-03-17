@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+session_start();
 
 $code = $_GET['code'] ?? '';
 if (!$code || strlen($code) !== 8) {

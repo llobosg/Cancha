@@ -2,6 +2,18 @@
 // includes/config.php
 header("Access-Control-Allow-Origin: https://canchasport.com");
 
+// Configuración de sesión segura y consistente
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',           // ← ¡Importante! Debe ser '/'
+        'domain' => '',          // ← Vacío para dominio actual
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+}
+
 // === CARGAR VARIABLES DE ENTORNO ===
 function loadEnvVars() {
     // Si estamos en CLI (terminal), cargar .env manualmente
