@@ -338,7 +338,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
                 <strong>${torneo.nombre}</strong><br>
-                <small>${torneo.categoria} • ${fecha} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${estadoLabel} • ${publico} • ${torneo.premios}</small><br>
+                <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${estadoLabel} • ${torneo.premios}</small><br>
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verFixture(${torneo.id_torneo})">
                   Ver Fixture
