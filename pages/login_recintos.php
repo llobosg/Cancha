@@ -3,14 +3,20 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
+error_log("🔍 [LOGIN_RECINTOS] Inicio del script");
+error_log("🔍 [LOGIN_RECINTOS] Sesión actual: " . print_r($_SESSION, true));
+
 // Destruir cualquier sesión de socio para evitar conflicto
 if (isset($_SESSION['id_socio'])) {
+    error_log("⚠️ [LOGIN_RECINTOS] Sesión de socio detectada. Destruyendo...");
     session_destroy();
     session_start();
+    error_log("✅ [LOGIN_RECINTOS] Nueva sesión iniciada sin id_socio");
 }
 
 // Si ya hay sesión de recinto, redirigir al dashboard
 if (isset($_SESSION['recinto_rol']) && $_SESSION['recinto_rol'] === 'admin_recinto') {
+    error_log("✅ [LOGIN_RECINTOS] Ya autenticado como admin_recinto. Redirigiendo a recinto_dashboard.php");
     header('Location: recinto_dashboard.php');
     exit;
 }
@@ -21,8 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = trim($_POST['usuario'] ?? '');
     $contraseña = $_POST['contraseña'] ?? '';
     
+    error_log("🔍 [LOGIN_RECINTOS] Intento de login con usuario: '$usuario'");
+    
     if (empty($usuario) || empty($contraseña)) {
         $error = 'Usuario y contraseña son requeridos';
+        error_log("❌ [LOGIN_RECINTOS] Usuario o contraseña vacíos");
     } else {
         // Verificar credenciales
         $stmt = $pdo->prepare("
@@ -35,18 +44,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $admin = $stmt->fetch();
         
         if ($admin && password_verify($contraseña, $admin['contraseña'])) {
+            error_log("✅ [LOGIN_RECINTOS] Credenciales válidas para usuario: '$usuario'");
+            
             if (!$admin['email_verified']) {
                 $error = 'Tu recinto no ha sido verificado. Por favor, revisa tu email.';
+                error_log("❌ [LOGIN_RECINTOS] Recinto no verificado para usuario: '$usuario'");
             } else {
                 // Iniciar sesión
                 $_SESSION['id_recinto'] = $admin['id_recinto'];
                 $_SESSION['id_admin_recinto'] = $admin['id_admin'];
                 $_SESSION['recinto_rol'] = 'admin_recinto';
+                error_log("✅ [LOGIN_RECINTOS] Sesión iniciada correctamente. Redirigiendo a recinto_dashboard.php");
                 header('Location: recinto_dashboard.php');
                 exit;
             }
         } else {
             $error = 'Usuario o contraseña incorrectos';
+            error_log("❌ [LOGIN_RECINTOS] Credenciales inválidas para usuario: '$usuario'");
         }
     }
 }
