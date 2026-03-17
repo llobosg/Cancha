@@ -25,7 +25,8 @@ try {
             estado,
             publico,
             premios,
-            created_at
+            created_at,
+            slug
         FROM torneos
         WHERE id_recinto = ? 
         AND estado IN ('abierto', 'cerrado', 'en_progreso')
