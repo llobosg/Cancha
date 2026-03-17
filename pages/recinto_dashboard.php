@@ -201,6 +201,14 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <button class="action-btn" onclick="alert('Función en desarrollo: Crear Americano')">Crear Americano</button>
     </div>
 
+    <!-- Panel de Torneos -->
+    <div class="dynamic-panel" id="panelTorneos">
+      <h3>🏆 Torneos Americanos Activos</h3>
+      <div id="listaTorneos" style="margin-top: 1rem;">
+        <p>Cargando torneos...</p>
+      </div>
+    </div>
+
     <!-- Panel dinámico -->
     <div class="dynamic-panel" id="dynamicPanel">
       <h3>📋 Bienvenido al panel de administración</h3>
@@ -296,6 +304,132 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           alert('❌ ' + data.message);
         }
       });
+    }
+
+    // === CARGAR TORNEOS AL INICIAR ===
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('../api/get_torneos_recinto.php')
+        .then(r => r.json())
+        .then(data => {
+          const contenedor = document.getElementById('listaTorneos');
+          if (data.error) {
+            contenedor.innerHTML = `<p style="color:#FF6B6B;">❌ ${data.error}</p>`;
+            return;
+          }
+          if (data.length === 0) {
+            contenedor.innerHTML = `<p>📭 No hay torneos activos.</p>`;
+            return;
+          }
+          let html = '<div style="display:flex;flex-direction:column;gap:0.8rem;">';
+          data.forEach(torneo => {
+            const fecha = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
+            html += `
+              <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
+                <strong>${torneo.nombre}</strong><br>
+                <small>${torneo.deporte} • ${torneo.categoria} • ${fecha}</small><br>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
+                        onclick="verFixture(${torneo.id_torneo})">
+                  Ver Fixture
+                </button>
+              </div>
+            `;
+          });
+          html += '</div>';
+          contenedor.innerHTML = html;
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('listaTorneos').innerHTML = `<p style="color:#FF6B6B;">❌ Error al cargar torneos</p>`;
+        });
+    });
+
+    // === VER FIXTURE ===
+    function verFixture(idTorneo) {
+      fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+          }
+          let html = `
+            <h3>📋 Fixture - ${data.torneo_nombre}</h3>
+            <div style="max-height:60vh;overflow-y:auto;margin:1rem 0;">
+              <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#071289;color:white;">
+                    <th>Fecha</th>
+                    <th>Equipo 1</th>
+                    <th></th>
+                    <th>Equipo 2</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          data.partidos.forEach(p => {
+            const jugado = p.resultado_1 !== null && p.resultado_2 !== null;
+            const fecha = p.fecha_hora_programada ? new Date(p.fecha_hora_programada).toLocaleDateString('es-CL') : '-';
+            html += `
+              <tr style="border-bottom:1px solid #ccc;">
+                <td>${fecha}</td>
+                <td>${p.equipo1 || 'Pareja 1'}</td>
+                <td style="text-align:center;">
+                  ${jugado ? `${p.resultado_1} - ${p.resultado_2}` : 'vs'}
+                </td>
+                <td>${p.equipo2 || 'Pareja 2'}</td>
+                <td>
+                  <button class="action-btn" style="padding:0.2rem 0.4rem;font-size:0.75rem;"
+                          onclick="editarResultado(${p.id_partido}, '${p.equipo1 || 'Pareja 1'}', '${p.equipo2 || 'Pareja 2'}')">
+                    ${jugado ? '✏️ Editar' : '✅ Resultado'}
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+          html += `
+                </tbody>
+              </table>
+            </div>
+            <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
+          `;
+          document.getElementById('submodalContenido').innerHTML = html;
+          document.getElementById('submodalGenerico').style.display = 'flex';
+        });
+    }
+
+    // === EDITAR RESULTADO ===
+    function editarResultado(idPartido, equipo1, equipo2) {
+      const goles1 = prompt(`Goles de ${equipo1}:`);
+      const goles2 = prompt(`Goles de ${equipo2}:`);
+      if (goles1 === null || goles2 === null) return;
+      if (isNaN(goles1) || isNaN(goles2)) {
+        alert('Por favor ingresa números válidos');
+        return;
+      }
+      fetch('../api/guardar_resultado_partido_torneo.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({
+          id_partido: idPartido,
+          goles1: goles1,
+          goles2: goles2
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Resultado guardado');
+          verFixture(idPartido); // Recargar fixture
+        } else {
+          alert('❌ ' + data.message);
+        }
+      });
+    }
+
+    // === CERRAR SUBMODAL ===
+    function cerrarSubmodal() {
+      document.getElementById('submodalGenerico').style.display = 'none';
     }
   </script>
 </body>
