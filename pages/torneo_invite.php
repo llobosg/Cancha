@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/../includes/config.php';
 
 $code = $_GET['code'] ?? '';
 if (!$code || strlen($code) !== 8) {

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/../includes/config.php';
 
 $slug = $_GET['slug'] ?? '';
 if (!$slug || strlen($slug) !== 8) {
