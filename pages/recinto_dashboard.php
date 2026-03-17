@@ -1,40 +1,44 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
-// Validar sesión y rol
-if (!isset($_SESSION['id_socio']) || empty($_SESSION['es_responsable'])) {
+// Configuración consistente de sesión
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
+
+// Validar rol de recinto
+if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
     header('Location: ../index.php');
     exit;
 }
 
-$club_id = $_SESSION['club_id'] ?? null;
-if (!$club_id) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// === Cargar datos del club ===
-$stmt_club = $pdo->prepare("SELECT nombre, logo FROM clubs WHERE id_club = ?");
-$stmt_club->execute([$club_id]);
-$club = $stmt_club->fetch();
-$club_nombre = $club['nombre'] ?? 'Recinto';
-$club_logo = $club['logo'] ?? null;
+// Cargar datos del recinto
+$id_recinto = $_SESSION['id_recinto'] ?? null;
+$stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
+$stmt_recinto->execute([$id_recinto]);
+$recinto = $stmt_recinto->fetch();
+$recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - <?= htmlspecialchars($club_nombre) ?> | CanchaSport</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+  <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏟️</text></svg>">
   <style>
     :root {
       --bg-primary: #071289;
       --accent: #4ECDC4;
       --gold: #FFD700;
-      --success: #2ECC71;
-      --warning: #FF6B6B;
       --card-bg: rgba(255, 255, 255, 0.15);
       --text-light: white;
     }
@@ -133,31 +137,6 @@ $club_logo = $club['logo'] ?? null;
       border-radius: 14px;
       min-height: 200px;
     }
-    .submodal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .submodal-content {
-      background: white;
-      color: #071289;
-      padding: 2rem;
-      border-radius: 16px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .close {
-      float: right;
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -167,7 +146,7 @@ $club_logo = $club['logo'] ?? null;
       <div style="display: flex; align-items: center; gap: 1rem;">
         <div class="logo">🏟️</div>
         <div>
-          <h1><?= htmlspecialchars($club_nombre) ?></h1>
+          <h1><?= htmlspecialchars($recinto_nombre) ?></h1>
           <p>Panel de Administración</p>
         </div>
       </div>
@@ -183,7 +162,6 @@ $club_logo = $club['logo'] ?? null;
 
     <!-- Gráficos -->
     <div class="stats-grid">
-      <!-- Canchas -->
       <div class="stat-card">
         <div class="stat-title">Canchas disponibles</div>
         <div class="chart">
@@ -195,14 +173,12 @@ $club_logo = $club['logo'] ?? null;
         <div>6/10 reservadas</div>
       </div>
 
-      <!-- Ingresos -->
       <div class="stat-card">
         <div class="stat-title">Ingresos este mes</div>
         <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
         <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
       </div>
 
-      <!-- Ocupación -->
       <div class="stat-card">
         <div class="stat-title">Ocupación MTD</div>
         <div class="chart">
@@ -219,10 +195,10 @@ $club_logo = $club['logo'] ?? null;
 
     <!-- Acciones rápidas -->
     <div class="quick-actions">
-      <button class="action-btn" onclick="gestionarCancha()">Gestionar cancha</button>
-      <button class="action-btn" onclick="calendarioReservas()">Calendario reservas</button>
-      <button class="action-btn" onclick="reservaManual()">Reserva Manual</button>
-      <button class="action-btn" onclick="crearAmericano()">Crear Americano</button>
+      <button class="action-btn" onclick="alert('Función en desarrollo: Gestionar cancha')">Gestionar cancha</button>
+      <button class="action-btn" onclick="alert('Función en desarrollo: Calendario reservas')">Calendario reservas</button>
+      <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
+      <button class="action-btn" onclick="alert('Función en desarrollo: Crear Americano')">Crear Americano</button>
     </div>
 
     <!-- Panel dinámico -->
@@ -232,78 +208,11 @@ $club_logo = $club['logo'] ?? null;
     </div>
   </div>
 
-  <!-- Submodal genérico -->
-  <div class="submodal" id="submodalGenerico">
-    <div class="submodal-content">
-      <span class="close" onclick="cerrarSubmodal()">&times;</span>
-      <div id="submodalContenido"></div>
-    </div>
-  </div>
-
   <script>
-    // === FUNCIONES DE ACCIÓN ===
-    function gestionarCancha() {
-      document.getElementById('submodalContenido').innerHTML = `
-        <h3>🛠️ Gestionar canchas</h3>
-        <p>Próximamente: formulario para editar horarios, precios y disponibilidad.</p>
-        <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
-      `;
-      document.getElementById('submodalGenerico').style.display = 'flex';
-    }
-
-    function calendarioReservas() {
-      document.getElementById('submodalContenido').innerHTML = `
-        <h3>📅 Calendario de reservas</h3>
-        <p>Próximamente: vista semanal/mensual con gestión de reservas.</p>
-        <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
-      `;
-      document.getElementById('submodalGenerico').style.display = 'flex';
-    }
-
-    function reservaManual() {
-      alert('Función en desarrollo: Reserva Manual');
-    }
-
-    function crearAmericano() {
-      document.getElementById('submodalContenido').innerHTML = `
-        <h3>🏆 Crear campeonato americano</h3>
-        <form id="formAmericano" style="margin-top:1rem;">
-          <label>Nombre del torneo:</label>
-          <input type="text" placeholder="Ej: Torneo Primavera 2026" style="width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:6px; border:1px solid #ccc;">
-          
-          <label>Deporte:</label>
-          <select style="width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:6px; border:1px solid #ccc;">
-            <option>Fútbol</option>
-            <option>Futsal</option>
-            <option>Pádel</option>
-          </select>
-          
-          <label>Número de equipos:</label>
-          <input type="number" min="4" max="16" value="8" style="width:100%; padding:0.5rem; margin:0.5rem 0; border-radius:6px; border:1px solid #ccc;">
-          
-          <button type="submit" class="action-btn" style="margin-top:1rem; width:100%;">Crear torneo</button>
-        </form>
-      `;
-      document.getElementById('submodalGenerico').style.display = 'flex';
-
-      document.getElementById('formAmericano')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        alert('✅ Torneo creado exitosamente');
-        cerrarSubmodal();
-      });
-    }
-
-    function cerrarSubmodal() {
-      document.getElementById('submodalGenerico').style.display = 'none';
-    }
-
-    // === FILTROS ===
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        // Aquí iría la lógica para recargar datos según el período
-        console.log('Filtro:', btn.dataset.period);
       });
     });
   </script>
