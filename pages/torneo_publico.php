@@ -88,33 +88,39 @@ if (!$torneo) {
     <p> 🎾 </p>
     <p>Organiza: Pasco Club</p>
     <p>Auspiciado por PALLAP</p>
-    <p>Estadísiticas canchasport.com</p>
-    <?php if (isset($_SESSION['id_socio'])): ?>
-      <button class="btn" onclick="inscribirme()">Inscribirme al torneo</button>
-    <?php else: ?>
-      <form id="registroForm">
-        <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
-        <input type="text" name="nombre" placeholder="Tu nombre o Alias" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
-        <input type="email" name="email" placeholder="Tu email" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
+    <p>Estadísticas canchasport.com</p>
 
-        <button class="btn" type="submit">Inscribirme</button>
-        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+    <?php if (isset($_SESSION['id_socio'])): ?>
+        <button class="btn" onclick="inscribirme()">Inscribirme al torneo</button>
+    <?php else: ?>
+        <form id="registroForm">
+            <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
+            <input type="text" name="nombre" placeholder="Tu nombre completo" required 
+                   style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+            <input type="email" name="email" placeholder="Tu email" required 
+                   style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+            <button class="btn" type="submit">Inscribirme</button>
+        </form>
+    <?php endif; ?>
+
+    <!-- Sección de recuperación (siempre visible como enlace) -->
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
         <p>
-          ¿Ya te inscribiste pero perdiste el link de invitación? 
-          <a href="#" id="toggleRecuperar" style="color:#FFD700;text-decoration:underline;">Recupéralo aquí</a>
+            ¿Ya te inscribiste pero perdiste el link de invitación? 
+            <a href="#" id="toggleRecuperar" style="color:#FFD700;text-decoration:underline;">Recupéralo aquí</a>
         </p>
 
         <div id="recuperarFormContainer" style="display:none;margin-top:1rem;">
-          <form id="recuperarForm">
-            <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
-            <input type="text" name="nombre" placeholder="Tu nombre" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
-            <input type="email" name="email" placeholder="Tu email" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
-            <button type="submit" class="btn" style="background:#FFD700;color:#071289;margin-top:0.5rem;">Recuperar link</button>
-          </form>
+            <form id="recuperarForm">
+                <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
+                <input type="text" name="nombre" placeholder="Tu nombre" 
+                       style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+                <input type="email" name="email" placeholder="Tu email" 
+                       style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+                <button type="submit" class="btn" style="background:#FFD700;color:#071289;margin-top:0.5rem;">Recuperar link</button>
+            </form>
         </div>
-      </div>
-      </form>
-    <?php endif; ?>
+    </div>
   </div>
 
   <script>
