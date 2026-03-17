@@ -9,6 +9,12 @@ error_log("🔍 [INSCRIBIR_TORNEO] Inicio del script");
 error_log("🔍 [INSCRIBIR_TORNEO] Sesión actual: " . print_r($_SESSION, true));
 error_log("🔍 [INSCRIBIR_TORNEO] POST recibido: " . print_r($_POST, true));
 
+// Si es socio, no debe enviar nombre/email
+if (isset($_SESSION['id_socio'])) {
+    // Forzar que no se usen campos de temporal
+    unset($_POST['nombre'], $_POST['email']);
+}
+
 try {
     $slug = $_POST['slug'] ?? '';
     if (!$slug || strlen($slug) !== 8) {

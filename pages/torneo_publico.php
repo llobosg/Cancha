@@ -118,36 +118,45 @@ if (!$torneo) {
 
   <script>
     function inscribirme() {
-      fetch('../api/inscribir_al_torneo.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({slug: '<?= $slug ?>'})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.redirect) {
-          window.location.href = data.redirect;
-        } else {
-          alert('Error: ' + (data.message || 'No se pudo inscribir'));
-        }
-      });
+      // Verificar si el usuario está logueado como socio
+      fetch('../api/verificar_sesion.php')
+        .then(r => r.json())
+        .then(data => {
+          if (data.socio) {
+            // Enviar solo el slug (sin nombre ni email)
+            fetch('../api/inscribir_al_torneo.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: new URLSearchParams({slug: '<?= $slug ?>'})
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.success && data.redirect) {
+                window.location.href = data.redirect;
+              } else {
+                alert('Error: ' + (data.message || 'No se pudo inscribir'));
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              alert('❌ Error de conexión. Inténtalo de nuevo.');
+            });
+          } else {
+            alert('⚠️ Tu sesión expiró. Por favor, inicia sesión nuevamente.');
+            window.location.href = '../';
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('❌ No se pudo verificar tu sesión. Inténtalo de nuevo.');
+        });
     }
 
-    document.getElementById('registroForm')?.addEventListener('submit', e => {
+    // === Manejo del formulario de recuperación ===
+    document.getElementById('toggleRecuperar')?.addEventListener('click', e => {
       e.preventDefault();
-      const formData = new FormData(e.target);
-      fetch('../api/inscribir_al_torneo.php', {
-        method: 'POST',
-        body: formData
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.redirect) {
-          window.location.href = data.redirect;
-        } else {
-          alert('Error: ' + (data.message || 'No se pudo inscribir'));
-        }
-      });
+      const container = document.getElementById('recuperarFormContainer');
+      container.style.display = container.style.display === 'none' ? 'block' : 'none';
     });
 
     document.getElementById('recuperarForm')?.addEventListener('submit', e => {
@@ -164,13 +173,33 @@ if (!$torneo) {
         } else {
           alert('❌ ' + (data.message || 'No se encontró tu inscripción'));
         }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('❌ Error al recuperar el link');
       });
     });
 
-    document.getElementById('toggleRecuperar')?.addEventListener('click', e => {
+    // === Manejo del formulario principal (para no socios) ===
+    document.getElementById('registroForm')?.addEventListener('submit', e => {
       e.preventDefault();
-      const container = document.getElementById('recuperarFormContainer');
-      container.style.display = container.style.display === 'none' ? 'block' : 'none';
+      const formData = new FormData(e.target);
+      fetch('../api/inscribir_al_torneo.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.redirect) {
+          window.location.href = data.redirect;
+        } else {
+          alert('❌ ' + (data.message || 'No se pudo inscribir'));
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('❌ Error al inscribirse');
+      });
     });
   </script>
 </body>
