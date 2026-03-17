@@ -45,6 +45,10 @@ if (!$invitacion) {
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      background: 
+      linear-gradient(rgba(0, 20, 40, 0.85), rgba(0, 30, 60, 0.9)),
+      url('/../uploads/logos/fondoamericano.png') center/cover no-repeat fixed;
+    color: white;
     }
     .container {
       background: white;
@@ -78,10 +82,12 @@ if (!$invitacion) {
 </head>
 <body>
   <div class="container">
-    <h1>🤝 ¡Te invitaron a jugar!</h1>
+    <h1>🤝 ¡Te invitaron a Jugar!</h1>
     <p><strong><?= htmlspecialchars($invitacion['nombre_socio_1'] ?? $invitacion['nombre_temp_1']) ?></strong> te invitó a participar en:</p>
     <h3><?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
-
+    <p>🎾</p>
+    <p>Organiza: <strong>Pasco Club</strong></p>
+    <p>Auspiciado por <strong>PALLAP</strong></p>
     <?php if (isset($_SESSION['id_socio'])): ?>
       <p>✅ Estás logueado como socio.</p>
       <button class="btn" onclick="aceptarInvitacion()">Aceptar y unirme</button>

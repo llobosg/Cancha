@@ -39,6 +39,10 @@ if (!$registro) {
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      background: 
+      linear-gradient(rgba(0, 20, 40, 0.85), rgba(0, 30, 60, 0.9)),
+      url('/../uploads/logos/fondoamericano.png') center/cover no-repeat fixed;
+    color: white;
     }
     .container {
       background: white;
