@@ -96,6 +96,15 @@ if (!$torneo) {
         <input type="email" name="email" placeholder="Tu email" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
 
         <button class="btn" type="submit">Inscribirme</button>
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+        <p style="margin-bottom:1rem;">¿Ya te inscribiste pero perdiste el link de invitación?</p>
+        <form id="recuperarForm">
+          <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
+          <input type="text" name="nombre" placeholder="Tu nombre" required style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+          <input type="email" name="email" placeholder="Tu email" required style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+          <button type="submit" class="btn" style="background:#FFD700;color:#071289;margin-top:0.5rem;">Recuperar link</button>
+        </form>
+      </div>
       </form>
     <?php endif; ?>
   </div>
@@ -130,6 +139,23 @@ if (!$torneo) {
           window.location.href = data.redirect;
         } else {
           alert('Error: ' + (data.message || 'No se pudo inscribir'));
+        }
+      });
+    });
+
+    document.getElementById('recuperarForm')?.addEventListener('submit', e => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      fetch('../api/recuperar_link_pareja.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.redirect) {
+          window.location.href = data.redirect;
+        } else {
+          alert('❌ ' + (data.message || 'No se encontró tu inscripción'));
         }
       });
     });

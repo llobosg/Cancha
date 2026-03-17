@@ -1,6 +1,8 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/brevo_mailer.php';
+
 session_start();
 
 error_log("🔍 [INSCRIBIR_TORNEO] Inicio del script");
@@ -15,7 +17,7 @@ try {
 
     // Buscar torneo
     $stmt_torneo = $pdo->prepare("
-        SELECT id_torneo, nivel, num_parejas_max 
+        SELECT id_torneo, nivel, num_parejas_max, nombre 
         FROM torneos 
         WHERE slug = ? AND estado = 'abierto'
     ");
@@ -117,6 +119,52 @@ try {
             ) VALUES (?, NULL, NULL, ?, NULL, ?, 'esperando_pareja', NULL)
         ")->execute([$torneo['id_torneo'], $id_temporal, $codigo_pareja]);
         error_log("✅ [INSCRIBIR_TORNEO] Inscripción de temporal completada: temporal=$id_temporal, torneo={$torneo['id_torneo']}");
+    }
+
+    // === ENVIAR CORREO CON BREVO ===
+    if ($es_socio) {
+        $stmt_email = $pdo->prepare("SELECT email, nombre FROM socios WHERE id_socio = ?");
+        $stmt_email->execute([$id_socio]);
+        $user = $stmt_email->fetch();
+        $email_destino = $user['email'] ?? null;
+        $nombre_destino = $user['nombre'] ?? 'Jugador';
+    } else {
+        $email_destino = $_POST['email'] ?? null;
+        $nombre_destino = $_POST['nombre'] ?? 'Jugador';
+    }
+
+    if ($email_destino && $nombre_destino) {
+        // Generar QR en base64
+        $qrLink = "https://canchasport.com/pages/torneo_invite.php?code={$codigo_pareja}";
+        $qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($qrLink);
+        $qrImage = @file_get_contents($qrApiUrl);
+        $qrData = $qrImage ? base64_encode($qrImage) : '';
+
+        // Enviar correo
+        try {
+            $mailer = new BrevoMailer();
+            $mailer->setTo($email_destino, $nombre_destino);
+            $mailer->setSubject('⚽ ¡Tu link de invitación para el torneo!');
+            $html = "
+                <h2>¡Hola {$nombre_destino}!</h2>
+                <p>Te has inscrito como primer jugador en el torneo <strong>{$torneo['nombre']}</strong>.</p>
+                <p>Ahora solo falta invitar a tu pareja:</p>
+                <p><strong>Link de invitación:</strong><br>
+                <a href='{$qrLink}' style='color:#071289;word-break:break-all;'>{$qrLink}</a></p>
+                " . ($qrData ? "<p>O escanea este QR:</p><img src='data:image/png;base64,{$qrData}' alt='QR' style='max-width:200px; border:1px solid #eee; border-radius:8px;'>" : "") . "
+                <p>¡Mucha suerte en el torneo!</p>
+                <hr style='margin:20px 0; border:0; border-top:1px solid #eee;'>
+                <small>Este mensaje fue generado automáticamente por CanchaSport.</small>
+            ";
+            $mailer->setHtmlBody($html);
+            if ($mailer->send()) {
+                error_log("✅ [INSCRIBIR_TORNEO] Correo enviado a: $email_destino");
+            } else {
+                error_log("⚠️ [INSCRIBIR_TORNEO] Falló el envío del correo a: $email_destino");
+            }
+        } catch (Exception $e) {
+            error_log("❌ [INSCRIBIR_TORNEO] Error al enviar correo: " . $e->getMessage());
+        }
     }
 
     echo json_encode([

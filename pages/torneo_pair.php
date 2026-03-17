@@ -62,7 +62,7 @@ if (!$registro) {
       border-radius: 8px;
     }
     .share-link {
-      background: #f1f1f1;
+      background: #bd2be9;
       padding: 0.8rem;
       border-radius: 6px;
       margin: 1rem 0;
