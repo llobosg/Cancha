@@ -323,10 +323,22 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           let html = '<div style="display:flex;flex-direction:column;gap:0.8rem;">';
           data.forEach(torneo => {
             const fecha = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
+            const fechaInicio = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
+            const fechaFin = new Date(torneo.fecha_fin).toLocaleDateString('es-CL');
+            const creado = new Date(torneo.created_at).toLocaleDateString('es-CL');
+            const publico = torneo.publico == 1 ? '✅ Sí' : '❌ No';
+            const estadoMap = {
+              'borrador': 'Borrador',
+              'abierto': 'Abierto',
+              'cerrado': 'Cerrado',
+              'en_progreso': 'En progreso',
+              'finalizado': 'Finalizado'
+            };
+            const estadoLabel = estadoMap[torneo.estado] || torneo.estado;
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
                 <strong>${torneo.nombre}</strong><br>
-                <small>${torneo.deporte} • ${torneo.categoria} • ${fecha}</small><br>
+                <small>${torneo.categoria} • ${fecha} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${estadoLabel} • ${publico} • ${torneo.premios}</small><br>
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verFixture(${torneo.id_torneo})">
                   Ver Fixture
