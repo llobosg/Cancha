@@ -102,7 +102,7 @@ if (!$torneo) {
 
   <script>
     function inscribirme() {
-      fetch('api/inscribir_al_torneo.php', {
+      fetch('../api/inscribir_al_torneo.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: new URLSearchParams({slug: '<?= $slug ?>'})
@@ -120,7 +120,7 @@ if (!$torneo) {
     document.getElementById('registroForm')?.addEventListener('submit', e => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      fetch('api/inscribir_al_torneo.php', {
+      fetch('../api/inscribir_al_torneo.php', {
         method: 'POST',
         body: formData
       })

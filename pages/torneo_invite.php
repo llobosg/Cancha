@@ -102,7 +102,7 @@ if (!$invitacion) {
 
   <script>
     function aceptarInvitacion() {
-      fetch('api/completar_pareja.php', {
+      fetch('../api/inscribir_al_torneo.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: new URLSearchParams({code: '<?= $code ?>'})
@@ -121,7 +121,7 @@ if (!$invitacion) {
     document.getElementById('registroForm')?.addEventListener('submit', e => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      fetch('api/inscribir_al_torneo.php', {
+      fetch('../api/inscribir_al_torneo.php', {
         method: 'POST',
         body: formData
       })

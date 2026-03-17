@@ -91,7 +91,7 @@ if (!$registro) {
 
     <p>O envía este enlace:</p>
     <div class="share-link" id="shareLink">
-      https://canchasport.com/torneo_invite.php?code=<?= urlencode($code) ?>
+      https://canchasport.com/pages/torneo_invite.php?code=<?= urlencode($code) ?>
     </div>
 
     <button class="btn" onclick="copiarEnlace()">📋 Copiar enlace</button>
