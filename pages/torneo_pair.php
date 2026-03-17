@@ -33,7 +33,7 @@ if (!$registro) {
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      background: #bc7dcf;
       display: flex;
       justify-content: center;
       align-items: center;
