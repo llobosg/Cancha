@@ -98,14 +98,19 @@ if (!$torneo) {
 
         <button class="btn" type="submit">Inscribirme</button>
         <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
-        <p style="margin-bottom:1rem;">¿Ya te inscribiste pero perdiste el link de invitación?</p>
-        <form id="recuperarForm">
-          <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
-          <input type="text" name="nombre" placeholder="Tu nombre o Alias" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
-          <input type="email" name="email" placeholder="Tu email" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
-          <button type="submit" class="btn" style="background:#FFD700;color:#071289;margin-top:0.5rem;">Recuperar link</button>
-          <p style="margin-bottom:1rem;">powered by canchasport.com</p>
-        </form>
+        <p>
+          ¿Ya te inscribiste pero perdiste el link de invitación? 
+          <a href="#" id="toggleRecuperar" style="color:#FFD700;text-decoration:underline;">Recupéralo aquí</a>
+        </p>
+
+        <div id="recuperarFormContainer" style="display:none;margin-top:1rem;">
+          <form id="recuperarForm">
+            <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
+            <input type="text" name="nombre" placeholder="Tu nombre" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+            <input type="email" name="email" placeholder="Tu email" style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
+            <button type="submit" class="btn" style="background:#FFD700;color:#071289;margin-top:0.5rem;">Recuperar link</button>
+          </form>
+        </div>
       </div>
       </form>
     <?php endif; ?>
@@ -160,6 +165,12 @@ if (!$torneo) {
           alert('❌ ' + (data.message || 'No se encontró tu inscripción'));
         }
       });
+    });
+
+    document.getElementById('toggleRecuperar')?.addEventListener('click', e => {
+      e.preventDefault();
+      const container = document.getElementById('recuperarFormContainer');
+      container.style.display = container.style.display === 'none' ? 'block' : 'none';
     });
   </script>
 </body>
