@@ -83,7 +83,9 @@ if (!$invitacion) {
   <div class="container">
     <h1>🤝 ¡Te invitaron a jugar!</h1>
     <p><strong><?= htmlspecialchars($invitacion['nombre_socio_1'] ?? $invitacion['nombre_temp_1']) ?></strong> te invitó a participar en:</p>
-    <h3><?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
+    <h3>🎾 <?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
+    <p> Organiza: PASCO CLUB </p>
+    <p> Auspicia: PALLAP </p>
 
     <?php if (isset($_SESSION['id_socio'])): ?>
       <p>✅ Estás logueado como socio.</p>
