@@ -119,41 +119,33 @@ if (!$torneo) {
 
   <script>
     function inscribirme() {
-      // Verificar si el usuario está logueado como socio
-      fetch('../api/verificar_sesion.php')
-        .then(r => r.json())
-        .then(data => {
-          if (data.socio) {
-            // Enviar solo el slug (sin nombre ni email)
-            fetch('../api/inscribir_al_torneo.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: new URLSearchParams({slug: '<?= $slug ?>'})
-            })
-            .then(r => r.json())
-            .then(data => {
-              if (data.success && data.redirect) {
-                window.location.href = data.redirect;
-              } else {
-                alert('Error: ' + (data.message || 'No se pudo inscribir'));
-              }
-            })
-            .catch(err => {
-              console.error(err);
-              alert('❌ Error de conexión. Inténtalo de nuevo.');
-            });
-          } else {
-            alert('⚠️ Tu sesión expiró. Por favor, inicia sesión nuevamente.');
-            window.location.href = '../';
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          alert('❌ No se pudo verificar tu sesión. Inténtalo de nuevo.');
-        });
+      fetch('../api/verificar_sesion.php', {
+        credentials: 'include' // ← Incluir cookies
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.socio) {
+          fetch('../api/inscribir_al_torneo.php', {
+            method: 'POST',
+            credentials: 'include', // ← Incluir cookies
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({slug: '<?= $slug ?>'})
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && data.redirect) {
+              window.location.href = data.redirect;
+            } else {
+              alert('Error: ' + (data.message || 'No se pudo inscribir'));
+            }
+          });
+        } else {
+          alert('⚠️ Tu sesión expiró. Por favor, inicia sesión nuevamente.');
+          window.location.href = '../';
+        }
+      });
     }
 
-    // === Manejo del formulario de recuperación ===
     document.getElementById('toggleRecuperar')?.addEventListener('click', e => {
       e.preventDefault();
       const container = document.getElementById('recuperarFormContainer');
@@ -165,6 +157,7 @@ if (!$torneo) {
       const formData = new FormData(e.target);
       fetch('../api/recuperar_link_pareja.php', {
         method: 'POST',
+        credentials: 'include', // ← Incluir cookies
         body: formData
       })
       .then(r => r.json())
@@ -174,19 +167,15 @@ if (!$torneo) {
         } else {
           alert('❌ ' + (data.message || 'No se encontró tu inscripción'));
         }
-      })
-      .catch(err => {
-        console.error(err);
-        alert('❌ Error al recuperar el link');
       });
     });
 
-    // === Manejo del formulario principal (para no socios) ===
     document.getElementById('registroForm')?.addEventListener('submit', e => {
       e.preventDefault();
       const formData = new FormData(e.target);
       fetch('../api/inscribir_al_torneo.php', {
         method: 'POST',
+        credentials: 'include', // ← Incluir cookies
         body: formData
       })
       .then(r => r.json())
@@ -196,10 +185,6 @@ if (!$torneo) {
         } else {
           alert('❌ ' + (data.message || 'No se pudo inscribir'));
         }
-      })
-      .catch(err => {
-        console.error(err);
-        alert('❌ Error al inscribirse');
       });
     });
   </script>
