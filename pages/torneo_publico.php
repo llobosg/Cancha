@@ -22,7 +22,7 @@ if (!$torneo) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><?= htmlspecialchars($torneo['nombre']) ?> - CanchaSport</title>
+  <title>CanchaSport - <?= htmlspecialchars($torneo['nombre']) ?></title>
   <style>
   body {
     margin: 0;
@@ -83,7 +83,10 @@ if (!$torneo) {
 <body>
   <div class="container">
     <h1>🏆 <?= htmlspecialchars($torneo['nombre']) ?></h1>
-    <p>¡Únete a este torneo americano!</p>
+    <p>¡Únete a este Americano!</p>
+    <p> 🎾 </p>
+    <p>Organiza: Pasco Club</p>
+    <p>Auspiciado por Pallap</p>
     <?php if (isset($_SESSION['id_socio'])): ?>
       <button class="btn" onclick="inscribirme()">Inscribirme al torneo</button>
     <?php else: ?>
@@ -91,6 +94,7 @@ if (!$torneo) {
         <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">
         <input type="text" name="nombre" placeholder="Tu nombre completo" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
         <input type="email" name="email" placeholder="Tu email" required style="display:block;width:100%;padding:0.6rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:4px;">
+
         <button class="btn" type="submit">Inscribirme</button>
       </form>
     <?php endif; ?>
