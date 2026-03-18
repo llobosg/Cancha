@@ -565,11 +565,13 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
     });
 
+    // editar torneo
     function editarTorneo(idTorneo) {
       // Redirigir al formulario de edición
       window.location.href = `crear_torneo.php?editar=${idTorneo}`;
     }
 
+    // Cerrar torneo
     function cerrarTorneo(idTorneo) {
       if (confirm('¿Cerrar inscripciones para este torneo?')) {
         fetch('../api/cambiar_estado_torneo.php', {
@@ -584,6 +586,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       }
     }
 
+    // Eliminar torneo
     function eliminarTorneo(idTorneo) {
       if (confirm('¿Eliminar este torneo? Esta acción no se puede deshacer.')) {
         fetch('../api/eliminar_torneo.php', {
