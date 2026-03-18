@@ -89,10 +89,11 @@ if ($torneo_cerrado) {
     </head>
     <body>
       <div class="container">
-        <h2>🔒 ¡Inscripciones completas!</h2>
+        <h2>🎾🎾🎾🎾🎾🎾</h2>
+        <h2>🔒 ¡Inscripciones cerradas!</h2>
         <p><?= htmlspecialchars($mensaje_amigable) ?></p>
-        <p>¡Pero no te preocupes! Regístrate en CanchaSport y sé el primero en enterarte de nuevos torneos y eventos.</p>
-        <a href="/pages/registro_socio.php?modo=individual" class="btn">👉 Únete ahora</a>
+        <p>¡Pero no te preocupes! Regístrate en canchasport.com y sé el primero en enterarte de nuevos torneos y eventos.</p>
+        <a href="/pages/registro_socio.php?modo=individual" class="btn">👉 Únete ahora 🎾</a>
       </div>
     </body>
     </html>
