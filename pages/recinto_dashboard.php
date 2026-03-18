@@ -349,7 +349,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
                 <!-- Menú de acciones (tres puntos) -->
                 <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;" onclick="toggleMenu(${torneo.id_torneo}, event)">
-                  ⋯
+                  ⋯***
                 </div>
 
                 <!-- Menú desplegable (oculto por defecto) -->
