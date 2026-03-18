@@ -1,15 +1,26 @@
 <?php
 header('Content-Type: application/json');
+
+// Logging temprano
+error_log("🔍 [GENERAR_FIXTURE] Inicio del script");
+
+// Cargar configuración
 require_once __DIR__ . '/../includes/config.php';
 
+// Iniciar sesión
+session_start();
+
+error_log("🔍 [GENERAR_FIXTURE] Sesión iniciada. ID recinto: " . ($_SESSION['id_recinto'] ?? 'NO DEFINIDO'));
+
 try {
-    session_start();
-    if (!isset($_SESSION['id_recinto'])) {
+    if (!isset($_SESSION[' id_recinto'])) {
+        error_log("❌ [GENERAR_FIXTURE] Acceso no autorizado: sesión sin id_recinto");
         throw new Exception('Acceso no autorizado');
     }
 
     $id_torneo = $_POST['id_torneo'] ?? null;
     if (!$id_torneo) {
+        error_log("❌ [GENERAR_FIXTURE] ID de torneo no proporcionado");
         throw new Exception('ID de torneo requerido');
     }
 
