@@ -341,11 +341,11 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             const totalRecaudado = valor * (torneo.parejas_inscritas || 0);
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
-                <strong>${torneo.nombre}</strong><br>
+                <strong>${torneo.nombre}</strong>
                 <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${parejas} • ${estadoLabel} • ${torneo.premios}</small>
-                <div><strong>Inscritos:</strong> ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div><br>
-                <div><strong>Valor:</strong> $${valor.toLocaleString()}</div>
-                <div><strong>Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${torneo.parejas_inscritas || 0} pendientes)</div>
+                <small><div>Inscritos: ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div></small>
+                <small><div>Valor: $${valor.toLocaleString()}</div></small>
+                <small><div>Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${torneo.parejas_inscritas || 0} pendientes)</div></small>
 
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="generarFixture(${torneo.id_torneo})">
