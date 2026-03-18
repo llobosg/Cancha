@@ -31,18 +31,9 @@ try {
         throw new Exception('Torneo no encontrado');
     }
 
-    // Contar parejas inscritas
-    $stmt_count = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM parejas_torneo 
-        WHERE id_torneo = ? AND estado = 'completa'
-    ");
-    $stmt_count->execute([$id_torneo]);
-    $num_parejas = (int)$stmt_count->fetchColumn();
-
-    if ($num_parejas < 2) {
-        throw new Exception('Se necesitan al menos 2 parejas para generar el fixture');
-    }
+    // === MODO PRUEBA: Forzar 6 parejas genéricas ===
+    $num_parejas = 6; // ← Fijar 6 parejas para testing
+    error_log("🧪 [GENERAR_FIXTURE] Modo prueba: forzando 6 parejas genéricas");
 
     // === GENERAR PAREJAS GENÉRICAS ===
     $parejas = [];
