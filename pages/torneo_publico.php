@@ -8,7 +8,7 @@ if (!$slug || strlen($slug) !== 8) {
     die('Torneo no válido');
 }
 
-/$stmt = $pdo->prepare("
+$stmt = $pdo->prepare("
     SELECT 
         id_torneo, 
         nombre, 
