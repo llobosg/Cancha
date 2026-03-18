@@ -340,19 +340,19 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             const valor = parseInt(torneo.valor) || 0;
             const totalRecaudado = valor * (torneo.parejas_inscritas || 0);
             html += `
-              <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
-                <br><strong>${torneo.nombre}</strong></br>
+              <div style="background:rgba(255,255,255,0.2);padding:1.2rem;border-radius:12px;position:relative;">
+                <h4 style="margin:0 0 0.8rem 0;font-size:1.1rem;">${torneo.nombre}</h4>
                 <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${parejas} • ${estadoLabel} • ${torneo.premios}</small>
                 <small><div>Inscritos: ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div></small>
                 <small><div>Valor: $${valor.toLocaleString()}</div></small>
                 <small><div>Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${torneo.parejas_inscritas || 0} pendientes)</div></small>
 
                 <!-- Menú de acciones (tres puntos) -->
-                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;" onclick="toggleMenu(${torneo.id_torneo}, event)">
-                  ⋯***
+                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;font-size:1.2rem;color:#FFD700;z-index:5;" onclick="toggleMenu(${torneo.id_torneo}, event)">
+                  ⋮
                 </div>
 
-                <!-- Menú desplegable (oculto por defecto) -->
+                <!-- Menú desplegable -->
                 <div id="menu-${torneo.id_torneo}" style="display:none;position:absolute;top:2rem;right:0.5rem;background:white;color:#071289;padding:0.5rem;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:10;">
                   <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="editarTorneo(${torneo.id_torneo})">✏️ Editar</div>
                   <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="cerrarTorneo(${torneo.id_torneo})">🔒 Cerrar</div>
