@@ -341,11 +341,23 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             const totalRecaudado = valor * (torneo.parejas_inscritas || 0);
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
-                <strong>${torneo.nombre}</strong>
+                <br><strong>${torneo.nombre}</strong></br>
                 <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${parejas} • ${estadoLabel} • ${torneo.premios}</small>
                 <small><div>Inscritos: ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div></small>
                 <small><div>Valor: $${valor.toLocaleString()}</div></small>
                 <small><div>Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${torneo.parejas_inscritas || 0} pendientes)</div></small>
+
+                <!-- Menú de acciones (tres puntos) -->
+                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;" onclick="toggleMenu(${torneo.id_torneo}, event)">
+                  ⋯
+                </div>
+
+                <!-- Menú desplegable (oculto por defecto) -->
+                <div id="menu-${torneo.id_torneo}" style="display:none;position:absolute;top:2rem;right:0.5rem;background:white;color:#071289;padding:0.5rem;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:10;">
+                  <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="editarTorneo(${torneo.id_torneo})">✏️ Editar</div>
+                  <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="cerrarTorneo(${torneo.id_torneo})">🔒 Cerrar</div>
+                  <div style="padding:0.3rem 0.6rem;cursor:pointer;color:#FF6B6B;" onclick="eliminarTorneo(${torneo.id_torneo})">🗑️ Eliminar</div>
+                </div>
 
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="generarFixture(${torneo.id_torneo})">
@@ -536,6 +548,54 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: new URLSearchParams({id_torneo: ID})
       })
+    }
+
+    // Cerrar otros menús al abrir uno nuevo
+    function toggleMenu(id, event) {
+      event.stopPropagation();
+      const menu = document.getElementById(`menu-${id}`);
+      // Cerrar todos los menús
+      document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
+      // Abrir el seleccionado
+      menu.style.display = 'block';
+    }
+
+    // Cerrar menús al hacer clic fuera
+    document.addEventListener('click', () => {
+      document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
+    });
+
+    function editarTorneo(idTorneo) {
+      // Redirigir al formulario de edición
+      window.location.href = `crear_torneo.php?editar=${idTorneo}`;
+    }
+
+    function cerrarTorneo(idTorneo) {
+      if (confirm('¿Cerrar inscripciones para este torneo?')) {
+        fetch('../api/cambiar_estado_torneo.php', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_torneo: idTorneo, estado: 'cerrado'})
+        }).then(r => r.json()).then(data => {
+          if (data.success) location.reload();
+          else alert('Error: ' + data.message);
+        });
+      }
+    }
+
+    function eliminarTorneo(idTorneo) {
+      if (confirm('¿Eliminar este torneo? Esta acción no se puede deshacer.')) {
+        fetch('../api/eliminar_torneo.php', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_torneo: idTorneo})
+        }).then(r => r.json()).then(data => {
+          if (data.success) location.reload();
+          else alert('Error: ' + data.message);
+        });
+      }
     }
 
   </script>

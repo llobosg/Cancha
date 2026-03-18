@@ -17,13 +17,34 @@ if (!$stmt_check->fetch()) {
     header('Location: ../index.php');
     exit;
 }
+
+// Modo edición
+$modo_edicion = false;
+$torneo_data = null;
+
+if (isset($_GET['editar'])) {
+    $id_torneo = (int)$_GET['editar'];
+    $stmt = $pdo->prepare("
+        SELECT * 
+        FROM torneos 
+        WHERE id_torneo = ? AND id_recinto = ?
+    ");
+    $stmt->execute([$id_torneo, $id_recinto]);
+    $torneo_data = $stmt->fetch();
+    if ($torneo_data) {
+        $modo_edicion = true;
+    } else {
+        header('Location: recinto_dashboard.php');
+        exit;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Torneo Americano | CanchaSport</title>
+    <title><?= $modo_edicion ? 'Editar Torneo' : 'Crear Torneo Americano' ?> | CanchaSport</title>
     <link rel="stylesheet" href="../styles.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
@@ -65,7 +86,7 @@ if (!$stmt_check->fetch()) {
         .btn-submit {
             width: 100%;
             padding: 0.8rem;
-            background: #00cc66;
+            background: <?= $modo_edicion ? '#FFA500' : '#00cc66' ?>;
             color: white;
             border: none;
             border-radius: 8px;
@@ -75,7 +96,7 @@ if (!$stmt_check->fetch()) {
             transition: background 0.2s;
         }
         .btn-submit:hover {
-            background: #00aa55;
+            background: <?= $modo_edicion ? '#e69500' : '#00aa55' ?>;
         }
         .back-link {
             display: block;
@@ -111,79 +132,90 @@ if (!$stmt_check->fetch()) {
 </head>
 <body>
     <div class="form-container">
-        <h2>🏆 Crear Torneo Americano</h2>
+        <h2>🏆 <?= $modo_edicion ? 'Editar Torneo' : 'Crear Torneo Americano' ?></h2>
         <form id="crearTorneoForm">
-            <input type="hidden" name="id_recinto" value="<?= $_SESSION['club_id'] ?>">
+            <input type="hidden" name="id_recinto" value="<?= $id_recinto ?>">
+            <?php if ($modo_edicion): ?>
+                <input type="hidden" name="id_torneo" value="<?= $torneo_data['id_torneo'] ?>">
+            <?php endif; ?>
 
             <div class="form-group">
                 <label for="nombre">Nombre del torneo *</label>
-                <input type="text" id="nombre" name="nombre" required placeholder="Ej: Torneo Primavera Pádel">
+                <input type="text" id="nombre" name="nombre" value="<?= htmlspecialchars($torneo_data['nombre'] ?? '') ?>" required placeholder="Ej: Torneo Primavera Pádel">
             </div>
 
             <div class="form-group">
                 <label for="deporte">Deporte *</label>
                 <select id="deporte" name="deporte" required>
-                    <option value="padel">Pádel</option>
-                    <option value="tenis">Tenis</option>
+                    <option value="padel" <?= ($torneo_data['deporte'] ?? 'padel') === 'padel' ? 'selected' : '' ?>>Pádel</option>
+                    <option value="tenis" <?= ($torneo_data['deporte'] ?? '') === 'tenis' ? 'selected' : '' ?>>Tenis</option>
+                    <option value="futbolito" <?= ($torneo_data['deporte'] ?? '') === 'futbolito' ? 'selected' : '' ?>>Futbolito</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="categoria">Categoría *</label>
                 <select id="categoria" name="categoria" required>
-                    <option value="masculina">Masculina</option>
-                    <option value="femenina">Femenina</option>
-                    <option value="mixta">Mixta</option>
+                    <option value="masculina" <?= ($torneo_data['categoria'] ?? '') === 'masculina' ? 'selected' : '' ?>>Masculina</option>
+                    <option value="femenina" <?= ($torneo_data['categoria'] ?? '') === 'femenina' ? 'selected' : '' ?>>Femenina</option>
+                    <option value="mixta" <?= ($torneo_data['categoria'] ?? 'mixta') === 'mixta' ? 'selected' : '' ?>>Mixta</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="nivel">Nivel *</label>
                 <select id="nivel" name="nivel" required>
-                    <option value="Sexta">Sexta</option>
-                    <option value="Quinta">Quinta</option>
-                    <option value="Cuarta">Cuarta</option>
-                    <option value="Tercera">Tercera</option>
-                    <option value="Segunda">Segunda</option>
-                    <option value="Primera">Primera</option>
+                    <?php
+                    $niveles = ['Sexta','Quinta','Cuarta','Tercera','Segunda','Primera'];
+                    foreach ($niveles as $n): ?>
+                        <option value="<?= $n ?>" <?= ($torneo_data['nivel'] ?? '') === $n ? 'selected' : '' ?>><?= $n ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="fecha_inicio">Fecha y hora inicio *</label>
-                <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" required>
+                <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" 
+                       value="<?= $torneo_data ? date('Y-m-d\TH:i', strtotime($torneo_data['fecha_inicio'])) : '' ?>" required>
             </div>
 
             <div class="form-group">
                 <label for="fecha_fin">Fecha y hora fin *</label>
-                <input type="datetime-local" id="fecha_fin" name="fecha_fin" required>
+                <input type="datetime-local" id="fecha_fin" name="fecha_fin" 
+                       value="<?= $torneo_data ? date('Y-m-d\TH:i', strtotime($torneo_data['fecha_fin'])) : '' ?>" required>
             </div>
 
             <div class="form-group">
                 <label for="num_parejas_max">Cantidad máxima de parejas *</label>
-                <input type="number" id="num_parejas_max" name="num_parejas_max" min="2" max="32" required>
+                <input type="number" id="num_parejas_max" name="num_parejas_max" 
+                       value="<?= (int)($torneo_data['num_parejas_max'] ?? 8) ?>" min="2" max="32" required>
             </div>
 
             <div class="form-group">
                 <label>Valor por pareja ($)</label>
-                <input type="number" name="valor" min="0" value="0" required>
+                <input type="number" name="valor" 
+                       value="<?= (int)($torneo_data['valor'] ?? 0) ?>" min="0" required>
             </div>
 
             <div class="form-group">
                 <label for="premios">Premios (opcional)</label>
-                <input type="text" id="premios" name="premios" placeholder="Ej: Trofeo + Vales">
+                <input type="text" id="premios" name="premios" 
+                       value="<?= htmlspecialchars($torneo_data['premios'] ?? '') ?>" placeholder="Ej: Trofeo + Vales">
             </div>
 
             <div class="form-group">
                 <label>
-                    <input type="checkbox" name="publico" value="1" class="back-link"> Publicar en landing global
+                    <input type="checkbox" name="publico" value="1" 
+                           <?= ($torneo_data['publico'] ?? 0) ? 'checked' : '' ?>> Publicar en landing global
                 </label>
             </div>
 
-            <button type="submit" class="btn-submit">Crear Torneo</button>
+            <button type="submit" class="btn-submit">
+                <?= $modo_edicion ? 'Actualizar Torneo' : 'Crear Torneo' ?>
+            </button>
         </form>
 
-        <!-- QR Resultado -->
+        <!-- QR Resultado (solo en creación) -->
         <div id="qrSection">
             <h3>✅ ¡Torneo creado!</h3>
             <p>Comparte este enlace o escanea el QR:</p>
@@ -202,7 +234,7 @@ if (!$stmt_check->fetch()) {
             const data = Object.fromEntries(formData);
 
             try {
-                const res = await fetch('../api/crear_torneo.php', {
+                const res = await fetch('../api/<?= $modo_edicion ? 'editar_torneo.php' : 'crear_torneo.php' ?>', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
@@ -210,29 +242,29 @@ if (!$stmt_check->fetch()) {
                 const result = await res.json();
 
                 if (result.success) {
-                    // Mostrar QR y enlace
-                    const qrSection = document.getElementById('qrSection');
-                    const qrUrlEl = document.getElementById('qrUrl');
-                    qrUrlEl.textContent = result.qr_url;
-                    qrSection.style.display = 'block';
+                    <?php if (!$modo_edicion): ?>
+                        // Mostrar QR solo en creación
+                        const qrSection = document.getElementById('qrSection');
+                        const qrUrlEl = document.getElementById('qrUrl');
+                        qrUrlEl.textContent = result.qr_url;
+                        qrSection.style.display = 'block';
 
-                    if (typeof QRCode !== 'undefined') {
-                        QRCode.toCanvas(document.getElementById('qrCanvas'), result.qr_url, { width: 200 }, function (error) {
-                            if (error) console.error(error);
-                        });
-                    } else {
-                        console.warn('QRCode no disponible');
-                        document.getElementById('qrCanvas').outerHTML = '<p style="color:white;">⚠️ QR no disponible</p>';
-                    }
-
-                    // Scroll to QR
-                    qrSection.scrollIntoView({ behavior: 'smooth' });
+                        if (typeof QRCode !== 'undefined') {
+                            QRCode.toCanvas(document.getElementById('qrCanvas'), result.qr_url, { width: 200 }, function (error) {
+                                if (error) console.error(error);
+                            });
+                        }
+                        qrSection.scrollIntoView({ behavior: 'smooth' });
+                    <?php else: ?>
+                        alert('✅ Torneo actualizado');
+                        window.location.href = 'recinto_dashboard.php';
+                    <?php endif; ?>
                 } else {
                     alert('❌ ' + result.message);
                 }
             } catch (err) {
                 console.error(err);
-                alert('❌ Error al crear el torneo');
+                alert('❌ Error al procesar el formulario');
             }
         });
 
