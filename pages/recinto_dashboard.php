@@ -336,7 +336,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             };
             const estadoLabel = estadoMap[torneo.estado] || torneo.estado;
             const parejas = `${torneo.num_parejas_max} parejas`;
-            const totalRecaudado = torneo.valor * torneo.parejas_inscritas;
             const pendientes = torneo.parejas_inscritas;
             const valor = parseInt(torneo.valor) || 0;
             const totalRecaudado = valor * (torneo.parejas_inscritas || 0);
