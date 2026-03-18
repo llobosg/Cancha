@@ -22,78 +22,44 @@ try {
     $sql = "";
     $params = [];
 
-    // === Modo individual: solo mostrar datos del socio ===
-    case 'inscritos':
-        if (isset($_SESSION['club_id'])) {
-            // Modo club: mostrar todos los inscritos del próximo evento
-            $sql = "
-                SELECT 
-                    r.fecha,
-                    r.hora_inicio,
-                    te.tipoevento AS id_tipoevento,
-                    r.id_club,
-                    r.id_cancha,
-                    r.monto_total AS costo_evento,
-                    s.alias as nombre,
-                    i.posicion_jugador,
-                    i.lleva_cerveza,
-                    i.id_inscrito,
-                    c.monto AS cuota_monto,
-                    c.fecha_pago,
-                    c.comentario,
-                    r.id_reserva AS id_evento,
-                    s.id_socio
-                FROM reservas r
-                JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
-                JOIN socios s ON i.id_socio = s.id_socio
-                LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
-                JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                WHERE r.id_club = ? 
-                AND (
-                    r.fecha > CURDATE() 
-                    OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                )
-                ORDER BY r.fecha ASC, r.hora_inicio ASC
-                LIMIT 50
-            ";
-            $params = [$_SESSION['club_id']];
-        } else {
-            // Modo individual: mostrar solo tus inscripciones futuras
-            $sql = "
-                SELECT 
-                    r.fecha,
-                    r.hora_inicio,
-                    te.tipoevento AS id_tipoevento,
-                    NULL AS id_club,
-                    r.id_cancha,
-                    r.monto_total AS costo_evento,
-                    s.alias as nombre,
-                    i.posicion_jugador,
-                    i.lleva_cerveza,
-                    i.id_inscrito,
-                    c.monto AS cuota_monto,
-                    c.fecha_pago,
-                    c.comentario,
-                    r.id_reserva AS id_evento,
-                    s.id_socio
-                FROM reservas r
-                JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
-                JOIN socios s ON i.id_socio = s.id_socio
-                LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
-                JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                WHERE s.id_socio = ?
-                AND (
-                    r.fecha > CURDATE() 
-                    OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                )
-                ORDER BY r.fecha ASC, r.hora_inicio ASC
-                LIMIT 50
-            ";
-            $params = [$_SESSION['id_socio']];
-        }
-        break;
+    if (isset($_SESSION['club_id'])) {
+        // === Modo club ===
+        $club_id = $_SESSION['club_id'];
+        switch ($filtro) {
+            case 'inscritos':
+                $sql = "
+                    SELECT 
+                        r.fecha,
+                        r.hora_inicio,
+                        te.tipoevento AS id_tipoevento,
+                        r.id_club,
+                        r.id_cancha,
+                        r.monto_total AS costo_evento,
+                        s.alias as nombre,
+                        i.posicion_jugador,
+                        i.lleva_cerveza,
+                        i.id_inscrito,
+                        c.monto AS cuota_monto,
+                        c.fecha_pago,
+                        c.comentario,
+                        r.id_reserva AS id_evento,
+                        s.id_socio
+                    FROM reservas r
+                    JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
+                    JOIN socios s ON i.id_socio = s.id_socio
+                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
+                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE r.id_club = ? 
+                      AND (
+                        r.fecha > CURDATE() 
+                        OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
+                      )
+                    ORDER BY r.fecha ASC, r.hora_inicio ASC
+                    LIMIT 50
+                ";
+                $params = [$club_id];
+                break;
 
             case 'reservas':
                 $sql = "
@@ -150,31 +116,31 @@ try {
             case 'cuotas':
                 $sql = "
                     SELECT 
-                            c.id_cuota,
-                            COALESCE(r.fecha, e.fecha) AS fecha_evento,
-                            CASE 
-                                WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-                                WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-                                ELSE 'Sin detalle'
-                            END AS origen,
-                            c.monto AS costo_evento,
-                            s.nombre AS nombre_socio,
-                            c.monto,
-                            c.fecha_pago,
-                            c.estado,
-                            c.comentario
-                        FROM cuotas c
-                        INNER JOIN socios s ON c.id_socio = s.id_socio
-                        INNER JOIN clubs cl ON s.id_club = cl.id_club
-                        LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-                        LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-                        LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                        LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-                        LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-                        WHERE cl.id_club = ? AND c.estado IN ('pendiente', 'en_revision')
-                        ORDER BY c.fecha_vencimiento DESC
-                        LIMIT 50
-                    ";
+                        c.id_cuota,
+                        COALESCE(r.fecha, e.fecha) AS fecha_evento,
+                        CASE 
+                            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+                            ELSE 'Sin detalle'
+                        END AS origen,
+                        c.monto AS costo_evento,
+                        s.nombre AS nombre_socio,
+                        c.monto,
+                        c.fecha_pago,
+                        c.estado,
+                        c.comentario
+                    FROM cuotas c
+                    INNER JOIN socios s ON c.id_socio = s.id_socio
+                    INNER JOIN clubs cl ON s.id_club = cl.id_club
+                    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+                    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+                    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+                    WHERE cl.id_club = ? AND c.estado IN ('pendiente', 'en_revision')
+                    ORDER BY c.fecha_vencimiento DESC
+                    LIMIT 50
+                ";
                 $params = [$club_id];
                 break;
 
@@ -196,7 +162,7 @@ try {
                         s.email AS comentario,
                         s.id_socio AS id_evento,
                         s.id_socio,
-                        cl.nombre AS club_nombre   -- ✅ Coma agregada arriba
+                        cl.nombre AS club_nombre
                     FROM socios s
                     INNER JOIN clubs cl ON s.id_club = cl.id_club
                     WHERE s.id_club = ?
@@ -206,31 +172,48 @@ try {
                 $params = [$club_id];
                 break;
 
-                // Verificar si el usuario actual es responsable
-                $es_responsable = false;
-                if (isset($_SESSION['id_socio'])) {
-                    $stmt_resp = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
-                    $stmt_resp->execute([$_SESSION['id_socio'], $club_id]);
-                    $row = $stmt_resp->fetch();
-                    $es_responsable = $row && $row['es_responsable'] == 1;
-                }
-
-                // Construir acciones
-                $resultados = [];
-                foreach ($socios as $socio) {
-                    $acciones = '-';
-                    if ($es_responsable) {
-                        $acciones = '
-                            <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#3498DB;" onclick="editarPerfilSocio(' . $socio['id_socio'] . ')">✏️</button>
-                            <button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#E74C3C;margin-top:0.2rem;" onclick="eliminarSocio(' . $socio['id_socio'] . ')">🗑️</button>
-                        ';
-                    }
-                    $socio['accion'] = $acciones;
-                    $resultados[] = $socio;
-                }
-
-                echo json_encode($resultados);
+            default:
+                echo json_encode([]);
                 exit;
+        }
+
+    } else {
+        // === Modo individual ===
+        switch ($filtro) {
+            case 'inscritos':
+                $sql = "
+                    SELECT 
+                        r.fecha,
+                        r.hora_inicio,
+                        te.tipoevento AS id_tipoevento,
+                        NULL AS id_club,
+                        r.id_cancha,
+                        r.monto_total AS costo_evento,
+                        s.alias as nombre,
+                        i.posicion_jugador,
+                        i.lleva_cerveza,
+                        i.id_inscrito,
+                        c.monto AS cuota_monto,
+                        c.fecha_pago,
+                        c.comentario,
+                        r.id_reserva AS id_evento,
+                        s.id_socio
+                    FROM reservas r
+                    JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
+                    JOIN socios s ON i.id_socio = s.id_socio
+                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
+                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE s.id_socio = ?
+                      AND (
+                        r.fecha > CURDATE() 
+                        OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
+                      )
+                    ORDER BY r.fecha ASC, r.hora_inicio ASC
+                    LIMIT 50
+                ";
+                $params = [$_SESSION['id_socio']];
+                break;
 
             default:
                 echo json_encode([]);
@@ -241,11 +224,10 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     echo json_encode($resultados);
 
 } catch (Exception $e) {
-    error_log("Error en cargar_detalle_eventos.php: " . $e->getMessage());
+    error_log("Error en get_tabla_datos.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Error interno del servidor']);
 }
