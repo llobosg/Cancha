@@ -165,6 +165,11 @@ if (!$stmt_check->fetch()) {
             </div>
 
             <div class="form-group">
+                <label>Valor por pareja ($)</label>
+                <input type="number" name="valor" min="0" value="0" required>
+            </div>
+
+            <div class="form-group">
                 <label for="premios">Premios (opcional)</label>
                 <input type="text" id="premios" name="premios" placeholder="Ej: Trofeo + Vales">
             </div>

@@ -98,6 +98,7 @@ if (!$registro) {
     <div class="share-link" id="shareLink">
       https://canchasport.com/pages/torneo_invite.php?code=<?= urlencode($code) ?>
     </div>
+    <p style="color: #071289;">Recibirás un correo de confirmación una vez que tu pareja se una al torneo.</p>
 
     <button class="btn" onclick="copiarEnlace()">📋 Copiar enlace</button>
     <button class="btn" style="background: #6c757d;margin-top:0.5rem;" onclick="window.location.href='/'">Volver al inicio</button>
@@ -105,7 +106,7 @@ if (!$registro) {
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
-    const link = 'https://canchasport.com/torneo_invite.php?code=<?= urlencode($code) ?>';
+    const link = 'https://canchasport.com/pages/torneo_invite.php?code=<?= urlencode($code) ?>';
     new QRCode(document.getElementById("qrcode"), {
       text: link,
       width: 160,

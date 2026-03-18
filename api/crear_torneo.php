@@ -13,7 +13,7 @@ try {
 
     // Validar datos
     $data = json_decode(file_get_contents('php://input'), true);
-    $required = ['nombre', 'deporte', 'categoria', 'nivel', 'fecha_inicio', 'fecha_fin', 'num_parejas_max'];
+    $required = ['nombre', 'deporte', 'categoria', 'nivel', 'fecha_inicio', 'fecha_fin', 'num_parejas_max', 'valor'];
     foreach ($required as $field) {
         if (empty($data[$field])) throw new Exception("Campo requerido: {$field}");
     }
@@ -30,8 +30,8 @@ try {
     $stmt = $pdo->prepare("
         INSERT INTO torneos (
             id_recinto, nombre, descripcion, deporte, categoria, nivel,
-            fecha_inicio, fecha_fin, num_parejas_max, estado, publico, premios
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierto', ?, ?)
+            fecha_inicio, fecha_fin, num_parejas_max, valor, estado, publico, premios
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierto', ?, ?)
     ");
     $stmt->execute([
         $id_recinto,
@@ -43,6 +43,7 @@ try {
         $fecha_inicio->format('Y-m-d H:i:s'),
         $fecha_fin->format('Y-m-d H:i:s'),
         $data['num_parejas_max'],
+        $data['valor'],
         $data['publico'] ?? 0,
         $data['premios'] ?? ''
     ]);

@@ -87,6 +87,7 @@ if (!$invitacion) {
     <h3>🎾 <?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
     <p> Organiza: PASCO CLUB </p>
     <p> Auspicia: PALLAP </p>
+    <p><strong>💰 Valor:</strong> $<?= number_format($torneo['valor'], 0, ',', '.') ?></p>
 
     <?php if (isset($_SESSION['id_socio'])): ?>
       <p>✅ Estás logueado como socio.</p>
@@ -102,6 +103,7 @@ if (!$invitacion) {
           <input type="email" name="email" placeholder="Tu email" required>
         </div>
         <button class="btn" type="submit">Unirme al torneo</button>
+        <p style="color: #071289;">Recibirás un correo de confirmación una vez que te inscribas.</p>
       </form>
     <?php endif; ?>
   </div>

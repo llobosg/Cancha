@@ -56,11 +56,13 @@ try {
     if ($primer) {
         $mailer = new BrevoMailer();
         $mailer->setTo($primer['email'], $primer['nombre']);
-        $mailer->setSubject('🎉 ¡Tu pareja se ha unido!');
+        $mailer->setSubject('🎉 ¡Tu pareja Pádel al Americano se ha unido!');
         $mailer->setHtmlBody("
             <h2>¡Hola {$primer['nombre']}!</h2>
             <p>¡Tu pareja ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>!</p>
             <p>Ya están listos para jugar. 🎾</p>
+            <p>Recuerda que el torneo comienza el <strong>{fechaInicio}</strong>.</p>
+            <p>Para estadísticas y fixture, visita o regístrate en: <a href='https://canchasport.com/pages/dashboard_socio.php' style='color:#FFD700;'>Ver dashboard</a></p>
         ");
         $mailer->send();
     }
@@ -114,7 +116,8 @@ function enviarCorreoConfirmacion($email, $nombre, $torneo, $link) {
     $mailer->setHtmlBody("
         <h2>¡Hola {$nombre}!</h2>
         <p>Tu inscripción al torneo <strong>{$torneo}</strong> ha sido confirmada.</p>
-        <p>📊 <a href='{$link}' style='color:#FFD700;'>Ver estadísticas y fixture</a></p>
+        <p>Recuerda que el torneo comienza el <strong>{fechaInicio}</strong>.</p>
+        <p>📊 <a href='{$link}' style='color:#FFD700;'>Visita o regístrate para ver estadísticas y fixture</a></p>
         <p>¡Listos para jugar!</p>
     ");
     $mailer->send();

@@ -335,20 +335,32 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               'finalizado': 'Finalizado'
             };
             const estadoLabel = estadoMap[torneo.estado] || torneo.estado;
-            const progreso = `${torneo.parejas_inscritas}/${torneo.num_parejas_max} parejas`;
+            const parejas = `${torneo.num_parejas_max} parejas`;
+            const totalRecaudado = torneo.valor * torneo.parejas_inscritas;
+            const pendientes = torneo.parejas_inscritas;
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1rem;border-radius:10px;">
                 <strong>${torneo.nombre}</strong><br>
-                <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${torneo.num_parejas_max} • ${progreso} • ${estadoLabel} • ${torneo.premios}</small>
+                <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${parejas} • ${estadoLabel} • ${torneo.premios}</small>
                 <div><strong>👥 Inscritos:</strong> ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div><br>
+                <div><strong>💰 Valor:</strong> $${parseInt(torneo.valor).toLocaleString()}</div>
+                <div><strong>📊 Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${pendientes} pendientes)</div>
 
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
+                        onclick="generarFixture(${torneo.id_torneo})">
+                  Generar Fixture
+                </button>
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verFixture(${torneo.id_torneo})">
                   Ver Fixture
-                </button>
+                </button>   
                 <button class="action-btn" style="padding:0.35rem;font-size:0.9rem;background:#FFD700;color:#071289;flex:1;"
                         onclick="compartirTorneo('${torneo.slug}')">
                   Compartir link
+                </button>
+                <button class="action-btn" style="padding:0.35rem;font-size:0.9rem;background:#4ECDC4;color:white;flex:1;"
+                        onclick="verParejas(${torneo.id_torneo})">
+                  Parejas
                 </button>
               </div>
             `;
@@ -451,6 +463,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       document.getElementById('submodalGenerico').style.display = 'none';
     }
 
+    // === compartir torneo ===
     function compartirTorneo(slug) {
       const link = `https://canchasport.com/pages/torneo_publico.php?slug=${slug}`;
       let qrHtml = `
@@ -482,11 +495,48 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       });
     }
 
+    // === copiar enlace ===
     function copiarLink(link) {
       navigator.clipboard.writeText(link).then(() => {
         alert('✅ Enlace copiado al portapapeles');
       });
     }
+
+    // === ver parejas ===
+    function verParejas(idTorneo) {
+      fetch(`../api/get_parejas_torneo.php?id_torneo=${idTorneo}`)
+        .then(r => r.json())
+        .then(data => {
+          let html = `<h3>Parejas inscritas</h3><table style="width:100%;border-collapse:collapse;margin-top:1rem;">
+            <thead><tr style="background:#071289;color:white;">
+              <th>Nº</th><th>Nombre</th><th>Estado</th><th>Acción</th>
+            </tr></thead><tbody>`;
+          
+          data.forEach((p, i) => {
+            html += `
+              <tr style="border-bottom:1px solid #ccc;">
+                <td>${i+1}</td>
+                <td>${p.nombre}</td>
+                <td>${p.estado_valor || 'pendiente'}</td>
+                <td><span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarPareja(${p.id_pareja})">🗑️</span></td>
+              </tr>
+            `;
+          });
+          html += `</tbody></table><button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+          document.getElementById('submodalContenido').innerHTML = html;
+          document.getElementById('submodalGenerico').style.display = 'flex';
+        });
+    }
+
+    function generarFixture(ID) {
+      fetch('../api/generar_fixture.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_torneo: ID})
+      })
+    }
+
   </script>
   <!-- Submodal genérico -->
   <div id="submodalGenerico" style="
