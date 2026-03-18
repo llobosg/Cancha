@@ -32,7 +32,7 @@ try {
         throw new Exception('Torneo no encontrado');
     }
 
-    // === OBTENER PAREJAS REALES CON SUS ID_REALES ===
+    // === OBTENER PAREJAS REALES ===
     $stmt_parejas = $pdo->prepare("
         SELECT id_pareja 
         FROM parejas_torneo 
@@ -46,27 +46,13 @@ try {
     $stmt_parejas->execute([$id_torneo]);
     $parejas_db = $stmt_parejas->fetchAll(PDO::FETCH_ASSOC);
 
+    if (count($parejas_db) < 2) {
+        throw new Exception('Se necesitan al menos 2 parejas para generar el fixture');
+    }
+
     $parejas = [];
     foreach ($parejas_db as $p) {
-        $parejas[] = [
-            'id' => $p['id_pareja'], // ← ¡Este es el ID real!
-            'nombre' => '#' . $p['id_pareja']
-        ];
-    }
-    $stmt_count->execute([$id_torneo]);
-    $num_parejas = (int)$stmt_count->fetchColumn();
-
-    if ($num_parejas < 6) {
-        throw new Exception('Se necesitan al menos 6 parejas para generar el fixture');
-    }
-
-    // === GENERAR PAREJAS GENÉRICAS ===
-    $parejas = [];
-    for ($i = 1; $i <= $num_parejas; $i++) {
-        $parejas[] = [
-            'id' => $i,
-            'nombre' => "#{$i}"
-        ];
+        $parejas[] = ['id' => $p['id_pareja'], 'nombre' => '#' . $p['id_pareja']];
     }
 
     // === ALGORITMO ROUND-ROBIN SIMPLE ===

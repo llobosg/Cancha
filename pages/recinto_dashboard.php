@@ -371,7 +371,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                         onclick="compartirTorneo('${torneo.slug}')">
                   Compartir link
                 </button>
-                <button class="action-btn" style="padding:0.35rem;font-size:0.9rem;background:#4ECDC4;color:white;flex:1;"
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verParejas(${torneo.id_torneo})">
                   Parejas
                 </button>
