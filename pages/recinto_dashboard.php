@@ -547,7 +547,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             method: 'POST',
             credentials: 'include',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_torneo: idTorneo})
+            body: new URLSearchParams({id_torneo: String(idTorneo)})
         })
         .then(r => r.json())
         .then(data => {
@@ -593,7 +593,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           method: 'POST',
           credentials: 'include',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: new URLSearchParams({id_torneo: idTorneo, estado: 'cerrado'})
+          body: new URLSearchParams({id_torneo: String(idTorneo), estado: 'cerrado'})
         }).then(r => r.json()).then(data => {
           if (data.success) location.reload();
           else alert('Error: ' + data.message);
@@ -608,7 +608,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           method: 'POST',
           credentials: 'include',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: new URLSearchParams({id_torneo: idTorneo})
+          body: new URLSearchParams({id_torneo: String(idTorneo)})
         }).then(r => r.json()).then(data => {
           if (data.success) location.reload();
           else alert('Error: ' + data.message);

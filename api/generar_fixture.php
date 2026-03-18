@@ -19,10 +19,11 @@ try {
     }
 
     $id_torneo = $_POST['id_torneo'] ?? null;
-    if (!$id_torneo) {
-        error_log("❌ [GENERAR_FIXTURE] ID de torneo no proporcionado");
+    if (!$id_torneo || !is_numeric($id_torneo)) {
+        error_log("❌ [GENERAR_FIXTURE] ID de torneo inválido: " . print_r($id_torneo, true));
         throw new Exception('ID de torneo requerido');
     }
+    $id_torneo = (int)$id_torneo;
 
     // Verificar pertenencia
     $stmt = $pdo->prepare("SELECT id_torneo FROM torneos WHERE id_torneo = ? AND id_recinto = ?");
@@ -38,6 +39,10 @@ try {
         WHERE id_torneo = ? AND estado = 'completa'
         ORDER BY id_pareja
     ");
+    if (!$stmt_parejas) {
+        error_log("❌ [GENERAR_FIXTURE] Error en prepare: " . json_encode($pdo->errorInfo()));
+        throw new Exception('Error al preparar consulta');
+    }
     $stmt_parejas->execute([$id_torneo]);
     $parejas_db = $stmt_parejas->fetchAll(PDO::FETCH_ASSOC);
 
@@ -51,8 +56,8 @@ try {
     $stmt_count->execute([$id_torneo]);
     $num_parejas = (int)$stmt_count->fetchColumn();
 
-    if ($num_parejas < 2) {
-        throw new Exception('Se necesitan al menos 2 parejas para generar el fixture');
+    if ($num_parejas < 6) {
+        throw new Exception('Se necesitan al menos 6 parejas para generar el fixture');
     }
 
     // === GENERAR PAREJAS GENÉRICAS ===
