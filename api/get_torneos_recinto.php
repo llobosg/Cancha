@@ -22,6 +22,8 @@ try {
             t.fecha_inicio,
             t.fecha_fin,
             t.num_parejas_max,
+            t.valor,
+            t.estado_valor,
             t.estado,
             t.publico,
             t.premios,
