@@ -924,7 +924,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
       <h3>Detalle Eventos</h3>
 
       <!-- Filtros -->
-      <button class="filter-btn" data-filter="inscritos">Inscritos Próximo evento</button>
+      <button class="filter-btn" data-filter="inscritos">Inscritos Próximo futbolito</button>
+      <button class="filter-btn" data-filter="torneos">Americanos</button>
       <button class="filter-btn" data-filter="equipos">Equipos IA</button>
 
       <?php if (!$modo_individual): ?>
@@ -1784,6 +1785,41 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                   </tr>
                 `;
 
+              } else if (filtro === 'torneos') {
+                  // Llamada específica a get_mis_torneos.php
+                  fetch('../api/get_mis_torneos.php')
+                      .then(r => r.json())
+                      .then(data => {
+                          if (!Array.isArray(data) || data.length === 0) {
+                              tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
+                              return;
+                          }
+                          let html = '';
+                          data.forEach(row => {
+                              html += `
+                                  <tr>
+                                      <td>${formatDate(row.fecha)}</td>
+                                      <td>-</td>
+                                      <td>${row.id_tipoevento}</td>
+                                      <td>${row.id_club || '-'}</td>
+                                      <td>${row.id_cancha || '-'}</td>
+                                      <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                      <td>${row.nombre || '-'}</td>
+                                      <td>${row.posicion_jugador || '-'}</td>
+                                      <td>-</td>
+                                      <td>-</td>
+                                      <td>${row.comentario || '-'}</td>
+                                      <td>-</td>
+                                  </tr>
+                              `;
+                          });
+                          tbody.innerHTML = html;
+                      })
+                      .catch(err => {
+                          console.error('Error:', err);
+                          tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los torneos</td></tr>';
+                      });
+                  return; // ← Importante: salir aquí
               } else {
                 // Equipos IA, Reservas, Eventos → sin acciones ni comentario
                 html += `
