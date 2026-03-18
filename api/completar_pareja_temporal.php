@@ -114,6 +114,30 @@ try {
 
     if ($inscritos >= $cupo) {
         $pdo->prepare("UPDATE torneos SET estado = 'cerrado' WHERE id_torneo = ?")->execute([$torneo_id]);
+
+        // === Notificar al admin ===
+        $stmt_admin = $pdo->prepare("
+            SELECT ar.email, r.nombre AS recinto_nombre
+            FROM admin_recintos ar
+            JOIN recintos_deportivos r ON ar.id_recinto = r.id_recinto
+            WHERE ar.id_recinto = (
+                SELECT id_recinto FROM torneos WHERE id_torneo = ?
+            )
+        ");
+        $stmt_admin->execute([$torneo_id]);
+        $admin = $stmt_admin->fetch();
+
+        if ($admin) {
+            $mailer = new BrevoMailer();
+            $mailer->setTo($admin['email'], 'Admin del recinto');
+            $mailer->setSubject('✅ Torneo cerrado: cupo completo');
+            $mailer->setHtmlBody("
+                <h2>El torneo <strong>{$torneo_nombre}</strong> ha sido cerrado.</h2>
+                <p>✅ Se alcanzó el límite de <strong>{$cupo} parejas</strong>.</p>
+                <p>Ya puedes proceder a generar el fixture desde tu dashboard.</p>
+            ");
+            $mailer->send();
+        }
     }
 
     echo json_encode(['success' => true, 'message' => '✅ ¡Pareja completada!']);

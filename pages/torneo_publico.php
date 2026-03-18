@@ -8,14 +8,96 @@ if (!$slug || strlen($slug) !== 8) {
     die('Torneo no válido');
 }
 
-// Verificar que el torneo existe y es público
-$stmt = $pdo->prepare("SELECT id_torneo, nombre FROM torneos WHERE slug = ? AND publico = 1 AND estado IN ('abierto', 'cerrado')");
+/$stmt = $pdo->prepare("
+    SELECT 
+        id_torneo, 
+        nombre, 
+        valor,
+        estado,
+        num_parejas_max
+    FROM torneos 
+    WHERE slug = ? AND publico = 1
+");
 $stmt->execute([$slug]);
 $torneo = $stmt->fetch();
 
 if (!$torneo) {
     http_response_code(404);
-    die('Torneo no encontrado o no público');
+    die('Torneo no encontrado');
+}
+
+// Verificar si el torneo está cerrado o lleno
+$torneo_cerrado = false;
+$mensaje_amigable = '';
+
+if ($torneo['estado'] !== 'abierto') {
+    $torneo_cerrado = true;
+    $mensaje_amigable = 'Las inscripciones para este torneo ya han finalizado.';
+} else {
+    // Contar parejas inscritas
+    $stmt_count = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM parejas_torneo 
+        WHERE id_torneo = ? AND estado = 'completa'
+    ");
+    $stmt_count->execute([$torneo['id_torneo']]);
+    $inscritos = (int)$stmt_count->fetchColumn();
+    
+    if ($inscritos >= $torneo['num_parejas_max']) {
+        $torneo_cerrado = true;
+        $mensaje_amigable = '¡Este torneo ya alcanzó el límite de parejas inscritas!';
+    }
+}
+
+if ($torneo_cerrado) {
+    ?>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>🔒 Inscripciones cerradas</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background: #f5f5f5;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          margin: 0;
+        }
+        .container {
+          background: white;
+          padding: 2rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          text-align: center;
+          max-width: 500px;
+        }
+        .btn {
+          background: #071289;
+          color: white;
+          border: none;
+          padding: 0.8rem 1.5rem;
+          border-radius: 8px;
+          font-size: 1.1rem;
+          cursor: pointer;
+          margin-top: 1.5rem;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h2>🔒 ¡Inscripciones completas!</h2>
+        <p><?= htmlspecialchars($mensaje_amigable) ?></p>
+        <p>¡Pero no te preocupes! Regístrate en CanchaSport y sé el primero en enterarte de nuevos torneos y eventos.</p>
+        <a href="/pages/registro_socio.php?modo=individual" class="btn">👉 Únete ahora</a>
+      </div>
+    </body>
+    </html>
+    <?php
+    exit;
 }
 ?>
 <!DOCTYPE html>

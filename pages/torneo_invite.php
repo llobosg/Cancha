@@ -15,8 +15,8 @@ $stmt = $pdo->prepare("
         pt.id_torneo,
         t.nombre AS torneo_nombre,
         t.slug,
-        s1.alias AS nombre_socio_1,
-        jt1.nombre AS nombre_temp_1
+        t.valor,
+        COALESCE(s1.alias, jt1.nombre) AS nombre_invitador
     FROM parejas_torneo pt
     JOIN torneos t ON pt.id_torneo = t.id_torneo
     LEFT JOIN socios s1 ON pt.id_socio_1 = s1.id_socio
@@ -87,7 +87,9 @@ if (!$invitacion) {
     <h3>🎾 <?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
     <p> Organiza: PASCO CLUB </p>
     <p> Auspicia: PALLAP </p>
-    <p><strong>💰 Valor:</strong> $<?= number_format($torneo['valor'], 0, ',', '.') ?></p>
+    <?php if (!empty($invitacion['valor'])): ?>
+        <p>Valor: $<?= number_format((int)$invitacion['valor'], 0, ',', '.') ?></p>
+    <?php endif; ?>
 
     <?php if (isset($_SESSION['id_socio'])): ?>
       <p>✅ Estás logueado como socio.</p>
