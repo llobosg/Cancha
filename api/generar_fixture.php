@@ -31,12 +31,23 @@ try {
         throw new Exception('Torneo no encontrado');
     }
 
-    // Contar parejas inscritas
-    $stmt_count = $pdo->prepare("
-        SELECT COUNT(*) 
+    // === OBTENER PAREJAS REALES CON SUS ID_REALES ===
+    $stmt_parejas = $pdo->prepare("
+        SELECT id_pareja 
         FROM parejas_torneo 
         WHERE id_torneo = ? AND estado = 'completa'
+        ORDER BY id_pareja
     ");
+    $stmt_parejas->execute([$id_torneo]);
+    $parejas_db = $stmt_parejas->fetchAll(PDO::FETCH_ASSOC);
+
+    $parejas = [];
+    foreach ($parejas_db as $p) {
+        $parejas[] = [
+            'id' => $p['id_pareja'], // ← ¡Este es el ID real!
+            'nombre' => '#' . $p['id_pareja']
+        ];
+    }
     $stmt_count->execute([$id_torneo]);
     $num_parejas = (int)$stmt_count->fetchColumn();
 
