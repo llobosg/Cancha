@@ -541,13 +541,28 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         });
     }
 
-    function generarFixture(ID) {
-      fetch('../api/generar_fixture.php', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_torneo: ID})
-      })
+    // Gerenar fixture
+    function generarFixture(idTorneo) {
+        fetch('../api/generar_fixture.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({id_torneo: idTorneo})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                // Opcional: recargar la lista de torneos
+                cargarTorneos();
+            } else {
+                alert('❌ ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('❌ Error al generar el fixture');
+        });
     }
 
     // Cerrar otros menús al abrir uno nuevo
