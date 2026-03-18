@@ -348,7 +348,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 <small><div>Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${torneo.parejas_inscritas || 0} pendientes)</div></small>
 
                 <!-- Menú de acciones (tres puntos) -->
-                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;font-size:1.2rem;color:#FFD700;z-index:5;" onclick="toggleMenu(${torneo.id_torneo}, event)">
+                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;font-size:1.2rem;color: #ed0606;z-index:5;" onclick="toggleMenu(${torneo.id_torneo}, event)">
                   ⋮
                 </div>
 
