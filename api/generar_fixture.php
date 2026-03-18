@@ -13,7 +13,7 @@ session_start();
 error_log("🔍 [GENERAR_FIXTURE] Sesión iniciada. ID recinto: " . ($_SESSION['id_recinto'] ?? 'NO DEFINIDO'));
 
 try {
-    if (!isset($_SESSION[' id_recinto'])) {
+    if (!isset($_SESSION['id_recinto'])) {
         error_log("❌ [GENERAR_FIXTURE] Acceso no autorizado: sesión sin id_recinto");
         throw new Exception('Acceso no autorizado');
     }
