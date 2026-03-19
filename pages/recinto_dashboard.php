@@ -277,6 +277,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                         });
 
                         html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#4ECDC4;" onclick="verResultados(${idTorneo})">Ver Resultados</button>`;
                         document.getElementById('submodalContenido').innerHTML = html;
                         document.getElementById('submodalGenerico').style.display = 'flex';
                     });
@@ -564,35 +565,49 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
     let contenidoFixtureAnterior = '';
 
     function abrirResultado(idPartido, pareja1, pareja2) {
-        // Guardar el contenido actual del submodal (el fixture)
+        // Guardar contenido del fixture
         contenidoFixtureAnterior = document.getElementById('submodalContenido').innerHTML;
-        const anchoReducido = 'max-width:450px; width:85%;'; // ← 25% más angosto
-        const html = `
-            <div style="text-align:center;${anchoReducido}">
-                <h3>📊 Ingresar resultado</h3>
-                <p><strong>${pareja1} vs ${pareja2}</strong></p>
-                <div style="display:flex;justify-content:center;gap:1rem;margin:1rem 0;">
-                    <div>
-                        <label>${pareja1}</label>
-                        <input type="number" id="juegos1" min="0" max="7" value="0" style="width:80px;padding:0.4rem;text-align:center;">
-                    </div>
-                    <div>
-                        <label>${pareja2}</label>
-                        <input type="number" id="juegos2" min="0" max="7" value="0" style="width:80px;padding:0.4rem;text-align:center;">
-                    </div>
-                </div>
-                <div id="ganadora" style="margin:0.5rem 0;font-weight:bold;"></div>
-                <button class="action-btn" style="background:#2ECC71;margin-top:0.5rem;" onclick="guardarResultado(${idPartido}, '${pareja1}', '${pareja2}')">Guardar</button>
-                <button class="action-btn" style="background:#6c757d;margin-top:0.5rem;" onclick="volverAFixture()">Cancelar</button>
-            </div>
-        `;
-        document.getElementById('submodalContenido').innerHTML = html;
-        document.getElementById('submodalGenerico').style.display = 'flex';
 
-        // Actualizar ganadora en tiempo real
-        document.getElementById('juegos1').addEventListener('input', actualizarGanadora);
-        document.getElementById('juegos2').addEventListener('input', actualizarGanadora);
-        actualizarGanadora();
+        // Cargar resultado actual si existe
+        fetch(`../api/get_resultado_partido.php?id_partido=${idPartido}`)
+            .then(r => r.json())
+            .then(resultado => {
+                const j1 = resultado.juegos_pareja_1 || 0;
+                const j2 = resultado.juegos_pareja_2 || 0;
+
+                const anchoReducido = 'max-width:450px; width:85%;';
+                const html = `
+                    <div style="text-align:center;${anchoReducido}">
+                        <h3>📊 Editar resultado</h3>
+                        <p><strong>${pareja1} vs ${pareja2}</strong></p>
+                        <div style="display:flex;justify-content:center;gap:1rem;margin:1rem 0;">
+                            <div>
+                                <label>${pareja1}</label>
+                                <input type="number" id="juegos1" min="0" max="7" value="${j1}" style="width:80px;padding:0.4rem;text-align:center;">
+                            </div>
+                            <div>
+                                <label>${pareja2}</label>
+                                <input type="number" id="juegos2" min="0" max="7" value="${j2}" style="width:80px;padding:0.4rem;text-align:center;">
+                            </div>
+                        </div>
+                        <div id="ganadora" style="margin:0.5rem 0;font-weight:bold;"></div>
+                        <button class="action-btn" style="background:#2ECC71;margin-top:0.5rem;" onclick="guardarResultado(${idPartido}, '${pareja1}', '${pareja2}')">Guardar</button>
+                        <button class="action-btn" style="background:#6c757d;margin-top:0.5rem;" onclick="volverAFixture()">Cancelar</button>
+                    </div>
+                `;
+                document.getElementById('submodalContenido').innerHTML = html;
+                document.getElementById('submodalGenerico').style.display = 'flex';
+
+                // Actualizar ganadora
+                document.getElementById('juegos1').addEventListener('input', actualizarGanadora);
+                document.getElementById('juegos2').addEventListener('input', actualizarGanadora);
+                actualizarGanadora();
+            })
+            .catch(err => {
+                console.error('Error al cargar resultado:', err);
+                alert('❌ No se pudo cargar el resultado actual');
+                volverAFixture();
+            });
     }
 
     function actualizarGanadora() {
@@ -654,6 +669,39 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
     function cerrarSubmodal() {
         document.getElementById('submodalGenerico').style.display = 'none';
+    }
+
+    function verResultados(idTorneo) {
+        fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data || data.length === 0) {
+                    alert('No hay resultados registrados');
+                    return;
+                }
+
+                let html = `<h3>📊 Resultados – Torneo</h3>`;
+                html += `<table style="width:100%;border-collapse:collapse;margin-top:1rem;">`;
+                html += `<thead><tr style="background:#071289;color:white;"><th>Set</th><th>Pareja 1</th><th>vs</th><th>Pareja 2</th><th>Ganadora</th></tr></thead><tbody>`;
+
+                data.forEach((r, i) => {
+                    const ganador = (r.juegos1 > r.juegos2) ? r.pareja1 : r.pareja2;
+                    html += `
+                        <tr style="border-bottom:1px solid #ccc;">
+                            <td>Set ${i+1}</td>
+                            <td>${r.pareja1} (${r.juegos1})</td>
+                            <td>vs</td>
+                            <td>${r.pareja2} (${r.juegos2})</td>
+                            <td><strong>${ganador}</strong></td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+                document.getElementById('submodalContenido').innerHTML = html;
+                document.getElementById('submodalGenerico').style.display = 'flex';
+            });
     }
   </script>
   <!-- Submodal genérico -->
