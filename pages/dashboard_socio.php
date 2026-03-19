@@ -605,7 +605,7 @@ if (file_exists($logo_path)):
 <!-- Sub sección izquierda -->
 <div class="upper-left">
 
-<?php if ($modo_individual && $tiene_torneo): ?>
+<?php if ($modo_individual && !empty($torneos_americanos)): ?>
   <!-- Próximo Partido → Fixture -->
   <div class="fichas-dashboard">
   <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -633,7 +633,6 @@ if (file_exists($logo_path)):
   </div>
 
 <?php else: ?>
-  <!-- Fichas originales -->
   <div class="fichas-dashboard">
   <!-- Próximo Partido -->
   <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -738,7 +737,7 @@ if (file_exists($logo_path)):
   </div>
 
   <!-- Deudas Pendientes -->
-  <?php if ($deuda_mas_vigente && !$tiene_torneo): ?>
+  <?php if ($deuda_mas_vigente): ?>
   <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
     <h3>💰 Deuda Pendiente</h3>
     <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
@@ -875,7 +874,7 @@ if (file_exists($logo_path)):
 
 <!-- Sub sección derecha -->
 <div class="upper-right">
-<?php if (!($modo_individual && $tiene_torneo)): ?>
+<?php if (!($modo_individual && !empty($torneos_americanos))): ?>
   <?php if ($es_responsable): ?>
     <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
     <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
@@ -916,7 +915,7 @@ grid-template-columns: 1fr;
 <!-- Filtros -->
 <button class="filter-btn" data-filter="inscritos">Inscritos Próximo futbolito</button>
 <button class="filter-btn" data-filter="torneos">Americanos</button>
-<?php if (!($modo_individual && $tiene_torneo)): ?>
+<?php if (!($modo_individual && !empty($torneos_americanos))): ?>
   <button class="filter-btn" data-filter="equipos">Equipos IA</button>
 <?php endif; ?>
 <?php if (!$modo_individual): ?>
@@ -1251,8 +1250,6 @@ function invitarCancha(idReserva) {
 alert('Función "Invitar un Cancha" en desarrollo');
 }
 function pagarCuota(idCuota) {
-// Obtener monto y tipo desde la tabla (si es posible)
-// O redirigir con parámetros mínimos
 window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
 }
 // === ARMAR EQUIPOS IA ===
@@ -1393,9 +1390,7 @@ mostrarToast('❌ ' + data.message);
 }
 // === ANOTARSE CON CERVEZA ===
 function anotarseConCerveza(llevaCerveza) {
-// Cierra menú
 document.getElementById('cervezaMenu').style.display = 'none';
-// Llama a la API con el flag
 const formData = new FormData();
 formData.append('action', 'anotarse');
 formData.append('id_actividad', <?= $id_reserva ?? 0 ?>);
@@ -1421,7 +1416,6 @@ e.stopPropagation();
 const menu = document.getElementById('cervezaMenu');
 menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
-// Cerrar menú al hacer clic fuera
 document.addEventListener('click', () => {
 const menu = document.getElementById('cervezaMenu');
 if (menu) menu.style.display = 'none';
@@ -1749,16 +1743,14 @@ cargarTabla(filtro);
 // 2. Cargar tabla según parámetro de URL o por defecto
 const urlParams = new URLSearchParams(window.location.search);
 const filtro = urlParams.get('filtro') || 'inscritos';
-// Activar botón correspondiente
 const activeBtn = document.querySelector(`[data-filter="${filtro}"]`);
 if (activeBtn) {
 activeBtn.classList.add('active');
 }
-// Cargar datos
 cargarTabla(filtro);
 
 // === CARGAR DATOS DEL TORNEO SI ES NECESARIO ===
-<?php if ($modo_individual && $tiene_torneo): ?>
+<?php if ($modo_individual && !empty($torneos_americanos)): ?>
 const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
 
 // Fixture
