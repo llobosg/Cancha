@@ -56,11 +56,11 @@ try {
                 ";
             } else {
                 // Socio individual
-                $asunto = '⚽ ¡Bienvenido a CanchaSport como socio individual!';
+                $asunto = '🎾🏐 ¡Bienvenido a CanchaSport como socio individual!';
                 $mensaje = "
                     <p>¡Hola {$socio['nombre']}!</p>
                     <p>Gracias por unirte a CanchaSport como socio individual.</p>
-                    <p>Aquí podrás gestionar tus partidos, reservar canchas y participar en la comunidad deportiva multi-deporte.</p>
+                    <p>Aquí podrás gestionar tus partidos, torneos, Americanos, reservar canchas y participar en la comunidad deportiva multi-deporte.</p>
                     <p><a href='https://canchasport.com/pages/dashboard_socio.php' 
                        style='background: #071289; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;'>
                         Ir a tu dashboard
@@ -72,7 +72,7 @@ try {
             $mail->setHtmlBody("
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 12px;'>
                     <div style='text-align: center; background: #071289; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
-                        <h2>🔔 CanchaSport</h2>
+                        <h2>CanchaSport 🎾🏐</h2>
                     </div>
                     {$mensaje}
                     <hr style='margin: 25px 0; border: 0; border-top: 1px solid #eee;'>
