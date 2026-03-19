@@ -18,7 +18,7 @@ try {
         )
         JOIN jugadores_temporales jt ON (
             jt.id_jugador = pt.id_jugador_temp_2
-            AND jt.email = s.email
+            AND jt.email COLLATE utf8mb4_unicode_ci = s.email COLLATE utf8mb4_unicode_ci
         )
         WHERE s.id_club IS NULL
     ");
