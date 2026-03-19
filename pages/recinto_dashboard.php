@@ -366,14 +366,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 </div>
 
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
-                        onclick="generarFixture(${torneo.id_torneo})">
-                  Generar Fixture
-                </button>
-                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
-                        onclick="verFixture(${torneo.id_torneo})">
-                  Ver Fixture
-                </button>   
-                <button class="action-btn" style="padding:0.35rem;font-size:0.9rem;background:#FFD700;color:#071289;flex:1;"
                         onclick="compartirTorneo('${torneo.slug}')">
                   Compartir link
                 </button>
@@ -381,6 +373,14 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                         onclick="verParejas(${torneo.id_torneo})">
                   Parejas
                 </button>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
+                        onclick="generarFixture(${torneo.id_torneo})">
+                  Generar Fixture
+                </button>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
+                        onclick="verFixture(${torneo.id_torneo})">
+                  Ver Fixture
+                </button>     
               </div>
             `;
           });
