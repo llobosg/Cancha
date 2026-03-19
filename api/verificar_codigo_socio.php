@@ -114,8 +114,19 @@ try {
             'club_slug' => $club_slug
         ];
     }
-    
-    echo json_encode($response_data);
+
+    // Verificar si hay contexto de torneo o club en sesión
+    $response = ['success' => true];
+
+    if (isset($_SESSION['torneo_slug_post_registro'])) {
+        $response['torneo_slug'] = $_SESSION['torneo_slug_post_registro'];
+        unset($_SESSION['torneo_slug_post_registro']);
+    } elseif (isset($_SESSION['club_slug_post_registro'])) {
+        $response['club_slug'] = $_SESSION['club_slug_post_registro'];
+        unset($_SESSION['club_slug_post_registro']);
+    }
+
+    echo json_encode($response);
     
 } catch (Exception $e) {
     error_log("Verificación código socio error: " . $e->getMessage());

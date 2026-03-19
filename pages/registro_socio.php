@@ -334,6 +334,11 @@ while ($row = $stmt_regiones->fetch()) {
       <div class="submit-section">
         <button type="submit" class="btn-submit">Enviar código de verificación</button>
       </div>
+      <?php
+      $torneo_slug = $_GET['torneo'] ?? null;
+      if ($torneo_slug): ?>
+          <input type="hidden" name="torneo_slug" value="<?= htmlspecialchars($torneo_slug) ?>">
+      <?php endif; ?>
     </form>
   </div>
 

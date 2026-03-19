@@ -193,6 +193,10 @@ try {
     ]);
 
     $id_socio = $pdo->lastInsertId();
+    
+    if (!empty($_POST['torneo_slug'])) {
+        $_SESSION['torneo_slug_post_registro'] = $_POST['torneo_slug'];
+    }
 
     // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
     error_log("Iniciando envío de correo a: " . $email);

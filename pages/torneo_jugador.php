@@ -18,6 +18,8 @@ if (!$torneo) {
     die('Torneo no encontrado');
 }
 $id_torneo = $torneo['id_torneo'];
+$nombre_torneo = $torneo['nombre'];
+$fecha_torneo = date('d/m', strtotime($torneo['fecha_inicio']));
 
 // === Verificar si el usuario tiene acceso al torneo ===
 $tiene_acceso = false;
@@ -32,7 +34,7 @@ if (isset($_SESSION['id_socio'])) {
     $tiene_acceso = (bool)$stmt_check->fetch();
 }
 
-// Caso 2: Es jugador temporal (por email en sesión o en URL)
+// Caso 2: Es jugador temporal (por email en sesión)
 if (!$tiene_acceso && isset($_SESSION['user_email'])) {
     $email = $_SESSION['user_email'];
     $stmt_check = $pdo->prepare("
@@ -44,18 +46,11 @@ if (!$tiene_acceso && isset($_SESSION['user_email'])) {
     $tiene_acceso = (bool)$stmt_check->fetch();
 }
 
-// Caso 3: Acceso público (opcional, pero no recomendado)
-// Si quieres permitir acceso solo con el slug, comenta las líneas anteriores y usa:
-// $tiene_acceso = true;
-
+// Si no tiene acceso, redirigir a registro con el slug del torneo
 if (!$tiene_acceso) {
-    // Redirigir a registro individual con el slug
     header('Location: ../pages/registro_socio.php?modo=individual&torneo=' . urlencode($slug));
     exit;
 }
-
-$nombre_torneo = $torneo['nombre'];
-$fecha_torneo = date('d/m', strtotime($torneo['fecha_inicio']));
 ?>
 <!DOCTYPE html>
 <html lang="es">

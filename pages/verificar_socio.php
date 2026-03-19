@@ -176,10 +176,17 @@ if ($modo_individual) {
                 
                 if (data.success) {
                     alert('✅ ¡Cuenta verificada exitosamente!');
-                    // Redirigir al dashboard
-                    if (data.club_slug) {
-                        window.location.href = 'dashboard_socio.php?id_club=' + data.club_slug;
-                    } else {
+                    
+                    // 1. Prioridad: Redirección a torneo si viene de ahí
+                    if (data.torneo_slug) {
+                        window.location.href = 'torneo_jugador.php?slug=' + encodeURIComponent(data.torneo_slug);
+                    }
+                    // 2. Segundo: Redirección a club si aplica
+                    else if (data.club_slug) {
+                        window.location.href = 'dashboard_socio.php?id_club=' + encodeURIComponent(data.club_slug);
+                    }
+                    // 3. Por defecto: dashboard individual
+                    else {
                         window.location.href = 'dashboard_socio.php';
                     }
                 } else {
