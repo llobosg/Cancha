@@ -2,13 +2,7 @@
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
-// Verificar que el usuario esté logueado
-if (!isset($_SESSION['id_socio']) && !isset($_SESSION['user_email'])) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// Validar slug del torneo
+// Obtener slug del torneo
 $slug = $_GET['slug'] ?? null;
 if (!$slug || strlen($slug) < 5) {
     header('Location: ../index.php');
@@ -24,6 +18,42 @@ if (!$torneo) {
     die('Torneo no encontrado');
 }
 $id_torneo = $torneo['id_torneo'];
+
+// === Verificar si el usuario tiene acceso al torneo ===
+$tiene_acceso = false;
+
+// Caso 1: Está logueado como socio
+if (isset($_SESSION['id_socio'])) {
+    $stmt_check = $pdo->prepare("
+        SELECT 1 FROM parejas_torneo 
+        WHERE id_torneo = ? AND (id_socio_1 = ? OR id_socio_2 = ?)
+    ");
+    $stmt_check->execute([$id_torneo, $_SESSION['id_socio'], $_SESSION['id_socio']]);
+    $tiene_acceso = (bool)$stmt_check->fetch();
+}
+
+// Caso 2: Es jugador temporal (por email en sesión o en URL)
+if (!$tiene_acceso && isset($_SESSION['user_email'])) {
+    $email = $_SESSION['user_email'];
+    $stmt_check = $pdo->prepare("
+        SELECT 1 FROM parejas_torneo pt
+        JOIN jugadores_temporales jt ON (jt.id_jugador = pt.id_jugador_temp_1 OR jt.id_jugador = pt.id_jugador_temp_2)
+        WHERE pt.id_torneo = ? AND jt.email = ?
+    ");
+    $stmt_check->execute([$id_torneo, $email]);
+    $tiene_acceso = (bool)$stmt_check->fetch();
+}
+
+// Caso 3: Acceso público (opcional, pero no recomendado)
+// Si quieres permitir acceso solo con el slug, comenta las líneas anteriores y usa:
+// $tiene_acceso = true;
+
+if (!$tiene_acceso) {
+    // Redirigir a registro individual con el slug
+    header('Location: ../pages/registro_socio.php?modo=individual&torneo=' . urlencode($slug));
+    exit;
+}
+
 $nombre_torneo = $torneo['nombre'];
 $fecha_torneo = date('d/m', strtotime($torneo['fecha_inicio']));
 ?>
