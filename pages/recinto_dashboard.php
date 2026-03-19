@@ -698,7 +698,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 });
 
                 html += `</tbody></table>`;
-                html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+                html += `<button class="action-btn" style="margin-top:1rem;" onclick="volverAFixture()">Cerrar</button>`;
                 document.getElementById('submodalContenido').innerHTML = html;
                 document.getElementById('submodalGenerico').style.display = 'flex';
             });
