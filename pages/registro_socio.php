@@ -22,7 +22,7 @@ if ($modo_torneo) {
     $_SESSION['torneo_code_post_registro'] = $torneo_code;
 }
 
-/ === MODO CLUB O INDIVIDUAL ===
+// === MODO CLUB O INDIVIDUAL ===
 $club_slug_from_url = $_GET['club'] ?? '';
 $modo_individual = empty($club_slug_from_url) && !$modo_torneo;
 
