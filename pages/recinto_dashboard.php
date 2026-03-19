@@ -490,17 +490,35 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
     // Gerenar fixture
     function generarFixture(idTorneo) {
+        // Primero, verificar si ya hay resultados
+        fetch(`../api/verificar_resultados_torneo.php?id_torneo=${idTorneo}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.tiene_resultados) {
+                    if (confirm('⚠️ Ya existen resultados registrados. ¿Deseas regenerar el fixture? Esto borrará todos los resultados actuales.')) {
+                        procederConGeneracion(idTorneo);
+                    }
+                } else {
+                    procederConGeneracion(idTorneo);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('❌ Error al verificar resultados');
+            });
+    }
+
+    function procederConGeneracion(idTorneo) {
         fetch('../api/generar_fixture.php', {
             method: 'POST',
             credentials: 'include',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_torneo: String(idTorneo)})
+            body: new URLSearchParams({id_torneo: idTorneo})
         })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
                 alert('✅ ' + data.message);
-                // Opcional: recargar la lista de torneos
                 cargarTorneos();
             } else {
                 alert('❌ ' + data.message);
@@ -690,9 +708,9 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                   rondas[key].push(partido);
               });
 
-              let html = `<h3>📊 Resultados – Torneo</h3>`;
+              let html = `<h3>📊 Resultados 🎾 Torneo</h3>`;
               html += `<table style="width:100%;border-collapse:collapse;margin-top:1rem;">`;
-              html += `<thead><tr style="background:#071289;color:white;"><th>Ronda</th><th>Pareja 1</th><th>vs</th><th>Pareja 2</th><th>Ganadora</th></tr></thead><tbody>`;
+              html += `<thead><tr style="background:#071289;color:white;"><th>Ronda</th><th>Pareja</th><th>vs</th><th>Pareja</th><th>Ganadora</th></tr></thead><tbody>`;
 
               let numRonda = 1;
               Object.values(rondas).forEach(partidos => {

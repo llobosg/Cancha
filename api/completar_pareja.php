@@ -49,22 +49,40 @@ try {
         enviarCorreoConfirmacion($invitado['email'], $invitado['nombre'], $torneo_nombre, $link_dashboard);
     }
 
-    // === Correo al primer jugador ===
-    $stmt1 = $pdo->prepare("SELECT email, nombre FROM socios WHERE id_socio = ?");
-    $stmt1->execute([$pareja['id_socio_1']]);
-    $primer = $stmt1->fetch();
-    if ($primer) {
-        $mailer = new BrevoMailer();
-        $mailer->setTo($primer['email'], $primer['nombre']);
-        $mailer->setSubject('🎉 ¡Tu pareja Pádel al Americano se ha unido!');
-        $mailer->setHtmlBody("
-            <h2>¡Hola {$primer['nombre']}!</h2>
-            <p>¡Tu pareja ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>!</p>
-            <p>Ya están listos para jugar. 🎾</p>
-            <p>Recuerda que el torneo comienza el <strong>{fechaInicio}</strong>.</p>
-            <p>Para estadísticas y fixture, visita o regístrate en: <a href='https://canchasport.com/pages/dashboard_socio.php' style='color:#FFD700;'>Ver dashboard</a></p>
-        ");
-        $mailer->send();
+    // === Correo al primer jugador (pareja 1) ===
+    $mailer = new BrevoMailer();
+    $mailer->setTo($email_primer, $nombre_primer);
+    $mailer->setSubject('🎉 ¡Tu pareja se ha unido!');
+    $mailer->setHtmlBody("
+        <h2>¡Hola {$nombre_primer}!</h2>
+        <p>¡Tu pareja ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>!</p>
+        <p>Ya están listos para jugar. 🎾</p>
+    ");
+    $mailer->send();
+
+    // === Correo al invitado (pareja 2) ===
+    // Obtener el slug del torneo (asumiendo que ya tienes $torneo_id)
+    $stmt_slug = $pdo->prepare("SELECT slug FROM torneos WHERE id_torneo = ?");
+    $stmt_slug->execute([$torneo_id]);
+    $slug = $stmt_slug->fetchColumn();
+
+    if ($slug) {
+        $link_torneo = "https://canchasport.com/pages/torneo_jugador.php?slug=" . urlencode($slug);
+    } else {
+        // Fallback por si no hay slug
+        $link_torneo = "https://canchasport.com/pages/registro_socio.php?modo=individual";
+    }
+
+    $mailer = new BrevoMailer();
+    $mailer->setTo($email_invitado, $nombre_invitado);
+    $mailer->setSubject('✅ ¡Inscripción confirmada! 🎾');
+    $mailer->setHtmlBody("
+        <h2>¡Hola {$nombre_invitado}!</h2>
+        <p>Tu inscripción al torneo <strong>{$torneo_nombre}</strong> ha sido confirmada.</p>
+        <p>📊 <a href='{$link_torneo}' style='color:#FFD700;'>Ver estadísticas y fixture</a></p>
+        <p>¡Listos para jugar!</p>
+    ");
+    $mailer->send();
     }
 
     // === Correo al admin ===

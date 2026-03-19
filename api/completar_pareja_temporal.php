@@ -55,31 +55,40 @@ try {
     $torneo_id = $pareja['id_torneo'];
     $torneo_nombre = $pareja['torneo_nombre'];
 
-    // === Correo al invitado temporal ===
-    $link_registro = 'https://canchasport.com/pages/registro_socio.php?modo=individual';
-    enviarCorreoConfirmacion($email, $nombre, $torneo_nombre, $link_registro);
+    // === Correo al primer jugador (pareja 1) ===
+    $mailer = new BrevoMailer();
+    $mailer->setTo($email_primer, $nombre_primer);
+    $mailer->setSubject('🎉 ¡Tu pareja se ha unido!');
+    $mailer->setHtmlBody("
+        <h2>¡Hola {$nombre_primer}!</h2>
+        <p>¡Tu pareja ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>!</p>
+        <p>Ya están listos para jugar. 🎾</p>
+    ");
+    $mailer->send();
 
-    // === Correo al primer jugador ===
-    if ($pareja['id_socio_1']) {
-        $stmt1 = $pdo->prepare("SELECT email, nombre FROM socios WHERE id_socio = ?");
-        $stmt1->execute([$pareja['id_socio_1']]);
-        $primer = $stmt1->fetch();
+    // === Correo al invitado (pareja 2) ===
+    // Obtener el slug del torneo (asumiendo que ya tienes $torneo_id)
+    $stmt_slug = $pdo->prepare("SELECT slug FROM torneos WHERE id_torneo = ?");
+    $stmt_slug->execute([$torneo_id]);
+    $slug = $stmt_slug->fetchColumn();
+
+    if ($slug) {
+        $link_torneo = "https://canchasport.com/pages/torneo_jugador.php?slug=" . urlencode($slug);
     } else {
-        $stmt1 = $pdo->prepare("SELECT email, nombre FROM jugadores_temporales WHERE id_jugador = ?");
-        $stmt1->execute([$pareja['id_jugador_temp_1']]);
-        $primer = $stmt1->fetch();
+        // Fallback por si no hay slug
+        $link_torneo = "https://canchasport.com/pages/registro_socio.php?modo=individual";
     }
 
-    if ($primer) {
-        $mailer = new BrevoMailer();
-        $mailer->setTo($primer['email'], $primer['nombre']);
-        $mailer->setSubject('🎉 ¡Tu pareja se ha unido!');
-        $mailer->setHtmlBody("
-            <h2>¡Hola {$primer['nombre']}!</h2>
-            <p>¡Tu pareja ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>!</p>
-            <p>Ya están listos para jugar. 🎾</p>
-        ");
-        $mailer->send();
+    $mailer = new BrevoMailer();
+    $mailer->setTo($email_invitado, $nombre_invitado);
+    $mailer->setSubject('✅ ¡Inscripción confirmada!');
+    $mailer->setHtmlBody("
+        <h2>¡Hola {$nombre_invitado}!</h2>
+        <p>Tu inscripción al torneo <strong>{$torneo_nombre}</strong> ha sido confirmada.</p>
+        <p>📊 <a href='{$link_torneo}' style='color:#FFD700;'>Ver estadísticas y fixture</a></p>
+        <p>¡Listos para jugar!</p>
+    ");
+    $mailer->send();
     }
 
     // === Correo al admin ===
