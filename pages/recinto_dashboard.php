@@ -669,11 +669,11 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         .then(data => {
             if (data.success) {
                 alert('✅ Resultado guardado');
-                // Volver a cargar el fixture
-                const urlParams = new URLSearchParams(window.location.search);
-                const idTorneo = /* obtén el ID del torneo actual */;
-                // Si lo tienes en una variable global, úsala. Ej: window.torneoActualId
-                verFixture(window.torneoActualId);
+                if (typeof window.torneoActualId !== 'undefined') {
+                    verFixture(window.torneoActualId);
+                } else {
+                    cerrarSubmodal();
+                }
             } else {
                 alert('❌ ' + (data.message || 'Error al guardar'));
             }
