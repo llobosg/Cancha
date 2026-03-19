@@ -277,7 +277,8 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                         });
 
                         html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
-                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#4ECDC4;" onclick="verResultados(${idTorneo})">Ver Resultados</button>`;
+                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#4ECDC4;" onclick="verResultados(${idTorneo})">Resultados Set</button>`;
+                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#FFD700;color:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>`;
                         document.getElementById('submodalContenido').innerHTML = html;
                         document.getElementById('submodalGenerico').style.display = 'flex';
                     });
@@ -672,37 +673,84 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
     }
 
     function verResultados(idTorneo) {
-        fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
-            .then(r => r.json())
-            .then(data => {
-                if (!data || data.length === 0) {
-                    alert('No hay resultados registrados');
-                    return;
-                }
+      fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
+          .then(r => r.json())
+          .then(data => {
+              if (!data || data.length === 0) {
+                  alert('No hay resultados registrados');
+                  return;
+              }
 
-                let html = `<h3>📊 Resultados – Torneo</h3>`;
-                html += `<table style="width:100%;border-collapse:collapse;margin-top:1rem;">`;
-                html += `<thead><tr style="background:#071289;color:white;"><th>Set</th><th>Pareja 1</th><th>vs</th><th>Pareja 2</th><th>Ganadora</th></tr></thead><tbody>`;
+              // Agrupar por fecha/hora (misma ronda)
+              const rondas = {};
+              data.forEach(partido => {
+                  const key = new Date(partido.fecha_hora_programada).toISOString().split('T')[0] + '_' + 
+                              new Date(partido.fecha_hora_programada).getHours();
+                  if (!rondas[key]) rondas[key] = [];
+                  rondas[key].push(partido);
+              });
 
-                data.forEach((r, i) => {
-                    const ganador = (r.juegos1 > r.juegos2) ? r.pareja1 : r.pareja2;
-                    html += `
-                        <tr style="border-bottom:1px solid #ccc;">
-                            <td>Set ${i+1}</td>
-                            <td>${r.pareja1} (${r.juegos1})</td>
-                            <td>vs</td>
-                            <td>${r.pareja2} (${r.juegos2})</td>
-                            <td><strong>${ganador}</strong></td>
-                        </tr>
-                    `;
-                });
+              let html = `<h3>📊 Resultados – Torneo</h3>`;
+              html += `<table style="width:100%;border-collapse:collapse;margin-top:1rem;">`;
+              html += `<thead><tr style="background:#071289;color:white;"><th>Ronda</th><th>Pareja 1</th><th>vs</th><th>Pareja 2</th><th>Ganadora</th></tr></thead><tbody>`;
 
-                html += `</tbody></table>`;
-                html += `<button class="action-btn" style="margin-top:1rem;" onclick="volverAFixture()">Cerrar</button>`;
-                document.getElementById('submodalContenido').innerHTML = html;
-                document.getElementById('submodalGenerico').style.display = 'flex';
+              let numRonda = 1;
+              Object.values(rondas).forEach(partidos => {
+                  partidos.forEach(p => {
+                      const ganador = (p.juegos1 > p.juegos2) ? p.pareja1 : p.pareja2;
+                      html += `
+                          <tr style="border-bottom:1px solid #ccc;">
+                              <td>Set ${numRonda}</td>
+                              <td>${p.pareja1} (${p.juegos1})</td>
+                              <td>vs</td>
+                              <td>${p.pareja2} (${p.juegos2})</td>
+                              <td><strong>${ganador}</strong></td>
+                          </tr>
+                      `;
+                  });
+                  numRonda++;
+              });
+
+              html += `</tbody></table>`;
+              html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+              document.getElementById('submodalContenido').innerHTML = html;
+              document.getElementById('submodalGenerico').style.display = 'flex';
+          });
+  }
+
+  function verPosicionesTorneo(idTorneo) {
+    fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.posiciones || data.posiciones.length === 0) {
+                alert('No hay datos de posiciones');
+                return;
+            }
+
+            let html = `<h3>🏆 Cuadro Resultados – ${data.torneo_nombre}</h3>`;
+            html += `<table style="width:100%;border-collapse:collapse;margin-top:1rem;">`;
+            html += `<thead><tr style="background:#071289;color:white;"><th>Sets Ganados</th><th>Pareja</th></tr></thead><tbody>`;
+
+            data.posiciones.forEach(p => {
+                html += `
+                    <tr style="border-bottom:1px solid #ccc;">
+                        <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
+                        <td>${p.nombre_pareja}</td>
+                    </tr>
+                `;
             });
-    }
+
+            html += `</tbody></table>`;
+            html += `<button class="action-btn" style="margin-top:1rem;" onclick="volverAFixture()">Volver</button>`;
+            document.getElementById('submodalContenido').innerHTML = html;
+            document.getElementById('submodalGenerico').style.display = 'flex';
+        })
+        .catch(err => {
+            console.error('Error al cargar posiciones:', err);
+            alert('❌ Error al cargar el cuadro de resultados');
+            volverAFixture();
+        });
+  }
   </script>
   <!-- Submodal genérico -->
   <div id="submodalGenerico" style="
