@@ -231,6 +231,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             .then(r => r.json())
             .then(torneo => {
                 const nombreTorneo = torneo.nombre || 'Torneo';
+                const rondaNum = 0;
 
                 // Luego, cargar el fixture
                 fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
@@ -390,57 +391,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           document.getElementById('listaTorneos').innerHTML = `<p style="color:#FF6B6B;">❌ Error al cargar torneos</p>`;
         });
     });
-
-    // === VER FIXTURE ===
-    function verFixture(idTorneo) {
-      fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
-          .then(r => r.json())
-          .then(data => {
-              if (!data || data.length === 0) {
-                  alert('No hay fixture generado');
-                  return;
-              }
-
-              let html = `<h3>🎾 Fixture Americano</h3>`;
-              
-              // Agrupar por fecha/hora
-              const rondas = {};
-              data.forEach(partido => {
-                  const key = partido.fecha_hora_programada;
-                  if (!rondas[key]) rondas[key] = [];
-                  rondas[key].push(partido);
-              });
-
-              let rondaNum = 1;
-              Object.entries(rondas).forEach(([fecha, partidos]) => {
-                  const fechaObj = new Date(fecha);
-                  const fechaStr = fechaObj.toLocaleDateString('es-CL');
-                  const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-                  
-                  if rondaNum === 1) {
-                    html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr} ${horaStr}</strong><br>`;
-                  } else {
-                    html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr}</strong><br>`;
-                  }
-                  partidos.forEach(p => {
-                      html += `
-                          <div style="display:flex;justify-content:space-between;margin:0.4rem 0;background:rgba(255,255,255,0.1);padding:0.5rem;border-radius:6px;">
-                              <span>${p.pareja1}</span>
-                              <span>vs</span>
-                              <span>${p.pareja2}</span>
-                              <span style="cursor:pointer;color:#FFD700;" onclick="abrirResultado(${p.id_partido}, '${p.pareja1}', '${p.pareja2}')">✅ Resultado</span>
-                          </div>
-                      `;
-                  });
-                  html += `</div>`;
-                  rondaNum++;
-              });
-
-              html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
-              document.getElementById('submodalContenido').innerHTML = html;
-              document.getElementById('submodalGenerico').style.display = 'flex';
-          });
-    }
 
     // === EDITAR RESULTADO ===
     function editarResultado(idPartido, equipo1, equipo2) {
