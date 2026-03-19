@@ -205,10 +205,10 @@ try {
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                     WHERE s.id_socio = ?
-                      AND (
+                    AND (
                         r.fecha > CURDATE() 
                         OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                      )
+                    )
                     ORDER BY r.fecha ASC, r.hora_inicio ASC
                     LIMIT 50
                 ";
@@ -240,7 +240,7 @@ try {
                 ";
                 $params = [$_SESSION['id_socio'], $_SESSION['id_socio']];
                 break;
-                
+
             default:
                 echo json_encode([]);
                 exit;
