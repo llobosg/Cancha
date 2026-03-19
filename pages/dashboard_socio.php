@@ -964,18 +964,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
     <!-- SCRIPTS COMPLETOS -->
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const filtro = urlParams.get('filtro');
-        
-        if (filtro === 'cuotas') {
-          // Simular clic en la pestaña "Cuotas"
-          const tabCuotas = document.querySelector('[onclick*="cargarTabla(\'cuotas\')"]');
-          if (tabCuotas) {
-            tabCuotas.click();
-          }
-        }
-      });
       // === FUNCIONES DE NOTIFICACIÓN ===
       function mostrarNotificacion(mensaje, tipo = 'info') {
         const toast = document.getElementById('toast');
@@ -1073,17 +1061,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
           })
           .catch(error => console.error('Error al cargar puestos:', error));
       }
-
-      // === INICIALIZAR PUESTOS ===
-      document.addEventListener('DOMContentLoaded', () => {
-        const deporteSelect = document.getElementById('deporte');
-        if (deporteSelect?.value) {
-          cargarPuestosPorDeporte(deporteSelect.value);
-        }
-        deporteSelect?.addEventListener('change', function() {
-          cargarPuestosPorDeporte(this.value);
-        });
-      });
 
       // === TOAST PERSONALIZADO ===
       function mostrarToast(mensaje) {
@@ -1527,19 +1504,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         return `${d}/${m}`;
       }
 
-      // === INICIALIZAR AL CARGAR LA PÁGINA ===
-      document.addEventListener('DOMContentLoaded', () => {
-        cargarTabla('inscritos'); // ← Carga por defecto
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const filtro = btn.getAttribute('data-filter');
-            cargarTabla(filtro);
-          });
-        });
-      });
-
       // === MODAL EQUIPOS IA ===
       function mostrarModalEquipos(equipos) {
         const rojosEl = document.getElementById('equipoRojos');
@@ -1652,27 +1616,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         const modal = document.getElementById('modalEquipos');
         if (modal) modal.style.display = 'none';
       }
-
-      // === ACTIVAR PESTAÑA SEGÚN PARÁMETRO DE URL AL CARGAR ===
-      document.addEventListener('DOMContentLoaded', function () {
-        const urlParams = new URLSearchParams(window.location.search);
-        const filtro = urlParams.get('filtro');
-
-        if (filtro === 'cuotas') {
-          // Buscar el botón/tab que carga "Cuotas"
-          const tabCuotas = document.querySelector('[onclick*="cargarTabla(\'cuotas\')"]');
-          if (tabCuotas && !tabCuotas.classList.contains('active')) {
-            tabCuotas.click();
-            // Opcional: desplazar suavemente a la tabla
-            setTimeout(() => {
-              const tabla = document.querySelector('.stat-card-content table');
-              if (tabla) {
-                tabla.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              }
-            }, 500);
-          }
-        }
-      });
 
       // === CARGAR TABLA ÚNICA ===
       function cargarTabla(filtro) {
@@ -1847,6 +1790,43 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
           });
       }
+
+      // === INICIALIZAR AL CARGAR LA PÁGINA ===
+      document.addEventListener('DOMContentLoaded', () => {
+          // 1. Configurar botones de filtro
+          document.querySelectorAll('.filter-btn').forEach(btn => {
+              btn.addEventListener('click', () => {
+                  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                  btn.classList.add('active');
+                  const filtro = btn.getAttribute('data-filter');
+                  cargarTabla(filtro);
+              });
+          });
+
+          // 2. Cargar tabla según parámetro de URL o por defecto
+          const urlParams = new URLSearchParams(window.location.search);
+          const filtro = urlParams.get('filtro') || 'inscritos';
+          
+          // Activar botón correspondiente
+          const activeBtn = document.querySelector(`[data-filter="${filtro}"]`);
+          if (activeBtn) {
+              activeBtn.classList.add('active');
+          }
+
+          // Cargar datos
+          cargarTabla(filtro);
+      });
+
+      // === INICIALIZAR PUESTOS ===
+      document.addEventListener('DOMContentLoaded', () => {
+        const deporteSelect = document.getElementById('deporte');
+        if (deporteSelect?.value) {
+          cargarPuestosPorDeporte(deporteSelect.value);
+        }
+        deporteSelect?.addEventListener('change', function() {
+          cargarPuestosPorDeporte(this.value);
+        });
+      });
     </script>
 
     <!-- Modal Compartir Club -->
