@@ -616,11 +616,11 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 <div style="display:flex;justify-content:center;gap:1rem;margin:1rem 0;">
                     <div>
                         <label>${pareja1}</label>
-                        <input type="number" id="juegos1" min="0" max="7" value="6" style="width:80px;padding:0.4rem;text-align:center;">
+                        <input type="number" id="juegos1" min="0" max="7" value="0" style="width:80px;padding:0.4rem;text-align:center;">
                     </div>
                     <div>
                         <label>${pareja2}</label>
-                        <input type="number" id="juegos2" min="0" max="7" value="4" style="width:80px;padding:0.4rem;text-align:center;">
+                        <input type="number" id="juegos2" min="0" max="7" value="0" style="width:80px;padding:0.4rem;text-align:center;">
                     </div>
                 </div>
                 <div id="ganadora" style="margin:0.5rem 0;font-weight:bold;"></div>
@@ -684,9 +684,8 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         });
     }
 
-    function volverAFixture() {
-        // Vuelve a cargar el fixture del torneo actual
-        if (window.torneoActualId) {
+   function volverAFixture() {
+        if (typeof window.torneoActualId !== 'undefined') {
             verFixture(window.torneoActualId);
         } else {
             cerrarSubmodal();
