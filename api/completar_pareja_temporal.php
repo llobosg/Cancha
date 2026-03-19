@@ -1,8 +1,7 @@
 <?php
-// ✅ Primera línea del archivo
 header('Content-Type: application/json');
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // ← Ocultar errores en pantalla
+ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 require_once __DIR__ . '/../includes/config.php';
@@ -23,7 +22,13 @@ try {
 
     // Verificar que la invitación existe
     $stmt = $pdo->prepare("
-        SELECT pt.id_pareja, pt.id_torneo, pt.id_socio_1, pt.id_jugador_temp_1, t.nombre AS torneo_nombre
+        SELECT 
+            pt.id_pareja, 
+            pt.id_torneo, 
+            pt.id_socio_1, 
+            pt.id_jugador_temp_1, 
+            t.nombre AS torneo_nombre,
+            t.slug
         FROM parejas_torneo pt
         JOIN torneos t ON pt.id_torneo = t.id_torneo
         WHERE pt.codigo_pareja = ? AND pt.estado = 'esperando_pareja'
@@ -57,47 +62,57 @@ try {
         WHERE id_pareja = ?
     ")->execute([$id_temporal, $pareja['id_pareja']]);
 
-    // === Datos del torneo ===
+    // === Obtener datos del invitador (pareja 1) ===
+    $primer = null;
+    if ($pareja['id_socio_1']) {
+        $stmt_primer = $pdo->prepare("SELECT alias AS nombre, email FROM socios WHERE id_socio = ?");
+        $stmt_primer->execute([$pareja['id_socio_1']]);
+        $primer = $stmt_primer->fetch();
+    } elseif ($pareja['id_jugador_temp_1']) {
+        $stmt_primer = $pdo->prepare("SELECT nombre, email FROM jugadores_temporales WHERE id_jugador = ?");
+        $stmt_primer->execute([$pareja['id_jugador_temp_1']]);
+        $primer = $stmt_primer->fetch();
+    }
+
+    if (!$primer) {
+        throw new Exception('No se pudo identificar al invitador');
+    }
+
     $torneo_id = $pareja['id_torneo'];
     $torneo_nombre = $pareja['torneo_nombre'];
-
-    // === Correo al primer jugador (pareja 1) ===
-    $mailer = new BrevoMailer();
-    $mailer->setTo($email_primer, $nombre_primer);
-    $mailer->setSubject('🎉 ¡Tu pareja se ha unido!');
-    $mailer->setHtmlBody("
-        <h2>¡Hola {$nombre_primer}!</h2>
-        <p>¡Tu pareja ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>!</p>
-        <p>Ya están listos para jugar. 🎾</p>
-    ");
-    $mailer->send();
-
-    // === Correo al invitado (pareja 2) ===
-    // Obtener el slug del torneo (asumiendo que ya tienes $torneo_id)
-    $stmt_slug = $pdo->prepare("SELECT slug FROM torneos WHERE id_torneo = ?");
-    $stmt_slug->execute([$torneo_id]);
-    $slug = $stmt_slug->fetchColumn();
+    $slug = $pareja['slug'] ?? '';
 
     if ($slug) {
         $link_torneo = "https://canchasport.com/pages/torneo_jugador.php?slug=" . urlencode($slug);
     } else {
-        // Fallback por si no hay slug
         $link_torneo = "https://canchasport.com/pages/registro_socio.php?modo=individual";
     }
 
+    // === Correo al invitador ===
     $mailer = new BrevoMailer();
-    $mailer->setTo($email_invitado, $nombre_invitado);
+    $mailer->setTo($primer['email'], $primer['nombre']);
+    $mailer->setSubject('🎉 ¡Tu pareja se ha unido!');
+    $mailer->setHtmlBody("
+        <h2>¡Hola {$primer['nombre']}!</h2>
+        <p>{$nombre} ya se ha inscrito al torneo <strong>{$torneo_nombre}</strong>.</p>
+        <p>Ya están listos para jugar. 🎾</p>
+        <p>📊 <a href='{$link_torneo}' style='color:#FFD700;'>Ver fixture y resultados</a></p>
+    ");
+    $mailer->send();
+
+    // === Correo al invitado ===
+    $mailer = new BrevoMailer();
+    $mailer->setTo($email, $nombre);
     $mailer->setSubject('✅ ¡Inscripción confirmada!');
     $mailer->setHtmlBody("
-        <h2>¡Hola {$nombre_invitado}!</h2>
+        <h2>¡Hola {$nombre}!</h2>
         <p>Tu inscripción al torneo <strong>{$torneo_nombre}</strong> ha sido confirmada.</p>
-        <p>📊 <a href='{$link_torneo}' style='color:#FFD700;'>Ver estadísticas y fixture</a></p>
+        <p>📊 <a href='{$link_torneo}' style='color:#FFD700;'>Ver fixture, resultados y posiciones</a></p>
         <p>¡Listos para jugar!</p>
     ");
     $mailer->send();
-    }
 
-    // === Correo al admin ===
+    // === Correo al admin (opcional) ===
     $stmt_admin = $pdo->prepare("
         SELECT ar.email 
         FROM admin_recintos ar 
@@ -130,7 +145,6 @@ try {
     if ($inscritos >= $cupo) {
         $pdo->prepare("UPDATE torneos SET estado = 'cerrado' WHERE id_torneo = ?")->execute([$torneo_id]);
 
-        // === Notificar al admin ===
         $stmt_admin = $pdo->prepare("
             SELECT ar.email, r.nombre AS recinto_nombre
             FROM admin_recintos ar
@@ -159,19 +173,7 @@ try {
 
 } catch (Exception $e) {
     http_response_code(400);
+    error_log("Error en completar_pareja_temporal.php: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-}
-
-function enviarCorreoConfirmacion($email, $nombre, $torneo, $link) {
-    $mailer = new BrevoMailer();
-    $mailer->setTo($email, $nombre);
-    $mailer->setSubject('✅ ¡Inscripción confirmada!');
-    $mailer->setHtmlBody("
-        <h2>¡Hola {$nombre}!</h2>
-        <p>Tu inscripción al torneo <strong>{$torneo}</strong> ha sido confirmada.</p>
-        <p>📊 <a href='{$link}' style='color:#FFD700;'>Ver estadísticas y fixture</a></p>
-        <p>¡Listos para jugar!</p>
-    ");
-    $mailer->send();
 }
 ?>
