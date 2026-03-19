@@ -215,6 +215,32 @@ try {
                 $params = [$_SESSION['id_socio']];
                 break;
 
+            case 'americanos':
+                $sql = "
+                    SELECT 
+                        t.nombre AS torneo,
+                        t.fecha_inicio AS fecha,
+                        'americano' AS id_tipoevento,
+                        '' AS id_club,
+                        '' AS id_cancha,
+                        t.valor AS costo_evento,
+                        CONCAT('#', pt.id_pareja) AS nombre,
+                        '' AS posicion_jugador,
+                        0 AS lleva_cerveza,
+                        pt.id_pareja AS id_inscrito,
+                        0 AS cuota_monto,
+                        NULL AS fecha_pago,
+                        pt.estado AS comentario,
+                        pt.id_torneo AS id_evento
+                    FROM parejas_torneo pt
+                    JOIN torneos t ON pt.id_torneo = t.id_torneo
+                    WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
+                    AND t.estado IN ('abierto', 'en_progreso')
+                    ORDER BY t.fecha_inicio ASC
+                ";
+                $params = [$_SESSION['id_socio'], $_SESSION['id_socio']];
+                break;
+                
             default:
                 echo json_encode([]);
                 exit;
