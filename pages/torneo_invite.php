@@ -120,7 +120,7 @@ if (!$invitacion) {
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          alert('✅ ¡Pareja formada!');
+          alert('✅ ¡Pareja formada!, revisa tu correo para más detalles.');
           window.location.href = '../';
         } else {
           alert('❌ ' + data.message);

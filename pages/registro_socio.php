@@ -226,7 +226,9 @@ while ($row = $stmt_regiones->fetch()) {
         <div class="form-group"><label for="rol">Rol</label></div>
         <div class="form-group">
           <?php if ($modo_individual || $modo_torneo): ?>
-            <input type="text" id="rol" value="Jugador" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#fafcff;color:#071289;width:100%;">
+            <!-- Campo oculto + visual solo lectura -->
+            <input type="hidden" name="rol" value="Jugador">
+            <input type="text" value="Jugador" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#fafcff;color:#071289;width:100%;">
           <?php else: ?>
             <select id="rol" name="rol" required>
               <option value="">Seleccionar</option>
