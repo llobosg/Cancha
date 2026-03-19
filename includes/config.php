@@ -13,6 +13,9 @@ if (session_status() === PHP_SESSION_NONE) {
         'samesite' => 'Lax'
     ]);
 }
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
 
 // === CARGAR VARIABLES DE ENTORNO ===
 function loadEnvVars() {

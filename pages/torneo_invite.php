@@ -83,12 +83,12 @@ if (!$invitacion) {
 <body>
   <div class="container">
     <h1>🤝 ¡Te invitaron a jugar!</h1>
-    <p><strong><?= htmlspecialchars($invitacion['nombre_socio_1'] ?? $invitacion['nombre_temp_1']) ?></strong> te invitó a participar en:</p>
+    <p><strong><?= htmlspecialchars($invitacion['nombre_invitador']) ?></strong> te invitó a participar en:</p>
     <h3>🎾 <?= htmlspecialchars($invitacion['torneo_nombre']) ?></h3>
-    <p> Organiza: PASCO CLUB </p>
-    <p> Auspicia: PALLAP </p>
+    <p>Organiza: PASCO CLUB</p>
+    <p>Auspicia: PALLAP</p>
     <?php if (!empty($invitacion['valor'])): ?>
-        <p>Valor: $<?= number_format((int)$invitacion['valor'], 0, ',', '.') ?></p>
+        <p><strong>Valor:</strong> $<?= number_format((int)$invitacion['valor'], 0, ',', '.') ?></p>
     <?php endif; ?>
 
     <?php if (isset($_SESSION['id_socio'])): ?>
@@ -125,6 +125,10 @@ if (!$invitacion) {
         } else {
           alert('❌ ' + data.message);
         }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        alert('❌ Error de conexión');
       });
     }
 
@@ -143,6 +147,10 @@ if (!$invitacion) {
         } else {
           alert('❌ ' + data.message);
         }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        alert('❌ Error de conexión');
       });
     });
   </script>
