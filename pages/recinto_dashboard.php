@@ -417,7 +417,11 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                   const fechaStr = fechaObj.toLocaleDateString('es-CL');
                   const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
                   
-                  html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr} ${horaStr}</strong><br>`;
+                  if rondaNum === 1) {
+                    html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr} ${horaStr}</strong><br>`;
+                  } else {
+                    html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr}</strong><br>`;
+                  }
                   partidos.forEach(p => {
                       html += `
                           <div style="display:flex;justify-content:space-between;margin:0.4rem 0;background:rgba(255,255,255,0.1);padding:0.5rem;border-radius:6px;">
@@ -606,8 +610,12 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         });
       }
     }
+    
+    let contenidoFixtureAnterior = '';
 
     function abrirResultado(idPartido, pareja1, pareja2) {
+        // Guardar el contenido actual del submodal (el fixture)
+        contenidoFixtureAnterior = document.getElementById('submodalContenido').innerHTML;
         const anchoReducido = 'max-width:450px; width:85%;'; // ← 25% más angosto
         const html = `
             <div style="text-align:center;${anchoReducido}">
@@ -685,7 +693,9 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
     }
 
    function volverAFixture() {
-        if (typeof window.torneoActualId !== 'undefined') {
+        if (contenidoFixtureAnterior) {
+            document.getElementById('submodalContenido').innerHTML = contenidoFixtureAnterior;
+        } else if (typeof window.torneoActualId !== 'undefined') {
             verFixture(window.torneoActualId);
         } else {
             cerrarSubmodal();
