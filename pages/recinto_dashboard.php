@@ -389,57 +389,49 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
     // === VER FIXTURE ===
     function verFixture(idTorneo) {
-      fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.error) {
-            alert('Error: ' + data.error);
-            return;
-          }
-          let html = `
-            <h3>📋 Fixture - ${data.torneo_nombre}</h3>
-            <div style="max-height:60vh;overflow-y:auto;margin:1rem 0;">
-              <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                  <tr style="background:#071289;color:white;">
-                    <th>Fecha</th>
-                    <th>Equipo 1</th>
-                    <th></th>
-                    <th>Equipo 2</th>
-                    <th>Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
-          data.partidos.forEach(p => {
-            const jugado = p.resultado_1 !== null && p.resultado_2 !== null;
-            const fecha = p.fecha_hora_programada ? new Date(p.fecha_hora_programada).toLocaleDateString('es-CL') : '-';
-            html += `
-              <tr style="border-bottom:1px solid #ccc;">
-                <td>${fecha}</td>
-                <td>${p.equipo1 || 'Pareja 1'}</td>
-                <td style="text-align:center;">
-                  ${jugado ? `${p.resultado_1} - ${p.resultado_2}` : 'vs'}
-                </td>
-                <td>${p.equipo2 || 'Pareja 2'}</td>
-                <td>
-                  <button class="action-btn" style="padding:0.2rem 0.4rem;font-size:0.75rem;"
-                          onclick="editarResultado(${p.id_partido}, '${p.equipo1 || 'Pareja 1'}', '${p.equipo2 || 'Pareja 2'}')">
-                    ${jugado ? '✏️ Editar' : '✅ Resultado'}
-                  </button>
-                </td>
-              </tr>
-            `;
+      fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
+          .then(r => r.json())
+          .then(data => {
+              if (!data || data.length === 0) {
+                  alert('No hay fixture generado');
+                  return;
+              }
+
+              let html = `<h3>🎾 Fixture Americano</h3>`;
+              
+              // Agrupar por fecha/hora
+              const rondas = {};
+              data.forEach(partido => {
+                  const key = partido.fecha_hora_programada;
+                  if (!rondas[key]) rondas[key] = [];
+                  rondas[key].push(partido);
+              });
+
+              let rondaNum = 1;
+              Object.entries(rondas).forEach(([fecha, partidos]) => {
+                  const fechaObj = new Date(fecha);
+                  const fechaStr = fechaObj.toLocaleDateString('es-CL');
+                  const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                  
+                  html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr} ${horaStr}</strong><br>`;
+                  partidos.forEach(p => {
+                      html += `
+                          <div style="display:flex;justify-content:space-between;margin:0.4rem 0;background:rgba(255,255,255,0.1);padding:0.5rem;border-radius:6px;">
+                              <span>${p.pareja1}</span>
+                              <span>vs</span>
+                              <span>${p.pareja2}</span>
+                              <span style="cursor:pointer;color:#FFD700;" onclick="abrirResultado(${p.id_partido}, '${p.pareja1}', '${p.pareja2}')">✅ Resultado</span>
+                          </div>
+                      `;
+                  });
+                  html += `</div>`;
+                  rondaNum++;
+              });
+
+              html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+              document.getElementById('submodalContenido').innerHTML = html;
+              document.getElementById('submodalGenerico').style.display = 'flex';
           });
-          html += `
-                </tbody>
-              </table>
-            </div>
-            <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
-          `;
-          document.getElementById('submodalContenido').innerHTML = html;
-          document.getElementById('submodalGenerico').style.display = 'flex';
-        });
     }
 
     // === EDITAR RESULTADO ===
@@ -616,6 +608,47 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       }
     }
 
+    function abrirResultado(idPartido, pareja1, pareja2) {
+      const html = `
+          <h3>📊 Ingresar resultado</h3>
+          <p><strong>${pareja1} vs ${pareja2}</strong></p>
+          <div style="display:flex;gap:1rem;margin:1rem 0;">
+              <div>
+                  <label>${pareja1}</label>
+                  <input type="number" id="juegos1" min="0" max="7" value="6" style="width:80px;padding:0.4rem;">
+              </div>
+              <div>
+                  <label>${pareja2}</label>
+                  <input type="number" id="juegos2" min="0" max="7" value="4" style="width:80px;padding:0.4rem;">
+              </div>
+          </div>
+          <div id="ganadora" style="margin:0.5rem 0;font-weight:bold;"></div>
+          <button class="action-btn" style="background:#2ECC71;" onclick="guardarResultado(${idPartido}, '${pareja1}', '${pareja2}')">Guardar</button>
+          <button class="action-btn" style="background:#6c757d;margin-top:0.5rem;" onclick="cerrarSubmodal()">Cancelar</button>
+      `;
+      document.getElementById('submodalContenido').innerHTML = html;
+      document.getElementById('submodalGenerico').style.display = 'flex';
+
+      // Actualizar ganadora en tiempo real
+      document.getElementById('juegos1').addEventListener('input', actualizarGanadora);
+      document.getElementById('juegos2').addEventListener('input', actualizarGanadora);
+      actualizarGanadora();
+    }
+
+    function actualizarGanadora() {
+        const j1 = parseInt(document.getElementById('juegos1').value) || 0;
+        const j2 = parseInt(document.getElementById('juegos2').value) || 0;
+        const pareja1 = document.querySelector('#submodalContenido p strong').textContent.split(' vs ')[0];
+        const pareja2 = document.querySelector('#submodalContenido p strong').textContent.split(' vs ')[1];
+        const div = document.getElementById('ganadora');
+        if (j1 > j2) {
+            div.textContent = `Ganadora: ${pareja1}`;
+        } else if (j2 > j1) {
+            div.textContent = `Ganadora: ${pareja2}`;
+        } else {
+            div.textContent = '';
+        }
+    }
   </script>
   <!-- Submodal genérico -->
   <div id="submodalGenerico" style="
