@@ -482,14 +482,14 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             </tr></thead><tbody>`;
           
           data.forEach((p, i) => {
-            html += `
-              <tr style="border-bottom:1px solid #ccc;">
-                <td>${i+1}</td>
-                <td>${p.nombre}</td>
-                <td>${p.estado_valor || 'pendiente'}</td>
-                html += `<span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarParejaTorneo(${p.id_pareja})">🗑️</span>`;
-              </tr>
-            `;
+              html += `
+                  <tr style="border-bottom:1px solid #ccc;">
+                      <td>${i+1}</td>
+                      <td>${p.nombre}</td>
+                      <td>${p.estado_valor || 'pendiente'}</td>
+                      <td><span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarParejaTorneo(${p.id_pareja})">🗑️</span></td>
+                  </tr>
+              `;
           });
           html += `</tbody></table><button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
           document.getElementById('submodalContenido').innerHTML = html;
