@@ -34,31 +34,17 @@ git pull origin main
   --user=root \
   --password=BJfdOmZzlcQSgEUUOMTHvSqTSmcltSUT \
   --database=railway \
-  -e "DELIMITER $$
-CREATE PROCEDURE EliminarSocioSeguro(IN socio_id INT)
-BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        RESIGNAL;
-    END;
-    START TRANSACTION;
-    DELETE FROM parejas_torneo 
-    WHERE id_socio_1 = socio_id OR id_socio_2 = socio_id;
-    DELETE FROM inscritos 
-    WHERE id_socio = socio_id;
-    DELETE FROM cuotas 
-    WHERE id_socio = socio_id;
-    DELETE FROM socios 
-    WHERE id_socio = socio_id;
-    COMMIT;
-END$$
-DELIMITER;"
+  -e "ALTER TABLE admin_recintos
+ADD COLUMN telefono VARCHAR(20) AFTER nombre_completo,
+ADD COLUMN direccion TEXT AFTER telefono;"
 
 
 git add .
-git commit -m "mercadopago brick,19"
+git commit -m "recinto_dashboard mejoras2 y inscritos4"
 git push
+
+
+
 
 <label>Ingresa el código enviado al correo registrado</label>
 
@@ -114,5 +100,8 @@ Access Token  TEST-1904742350539733-031510-147347996ab76a0054d00a6e18f25680-3399
 
 webhooks: https://canchasport.com/api/webhook_mercadopago.php
 IPN: e8f35ec458e3db7c104198628f25b0906d90babc91b0743b74a97d982baa0ddd
+
+
+
 
 

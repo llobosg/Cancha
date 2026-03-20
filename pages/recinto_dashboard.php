@@ -487,7 +487,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 <td>${i+1}</td>
                 <td>${p.nombre}</td>
                 <td>${p.estado_valor || 'pendiente'}</td>
-                <td><span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarPareja(${p.id_pareja})">🗑️</span></td>
+                <td><span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarParejaTorneo(<?= $row['id_pareja'] ?>)">🗑️</span></td>
               </tr>
             `;
           });
@@ -803,6 +803,33 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       const menu = document.getElementById('menuAdmin');
       if (menu) menu.style.display = 'none';
   });
+
+  function eliminarParejaTorneo(idPareja) {
+    if (!confirm('¿Estás seguro de eliminar esta pareja del torneo?\n\n⚠️ Esto NO elimina a los jugadores como socios, solo los retira del torneo.')) {
+        return;
+    }
+
+    fetch('../api/eliminar_pareja_torneo.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_pareja: idPareja})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Recargar el submodal de parejas
+            const idTorneo = window.torneoActualId;
+            if (idTorneo) verParejas(idTorneo); // o la función que muestra las parejas
+        } else {
+            alert('❌ ' + data.message);
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('❌ Error al eliminar la pareja');
+    });
+  }
   </script>
   <!-- Submodal genérico -->
   <div id="submodalGenerico" style="
