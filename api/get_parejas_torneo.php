@@ -18,8 +18,8 @@ if (!$id_torneo) {
 $stmt = $pdo->prepare("
     SELECT 
         pt.id_pareja,
-        COALESCE(s1.alias, jt1.nombre) AS nombre1,
-        COALESCE(s2.alias, jt2.nombre) AS nombre2,
+        COALESCE(s1.alias, jt1.nombre, '#1') AS nombre1,
+        COALESCE(s2.alias, jt2.nombre, '#2') AS nombre2
         t.valor,
         'pendiente' AS estado_valor
     FROM parejas_torneo pt
@@ -40,5 +40,5 @@ while ($row = $stmt->fetch()) {
         'estado_valor' => $row['estado_valor']
     ];
 }
-echo json_encode($parejas);
+echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 ?>

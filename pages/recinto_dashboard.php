@@ -487,7 +487,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 <td>${i+1}</td>
                 <td>${p.nombre}</td>
                 <td>${p.estado_valor || 'pendiente'}</td>
-                <td><span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarParejaTorneo(<?= $row['id_pareja'] ?>)">🗑️</span></td>
+                html += `<span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarParejaTorneo(${p.id_pareja})">🗑️</span>`;
               </tr>
             `;
           });
