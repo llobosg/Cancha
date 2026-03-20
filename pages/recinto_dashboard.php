@@ -204,7 +204,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
     <!-- Acciones rápidas -->
     <div class="quick-actions">
-      <button class="action-btn" id="btnGestionCancha">Gestionar Cancha 🎾</button>
+      <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
       <button class="action-btn" id="btnCalendarioReservas">Calendario reservas</button>
       <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
       <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
@@ -784,7 +784,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   });
 
   document.getElementById('btnGestionCancha')?.addEventListener('click', () => {
-      window.location.href = 'gestion_cancha.php';
+      window.location.href = 'gestion_canchas.php';
   });
 
   document.getElementById('btnCalendarioReservas')?.addEventListener('click', () => {

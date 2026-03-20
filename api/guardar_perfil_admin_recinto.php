@@ -22,9 +22,10 @@ try {
         throw new Exception('Nombre y correo válidos son obligatorios');
     }
 
+    // En guardar_perfil_admin_recinto.php
     $pdo->prepare("
         UPDATE admin_recintos 
-        SET nombre = ?, email = ?, telefono = ?, direccion = ?
+        SET nombre_completo = ?, email = ?, telefono = ?, direccion = ?
         WHERE id_recinto = ?
     ")->execute([$nombre, $email, $telefono, $direccion, $id_recinto]);
 

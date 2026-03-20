@@ -10,7 +10,7 @@ if (!isset($_SESSION['id_recinto'])) {
 
 // Obtener datos actuales
 $stmt = $pdo->prepare("
-    SELECT nombre, email, telefono, direccion 
+    SELECT nombre_completo AS nombre, email, telefono, direccion 
     FROM admin_recintos 
     WHERE id_recinto = ?
 ");
