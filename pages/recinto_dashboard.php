@@ -158,6 +158,15 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <button class="filter-btn active" data-period="month">Mes</button>
       <button class="filter-btn" data-period="week">Semana</button>
       <button class="filter-btn" data-period="day">Hoy</button>
+      <!-- Menú del admin -->
+      <div style="position: relative; display: inline-block; margin-left: 1rem;">
+        <button class="filter-btn" style="padding:0.4rem 0.6rem;" onclick="toggleMenuAdmin(event)">
+          ⋮
+        </button>
+        <div id="menuAdmin" style="display:none; position:absolute; right:0; top:100%; background:white; border:1px solid #ccc; border-radius:6px; z-index:10; min-width:200px; box-shadow:0 4px 8px rgba(0,0,0,0.1);">
+          <a href="mantenedor_admin_recinto.php" style="display:block; padding:0.6rem 1rem; color:#071289; text-decoration:none; font-size:0.9rem;">👤 Perfil Admin recinto deportivo</a>
+        </div>
+      </div>
     </div>
 
     <!-- Gráficos -->
@@ -195,10 +204,10 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
     <!-- Acciones rápidas -->
     <div class="quick-actions">
-      <button class="action-btn" onclick="alert('Función en desarrollo: Gestionar cancha')">Gestionar cancha</button>
-      <button class="action-btn" onclick="alert('Función en desarrollo: Calendario reservas')">Calendario reservas</button>
+      <button class="action-btn" id="btnGestionCancha">Gestionar Cancha 🎾</button>
+      <button class="action-btn" id="btnCalendarioReservas">Calendario reservas</button>
       <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
-      <button class="btn-action" id="btnCrearTorneo">Crear Torneo</button>
+      <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
     </div>
 
     <!-- Panel de Torneos -->
@@ -769,9 +778,30 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             volverAFixture();
         });
   }
-
+  // === EVENTOS BOTONES PRINCIPALES ===
   document.getElementById('btnCrearTorneo')?.addEventListener('click', () => {
       window.location.href = 'crear_torneo.php';
+  });
+
+  document.getElementById('btnGestionCancha')?.addEventListener('click', () => {
+      window.location.href = 'gestion_cancha.php';
+  });
+
+  document.getElementById('btnCalendarioReservas')?.addEventListener('click', () => {
+      window.location.href = 'calendario_reservas.php';
+  });
+
+  // === MENÚ ADMIN ===
+  function toggleMenuAdmin(event) {
+      event.stopPropagation();
+      const menu = document.getElementById('menuAdmin');
+      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  }
+
+  // Cerrar menú al hacer clic fuera
+  document.addEventListener('click', () => {
+      const menu = document.getElementById('menuAdmin');
+      if (menu) menu.style.display = 'none';
   });
   </script>
   <!-- Submodal genérico -->
