@@ -198,7 +198,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <button class="action-btn" onclick="alert('Función en desarrollo: Gestionar cancha')">Gestionar cancha</button>
       <button class="action-btn" onclick="alert('Función en desarrollo: Calendario reservas')">Calendario reservas</button>
       <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
-      <button class="action-btn" onclick="crearTorneo()">Crear Americano</button>
+      <button class="btn-action" id="btnCrearTorneo">Crear Torneo</button>
     </div>
 
     <!-- Panel de Torneos -->
@@ -769,6 +769,10 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             volverAFixture();
         });
   }
+
+  document.getElementById('btnCrearTorneo')?.addEventListener('click', () => {
+      window.location.href = 'crear_torneo.php';
+  });
   </script>
   <!-- Submodal genérico -->
   <div id="submodalGenerico" style="
