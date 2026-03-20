@@ -198,7 +198,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <button class="action-btn" onclick="alert('Función en desarrollo: Gestionar cancha')">Gestionar cancha</button>
       <button class="action-btn" onclick="alert('Función en desarrollo: Calendario reservas')">Calendario reservas</button>
       <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
-      <button class="action-btn" onclick="alert('Función en desarrollo: Crear Americano')">Crear Americano</button>
+      <button class="action-btn" onclick="crearTorneo()">Crear Americano</button>
     </div>
 
     <!-- Panel de Torneos -->
