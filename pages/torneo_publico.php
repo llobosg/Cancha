@@ -1,4 +1,9 @@
 <?php
+// Zona horaria de Chile
+date_default_timezone_set('America/Santiago');
+
+// Forzar locale a español (Linux/macOS)
+setlocale(LC_TIME, 'es_ES.UTF-8', 'es_ES', 'es', 'spanish');
 require_once __DIR__ . '/../includes/config.php';
 session_start(); 
 
@@ -169,7 +174,7 @@ if ($torneo_cerrado) {
   <div class="container">
     <h1>🏆 <?= htmlspecialchars($torneo['nombre']) ?></h1>
     <p>¡Únete a este Americano!</p>
-    <p><strong>📅 Comienza:</strong> <?= date('l j \d\e F \a \l\a\s H:i', strtotime($torneo['fecha_inicio'])) ?> hrs</p>
+    <p><strong>📅 Comienza:</strong> <?= ucfirst(strftime('%A %d de %B a las %H:%M', strtotime($torneo['fecha_inicio']))) ?> hrs</p>
     <p> 🎾 </p>
     <p>Organiza: Pasco Club</p>
     <p><strong>💰 Valor:</strong> $<?= number_format($torneo['valor'], 0, ',', '.') ?></p>
