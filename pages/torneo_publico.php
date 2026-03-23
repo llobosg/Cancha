@@ -13,10 +13,11 @@ $stmt = $pdo->prepare("
         id_torneo, 
         nombre, 
         valor,
+        fecha_inicio,
         estado,
         num_parejas_max
     FROM torneos 
-    WHERE slug = ? AND publico = 1
+    WHERE slug = ? AND publico = 1 AND estado IN ('abierto', 'en_progreso')
 ");
 $stmt->execute([$slug]);
 $torneo = $stmt->fetch();
@@ -168,6 +169,7 @@ if ($torneo_cerrado) {
   <div class="container">
     <h1>🏆 <?= htmlspecialchars($torneo['nombre']) ?></h1>
     <p>¡Únete a este Americano!</p>
+    <p><strong>📅 Comienza:</strong> <?= date('l j \d\e F \a \l\a\s H:i', strtotime($torneo['fecha_inicio'])) ?> hrs</p>
     <p> 🎾 </p>
     <p>Organiza: Pasco Club</p>
     <p><strong>💰 Valor:</strong> $<?= number_format($torneo['valor'], 0, ',', '.') ?></p>
@@ -184,7 +186,7 @@ if ($torneo_cerrado) {
             <input type="email" name="email" placeholder="Tu email" required 
                    style="display:block;width:100%;padding:0.6rem;margin:0.3rem 0;border:1px solid #ccc;border-radius:4px;background:rgba(255,255,255,0.9);color:#071289;">
             <button class="btn" type="submit">Inscribirme</button>
-            <p style="color: #071289;">Recibirás un correo de confirmación una vez que te inscribas.</p>
+            <p style="color: #ecf4f2;">Recibirás un correo de confirmación una vez que te inscribas.</p>
         </form>
     <?php endif; ?>
 

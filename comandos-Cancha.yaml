@@ -40,7 +40,7 @@ ADD COLUMN direccion TEXT AFTER telefono;"
 
 
 git add .
-git commit -m "recinto_dashboard mejoras2 y inscritos4"
+git commit -m "elimina parejas5 y inscritos4"
 git push
 
 
