@@ -174,7 +174,24 @@ if ($torneo_cerrado) {
   <div class="container">
     <h1>🏆 <?= htmlspecialchars($torneo['nombre']) ?></h1>
     <p>¡Únete a este Americano!</p>
-    <p><strong>📅 Comienza:</strong> <?= ucfirst(strftime('%A %d de %B a las %H:%M', strtotime($torneo['fecha_inicio']))) ?> hrs</p>
+    <?php
+      function fechaEnEspañol($fecha_mysql) {
+          $dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+          $meses = [
+              'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+              'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+          ];
+
+          $timestamp = strtotime($fecha_mysql);
+          $dia_semana = $dias[date('w', $timestamp)];
+          $dia = date('d', $timestamp);
+          $mes = $meses[date('n', $timestamp) - 1];
+          $hora = date('H:i', $timestamp);
+
+          return "$dia_semana $dia de $mes a las $hora";
+      }
+      ?>
+    <p><strong>📅 Comienza:</strong> <?= fechaEnEspañol($torneo['fecha_inicio']) ?> hrs</p>
     <p> 🎾 </p>
     <p>Organiza: Pasco Club</p>
     <p><strong>💰 Valor:</strong> $<?= number_format($torneo['valor'], 0, ',', '.') ?></p>
