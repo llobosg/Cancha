@@ -40,8 +40,8 @@ class BrevoMailer {
         ];
 
         // ✅ USAR EL REMITENTE VERIFICADO
-        $sender_email = 'llobos@gltcomex.com';
-        $sender_name = 'Gestión Abarrotes-Frutas-Verduras';
+        $sender_email = 'contacto@canchasport.com'; // Cambia esto por tu correo verificado en Brevo
+        $sender_name = 'CanchaSport';
         
         $data = [
             'sender' => ['email' => $sender_email, 'name' => $sender_name],
