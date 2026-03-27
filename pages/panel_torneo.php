@@ -1,12 +1,16 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+session_start();
 
-// Asegurar ID del torneo
-$id_torneo = $_GET['id'] ?? ($_POST['id_torneo'] ?? 0);
-if (!$id_torneo) {
-    // Redirigir o mostrar error
-    die('Torneo no especificado');
+// Obtener ID del torneo desde la URL
+$id_torneo = (int)($_GET['id'] ?? 0);
+
+if ($id_torneo <= 0) {
+    die('❌ Torneo no especificado. Regresa al listado.');
 }
+
+// Opcional: guardar en sesión para otras páginas
+$_SESSION['id_torneo_actual'] = $id_torneo;
 
 ?>
 <!DOCTYPE html>
