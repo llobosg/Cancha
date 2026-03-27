@@ -391,9 +391,10 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                         onclick="verFixture(${torneo.id_torneo})">
                   Ver Fixture
                 </button>
-                <a href="panel_torneo.php?id=<?= $id_torneo ?>" class="btn" style="background:#3b82f6; margin-left:0.8rem;">
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;background:#3b82f6;color:white;" 
+                        onclick="irPanelTorneo(${torneo.id_torneo})">
                   📺 Panel Torneo
-                </a>  
+                </button>
               </div>
             `;
           });
@@ -832,6 +833,10 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         console.error('Error:', err);
         alert('❌ Error al eliminar la pareja');
     });
+  }
+
+  function irPanelTorneo(idTorneo) {
+    window.location.href = 'panel_torneo.php?id=' + idTorneo;
   }
   </script>
   <!-- Submodal genérico -->
