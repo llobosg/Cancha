@@ -390,7 +390,10 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
                         onclick="verFixture(${torneo.id_torneo})">
                   Ver Fixture
-                </button>     
+                </button>
+                <a href="panel_torneo.php?id=<?= $id_torneo ?>" class="btn" style="background:#3b82f6; margin-left:0.8rem;">
+                  📺 Panel Torneo
+                </a>     
               </div>
             `;
           });
