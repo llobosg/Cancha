@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-
-
-$id_torneo = $_GET['id'] ?? 0;
+// Asegurar ID del torneo
+$id_torneo = $_GET['id'] ?? ($_POST['id_torneo'] ?? 0);
 if (!$id_torneo) {
-    die('ID de torneo requerido');
+    // Redirigir o mostrar error
+    die('Torneo no especificado');
 }
 
 ?>
