@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../../includes/config.php';
+session_start();
 
 if (!isset($_SESSION['id_recinto'])) {
     http_response_code(403);
@@ -14,26 +15,23 @@ if (!$id_torneo) {
     exit;
 }
 
-// Obtener partidos del torneo
 $stmt = $pdo->prepare("
     SELECT 
         p.id_partido,
-        CONCAT(j1.nombre, ' & ', j2.nombre) as pareja1,
-        CONCAT(j3.nombre, ' & ', j4.nombre) as pareja2,
+        COALESCE(s1.alias, jt1.nombre, 'Pareja 1') AS pareja1,
+        COALESCE(s2.alias, jt2.nombre, 'Pareja 2') AS pareja2,
         p.set1_p1,
         p.set1_p2
-    FROM partidos p
-    JOIN parejas pa1 ON p.id_pareja1 = pa1.id_pareja
-    JOIN usuarios j1 ON pa1.id_jugador1 = j1.id_usuario
-    JOIN usuarios j2 ON pa1.id_jugador2 = j2.id_usuario
-    JOIN parejas pa2 ON p.id_pareja2 = pa2.id_pareja
-    JOIN usuarios j3 ON pa2.id_jugador1 = j3.id_usuario
-    JOIN usuarios j4 ON pa2.id_jugador2 = j4.id_usuario
+    FROM partidos_torneo p
+    LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
+    LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
+    LEFT JOIN jugadores_temporales jt1 ON pt1.id_jugador_temp_1 = jt1.id_jugador
+    LEFT JOIN parejas_torneo pt2 ON p.id_pareja_2 = pt2.id_pareja
+    LEFT JOIN socios s2 ON pt2.id_socio_1 = s2.id_socio
+    LEFT JOIN jugadores_temporales jt2 ON pt2.id_jugador_temp_1 = jt2.id_jugador
     WHERE p.id_torneo = ?
     ORDER BY p.id_partido
 ");
 $stmt->execute([$id_torneo]);
-$partidos = $stmt->fetchAll();
-
-echo json_encode($partidos);
+echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 ?>
