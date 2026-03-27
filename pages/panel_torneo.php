@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Solo admin o staff del recinto
-if (!isset($_SESSION['id_usuario']) || !in_array($_SESSION['rol'], ['admin', 'staff'])) {
+$roles_permitidos = ['admin', 'staff', 'recinto_admin', 'admin_recinto'];
+if (!isset($_SESSION['id_usuario']) || !in_array($_SESSION['rol'], $roles_permitidos)) {
       header('Location: ../index.php');
     exit;
 }
@@ -11,6 +11,7 @@ $id_torneo = $_GET['id'] ?? 0;
 if (!$id_torneo) {
     die('ID de torneo requerido');
 }
+
 ?>
 <!DOCTYPE html>
 <html>
