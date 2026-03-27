@@ -164,7 +164,7 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
         renderizarFixture(fixture);
 
         // Posiciones
-        const resPos = await fetch(`/api/torneos/posiciones.php?id=${ID_TORNEO}`);
+        const resPos = await fetch(`/api/torneos/posiciones_torneo.php?id=${ID_TORNEO}`);
         const posiciones = await resPos.json();
         renderizarPosiciones(posiciones);
       } catch (err) {
