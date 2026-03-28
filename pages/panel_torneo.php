@@ -61,11 +61,14 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
   }
   .posiciones-col {
       width: 30%;
+      position: sticky;
       background: rgba(13, 47, 94, 0.85);
-      border: 2px solid white; /* Rayas de cancha */
+      border: 2px solid white;
       padding: 1.5rem;
       border-radius: 12px;
-      height: fit-content;
+      top: 20px;
+      align-self: flex-start;
+      max-height: fit-content;
     }
   .bloque {
     background: rgba(13, 47, 94, 0.85); /* Azul intenso con transparencia */
