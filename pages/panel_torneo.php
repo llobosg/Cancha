@@ -46,12 +46,12 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
     }
 
     .fixture-col {
-      width: 80%;
+      width: 70%;
       overflow-y: auto; /* permite scroll solo en el fixture */
     }
 
     .posiciones-col {
-      width: 20%;
+      width: 30%;
       position: sticky; /* ← clave */
       top: 20px;       /* distancia desde el top */
       align-self: flex-start;
@@ -222,7 +222,7 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
       ul.innerHTML = ranking.map((r, i) => `
         <li>
           <span>${i+1}. ${r.alias || r.nombre}</span>
-          <span>${r.puntos} pts</span>
+          <span>${r.puntos} Set</span>
         </li>
       `).join('');
     }
