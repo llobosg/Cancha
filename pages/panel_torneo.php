@@ -124,16 +124,16 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
         <h2 style="margin-bottom:1rem; color:#60a5fa;">📋 Fixture</h2>
         <div id="fixture-container">
           <!-- Se llenará dinámicamente -->
-          <h3><p>Cargando partidos...</p></h3>
+          <h2><p>Cargando partidos...</p></h2>
         </div>
       </div>
     </div>
 
     <!-- POSICIONES -->
     <div class="posiciones-col">
-        <h2>🏅 Posiciones</h2>
+        <h2>🏅 POSICIONES </h2>
         <ul id="ranking-list" class="ranking">
-          <h3><li><span>Cargando...</span></li></h3>
+          <h2><li><span>Cargando...</span></li></h2>
         </ul>
     </div>
   </div>
