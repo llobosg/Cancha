@@ -20,8 +20,8 @@ $stmt = $pdo->prepare("
         p.id_partido,
         COALESCE(s1.alias, jt1.nombre, 'Pareja 1') AS pareja1,
         COALESCE(s2.alias, jt2.nombre, 'Pareja 2') AS pareja2,
-        p.set1_p1,
-        p.set1_p2
+        p.juegos_pareja_1 AS set1_p1,
+        p.juegos_pareja_2 AS set1_p2
     FROM partidos_torneo p
     LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
     LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
@@ -30,7 +30,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN socios s2 ON pt2.id_socio_1 = s2.id_socio
     LEFT JOIN jugadores_temporales jt2 ON pt2.id_jugador_temp_1 = jt2.id_jugador
     WHERE p.id_torneo = ?
-    ORDER BY p.id_partido
+    ORDER BY p.fecha_hora_programada, p.id_partido
 ");
 $stmt->execute([$id_torneo]);
 echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
