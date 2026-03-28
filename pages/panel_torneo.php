@@ -179,21 +179,34 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
         return;
       }
 
-      cont.innerHTML = partidos.map(p => `
-        <div class="partido">
-          <div>
-            <div class="pareja">${p.pareja1}</div>
-            <div class="pareja">${p.pareja2}</div>
-          </div>
-          <div class="resultado">
-            <input type="number" min="0" max="99" value="${p.set1_p1 || ''}" 
-                   onchange="guardarResultado(${p.id_partido}, 'set1_p1', this.value)">
-            -
-            <input type="number" min="0" max="99" value="${p.set1_p2 || ''}" 
-                   onchange="guardarResultado(${p.id_partido}, 'set1_p2', this.value)">
-          </div>
-        </div>
-      `).join('');
+      // Agrupar en sets de 3 partidos
+      const sets = [];
+      for (let i = 0; i < partidos.length; i += 3) {
+        sets.push(partidos.slice(i, i + 3));
+      }
+
+      let html = '';
+      sets.forEach((setPartidos, idx) => {
+        html += `<div style="margin-bottom:1.5rem;"><strong>SET ${idx + 1}</strong></div>`;
+        setPartidos.forEach(p => {
+          html += `
+            <div class="partido">
+              <div>
+                <div class="pareja">${p.pareja1} VS ${p.pareja2}</div>
+              </div>
+              <div class="resultado">
+                <input type="number" min="0" max="99" value="${p.set1_p1 || ''}" 
+                      onchange="guardarResultado(${p.id_partido}, 'set1_p1', this.value)">
+                -
+                <input type="number" min="0" max="99" value="${p.set1_p2 || ''}" 
+                      onchange="guardarResultado(${p.id_partido}, 'set1_p2', this.value)">
+              </div>
+            </div>
+          `;
+        });
+      });
+
+      cont.innerHTML = html;
     }
 
     function renderizarPosiciones(ranking) {
