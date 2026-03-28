@@ -30,7 +30,7 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
   <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: url('/assets/img/padel.png') center/cover fixed;
+    background: url('/assets/img/padel.png') center/contain fixed;
     color: white;
     font-family: 'Segoe UI', sans-serif;
     min-height: 100vh;
@@ -61,7 +61,8 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
   }
   .posiciones-col {
       width: 30%;
-      background: #1b263b;
+      background: rgba(13, 47, 94, 0.85);
+      border: 2px solid white; /* Rayas de cancha */
       padding: 1.5rem;
       border-radius: 12px;
       height: fit-content;
@@ -84,16 +85,32 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.3);
   }
-  .posiciones .ranking li {
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-  }
-  footer {
-    background: rgba(0, 0, 0, 0.6);
-    padding: 1rem;
-    text-align: center;
-    font-size: 0.9rem;
-    color: #a0aec0;
-  }
+
+  .ranking {
+      list-style: none;
+    }
+    .ranking li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .ranking li:first-child {
+      color: #fbbf24;
+    }
+    .ranking li:nth-child(2) {
+      color: #c0c0c0;
+    }
+    .ranking li:nth-child(3) {
+      color: #cd7f32;
+    }
+    footer {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #a0aec0;
+    }
   </style>
 </head>
 <body>
@@ -111,12 +128,10 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
 
     <!-- POSICIONES -->
     <div class="posiciones-col">
-      <div class="bloque">
         <h2>🏅 Posiciones</h2>
         <ul id="ranking-list" class="ranking">
           <li><span>Cargando...</span></li>
         </ul>
-      </div>
     </div>
   </div>
 
