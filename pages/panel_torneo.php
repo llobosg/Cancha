@@ -12,114 +12,87 @@ if ($id_torneo <= 0) {
 // Opcional: guardar en sesión para otras páginas
 $_SESSION['id_torneo_actual'] = $id_torneo;
 
+// Obtener nombre del torneo
+$stmt = $pdo->prepare("SELECT nombre FROM torneos WHERE id_torneo = ? AND id_recinto = ?");
+$stmt->execute([$id_torneo, $_SESSION['id_recinto']]);
+$torneo = $stmt->fetch();
+$nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
+
 ?>
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>🏆 Panel Torneo en Vivo — CanchaSport</title>
+  <div class="header">
+    <h1>🏆 TORNEO <?= htmlspecialchars($nombre_torneo) ?> EN VIVO</h1>
+  </div>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0d1b2a;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .header {
-      background: linear-gradient(90deg, #1e3a8a, #0d1b2a);
-      padding: 1.2rem 2rem;
-      text-align: center;
-    }
-    .header h1 {
-      font-size: 2.2rem;
-      font-weight: bold;
-    }
-    .main {
-      display: flex;
-      padding: 1.5rem;
-      gap: 2rem;
-      height: calc(100vh - 120px); /* altura fija */
-    }
-
-    .fixture-col {
-      width: 70%;
-      overflow-y: auto; /* permite scroll solo en el fixture */
-    }
-
-    .posiciones-col {
-      width: 30%;
-      position: sticky; /* ← clave */
-      top: 20px;       /* distancia desde el top */
-      align-self: flex-start;
-      max-height: fit-content;
-    }
-    .bloque {
-      background: #1b263b;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .partido {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      background: #0d1b2a;
-      border-radius: 8px;
-      border-left: 4px solid #3b82f6;
-    }
-    .pareja {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    .resultado {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .resultado input {
-      width: 50px;
-      padding: 0.4rem;
-      border: 1px solid #3b82f6;
-      border-radius: 4px;
-      background: #0d1b2a;
-      color: white;
-      text-align: center;
-      font-size: 1.1rem;
-    }
-    .posiciones h2 {
-      margin-bottom: 1.2rem;
-      color: #60a5fa;
-    }
-    .ranking {
-      list-style: none;
-    }
-    .ranking li {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.8rem 0;
-      border-bottom: 1px solid #1e293b;
-    }
-    .ranking li:first-child {
-      color: #fbbf24;
-    }
-    .ranking li:nth-child(2) {
-      color: #c0c0c0;
-    }
-    .ranking li:nth-child(3) {
-      color: #cd7f32;
-    }
-    footer {
-      background: #000;
-      padding: 1rem;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #64748b;
-    }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: url('/assets/img/padel.png') center/cover fixed;
+    color: white;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    background: #10B981; /* Verde fluor */
+    padding: 1.2rem 2rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  }
+  .header h1 {
+    font-size: 2.4rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .main {
+    display: flex;
+    flex: 1;
+    padding: 1.5rem;
+    gap: 2rem;
+    height: calc(100vh - 120px);
+  }
+  .fixture-col {
+    width: 70%;
+    overflow-y: auto;
+  }
+  .posiciones-col {
+    width: 30%;
+    position: sticky;
+    top: 20px;
+    align-self: flex-start;
+  }
+  .bloque {
+    background: rgba(13, 47, 94, 0.85); /* Azul intenso con transparencia */
+    border: 2px solid white; /* Rayas de cancha */
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(2px);
+  }
+  .partido {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem;
+    margin-bottom: 0.6rem;
+    background: rgba(19, 58, 112, 0.7);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .posiciones .ranking li {
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  footer {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #a0aec0;
+  }
   </style>
 </head>
 <body>
