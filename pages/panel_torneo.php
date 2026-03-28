@@ -56,11 +56,11 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
     height: calc(100vh - 120px);
   }
   .fixture-col {
-    width: 70%;
+    width: 75%;
     overflow-y: auto;
   }
   .posiciones-col {
-      width: 30%;
+      width: 25%;
       position: sticky;
       background: rgba(13, 47, 94, 0.85);
       border: 2px solid white;
@@ -102,7 +102,7 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
       color: #3ef407;
     }
     .ranking li:nth-child(2) {
-      color: #120af5;
+      color: #d618f7;
     }
     .ranking li:nth-child(3) {
       color: #faf608;
@@ -124,7 +124,7 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
         <h2 style="margin-bottom:1rem; color:#60a5fa;">📋 Fixture</h2>
         <div id="fixture-container">
           <!-- Se llenará dinámicamente -->
-          <p>Cargando partidos...</p>
+          <h3><p>Cargando partidos...</p></h3>
         </div>
       </div>
     </div>
