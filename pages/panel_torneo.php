@@ -60,11 +60,12 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
     overflow-y: auto;
   }
   .posiciones-col {
-    width: 30%;
-    position: sticky;
-    top: 20px;
-    align-self: flex-start;
-  }
+      width: 30%;
+      background: #1b263b;
+      padding: 1.5rem;
+      border-radius: 12px;
+      height: fit-content;
+    }
   .bloque {
     background: rgba(13, 47, 94, 0.85); /* Azul intenso con transparencia */
     border: 2px solid white; /* Rayas de cancha */
@@ -96,11 +97,6 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
   </style>
 </head>
 <body>
-
-  <div class="header">
-    <h1>🏆 TORNEO EN VIVO</h1>
-  </div>
-
   <div class="main">
     <!-- FIXTURE -->
     <div class="fixture-col">
@@ -115,7 +111,7 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
 
     <!-- POSICIONES -->
     <div class="posiciones-col">
-      <div class="posiciones">
+      <div class="bloque">
         <h2>🏅 Posiciones</h2>
         <ul id="ranking-list" class="ranking">
           <li><span>Cargando...</span></li>
