@@ -99,13 +99,13 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
       border-bottom: 1px solid #1e293b;
     }
     .ranking li:first-child {
-      color: #fbbf24;
+      color: #3ef407;
     }
     .ranking li:nth-child(2) {
-      color: #c0c0c0;
+      color: #120af5;
     }
     .ranking li:nth-child(3) {
-      color: #cd7f32;
+      color: #faf608;
     }
     footer {
       background: rgba(0, 0, 0, 0.6);
@@ -133,7 +133,7 @@ $nombre_torneo = $torneo ? $torneo['nombre'] : 'Torneo';
     <div class="posiciones-col">
         <h2>🏅 Posiciones</h2>
         <ul id="ranking-list" class="ranking">
-          <li><span>Cargando...</span></li>
+          <h3><li><span>Cargando...</span></li></h3>
         </ul>
     </div>
   </div>
