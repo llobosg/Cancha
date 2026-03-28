@@ -46,12 +46,12 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
     }
 
     .fixture-col {
-      width: 60%;
+      width: 80%;
       overflow-y: auto; /* permite scroll solo en el fixture */
     }
 
     .posiciones-col {
-      width: 40%;
+      width: 20%;
       position: sticky; /* ← clave */
       top: 20px;       /* distancia desde el top */
       align-self: flex-start;
