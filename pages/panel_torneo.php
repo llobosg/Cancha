@@ -40,19 +40,22 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
     }
     .main {
       display: flex;
-      flex: 1;
       padding: 1.5rem;
       gap: 2rem;
+      height: calc(100vh - 120px); /* altura fija */
     }
+
     .fixture-col {
       width: 60%;
+      overflow-y: auto; /* permite scroll solo en el fixture */
     }
+
     .posiciones-col {
       width: 40%;
-      background: #1b263b;
-      padding: 1.5rem;
-      border-radius: 12px;
-      height: fit-content;
+      position: sticky; /* ← clave */
+      top: 20px;       /* distancia desde el top */
+      align-self: flex-start;
+      max-height: fit-content;
     }
     .bloque {
       background: #1b263b;
@@ -179,7 +182,6 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
         return;
       }
 
-      // Agrupar en sets de 3 partidos
       const sets = [];
       for (let i = 0; i < partidos.length; i += 3) {
         sets.push(partidos.slice(i, i + 3));
@@ -187,20 +189,21 @@ $_SESSION['id_torneo_actual'] = $id_torneo;
 
       let html = '';
       sets.forEach((setPartidos, idx) => {
-        html += `<div style="margin-bottom:1.5rem;"><strong>SET ${idx + 1}</strong></div>`;
+        html += `<div style="margin:1.5rem 0;"><strong>SET ${idx + 1}</strong></div>`;
         setPartidos.forEach(p => {
+          // Determinar ganador
+          let ganador = '';
+          if (p.set1_p1 !== null && p.set1_p2 !== null) {
+            ganador = (p.set1_p1 > p.set1_p2) ? p.pareja1 : p.pareja2;
+          }
+
           html += `
-            <div class="partido">
-              <div>
-                <div class="pareja">${p.pareja1} VS ${p.pareja2}</div>
+            <div class="partido" style="display:flex;justify-content:space-between;align-items:center;padding:0.8rem;background:#0d1b2a;border-radius:8px;margin-bottom:0.6rem;">
+              <div style="flex:2;">${p.pareja1} VS ${p.pareja2}</div>
+              <div style="flex:1;text-align:center;font-weight:bold;">
+                ${p.set1_p1 || '–'} - ${p.set1_p2 || '–'}
               </div>
-              <div class="resultado">
-                <input type="number" min="0" max="99" value="${p.set1_p1 || ''}" 
-                      onchange="guardarResultado(${p.id_partido}, 'set1_p1', this.value)">
-                -
-                <input type="number" min="0" max="99" value="${p.set1_p2 || ''}" 
-                      onchange="guardarResultado(${p.id_partido}, 'set1_p2', this.value)">
-              </div>
+              <div style="flex:1.5;color:#4ade80;">${ganador || '–'}</div>
             </div>
           `;
         });
