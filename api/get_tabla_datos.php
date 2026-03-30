@@ -147,26 +147,16 @@ try {
             case 'socios':
                 $sql = "
                     SELECT 
-                        NULL AS fecha,
-                        NULL AS hora_inicio,
-                        NULL AS id_tipoevento,
-                        s.id_club,
-                        NULL AS id_cancha,
-                        NULL AS costo_evento,
-                        s.nombre AS nombre_socio,
-                        s.rol AS posicion_jugador,
-                        0 AS lleva_cerveza,
-                        0 AS id_inscrito,
-                        NULL AS cuota_monto,
-                        NULL AS fecha_pago,
-                        s.email AS comentario,
                         s.id_socio AS id_evento,
                         s.id_socio,
-                        cl.nombre AS club_nombre
+                        s.alias,                -- ✅ ya existe
+                        s.nombre AS nombre_socio,
+                        s.rol AS posicion_jugador,
+                        s.email,
+                        s.created_at
                     FROM socios s
-                    INNER JOIN clubs cl ON s.id_club = cl.id_club
                     WHERE s.id_club = ?
-                    ORDER BY s.nombre ASC
+                    ORDER BY s.alias ASC
                     LIMIT 50
                 ";
                 $params = [$club_id];

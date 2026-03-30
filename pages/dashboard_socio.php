@@ -1645,32 +1645,32 @@ html += `
 </tr>
 `;
 } else if (filtro === 'socios') {
-const esResponsable = <?= json_encode($es_responsable) ?>;
-let botonAccion = '-';
-if (esResponsable) {
-botonAccion = `
-<div style="display:flex;gap:0.6rem;justify-content:center;">
-<span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
-<span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
-</div>
-`;
-}
-html += `
-<tr>
-<td>${formatDate(row.created_at)}</td>
-<td>-</td>
-<td>-</td>
-<td>${row.club_nombre || '-'}</td>
-<td>-</td>
-<td>-</td>
-<td>${row.nombre || '-'}</td>
-<td>${row.rol || '-'}</td>
-<td>-</td>
-<td>-</td>
-<td>${row.email || '-'}</td>
-<td>${botonAccion}</td>
-</tr>
-`;
+    const esResponsable = <?= json_encode($es_responsable) ?>;
+    let botonAccion = '-';
+    if (esResponsable) {
+        botonAccion = `
+            <div style="display:flex;gap:0.6rem;justify-content:center;">
+                <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
+                <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
+            </div>
+        `;
+    }
+    html += `
+        <tr>
+            <td>${formatDate(row.created_at)}</td>
+            <td>-</td>
+            <td>-</td>
+            <!-- CLUB eliminado -->
+            <td>-</td>
+            <td>-</td>
+            <td>${row.alias || '-'}</td>
+            <td>${row.posicion_jugador || '-'}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>${row.email || '-'}</td>
+            <td>${botonAccion}</td>
+        </tr>
+    `;
 } else if (filtro === 'inscritos') {
 const esResponsable = <?= json_encode($es_responsable) ?>;
 const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
