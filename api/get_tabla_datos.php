@@ -3,16 +3,25 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
+error_log("=== INICIO get_tabla_datos.php ===");
+error_log("GET recibido: " . print_r($_GET, true));
+error_log("SESSION recibida: " . print_r($_SESSION, true));
+
 if (!isset($_SESSION['id_socio'])) {
+    error_log("❌ Acceso denegado: id_socio no encontrado en sesión");
     http_response_code(403);
     echo json_encode(['error' => 'Acceso no autorizado']);
     exit;
 }
 
-$filtro = $_GET['filtro'] ?? '';
+$filtro = $_GET['filtro'] ?? 'inscritos';
 $club_id = $_SESSION['club_id'] ?? null;
 
+error_log("Filtro solicitado: $filtro");
+error_log("Club ID en sesión: " . ($club_id ?: 'NULL'));
+
 if (!$club_id) {
+    error_log("⚠️ Club ID no definido. Devolviendo array vacío.");
     echo json_encode([]);
     exit;
 }
@@ -114,6 +123,10 @@ try {
                 break;
 
             case 'cuotas':
+                error_log("🔍 Entrando al caso 'cuotas'");
+                error_log("ID Socio: " . $_SESSION['id_socio']);
+                error_log("ID Club activo: " . $_SESSION['club_id']);
+
                 $sql = "
                     SELECT 
                         c.id_cuota,
@@ -148,7 +161,21 @@ try {
                         AND sc.id_club = ?
                     ORDER BY c.fecha_vencimiento DESC
                 ";
+
                 $params = [$_SESSION['id_socio'], $_SESSION['club_id']];
+                error_log("SQL generado: " . $sql);
+                error_log("Parámetros: " . json_encode($params));
+
+                try {
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute($params);
+                    $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    error_log("✅ Cuotas encontradas: " . count($resultados));
+                    echo json_encode($resultados);
+                } catch (Exception $e) {
+                    error_log("❌ Error en consulta de cuotas: " . $e->getMessage());
+                    echo json_encode([]);
+                }
                 break;
 
             case 'socios':
