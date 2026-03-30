@@ -352,9 +352,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <a href="javascript:history.back()" class="close-btn">Cancelar</a>
     <?php endif; ?>
 
-    <!-- === MERCADO PAGO BRICKS === -->
+    <!-- === MERCADO PAGO BRICKS === 
       <div class="divider">— o —</div>
       <div id="bricks_container"></div>
+    -->
 
   </div>
 
@@ -385,109 +386,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   // === INICIALIZAR BRICKS ===
-  const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>');
+  //
+  //const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>');
 
-  const bricksBuilder = mp.bricks();
+  //const bricksBuilder = mp.bricks();
 
-  const renderCardPaymentBrick = async () => {
+  //const renderCardPaymentBrick = async () => {
 
-    const settings = {
-      initialization: {
-        amount: <?= (float)$cuota['monto'] ?>,
-        payer: {
-          email: '<?= $_SESSION['user_email'] ?? $cuota['socio_email'] ?>'
-        },
-        locale: "es-CL"
-      },
+  //  const settings = {
+  //    initialization: {
+  //      amount: <?= (float)$cuota['monto'] ?>,
+  //      payer: {
+  //        email: '<?= $_SESSION['user_email'] ?? $cuota['socio_email'] ?>'
+  //      },
+  //      locale: "es-CL"
+  //    },
 
-      customization: {
-        visual: {
-          style: {
-            theme: "default"
-          }
-        }
-      },
+  //    customization: {
+  //      visual: {
+  //        style: {
+  //          theme: "default"
+  //        }
+  //      }
+  //    },
 
-      callbacks: {
+  //    callbacks: {
 
-        onReady: () => {
-          console.log("Brick listo");
-        },
+  //      onReady: () => {
+  //        console.log("Brick listo");
+  //      },
 
-        onSubmit: (cardFormData) => {
+  //      onSubmit: (cardFormData) => {
 
-          document.querySelector("button").disabled = true;
+  //        document.querySelector("button").disabled = true;
 
-          return new Promise((resolve, reject) => {
+  //        return new Promise((resolve, reject) => {
 
-            fetch('../api/procesar_pago_brick.php', {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                ...cardFormData,
-                id_cuota: <?= $cuota['id_cuota'] ?>,
-                description: "Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>"
-              })
-            })
-            .then(response => response.json())
-            .then(data => {
+  //          fetch('../api/procesar_pago_brick.php', {
+  //            method: "POST",
+  //            headers: {
+  //              "Content-Type": "application/json"
+  //            },
+  //            body: JSON.stringify({
+  //              ...cardFormData,
+  //              id_cuota: <?= $cuota['id_cuota'] ?>,
+  //              description: "Cuota CanchaSport - <?= addslashes($cuota['detalle_origen']) ?>"
+  //            })
+  //          })
+  //          .then(response => response.json())
+  //          .then(data => {
 
-              console.log("Respuesta backend:", data);
+  //            console.log("Respuesta backend:", data);
+  //
+  //            if (data.status === "approved") {
 
-              if (data.status === "approved") {
+  //              mostrarToast("✅ Pago aprobado");
 
-                mostrarToast("✅ Pago aprobado");
+  //              setTimeout(() => {
+  //                window.location.href =
+  //                  "../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>";
+  //              }, 1500);
 
-                setTimeout(() => {
-                  window.location.href =
-                    "../pago_exitoso.php?id_cuota=<?= $cuota['id_cuota'] ?>";
-                }, 1500);
+  //            }
+  //            else if (data.status === "pending" || data.status === "in_process") {
+
+  //              mostrarToast("⏳ Pago en proceso");
+
+  //            }
+  //            else {
+
+  //              mostrarToast("❌ Pago rechazado: " + (data.message || "Error"));
 
               }
-              else if (data.status === "pending" || data.status === "in_process") {
 
-                mostrarToast("⏳ Pago en proceso");
+  //            resolve();
 
-              }
-              else {
+  //          })
+  //          .catch(error => {
 
-                mostrarToast("❌ Pago rechazado: " + (data.message || "Error"));
+  //            console.error("Error pago:", error);
 
-              }
+  //            mostrarToast("❌ Error procesando pago");
 
-              resolve();
+  //            reject();
 
-            })
-            .catch(error => {
+  //          });
 
-              console.error("Error pago:", error);
+  //        });
 
-              mostrarToast("❌ Error procesando pago");
+  //      },
 
-              reject();
+  //      onError: (error) => {
+  //        console.error("Error Brick:", error);
+  //        mostrarToast("❌ Error en formulario de pago");
+  //     }
 
-            });
+  //    }
 
-          });
+  //  };
 
-        },
-
-        onError: (error) => {
-          console.error("Error Brick:", error);
-          mostrarToast("❌ Error en formulario de pago");
-        }
-
-      }
-
-    };
-
-    window.cardPaymentBrickController =
-      await bricksBuilder.create("cardPayment", "bricks_container", settings);
-  };
-
-  renderCardPaymentBrick();
+  //  window.cardPaymentBrickController =
+  ////    await bricksBuilder.create("cardPayment", "bricks_container", settings);
+  //};
+  ////renderCardPaymentBrick();
 </script>
 </body>
 </html>
