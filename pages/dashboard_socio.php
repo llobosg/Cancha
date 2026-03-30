@@ -925,6 +925,7 @@ grid-template-columns: 1fr;
   <button class="filter-btn" data-filter="socios">Socios</button>
 <?php endif; ?>
 
+<!-- Columnas Tabla Datos -->
 <div class="dynamic-table-container">
 <table class="dynamic-table">
 <thead>
@@ -932,7 +933,6 @@ grid-template-columns: 1fr;
 <th>Fecha</th>
 <th>Hora</th>
 <th>Tipo</th>
-<th>Club</th>
 <th>Cancha</th>
 <th>Costo</th>
 <th>Nombre</th>
@@ -1660,7 +1660,6 @@ html += `
             <td>${formatDate(row.created_at)}</td>
             <td>-</td>
             <td>-</td>
-            <!-- CLUB eliminado -->
             <td>-</td>
             <td>-</td>
             <td>${row.alias || '-'}</td>
