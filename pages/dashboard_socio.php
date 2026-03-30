@@ -930,10 +930,8 @@ if (file_exists($logo_path)):
 
 <!-- Sub sección derecha -->
 <div class="upper-right">
-  <?php if (!empty($clubes_del_socio) && count($clubes_del_socio) > 1): ?>
-    <div style="margin-bottom:1rem;">
-      <strong>🏆 Mis Clubes</strong>
-    </div>
+<?php if (!empty($clubes_del_socio) && count($clubes_del_socio) > 1): ?>
+    <div><strong>🏆 Mis Clubes</strong></div>
     <?php foreach ($clubes_del_socio as $c): ?>
       <?php
       $slug_actual = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
@@ -944,23 +942,22 @@ if (file_exists($logo_path)):
         <?= htmlspecialchars($c['club_nombre']) ?>
       </button>
     <?php endforeach; ?>
-  <?php endif; ?>
+<?php endif; ?>
 
-  <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
+
+<?php if (!($modo_individual && !empty($torneos_americanos))): ?>
     <?php if ($es_responsable): ?>
-      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-      <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
+        <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+        <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
     <?php endif; ?>
-    <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug ?? '') ?>'">Eventos</button>
+    <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
     <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
-    
+    <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
     <!-- Botón "+ Otro Club" -->
-    <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">
-      ➕ A Otro Club
-    </button>
-  <?php endif; ?>
-  
-  <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
+    <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
+<?php endif; ?>
+
+</div>
 </div>
 
 <!-- CSS RESPONSIVE -->
