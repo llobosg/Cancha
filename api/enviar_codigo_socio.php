@@ -159,15 +159,55 @@ try {
 
     // Insertar socio
     $stmt = $pdo->prepare("
-        INSERT INTO socios (
-            id_club, nombre, alias, fecha_nac, celular, email, direccion, 
-            pais, region, ciudad, comuna,
-            rol, foto_url, genero, deporte, id_puesto, habilidad,
-            activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO socios (
+        nombre,
+        alias,
+        fecha_nac,
+        celular,
+        email,
+        direccion,
+        pais,
+        region,
+        ciudad,
+        comuna,
+        rol,
+        foto_url,
+        genero,
+        deporte,
+        id_puesto,
+        habilidad,
+        activo,
+        email_verified,
+        verification_code,
+        es_responsable,
+        datos_completos,
+        password_hash
+    ) VALUES (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        0,
+        ?,
+        0,
+        1,
+        ?
+    )
     ");
     $stmt->execute([
-        $id_club,
         $nombre,
         $alias,
         !empty($fecha_nac) ? $fecha_nac : null,
@@ -175,7 +215,7 @@ try {
         $email,
         !empty($direccion) ? $direccion : null,
         $pais,
-        $region, 
+        $region,
         $ciudad,
         $comuna,
         $rol,
@@ -185,10 +225,7 @@ try {
         $id_puesto ?: null,
         $habilidad ?: 'Básica',
         'Si',
-        0,
         $verification_code,
-        0,
-        1,
         $password_hash
     ]);
 

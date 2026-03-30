@@ -243,8 +243,21 @@ if ($torneo_reemplazo) {
       <div class="form-grid">
         <?php if ($modo_reemplazo): ?>
             <input type="hidden" name="torneo_reemplazo" value="<?= htmlspecialchars($torneo_reemplazo) ?>">
-            <div style="background:#fff3cd;padding:1rem;border-radius:8px;margin-bottom:1.5rem;text-align:center;">
-                <strong>🔄 Estás reemplazando a un jugador en el torneo: <?= htmlspecialchars($datos_reemplazo['nombre']) ?></strong>
+            <div style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 1rem;
+                border-radius: 12px;
+                margin-bottom: 2rem;
+                text-align: center;
+                font-weight: bold;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                max-width: 600px;
+                margin-left: auto;
+                margin-right: auto;
+            ">
+                🔄 Estás reemplazando a un jugador en el torneo:<br>
+                <span style="font-size: 1.2rem;"><?= htmlspecialchars($datos_reemplazo['nombre']) ?></span>
             </div>
         <?php endif; ?>
         <!-- Fila 1 -->
