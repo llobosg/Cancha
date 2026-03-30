@@ -267,7 +267,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     $proximo_evento = $stmt_evento->fetch();
 }
 
-// === DEUDAS PENDIENTES (solo del club activo) ===
+// === DEUDAS PENDIENTES (filtradas por club activo) ===
 $stmt_deudas = $pdo->prepare("
     SELECT
         c.id_cuota,
@@ -292,9 +292,23 @@ $stmt_deudas = $pdo->prepare("
         AND c.estado = 'pendiente'
         AND sc.id_club = ?
         AND sc.estado = 'activo'
+        -- Asegurar que el evento pertenezca al mismo club --
+        AND (
+            (c.tipo_actividad = 'reserva' AND r.id_club = ?)
+            OR
+            (c.tipo_actividad = 'evento' AND e.id_club = ?)
+            OR
+            (c.tipo_actividad NOT IN ('reserva', 'evento'))
+        )
     ORDER BY c.fecha_vencimiento ASC
     LIMIT 1
 ");
+$stmt_deudas->execute([
+    $_SESSION['id_socio'],
+    $_SESSION['club_id'],
+    $_SESSION['club_id'],
+    $_SESSION['club_id']
+]);
 $stmt_deudas->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
 $deuda_mas_vigente = $stmt_deudas->fetch();
 
