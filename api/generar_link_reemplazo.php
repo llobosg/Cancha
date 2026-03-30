@@ -37,15 +37,17 @@ try {
     $nuevo_codigo = bin2hex(random_bytes(4)); // 8 caracteres hex
 
     // Actualizar la pareja a "esperando_reemplazo"
+    // Determinar quién es el ausente
+    $id_socio_ausente = ($pareja['id_socio_1'] == $id_socio) ? $pareja['id_socio_2'] : $pareja['id_socio_1'];
+
     $pdo->prepare("
         UPDATE parejas_torneo 
-        SET codigo_pareja = ?, estado = 'esperando_reemplazo', id_socio_ausente = ?
+        SET 
+            codigo_pareja = ?, 
+            estado = 'esperando_reemplazo', 
+            id_socio_ausente = ?
         WHERE id_pareja = ?
-    ")->execute([
-        $nuevo_codigo,
-        $pareja['id_socio_1'] == $id_socio ? $pareja['id_socio_2'] : $pareja['id_socio_1'],
-        $id_pareja
-    ]);
+    ")->execute([$nuevo_codigo, $id_socio_ausente, $id_pareja]);
 
     $link = "https://canchasport.com/pages/registro_socio.php?torneo_reemplazo={$nuevo_codigo}";
 
