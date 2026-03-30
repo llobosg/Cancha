@@ -355,7 +355,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- === MERCADO PAGO BRICKS === -->
       <div class="divider">— o —</div>
       <div id="bricks_container"></div>
-    
 
   </div>
 
@@ -386,7 +385,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   // === INICIALIZAR BRICKS ===
-
   const mp = new MercadoPago('<?= MERCADOPAGO_PUBLIC_KEY ?>');
 
   const bricksBuilder = mp.bricks();
@@ -437,7 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .then(data => {
 
               console.log("Respuesta backend:", data);
-  
+
               if (data.status === "approved") {
 
                 mostrarToast("✅ Pago aprobado");
@@ -479,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         onError: (error) => {
           console.error("Error Brick:", error);
           mostrarToast("❌ Error en formulario de pago");
-       }
+        }
 
       }
 
@@ -488,6 +486,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     window.cardPaymentBrickController =
       await bricksBuilder.create("cardPayment", "bricks_container", settings);
   };
+
   renderCardPaymentBrick();
 </script>
 </body>
