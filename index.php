@@ -11,37 +11,41 @@ if (isset($_POST['login_alternativo'])) {
     } else {
         require_once __DIR__ . '/includes/config.php';
         
-        // Buscar socio por email (incluye individuales y de club)
+        // Buscar socio por email (modo individual o multiclub)
         $stmt = $pdo->prepare("
-            SELECT id_socio, id_club, password_hash, email
+            SELECT id_socio, password_hash, email
             FROM socios 
             WHERE email = ? AND password_hash IS NOT NULL
         ");
         $stmt->execute([$email]);
         $socio = $stmt->fetch();
-        
+
         if ($socio && password_verify($password, $socio['password_hash'])) {
             // Login exitoso
             $_SESSION['id_socio'] = $socio['id_socio'];
             $_SESSION['user_email'] = $email;
-            
-            if ($socio['id_club']) {
-                // Socio de club
-                $stmt_club = $pdo->prepare("SELECT email_responsable FROM clubs WHERE id_club = ?");
-                $stmt_club->execute([$socio['id_club']]);
-                $club_data = $stmt_club->fetch();
-                
-                if ($club_data) {
-                    $club_slug = substr(md5($socio['id_club'] . $club_data['email_responsable']), 0, 8);
-                    $_SESSION['club_id'] = $socio['id_club'];
-                    $_SESSION['current_club'] = $club_slug;
-                    header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
-                    exit;
-                } else {
-                    $error_login = 'Club no encontrado';
-                }
+
+            // Verificar si pertenece a algún club
+            $stmt_clubes = $pdo->prepare("
+                SELECT c.id_club, c.email_responsable, c.nombre
+                FROM socio_club sc
+                JOIN clubs c ON sc.id_club = c.id_club
+                WHERE sc.id_socio = ? AND sc.estado = 'activo'
+                ORDER BY c.nombre ASC
+                LIMIT 1
+            ");
+            $stmt_clubes->execute([$socio['id_socio']]);
+            $primer_club = $stmt_clubes->fetch();
+
+            if ($primer_club) {
+                // Tiene al menos un club → redirigir al primero
+                $club_slug = substr(md5($primer_club['id_club'] . $primer_club['email_responsable']), 0, 8);
+                $_SESSION['club_id'] = $primer_club['id_club'];
+                $_SESSION['current_club'] = $club_slug;
+                header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
+                exit;
             } else {
-                // Socio individual
+                // Es socio individual
                 header('Location: pages/dashboard_socio.php');
                 exit;
             }
