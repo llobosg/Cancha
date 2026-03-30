@@ -114,34 +114,41 @@ try {
                 break;
 
             case 'cuotas':
-                $sql = "
+                $stmt = $pdo->prepare("
                     SELECT 
                         c.id_cuota,
-                        COALESCE(r.fecha, e.fecha) AS fecha_evento,
-                        CASE 
+                        c.monto,
+                        c.fecha_vencimiento,
+                        c.estado,
+                        c.comentario,
+                        c.fecha_pago,
+                        c.adjunto,
+                        s.nombre AS nombre_socio,
+                        s.alias,
+                        s.rol,
+                        sc.id_club,
+                        cl.nombre AS club_nombre,
+                        CASE
                             WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
                             WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
                             ELSE 'Sin detalle'
-                        END AS origen,
-                        c.monto AS costo_evento,
-                        s.nombre AS nombre_socio,
-                        c.monto,
-                        c.fecha_pago,
-                        c.estado,
-                        c.comentario
+                        END as origen,
+                        COALESCE(r.fecha, e.fecha) as fecha_evento,
+                        c.costo_evento
                     FROM cuotas c
                     INNER JOIN socios s ON c.id_socio = s.id_socio
-                    INNER JOIN clubs cl ON s.id_club = cl.id_club
+                    INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+                    INNER JOIN clubs cl ON sc.id_club = cl.id_club
                     LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
                     LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
                     LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-                    WHERE cl.id_club = ? AND c.estado IN ('pendiente', 'en_revision')
+                    WHERE c.id_socio = ?
                     ORDER BY c.fecha_vencimiento DESC
-                    LIMIT 50
-                ";
-                $params = [$club_id];
+                ");
+                $stmt->execute([$_SESSION['id_socio']]);
+                echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
                 break;
 
             case 'socios':
