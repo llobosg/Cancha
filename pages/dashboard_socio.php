@@ -177,6 +177,23 @@ if (!$socio_actual) {
 
 $es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1;
 
+// === OBTENER TODOS LOS CLUBES DEL SOCIO ===
+$clubes_del_socio = [];
+if (isset($_SESSION['id_socio'])) {
+    $stmt_clubes = $pdo->prepare("
+        SELECT 
+            c.id_club,
+            c.nombre AS club_nombre,
+            c.email_responsable
+        FROM socio_club sc
+        JOIN clubs c ON sc.id_club = c.id_club
+        WHERE sc.id_socio = ? AND sc.estado = 'activo'
+        ORDER BY c.nombre ASC
+    ");
+    $stmt_clubes->execute([$_SESSION['id_socio']]);
+    $clubes_del_socio = $stmt_clubes->fetchAll();
+}
+
 // Guardar en sesión
 if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
@@ -913,16 +930,37 @@ if (file_exists($logo_path)):
 
 <!-- Sub sección derecha -->
 <div class="upper-right">
-<?php if (!($modo_individual && !empty($torneos_americanos))): ?>
-  <?php if ($es_responsable): ?>
-    <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-    <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
+  <?php if (!empty($clubes_del_socio) && count($clubes_del_socio) > 1): ?>
+    <div style="margin-bottom:1rem;">
+      <strong>🏆 Mis Clubes</strong>
+    </div>
+    <?php foreach ($clubes_del_socio as $c): ?>
+      <?php
+      $slug_actual = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+      // No mostrar el club actual
+      if (!$modo_individual && $club_id == $c['id_club']) continue;
+      ?>
+      <button class="btn-action" onclick="window.location.href='dashboard_socio.php?id_club=<?= $slug_actual ?>'">
+        <?= htmlspecialchars($c['club_nombre']) ?>
+      </button>
+    <?php endforeach; ?>
   <?php endif; ?>
-  <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
-  <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
+
+  <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
+    <?php if ($es_responsable): ?>
+      <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+      <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
+    <?php endif; ?>
+    <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug ?? '') ?>'">Eventos</button>
+    <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
+    
+    <!-- Botón "+ Otro Club" -->
+    <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">
+      ➕ A Otro Club
+    </button>
+  <?php endif; ?>
+  
   <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
-<?php endif; ?>
-</div>
 </div>
 
 <!-- CSS RESPONSIVE -->
@@ -1872,6 +1910,74 @@ deporteSelect?.addEventListener('change', function() {
 cargarPuestosPorDeporte(this.value);
 });
 });
+
+function agregarOtroClub() {
+    fetch('../api/listar_clubes_publicos.php')
+    .then(r => r.json())
+    .then(clubes => {
+        let html = '<h3>Selecciona un club</h3>';
+        html += '<input type="text" id="buscador-club" placeholder="Buscar..." onkeyup="filtrarClubes()" style="width:100%;padding:0.5rem;margin:0.5rem 0;">';
+        html += '<div id="lista-clubes" style="max-height:300px;overflow-y:auto;">';
+        clubes.forEach(c => {
+            // Evitar clubes ya unidos
+            const yaUnido = <?= json_encode(array_column($clubes_del_socio, 'id_club')) ?>;
+            if (yaUnido.includes(c.id_club)) return;
+            html += `<div style="padding:0.5rem;cursor:pointer;border-bottom:1px solid #eee;" onclick="solicitarUnirseAClub(${c.id_club})">${c.nombre}</div>`;
+        });
+        html += '</div>';
+        
+        // Mostrar en modal
+        const modal = document.createElement('div');
+        modal.id = 'modalOtroClub';
+        modal.innerHTML = `
+            <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;">
+                <div style="background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;">
+                    ${html}
+                    <button onclick="cerrarModalOtroClub()" style="margin-top:1rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    });
+}
+
+function filtrarClubes() {
+    const input = document.getElementById('buscador-club').value.toLowerCase();
+    const items = document.querySelectorAll('#lista-clubes > div');
+    items.forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(input) ? 'block' : 'none';
+    });
+}
+
+function cerrarModalOtroClub() {
+    const modal = document.getElementById('modalOtroClub');
+    if (modal) modal.remove();
+}
+
+function solicitarUnirseAClub(idClub) {
+    // Obtener slug del club
+    fetch(`../api/get_club_slug.php?id=${idClub}`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            fetch('../api/unirse_a_club.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ club_slug: data.slug })
+            })
+            .then(r => r.json())
+            .then(res => {
+                cerrarModalOtroClub();
+                if (res.success) {
+                    alert('✅ ' + res.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + res.message);
+                }
+            });
+        }
+    });
+}
 </script>
 
 <!-- Modal Compartir Club -->
