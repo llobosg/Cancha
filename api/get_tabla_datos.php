@@ -133,8 +133,8 @@ try {
                             WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
                             ELSE 'Sin detalle'
                         END as origen,
-                        COALESCE(r.fecha, e.fecha) as fecha_evento,
-                        c.costo_evento
+                        COALESCE(r.fecha, e.fecha) as fecha_evento
+                        -- ⚠️ REMOVIDO: c.costo_evento (no existe en tabla cuotas)
                     FROM cuotas c
                     INNER JOIN socios s ON c.id_socio = s.id_socio
                     INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
