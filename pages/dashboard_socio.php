@@ -285,13 +285,11 @@ $stmt_deudas = $pdo->prepare("
     LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
     LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
     LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-    -- Relación con socio_club para filtrar por club activo --
     INNER JOIN socio_club sc ON c.id_socio = sc.id_socio AND sc.estado = 'activo'
     WHERE 
         c.id_socio = ? 
         AND c.estado = 'pendiente'
         AND sc.id_club = ?
-        -- Asegurar que el evento pertenezca al mismo club --
         AND (
             (c.tipo_actividad = 'reserva' AND r.id_club = ?)
             OR
@@ -303,23 +301,13 @@ $stmt_deudas = $pdo->prepare("
     LIMIT 1
 ");
 
-// ✅ Solo una llamada con 4 parámetros
+// ✅ Solo UNA llamada con 4 parámetros
 $stmt_deudas->execute([
     $_SESSION['id_socio'],
     $_SESSION['club_id'],
     $_SESSION['club_id'],
     $_SESSION['club_id']
 ]);
-$deuda_mas_vigente = $stmt_deudas->fetch();
-
-// Ejecutar con exactamente 4 parámetros
-$stmt_deudas->execute([
-    $_SESSION['id_socio'],
-    $_SESSION['club_id'],
-    $_SESSION['club_id'],
-    $_SESSION['club_id']
-]);
-$stmt_deudas->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
 $deuda_mas_vigente = $stmt_deudas->fetch();
 
 $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
