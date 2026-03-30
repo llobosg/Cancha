@@ -51,6 +51,15 @@ try {
 
     $link = "https://canchasport.com/pages/registro_socio.php?torneo_reemplazo={$nuevo_codigo}";
 
+    $mail->setSubject('🎾 ¡Te invitan a completar una pareja en un torneo!');
+    $mail->setHtmlBody("
+        <h2>¡Hola!</h2>
+        <p>Un jugador de <strong>{$datos_reemplazo['nombre']}</strong> necesita reemplazar a su compañero y te ha invitado a formar dupla.</p>
+        <p><strong>Usa este link para registrarte y confirmar tu participación:</strong></p>
+        <p style='background:#f0f0f0;padding:10px;border-radius:5px;word-break:break-all;'>{$link}</p>
+        <p>¡No dejes a tu futuro compañero esperando!</p>
+    ");
+
     echo json_encode(['success' => true, 'link' => $link]);
 
 } catch (Exception $e) {

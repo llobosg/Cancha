@@ -16,12 +16,17 @@ try {
     $codigo = $input['codigo'] ?? '';
 
     if (strlen($codigo) !== 4 || !ctype_digit($codigo)) {
-        throw new Exception('Código inválido. Debe tener 4 dígitos.');
+        throw new Exception('Código inválido');
     }
 
-    // Buscar socio pendiente con ese código
+    // Iniciar sesión
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    // Buscar socio por código (sin id_club)
     $stmt = $pdo->prepare("
-        SELECT id_socio, email, id_club 
+        SELECT id_socio, email, email_verified 
         FROM socios 
         WHERE verification_code = ? AND email_verified = 0
     ");
@@ -29,45 +34,27 @@ try {
     $socio = $stmt->fetch();
 
     if (!$socio) {
-        throw new Exception('Código incorrecto o ya verificado.');
+        throw new Exception('Código incorrecto o ya verificado');
     }
 
     // Activar cuenta
     $pdo->prepare("UPDATE socios SET email_verified = 1 WHERE id_socio = ?")
          ->execute([$socio['id_socio']]);
 
-    // Iniciar sesión
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
+    // Guardar en sesión
     $_SESSION['id_socio'] = $socio['id_socio'];
     $_SESSION['user_email'] = $socio['email'];
-    $_SESSION['modo_individual'] = ($socio['id_club'] === null);
 
-    if ($socio['id_club']) {
-        // Recuperar slug del club
-        $stmt = $pdo->prepare("SELECT email_responsable FROM clubs WHERE id_club = ?");
-        $stmt->execute([$socio['id_club']]);
-        $email_resp = $stmt->fetchColumn();
-
-        if ($email_resp) {
-            $club_slug = substr(md5($socio['id_club'] . $email_resp), 0, 8);
-            $_SESSION['club_id'] = $socio['id_club'];
-            $_SESSION['current_club'] = $club_slug;
-        }
-    } else {
-        $_SESSION['club_id'] = null;
-        $_SESSION['current_club'] = null;
-    }
-
-    // Verificar contexto post-registro (torneo)
+    // Verificar si hay contexto de torneo o club
     $response = ['success' => true];
 
     if (isset($_SESSION['torneo_slug_post_registro'])) {
         $response['torneo_slug'] = $_SESSION['torneo_slug_post_registro'];
         unset($_SESSION['torneo_slug_post_registro']);
         unset($_SESSION['torneo_code_post_registro']);
+    } elseif (isset($_SESSION['club_slug_post_registro'])) {
+        $response['club_slug'] = $_SESSION['club_slug_post_registro'];
+        unset($_SESSION['club_slug_post_registro']);
     }
 
     echo json_encode($response);
