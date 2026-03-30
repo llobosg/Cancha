@@ -135,7 +135,7 @@ try {
                         s.nombre AS nombre_socio,
                         s.alias,
                         s.rol,
-                        sc.id_club,
+                        COALESCE(r.id_club, e.id_club) AS id_club_evento,
                         cl.nombre AS club_nombre,
                         CASE
                             WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
@@ -145,16 +145,15 @@ try {
                         COALESCE(r.fecha, e.fecha) as fecha_evento
                     FROM cuotas c
                     INNER JOIN socios s ON c.id_socio = s.id_socio
-                    INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-                    INNER JOIN clubs cl ON sc.id_club = cl.id_club
                     LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
                     LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
                     LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+                    INNER JOIN clubs cl ON cl.id_club = COALESCE(r.id_club, e.id_club)
                     WHERE 
                         c.id_socio = ? 
-                        AND sc.id_club = ?
+                        AND COALESCE(r.id_club, e.id_club) = ?
                     ORDER BY c.fecha_vencimiento DESC
                 ";
                 $params = [$_SESSION['id_socio'], $_SESSION['club_id']];
