@@ -33,14 +33,15 @@ if ($tipo_actividad === 'reserva') {
             c.id_evento,
             s.nombre AS socio_nombre,
             s.email AS socio_email,
-            s.id_club,  -- ← ¡Clave!
+            sc.id_club,
             cl.nombre AS club_nombre,
             cl.email_responsable,
             rd.nombre AS detalle_origen,
             r.fecha AS fecha_origen
         FROM cuotas c
         INNER JOIN socios s ON c.id_socio = s.id_socio
-        INNER JOIN clubs cl ON s.id_club = cl.id_club
+        INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+        INNER JOIN clubs cl ON sc.id_club = cl.id_club
         INNER JOIN reservas r ON c.id_evento = r.id_reserva
         INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
         INNER JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
@@ -58,14 +59,15 @@ if ($tipo_actividad === 'reserva') {
             c.id_evento,
             s.nombre AS socio_nombre,
             s.email AS socio_email,
-            s.id_club,  -- ← ¡Clave!
+            sc.id_club,
             cl.nombre AS club_nombre,
             cl.email_responsable,
             te.tipoevento AS detalle_origen,
             e.fecha AS fecha_origen
         FROM cuotas c
         INNER JOIN socios s ON c.id_socio = s.id_socio
-        INNER JOIN clubs cl ON s.id_club = cl.id_club
+        INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+        INNER JOIN clubs cl ON sc.id_club = cl.id_club
         INNER JOIN eventos e ON c.id_evento = e.id_evento
         INNER JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
         WHERE c.id_cuota = ? AND c.id_socio = ?
