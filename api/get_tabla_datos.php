@@ -134,7 +134,6 @@ try {
                             ELSE 'Sin detalle'
                         END as origen,
                         COALESCE(r.fecha, e.fecha) as fecha_evento
-                        -- ⚠️ REMOVIDO: c.costo_evento (no existe en tabla cuotas)
                     FROM cuotas c
                     INNER JOIN socios s ON c.id_socio = s.id_socio
                     INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
@@ -144,10 +143,12 @@ try {
                     LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
                     LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
                     LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-                    WHERE c.id_socio = ?
+                    WHERE 
+                        c.id_socio = ? 
+                        AND sc.id_club = ?
                     ORDER BY c.fecha_vencimiento DESC
                 ");
-                $stmt->execute([$_SESSION['id_socio']]);
+                $stmt->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
                 echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
                 break;
 
