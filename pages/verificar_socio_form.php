@@ -76,9 +76,11 @@ $club = $_GET['club'] ?? null;
       const data = await res.json();
 
       if (data.success) {
-        window.location.href = '/pages/dashboard_socio.php';
-      } else {
-        document.getElementById('mensaje').innerHTML = '<div class="error">' + data.message + '</div>';
+        <?php if (!empty($_GET['club'])): ?>
+          window.location.href = '/pages/dashboard_socio.php?id_club=<?= htmlspecialchars($_GET['club']) ?>';
+        <?php else: ?>
+          window.location.href = '/pages/dashboard_socio.php';
+        <?php endif; ?>
       }
     }
 
