@@ -114,7 +114,7 @@ try {
                 break;
 
             case 'cuotas':
-                $stmt = $pdo->prepare("
+                $sql = "
                     SELECT 
                         c.id_cuota,
                         c.monto,
@@ -147,9 +147,8 @@ try {
                         c.id_socio = ? 
                         AND sc.id_club = ?
                     ORDER BY c.fecha_vencimiento DESC
-                ");
-                $stmt->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
-                echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+                ";
+                $params = [$_SESSION['id_socio'], $_SESSION['club_id']];
                 break;
 
             case 'socios':
