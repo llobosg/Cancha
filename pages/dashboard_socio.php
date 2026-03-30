@@ -303,6 +303,15 @@ $stmt_deudas = $pdo->prepare("
     LIMIT 1
 ");
 
+// ✅ Solo una llamada con 4 parámetros
+$stmt_deudas->execute([
+    $_SESSION['id_socio'],
+    $_SESSION['club_id'],
+    $_SESSION['club_id'],
+    $_SESSION['club_id']
+]);
+$deuda_mas_vigente = $stmt_deudas->fetch();
+
 // Ejecutar con exactamente 4 parámetros
 $stmt_deudas->execute([
     $_SESSION['id_socio'],
