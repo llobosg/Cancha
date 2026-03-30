@@ -973,6 +973,26 @@ if (file_exists($logo_path)):
     <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
     <!-- Botón "+ Otro Club" -->
     <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
+    <!-- Verificar si el socio está en una pareja de torneo activo -->
+    <?php
+        $stmt_pareja = $pdo->prepare("
+            SELECT pt.id_pareja, t.nombre AS torneo_nombre
+            FROM parejas_torneo pt
+            JOIN torneos t ON pt.id_torneo = t.id_torneo
+            WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
+            AND t.estado IN ('abierto', 'en_progreso')
+            AND pt.estado = 'completa'
+            LIMIT 1
+        ");
+        $stmt_pareja->execute([$_SESSION['id_socio'], $_SESSION['id_socio']]);
+        $pareja_activa = $stmt_pareja->fetch();
+        ?>
+
+        <?php if ($pareja_activa): ?>
+            <button class="btn-action" style="background:#FF9800;" onclick="reemplazarCompanero(<?= $pareja_activa['id_pareja'] ?>)">
+                ➕ Reemplazar compañero
+            </button>
+    <?php endif; ?>
 <?php endif; ?>
 
 </div>
@@ -1997,6 +2017,47 @@ function solicitarUnirseAClub(idClub) {
 function cambiarClub(clubSlug) {
     // Redirigir con el nuevo slug → esto recargará el dashboard y actualizará la sesión
     window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
+}
+
+function reemplazarCompanero(idPareja) {
+    if (!confirm('¿Estás seguro de reemplazar a tu compañero? Se generará un nuevo link de invitación.')) return;
+    
+    fetch('../api/generar_link_reemplazo.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id_pareja: idPareja })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar modal con el nuevo link
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;">
+                    <div style="background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;">
+                        <h3>🔗 Nuevo link de reemplazo</h3>
+                        <p>Envía este link a tu nuevo compañero:</p>
+                        <div style="background:#f1f1f1;padding:0.6rem;border-radius:6px;margin:1rem 0;word-break:break-all;font-family:monospace;font-size:0.9rem;">
+                            ${data.link}
+                        </div>
+                        <button onclick="copiarYCerrar(this)" style="background:#071289;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;margin-right:0.5rem;">📋 Copiar</button>
+                        <button onclick="this.closest('div').remove()" style="background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            alert('❌ ' + data.message);
+        }
+    });
+}
+
+function copiarYCerrar(btn) {
+    const link = btn.closest('div').querySelector('div').textContent.trim();
+    navigator.clipboard.writeText(link).then(() => {
+        alert('✅ Link copiado');
+        btn.closest('div').remove();
+    });
 }
 </script>
 

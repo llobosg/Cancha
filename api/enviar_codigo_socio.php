@@ -257,6 +257,11 @@ try {
     ];
     // Limpiar cualquier output accidental
     ob_end_clean();
+    // Si es modo reemplazo, guardar en sesión
+    if (!empty($_POST['torneo_reemplazo'])) {
+        $_SESSION['torneo_reemplazo_post_registro'] = $_POST['torneo_reemplazo'];
+        $_SESSION['id_pareja_reemplazo_post_registro'] = $_SESSION['id_pareja_reemplazo'] ?? null;
+    }
     echo json_encode($response_data);
     exit;
 

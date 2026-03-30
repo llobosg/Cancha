@@ -75,6 +75,31 @@ $regiones_chile = [];
 while ($row = $stmt_regiones->fetch()) {
     $regiones_chile[$row['codigo_region']] = $row['nombre_region'];
 }
+
+// === MODO REEMPLAZO DE PAREJA ===
+$modo_reemplazo = false;
+$torneo_reemplazo = $_GET['torneo_reemplazo'] ?? null;
+
+if ($torneo_reemplazo) {
+    $modo_reemplazo = true;
+    // Validar que el código sea válido
+    $stmt = $pdo->prepare("
+        SELECT pt.id_pareja, t.id_torneo, t.nombre
+        FROM parejas_torneo pt
+        JOIN torneos t ON pt.id_torneo = t.id_torneo
+        WHERE pt.codigo_pareja = ? AND pt.estado = 'esperando_reemplazo'
+    ");
+    $stmt->execute([$torneo_reemplazo]);
+    $datos_reemplazo = $stmt->fetch();
+
+    if (!$datos_reemplazo) {
+        die('<h2 style="color:white;text-align:center;margin-top:50px;">Código de reemplazo inválido o expirado</h2>');
+    }
+
+    // Guardar en sesión para usar después del registro
+    $_SESSION['torneo_reemplazo'] = $torneo_reemplazo;
+    $_SESSION['id_pareja_reemplazo'] = $datos_reemplazo['id_pareja'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -216,6 +241,12 @@ while ($row = $stmt_regiones->fetch()) {
       <?php endif; ?>
 
       <div class="form-grid">
+        <?php if ($modo_reemplazo): ?>
+            <input type="hidden" name="torneo_reemplazo" value="<?= htmlspecialchars($torneo_reemplazo) ?>">
+            <div style="background:#fff3cd;padding:1rem;border-radius:8px;margin-bottom:1.5rem;text-align:center;">
+                <strong>🔄 Estás reemplazando a un jugador en el torneo: <?= htmlspecialchars($datos_reemplazo['nombre']) ?></strong>
+            </div>
+        <?php endif; ?>
         <!-- Fila 1 -->
         <div class="form-group"><label for="nombre">Nombre</label></div>
         <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
