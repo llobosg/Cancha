@@ -267,7 +267,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     $proximo_evento = $stmt_evento->fetch();
 }
 
-// === DEUDAS PENDIENTES ===
+// === DEUDAS PENDIENTES (solo del club activo) ===
 $stmt_deudas = $pdo->prepare("
     SELECT
         c.id_cuota,
@@ -285,11 +285,17 @@ $stmt_deudas = $pdo->prepare("
     LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
     LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
     LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-    WHERE c.id_socio = ? AND c.estado = 'pendiente'
+    -- Relación con socio_club para filtrar por club activo --
+    INNER JOIN socio_club sc ON c.id_socio = sc.id_socio
+    WHERE 
+        c.id_socio = ? 
+        AND c.estado = 'pendiente'
+        AND sc.id_club = ?
+        AND sc.estado = 'activo'
     ORDER BY c.fecha_vencimiento ASC
     LIMIT 1
 ");
-$stmt_deudas->execute([$_SESSION['id_socio']]);
+$stmt_deudas->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
 $deuda_mas_vigente = $stmt_deudas->fetch();
 
 $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
