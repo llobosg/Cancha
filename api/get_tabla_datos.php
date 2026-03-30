@@ -123,10 +123,6 @@ try {
                 break;
 
             case 'cuotas':
-                error_log("🔍 Entrando al caso 'cuotas'");
-                error_log("ID Socio: " . $_SESSION['id_socio']);
-                error_log("ID Club activo: " . $_SESSION['club_id']);
-
                 $sql = "
                     SELECT 
                         c.id_cuota,
@@ -161,21 +157,7 @@ try {
                         AND sc.id_club = ?
                     ORDER BY c.fecha_vencimiento DESC
                 ";
-
                 $params = [$_SESSION['id_socio'], $_SESSION['club_id']];
-                error_log("SQL generado: " . $sql);
-                error_log("Parámetros: " . json_encode($params));
-
-                try {
-                    $stmt = $pdo->prepare($sql);
-                    $stmt->execute($params);
-                    $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                    error_log("✅ Cuotas encontradas: " . count($resultados));
-                    echo json_encode($resultados);
-                } catch (Exception $e) {
-                    error_log("❌ Error en consulta de cuotas: " . $e->getMessage());
-                    echo json_encode([]);
-                }
                 break;
 
             case 'socios':
