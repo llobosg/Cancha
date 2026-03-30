@@ -73,15 +73,30 @@ if (!$modo_individual) {
 // === OBTENCIÓN DE ID_SOCIO ===
 $id_socio = null;
 $socio_actual = null;
+
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
+    
     if ($modo_individual) {
-        $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL");
+        // Modo individual: no debe tener clubes activos
+        $stmt_validate = $pdo->prepare("
+            SELECT s.* 
+            FROM socios s
+            LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+            WHERE s.id_socio = ? AND sc.id_socio IS NULL
+        ");
         $stmt_validate->execute([$id_socio]);
     } else {
-        $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ?");
+        // Modo club: debe pertenecer al club actual
+        $stmt_validate = $pdo->prepare("
+            SELECT s.*
+            FROM socios s
+            JOIN socio_club sc ON s.id_socio = sc.id_socio
+            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+        ");
         $stmt_validate->execute([$id_socio, $club_id]);
     }
+    
     $socio_actual = $stmt_validate->fetch();
     if (!$socio_actual) {
         $id_socio = null;
@@ -96,14 +111,26 @@ if (!$id_socio) {
     } elseif (isset($_SESSION['user_email'])) {
         $user_email = $_SESSION['user_email'];
     }
+    
     if ($user_email) {
         if ($modo_individual) {
-            $stmt_socio = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club IS NULL");
+            $stmt_socio = $pdo->prepare("
+                SELECT s.id_socio 
+                FROM socios s
+                LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+                WHERE s.email = ? AND sc.id_socio IS NULL
+            ");
             $stmt_socio->execute([$user_email]);
         } else {
-            $stmt_socio = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
+            $stmt_socio = $pdo->prepare("
+                SELECT s.id_socio
+                FROM socios s
+                JOIN socio_club sc ON s.id_socio = sc.id_socio
+                WHERE s.email = ? AND sc.id_club = ? AND sc.estado = 'activo'
+            ");
             $stmt_socio->execute([$user_email, $club_id]);
         }
+        
         $socio_data = $stmt_socio->fetch();
         if ($socio_data) {
             $id_socio = $socio_data['id_socio'];
@@ -127,10 +154,22 @@ if (!$id_socio) {
 // Asegurar socio_actual
 if (!$socio_actual) {
     if ($modo_individual) {
-        $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club IS NULL LIMIT 1");
+        $stmt_fallback = $pdo->prepare("
+            SELECT s.*
+            FROM socios s
+            LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+            WHERE s.id_socio = ? AND sc.id_socio IS NULL
+            LIMIT 1
+        ");
         $stmt_fallback->execute([$_SESSION['id_socio']]);
     } else {
-        $stmt_fallback = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND id_club = ? LIMIT 1");
+        $stmt_fallback = $pdo->prepare("
+            SELECT s.*
+            FROM socios s
+            JOIN socio_club sc ON s.id_socio = sc.id_socio
+            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+            LIMIT 1
+        ");
         $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
     }
     $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
