@@ -956,7 +956,7 @@ if (file_exists($logo_path)):
       // No mostrar el club actual
       if (!$modo_individual && $club_id == $c['id_club']) continue;
       ?>
-      <button class="btn-action" onclick="window.location.href='dashboard_socio.php?id_club=<?= $slug_actual ?>'">
+      <button class="btn-action" onclick="cambiarClub('<?= $slug_actual ?>')">
         <?= htmlspecialchars($c['club_nombre']) ?>
       </button>
     <?php endforeach; ?>
@@ -1992,6 +1992,11 @@ function solicitarUnirseAClub(idClub) {
             });
         }
     });
+}
+
+function cambiarClub(clubSlug) {
+    // Redirigir con el nuevo slug → esto recargará el dashboard y actualizará la sesión
+    window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
 }
 </script>
 
