@@ -337,7 +337,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             return;
           }
           let html = '<div style="display:flex;flex-direction:column;gap:0.8rem;">';
-          data.forEach(torneo => {
+          data.forEach($torneo => {
             const fecha = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
             const fechaInicio = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
             const fechaFin = new Date(torneo.fecha_fin).toLocaleDateString('es-CL');
@@ -396,11 +396,13 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                   📺 Panel Torneo
                 </button>
                 <!-- Botón Finalizado y UpRanking -->
-                <button 
-                    class="btn-action" style="background:#FF9800;margin-left:10px;" 
-                    onclick="finalizarTorneoYCalcularRanking(<?= $torneo['id_torneo'] ?>)">
-                    ✅ Finalizado y UpRanking
-                </button>
+                <?php if (!empty($torneo['id_torneo'])): ?>
+                  <button 
+                      class="btn-action" style="background:#FF9800;margin-left:10px;" 
+                      onclick="finalizarTorneoYCalcularRanking(<?= (int)$torneo['id_torneo'] ?>)">
+                      ✅ Finalizado y UpRanking
+                  </button>
+                <?php endif; ?>
               </div>
             `;
           });
