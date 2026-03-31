@@ -914,32 +914,38 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             </div>
         </div>
 
-        <!-- Noticias o Resultados Torneo -->
+        <!-- Tabla de Posiciones del Torneo -->
         <div class="stat-card">
             <h3>
-            <?php if ($tiene_torneo): ?>
-                🏆 Resultados – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?>
-            <?php else: ?>
+                <?php if ($tiene_torneo): ?>
+                🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?>
+                <?php else: ?>
                 Noticias
-            <?php endif; ?>
+                <?php endif; ?>
             </h3>
             <div class="stat-card-content">
-            <?php if ($tiene_torneo): ?>
-                <div id="posicionesTorneoDashboard">Cargando posiciones...</div>
-            <?php else: ?>
-                <div style="text-align:left;font-size:0.85rem;line-height:1.4;">
-                <div>• Bienvenidos a la temporada 2026</div>
-                <div>• Inscripciones OnClick</div>
-                <div>• Luego Ranking Americanos marzo</div>
-                <div>• Se vienen Americanos abril</div>
-                <div>• Más novedades pronto...</div>
-                </div>
-            <?php endif; ?>
+                <?php if ($tiene_torneo): ?>
+                    <div id="tablaPosicionesTorneo">Cargando tabla de posiciones...</div>
+                <?php else: ?>
+                    <div style="text-align:left;font-size:0.85rem;line-height:1.4;">
+                        <div>• Bienvenidos a la temporada 2026</div>
+                        <div>• Próximamente Ranking Pádel</div>
+                        <div>• Se viene otro Americano en Abril 🎾</div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         </div>
         <?php endif; ?>
         </div>
+
+        <!-- Resultados Personales del Torneo -->
+        <?php if ($tiene_torneo): ?>
+            <div class="stat-card">
+                <h3>📊 Mis Resultados – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
+                <div class="stat-card-content" id="misResultadosTorneo">Cargando mis resultados...</div>
+            </div>
+        <?php endif; ?>
 
         <!-- Sub sección derecha -->
         <div class="upper-right">
@@ -1961,6 +1967,45 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         html += '</tbody></table>';
                         document.getElementById('posicionesTorneoDashboard').innerHTML = html || 'Sin posiciones';
                     });
+                <?php endif; ?>
+
+                // === CARGAR TABLA DE POSICIONES COMPLETA ===
+                <?php if ($tiene_torneo): ?>
+                const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
+
+                // Tabla de posiciones
+                fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
+                    html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
+                    data.forEach((p, i) => {
+                        html += `<tr style="border-bottom:1px solid #eee;">
+                            <td style="text-align:center;">${i+1}</td>
+                            <td>${p.nombre_pareja}</td>
+                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('tablaPosicionesTorneo').innerHTML = html || 'Sin posiciones';
+                });
+
+                // Mis resultados personales
+                fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.length) {
+                        document.getElementById('misResultadosTorneo').innerHTML = 'No hay partidos jugados aún.';
+                        return;
+                    }
+                    let html = '<ul style="list-style:none;padding:0;">';
+                    data.forEach(p => {
+                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
+                        html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
+                    });
+                    html += '</ul>';
+                    document.getElementById('misResultadosTorneo').innerHTML = html;
+                });
                 <?php endif; ?>
 
                 // Noticias (Resultados resumen)
