@@ -1678,41 +1678,43 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 if (!tbody) return;
                 tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;">Cargando...</td></tr>';
                 // Caso especial: torneos usa un endpoint diferente
-                if (filtro === 'torneos') {
-                fetch('../api/get_mis_torneos.php')
+                case 'torneos':
+                    fetch('../api/get_mis_torneos.php')
                     .then(r => r.json())
-                        .then(data => {
-                            if (!Array.isArray(data) || data.length === 0) {
+                    .then(data => {
+                        if (!Array.isArray(data) || data.length === 0) {
                             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
                             return;
-                            }
-                            let html = '';
-                            data.forEach(row => {
+                        }
+                        let html = '';
+                        data.forEach(row => {
+                            // Formatear fecha sin hora
+                            const fecha = row.fecha ? row.fecha.split('T')[0].split('-').reverse().join('/') : '-';
                             html += `
-                            <tr>
-                            <td>${formatDate(row.fecha)}</td>
-                            <td>-</td>
-                            <td>${row.id_tipoevento}</td>
-                            <td>${row.id_club || '-'}</td>
-                            <td>${row.id_cancha || '-'}</td>
-                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                            <td>${row.nombre || '-'}</td>
-                            <td>${row.posicion_jugador || '-'}</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>${row.comentario || '-'}</td>
-                            <td>-</td>
-                            </tr>
+                                <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
+                                    <td>${fecha}</td>
+                                    <td>-</td>
+                                    <td>${row.nombre || '-'}</td>
+                                    <td>${row.id_club || '-'}</td>
+                                    <td>${row.id_cancha || '-'}</td>
+                                    <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                    <td>-</td>
+                                    <td>${row.posicion_jugador || '-'}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>${row.comentario || '-'}</td>
+                                    <td>-</td>
+                                </tr>
                             `;
-                            });
-                            tbody.innerHTML = html;
-                        })
-                        .catch(err => {
-                            console.error('Error:', err);
-                            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los torneos</td></tr>';
+                        });
+                        tbody.innerHTML = html;
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los torneos</td></tr>';
                     });
-                return;
-                }
+                    break;
+
                 // Caso general: otros filtros usan get_tabla_datos.php
                 fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
                     .then(r => r.json())
@@ -2037,6 +2039,74 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     alert('✅ Link copiado');
                     btn.closest('div').remove();
                 });
+            }
+
+            // === ABRIR DETALLE DE TORNEO ===
+            function abrirDetalleTorneo(idTorneo) {
+                fetch(`../api/get_detalle_torneo.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.torneo) {
+                        alert('❌ No se pudo cargar el detalle del torneo');
+                        return;
+                    }
+
+                    // Crear modal
+                    const modal = document.createElement('div');
+                    modal.id = 'modalDetalleTorneo';
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0; left: 0;
+                        width: 100%; height: 100%;
+                        background: rgba(0,0,0,0.7);
+                        z-index: 1000;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    `;
+
+                    let resultadosHtml = '<ul style="list-style:none;padding:0;">';
+                    (data.resultados || []).forEach(p => {
+                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
+                        resultadosHtml += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
+                    });
+                    resultadosHtml += '</ul>';
+
+                    let posicionesHtml = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
+                    posicionesHtml += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
+                    (data.posiciones || []).forEach((p, i) => {
+                        posicionesHtml += `<tr style="border-bottom:1px solid #eee;">
+                            <td style="text-align:center;">${i+1}</td>
+                            <td>${p.nombre_pareja}</td>
+                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
+                        </tr>`;
+                    });
+                    posicionesHtml += '</tbody></table>';
+
+                    modal.innerHTML = `
+                        <div style="background:white;padding:2rem;border-radius:16px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;position:relative;">
+                            <button onclick="cerrarModalTorneo()" style="position:absolute;top:10px;right:10px;background:#6c757d;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;">✕</button>
+                            <h3 style="margin-top:0;">📊 Detalle del Torneo</h3>
+                            <p><strong>Nombre:</strong> ${data.torneo.nombre}</p>
+                            <p><strong>Fecha:</strong> ${data.torneo.fecha_inicio}</p>
+                            <p><strong>Mi Posición:</strong> ${data.mi_posicion || '—'}</p>
+                            <h4 style="margin-top:1.5rem;">Mis Resultados</h4>
+                            ${resultadosHtml}
+                            <h4 style="margin-top:1.5rem;">Tabla de Posiciones</h4>
+                            ${posicionesHtml}
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                })
+                .catch(err => {
+                    console.error('Error al cargar detalle:', err);
+                    alert('❌ Error al cargar el detalle del torneo');
+                });
+            }
+
+            function cerrarModalTorneo() {
+                const modal = document.getElementById('modalDetalleTorneo');
+                if (modal) modal.remove();
             }
         </script>
     </body>
