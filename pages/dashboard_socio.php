@@ -1700,18 +1700,23 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                             }
                             let html = '';
                             data.forEach(row => {
-                                // Formatear fecha sin hora
-                                const fecha = row.fecha ? row.fecha.split('T')[0].split('-').reverse().join('/') : '-';
-                                const idTorneo = row.id_torneo || row.torneo_id || row.id;
+                                // Detectar el ID del torneo (puede llamarse de distintas formas)
+                                const idTorneo = row.id_torneo || row.torneo_id || row.id || null;
                                 if (!idTorneo) {
                                     console.warn('⚠️ Fila sin ID de torneo:', row);
-                                    return;
+                                    return; // Saltar filas sin ID
                                 }
+
+                                // Formatear fecha sin hora
+                                const fecha = row.fecha_inicio 
+                                    ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') 
+                                    : '-';
+
                                 html += `
                                     <tr onclick="abrirDetalleTorneo(${idTorneo})">
                                         <td>${fecha}</td>
                                         <td>-</td>
-                                        <td>${row.nombre || '-'}</td>
+                                        <td>${row.torneo_nombre || row.nombre || '-'}</td>
                                         <td>${row.id_club || '-'}</td>
                                         <td>${row.id_cancha || '-'}</td>
                                         <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
