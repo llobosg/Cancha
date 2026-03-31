@@ -914,36 +914,27 @@ if (file_exists($logo_path)):
     </div>
   </div>
 
-  <!-- Noticias o Resultados Torneo -->
-  <div class="stat-card">
-    <h3>
-      <?php if ($tiene_torneo): ?>
-        🏆 Resultados – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?>
-      <?php else: ?>
-        Noticias
-      <?php endif; ?>
-    </h3>
-    <div class="stat-card-content">
-      <?php if ($tiene_torneo): ?>
-        <div id="noticiasTorneo">Cargando resultados...</div>
-      <?php else: ?>
-        <div style="text-align:left;font-size:0.85rem;line-height:1.4;">
-          <div>• Bienvenidos a la temporada 2026</div>
-          <div>• Nuevas reglas para inscripciones</div>
-          <div>• Torneo interno próximamente</div>
-          <div>• Actualización de horarios</div>
-          <div>• Nuevo sistema de cuotas</div>
-          <div>• Eventos especiales</div>
-          <div>• Capacitación para capitanes</div>
-          <div>• Mantención de canchas</div>
-          <div>• Seguro deportivo obligatorio</div>
-          <div>• Más novedades pronto...</div>
-        </div>
-      <?php endif; ?>
-    </div>
+<!-- Noticias o Tabla de Posiciones -->
+<div class="stat-card">
+  <h3>
+    <?php if ($tiene_torneo): ?>
+      🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?>
+    <?php else: ?>
+      Noticias
+    <?php endif; ?>
+  </h3>
+  <div class="stat-card-content">
+    <?php if ($tiene_torneo): ?>
+      <div id="posicionesTorneoDashboard">Cargando posiciones...</div>
+    <?php else: ?>
+      <div style="text-align:left;font-size:0.85rem;line-height:1.4;">
+        <div>• Bienvenidos a la temporada 2026</div>
+        <div>• Próximamente Ranking Pádel</div>
+        <div>• Se viene otro Americano en Abril 🎾</div>
+        <!-- ... resto de noticias ... -->
+      </div>
+    <?php endif; ?>
   </div>
-  </div>
-<?php endif; ?>
 </div>
 
 <!-- Sub sección derecha -->
@@ -1859,6 +1850,26 @@ if (activeBtn) {
 activeBtn.classList.add('active');
 }
 cargarTabla(filtro);
+// === CARGAR POSICIONES EN DASHBOARD ===
+<?php if ($tiene_torneo): ?>
+const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
+
+fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`)
+.then(r => r.json())
+.then(data => {
+    let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
+    html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
+    (data.posiciones || []).forEach((p, i) => {
+        html += `<tr style="border-bottom:1px solid #eee;">
+            <td style="text-align:center;">${i+1}</td>
+            <td>${p.nombre_pareja}</td>
+            <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('posicionesTorneoDashboard').innerHTML = html || 'Sin posiciones';
+});
+<?php endif; ?>
 
 // === CARGAR DATOS DEL TORNEO SI ES NECESARIO ===
 <?php if ($modo_individual && !empty($torneos_americanos)): ?>
