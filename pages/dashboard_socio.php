@@ -1861,22 +1861,54 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
                 // === CARGAR POSICIONES EN DASHBOARD ===
                 <?php if ($tiene_torneo): ?>
-                    console.log("📊 Cargando posiciones para torneo ID:", <?= (int)$torneo_actual['id_torneo'] ?>);
-                    const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
+                console.log("📊 Cargando posiciones para torneo ID:", <?= (int)$torneo_actual['id_torneo'] ?>);
+                const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
 
-                    fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        console.log("✅ Posiciones recibidas:", data);
-                        // ... resto del código
+                // Tabla de posiciones
+                fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
+                    html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
+                    data.forEach((p, i) => {
+                        html += `<tr style="border-bottom:1px solid #eee;">
+                            <td style="text-align:center;">${i+1}</td>
+                            <td>${p.nombre_pareja}</td>
+                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
+                        </tr>`;
                     });
+                    html += '</tbody></table>';
+                    
+                    const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
+                    if (contenedorPosiciones) {
+                        contenedorPosiciones.innerHTML = html || 'Sin posiciones';
+                    } else {
+                        console.warn('⚠️ Contenedor de posiciones no encontrado');
+                    }
+                });
 
-                    fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        console.log("✅ Resultados personales recibidos:", data);
-                        // ... resto del código
+                // Mis resultados personales
+                fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.length) {
+                        document.getElementById('misResultadosTorneo').innerHTML = 'No hay partidos jugados aún.';
+                        return;
+                    }
+                    let html = '<ul style="list-style:none;padding:0;">';
+                    data.forEach(p => {
+                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
+                        html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
                     });
+                    html += '</ul>';
+                    
+                    const contenedorResultados = document.getElementById('misResultadosTorneo');
+                    if (contenedorResultados) {
+                        contenedorResultados.innerHTML = html;
+                    } else {
+                        console.warn('⚠️ Contenedor de resultados no encontrado');
+                    }
+                });
                 <?php else: ?>
                     console.log("📰 No hay torneos activos para este socio");
                 <?php endif; ?>
