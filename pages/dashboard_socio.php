@@ -725,10 +725,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <div class="stat-card-content" id="resultadosTorneo">Cargando resultados...</div>
                     </div>
 
-                    <!-- Posiciones -->
+                    <!-- Posiciones del torneo -->
                     <div class="stat-card">
-                    <h3>🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
-                    <div class="stat-card-content" id="posicionesTorneo">Cargando posiciones...</div>
+                        <h3>🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
+                        <div class="stat-card-content" id="tablaPosicionesTorneo">Cargando...</div>
+                        
+                        <!-- Ranking actual -->
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.3);">
+                            <h4 style="color:#FFD700;">🏅 Tu Ranking Actual</h4>
+                            <div id="miRanking">Cargando ranking...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -892,10 +898,17 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
                     <!-- Tabla de Posiciones del Torneo -->
                     <?php if ($tiene_torneo): ?>
-                    <div class="stat-card">
+                        <!-- Posiciones del torneo -->
+                        <div class="stat-card">
                         <h3>🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
-                        <div class="stat-card-content" id="tablaPosicionesTorneo">Cargando tabla de posiciones...</div>
-                    </div>
+                        <div class="stat-card-content" id="tablaPosicionesTorneo">Cargando...</div>
+                        
+                        <!-- Ranking actual -->
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.3);">
+                            <h4 style="color:#FFD700;">🏅 Tu Ranking Actual</h4>
+                            <div id="miRanking">Cargando ranking...</div>
+                        </div>
+                        </div>
                     <?php else: ?>
                     <div class="stat-card">
                         <h3>📰 Noticias</h3>
@@ -1705,13 +1718,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                     <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
                                         <td>${fecha}</td>
                                         <td>-</td>
-                                        <td>${row.torneo || '-'}</td>
+                                        <td>-</td>
                                         <td>${row.id_club || '-'}</td>
-                                        <td>${row.id_cancha || '-'}</td>
-                                        <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                        <td>-</td>
+                                        <td>'Pasco'</td>
+                                        <td>${row.torneo || '-'}</td>
                                         <td>${row.posicion || '-'}</td>
-                                        <td>-</td>
+                                        <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                                         <td>-</td>
                                         <td>${row.comentario || '-'}</td>
                                         <td>-</td>
@@ -1903,6 +1915,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     }
                 });
 
+                // Cargar ranking personal
+                fetch(`../api/get_ranking_personal.php?id_socio=<?= $_SESSION['id_socio'] ?>`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.total_puntos !== undefined) {
+                        document.getElementById('miRanking').innerHTML = `
+                            <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
+                            <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
+                        `;
+                    } else {
+                        document.getElementById('miRanking').innerHTML = 'No hay ranking disponible.';
+                    }
+                });
+
                 // Mis resultados personales
                 fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
                 .then(r => r.json())
@@ -1934,7 +1960,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             document.addEventListener('DOMContentLoaded', () => {
                 const deporteSelect = document.getElementById('deporte');
                 if (deporteSelect?.value) {
-            cargarPuestosPorDeporte(deporteSelect.value);
+                    cargarPuestosPorDeporte(deporteSelect.value);
                 }
                 deporteSelect?.addEventListener('change', function() {
                 cargarPuestosPorDeporte(this.value);

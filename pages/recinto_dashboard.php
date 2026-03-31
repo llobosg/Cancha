@@ -395,6 +395,12 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                         onclick="irPanelTorneo(${torneo.id_torneo})">
                   📺 Panel Torneo
                 </button>
+                <!-- Botón Finalizado y UpRanking -->
+                <button 
+                    class="btn-action" style="background:#FF9800;margin-left:10px;" 
+                    onclick="finalizarTorneoYCalcularRanking(<?= $id_torneo ?>)">
+                    ✅ Finalizado y UpRanking
+                </button>
               </div>
             `;
           });
@@ -837,6 +843,45 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
   function irPanelTorneo(idTorneo) {
     window.location.href = 'panel_torneo.php?id=' + idTorneo;
+  }
+
+  // === FINALIZAR TORNEO Y CALCULAR RANKING ===
+  function finalizarTorneoYCalcularRanking(idTorneo) {
+      if (!confirm('¿Estás seguro de finalizar este torneo y calcular el ranking?')) return;
+
+      // 1. Validar que todos los partidos estén finalizados
+      fetch(`../api/validar_torneo_finalizado.php?id_torneo=${idTorneo}`)
+      .then(r => r.json())
+      .then(data => {
+          if (!data.success) {
+              alert('❌ ' + data.message);
+              return;
+          }
+
+          // 2. Calcular ranking
+          fetch('../api/calcular_ranking_torneo.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ id_torneo: idTorneo })
+          })
+          .then(r => r.json())
+          .then(res => {
+              if (res.success) {
+                  alert('✅ Ranking actualizado correctamente');
+                  location.reload();
+              } else {
+                  alert('❌ Error al calcular ranking: ' + res.message);
+              }
+          })
+          .catch(err => {
+              console.error('Error:', err);
+              alert('❌ Error al procesar el ranking');
+          });
+      })
+      .catch(err => {
+          console.error('Error validación:', err);
+          alert('❌ Error al verificar estado del torneo');
+      });
   }
   </script>
   <!-- Submodal genérico -->
