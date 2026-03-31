@@ -1898,6 +1898,28 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 activeBtn.classList.add('active');
             }
             cargarTabla(filtro);
+
+            // === CARGAR POSICIONES EN DASHBOARD ===
+            <?php if ($tiene_torneo): ?>
+                console.log("📊 Cargando posiciones para torneo ID:", <?= (int)$torneo_actual['id_torneo'] ?>);
+                const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
+
+                fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    console.log("✅ Posiciones recibidas:", data);
+                    // ... resto del código
+                });
+
+                fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    console.log("✅ Resultados personales recibidos:", data);
+                    // ... resto del código
+                });
+            <?php else: ?>
+                console.log("📰 No hay torneos activos para este socio");
+            <?php endif; ?>
         });
 
         // === INICIALIZAR PUESTOS ===
