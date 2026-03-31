@@ -11,7 +11,7 @@ if (!isset($_SESSION['id_socio'])) {
 
 $id_torneo = $_GET['id_torneo'] ?? null;
 if (!$id_torneo) {
-    echo json_encode([]);
+    echo json_encode(['torneo' => null]);
     exit;
 }
 
@@ -36,6 +36,7 @@ try {
     $mi_posicion = $stmt->fetchColumn();
 
     // Resultados personales
+    $email = $_SESSION['user_email'] ?? '';
     $stmt = $pdo->prepare("
         SELECT 
             p.juegos_pareja_1,
@@ -73,7 +74,6 @@ try {
         WHERE p.id_torneo = ? AND p.estado = 'finalizado'
         ORDER BY p.fecha_hora_programada ASC
     ");
-    $email = $_SESSION['user_email'] ?? '';
     $stmt->execute([
         $_SESSION['id_socio'], $_SESSION['id_socio'],
         $email, $email,

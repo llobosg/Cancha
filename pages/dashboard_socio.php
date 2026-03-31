@@ -666,6 +666,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             text-align: center;
             }
         </style>
+        <script>
+            // Desactivar Service Worker en desarrollo
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+        </script>
     </head>
     <body>
         <div class="dashboard-container">
