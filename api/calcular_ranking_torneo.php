@@ -3,7 +3,7 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
-if ($_SESSION['rol'] !== 'admin' && $_SESSION['rol'] !== 'ceo_cancha') {
+if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
     echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
     exit;
 }
