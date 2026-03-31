@@ -3,8 +3,8 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
-// Validar que el usuario esté autenticado como socio
-if (!isset($_SESSION['id_socio'])) {
+// Validar que el usuario esté autenticado (socio o recinto)
+if (!isset($_SESSION['id_socio']) && !isset($_SESSION['id_recinto'])) {
     http_response_code(403);
     echo json_encode(['error' => 'Acceso no autorizado']);
     exit;
