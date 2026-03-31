@@ -20,8 +20,8 @@ $stmt = $pdo->prepare("
     SELECT 
         p.id_partido,
         p.fecha_hora_programada,
-        COALESCE(s1.alias, CONCAT(jt1.nombre, ' / ', jt1.apellido), '#Pareja 1') AS pareja1,
-        COALESCE(s2.alias, CONCAT(jt2.nombre, ' / ', jt2.apellido), '#Pareja 2') AS pareja2
+        COALESCE(s1.alias, jt1.nombre, '#Pareja 1') AS pareja1,
+        COALESCE(s2.alias, jt2.nombre, '#Pareja 2') AS pareja2
     FROM partidos_torneo p
     LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
     LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
@@ -34,13 +34,4 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$id_torneo]);
 echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-
-// Asegurar que siempre se devuelva JSON
-register_shutdown_function(function() {
-    $error = error_get_last();
-    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Error interno del servidor']);
-    }
-});
 ?>
