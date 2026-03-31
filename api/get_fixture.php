@@ -20,27 +20,22 @@ $stmt = $pdo->prepare("
     SELECT 
         p.id_partido,
         p.fecha_hora_programada,
-        -- Nombre de la primera pareja (usar alias del socio 1 o temporal)
-        -- Para pareja 1 completa
         CONCAT(
             COALESCE(s1.alias, jt1.nombre, 'J1'),
             ' / ',
             COALESCE(s1b.alias, jt1b.nombre, 'J2')
         ) AS pareja1
-        -- Nombre de la segunda pareja
         COALESCE(
             s2.alias,
             CONCAT(jt2.nombre, ' / ', jt2.apellido),
             '#Pareja 2'
         ) AS pareja2
     FROM partidos_torneo p
-    -- Primera pareja
     LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
-    LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio  -- Usar socio principal
+    LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
     LEFT JOIN jugadores_temporales jt1 ON pt1.id_jugador_temp_1 = jt1.id_jugador
-    -- Segunda pareja
     LEFT JOIN parejas_torneo pt2 ON p.id_pareja_2 = pt2.id_pareja
-    LEFT JOIN socios s2 ON pt2.id_socio_1 = s2.id_socio  -- Usar socio principal
+    LEFT JOIN socios s2 ON pt2.id_socio_1 = s2.id_socio
     LEFT JOIN jugadores_temporales jt2 ON pt2.id_jugador_temp_1 = jt2.id_jugador
     WHERE p.id_torneo = ?
     ORDER BY p.fecha_hora_programada ASC, p.id_partido ASC
