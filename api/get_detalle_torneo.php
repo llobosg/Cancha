@@ -33,32 +33,32 @@ try {
         WHERE id_torneo = ? AND (id_socio_1 = ? OR id_socio_2 = ?)
     ");
     $stmt->execute([$id_torneo, $_SESSION['id_socio'], $_SESSION['id_socio']]);
-    $mi_posicion = $stmt->fetchColumn();
+    $mi_posicion = $stmt->fetchColumn() ?: '—';
 
     // Resultados personales
     $email = $_SESSION['user_email'] ?? '';
     $stmt = $pdo->prepare("
-        SELECT 
-            p.juegos_pareja_1,
-            p.juegos_pareja_2,
-            CASE
-                WHEN p.id_pareja_1 = pt_mia.id_pareja THEN 
-                    COALESCE(
-                        CONCAT(s_rival1.alias, ' / ', s_rival2.alias),
-                        CONCAT(jt_rival1.nombre, ' / ', jt_rival2.nombre),
-                        'Pareja ' || p.id_pareja_2
-                    )
-                ELSE 
-                    COALESCE(
-                        CONCAT(s_rival1.alias, ' / ', s_rival2.alias),
-                        CONCAT(jt_rival1.nombre, ' / ', jt_rival2.nombre),
-                        'Pareja ' || p.id_pareja_1
-                    )
-            END AS rival,
-            CASE
-                WHEN p.id_pareja_1 = pt_mia.id_pareja THEN p.juegos_pareja_1 > p.juegos_pareja_2
-                ELSE p.juegos_pareja_2 > p.juegos_pareja_1
-            END AS resultado
+    SELECT 
+        p.juegos_pareja_1,
+        p.juegos_pareja_2,
+        CASE
+            WHEN p.id_pareja_1 = pt_mia.id_pareja THEN 
+                COALESCE(
+                    CONCAT(s_rival1.alias, ' / ', s_rival2.alias),
+                    CONCAT(jt_rival1.nombre, ' / ', jt_rival2.nombre),
+                    'Pareja ' || p.id_pareja_2
+                )
+            ELSE 
+                COALESCE(
+                    CONCAT(s_rival1.alias, ' / ', s_rival2.alias),
+                    CONCAT(jt_rival1.nombre, ' / ', jt_rival2.nombre),
+                    'Pareja ' || p.id_pareja_1
+                )
+        END AS rival,
+        CASE
+            WHEN p.id_pareja_1 = pt_mia.id_pareja THEN p.juegos_pareja_1 > p.juegos_pareja_2
+            ELSE p.juegos_pareja_2 > p.juegos_pareja_1
+        END AS resultado
         FROM partidos_torneo p
         JOIN parejas_torneo pt_mia ON (
             (pt_mia.id_socio_1 = ? OR pt_mia.id_socio_2 = ? OR pt_mia.id_jugador_temp_1 = (SELECT id_jugador FROM jugadores_temporales WHERE email = ?) OR pt_mia.id_jugador_temp_2 = (SELECT id_jugador FROM jugadores_temporales WHERE email = ?))
@@ -108,6 +108,12 @@ try {
         'resultados' => $resultados,
         'posiciones' => $posiciones
     ]);
+
+    error_log("🔍 Detalle torneo ID: $id_torneo, socio: " . ($_SESSION['id_socio'] ?? 'null'));
+    error_log("✅ Torneo: " . json_encode($torneo));
+    error_log("✅ Mi posición: " . $mi_posicion);
+    error_log("✅ Resultados: " . json_encode($resultados));
+    error_log("✅ Posiciones: " . json_encode($posiciones));
 
 } catch (Exception $e) {
     error_log("Error en get_detalle_torneo.php: " . $e->getMessage());

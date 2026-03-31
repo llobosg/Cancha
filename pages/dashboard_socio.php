@@ -1693,35 +1693,24 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         fetch('../api/get_mis_torneos.php')
                         .then(r => r.json())
                         .then(data => {
-                            console.log("🔍 Datos de torneos:", data); // ← Agrega esta línea
                             if (!Array.isArray(data) || data.length === 0) {
                                 tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
                                 return;
                             }
                             let html = '';
                             data.forEach(row => {
-                                // Detectar el ID del torneo (puede llamarse de distintas formas)
-                                const idTorneo = row.id_torneo || row.torneo_id || row.id || null;
-                                if (!idTorneo) {
-                                    console.warn('⚠️ Fila sin ID de torneo:', row);
-                                    return; // Saltar filas sin ID
-                                }
-
                                 // Formatear fecha sin hora
-                                const fecha = row.fecha_inicio 
-                                    ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') 
-                                    : '-';
-
+                                const fecha = row.fecha_inicio ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') : '-';
                                 html += `
-                                    <tr onclick="abrirDetalleTorneo(${idTorneo})">
+                                    <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
                                         <td>${fecha}</td>
                                         <td>-</td>
-                                        <td>${row.torneo_nombre || row.nombre || '-'}</td>
+                                        <td>${row.torneo || '-'}</td>
                                         <td>${row.id_club || '-'}</td>
                                         <td>${row.id_cancha || '-'}</td>
                                         <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                                         <td>-</td>
-                                        <td>${row.posicion_jugador || '-'}</td>
+                                        <td>${row.posicion || '-'}</td>
                                         <td>-</td>
                                         <td>-</td>
                                         <td>${row.comentario || '-'}</td>
