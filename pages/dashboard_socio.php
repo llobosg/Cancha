@@ -1864,27 +1864,38 @@ cargarTabla(filtro);
 <?php if ($modo_individual && !empty($torneos_americanos)): ?>
 const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
 
-// Fixture
+// Fixture - Agrupado por SET y con alias simplificado
 fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
 .then(r => r.json())
 .then(data => {
-let html = '';
-const rondas = {};
-data.forEach(p => {
-const key = new Date(p.fecha_hora_programada).toISOString().split('T')[0];
-if (!rondas[key]) rondas[key] = [];
-rondas[key].push(p);
-});
-let numRonda = 1;
-Object.values(rondas).forEach(partidos => {
-html += `<strong>Set ${numRonda}</strong><br>`;
-partidos.forEach(p => {
-html += `<div>${p.pareja1} vs ${p.pareja2}</div>`;
-});
-html += `<br>`;
-numRonda++;
-});
-document.getElementById('fixtureTorneo').innerHTML = html || 'No hay fixture';
+    if (!Array.isArray(data) || data.length === 0) {
+        document.getElementById('fixtureTorneo').innerHTML = 'No hay fixture';
+        return;
+    }
+
+    // Agrupar por fecha → cada fecha = 1 set
+    const sets = {};
+    data.forEach(partido => {
+        const fecha = new Date(partido.fecha_hora_programada).toISOString().split('T')[0];
+        if (!sets[fecha]) sets[fecha] = [];
+        sets[fecha].push(partido);
+    });
+
+    let html = '';
+    let numSet = 1;
+    Object.values(sets).forEach(partidos => {
+        html += `<div style="margin-bottom:1rem;"><strong>Set ${numSet}</strong></div>`;
+        partidos.forEach(p => {
+            // Mostrar solo el alias principal de cada pareja
+            const nombre1 = p.alias1 || p.pareja1 || 'Pareja 1';
+            const nombre2 = p.alias2 || p.pareja2 || 'Pareja 2';
+            html += `<div style="margin-left:1rem;">${nombre1} vs ${nombre2}</div>`;
+        });
+        html += `<br>`;
+        numSet++;
+    });
+
+    document.getElementById('fixtureTorneo').innerHTML = html;
 });
 
 // Resultados
