@@ -35,6 +35,12 @@ try {
         throw new Exception('No hay parejas en el torneo');
     }
 
+    // Solo procesar parejas con ambos socios válidos
+    if (!$p['id_socio_1'] || !$p['id_socio_2']) {
+        error_log("⚠️ Pareja {$p['id_pareja']} incompleta. Saltando.");
+        continue;
+    }
+
     $total = count($parejas);
     foreach ($parejas as $i => $p) {
         $pos = $i + 1;
