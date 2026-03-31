@@ -700,9 +700,7 @@ if (file_exists($logo_path)):
   <!-- Noticias → Posiciones -->
   <div class="stat-card">
     <h3>🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
-    <div class="stat-card-content" id="posicionesTorneo">
-      Cargando posiciones...
-    </div>
+    <div class="stat-card-content" id="posicionesTorneo">Cargando posiciones...</div>
   </div>
   </div>
 
@@ -936,6 +934,7 @@ if (file_exists($logo_path)):
     <?php endif; ?>
   </div>
 </div>
+<?php endif; ?>
 
 <!-- Sub sección derecha -->
 <div class="upper-right">
@@ -2124,5 +2123,8 @@ style="margin-top:0.5rem;background:#e74c3c;color:white;border:none;padding:0.3r
 </div>
 </div>
 </div>
+<?php endif; ?>
+</div> <!-- Cierre de .upper-left -->
+</div> <!-- Cierre de .dashboard-upper -->
 </body>
 </html>
