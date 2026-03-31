@@ -398,7 +398,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                 <!-- Botón Finalizado y UpRanking -->
                 <button 
                     class="btn-action" style="background:#FF9800;margin-left:10px;" 
-                    onclick="finalizarTorneoYCalcularRanking(<?= $id_torneo ?>)">
+                    onclick="finalizarTorneoYCalcularRanking(<?= $torneo['id_torneo'] ?>)">
                     ✅ Finalizado y UpRanking
                 </button>
               </div>
