@@ -20,16 +20,8 @@ $stmt = $pdo->prepare("
     SELECT 
         p.id_partido,
         p.fecha_hora_programada,
-        CONCAT(
-            COALESCE(s1.alias, jt1.nombre, 'J1'),
-            ' / ',
-            COALESCE(s1b.alias, jt1b.nombre, 'J2')
-        ) AS pareja1
-        COALESCE(
-            s2.alias,
-            CONCAT(jt2.nombre, ' / ', jt2.apellido),
-            '#Pareja 2'
-        ) AS pareja2
+        COALESCE(s1.alias, CONCAT(jt1.nombre, ' / ', jt1.apellido), '#Pareja 1') AS pareja1,
+        COALESCE(s2.alias, CONCAT(jt2.nombre, ' / ', jt2.apellido), '#Pareja 2') AS pareja2
     FROM partidos_torneo p
     LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
     LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
