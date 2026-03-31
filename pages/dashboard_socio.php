@@ -1693,6 +1693,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         fetch('../api/get_mis_torneos.php')
                         .then(r => r.json())
                         .then(data => {
+                            console.log("🔍 Datos de torneos:", data); // ← Agrega esta línea
                             if (!Array.isArray(data) || data.length === 0) {
                                 tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
                                 return;
@@ -1701,8 +1702,13 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                             data.forEach(row => {
                                 // Formatear fecha sin hora
                                 const fecha = row.fecha ? row.fecha.split('T')[0].split('-').reverse().join('/') : '-';
+                                const idTorneo = row.id_torneo || row.torneo_id || row.id;
+                                if (!idTorneo) {
+                                    console.warn('⚠️ Fila sin ID de torneo:', row);
+                                    return;
+                                }
                                 html += `
-                                    <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
+                                    <tr onclick="abrirDetalleTorneo(${idTorneo})">
                                         <td>${fecha}</td>
                                         <td>-</td>
                                         <td>${row.nombre || '-'}</td>
