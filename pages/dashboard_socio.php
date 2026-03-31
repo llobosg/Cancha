@@ -1876,7 +1876,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             cargarTabla(filtro);
 
             // === CARGAR DATOS DEL TORNEO SI ES NECESARIO ===
-            <?php if ($modo_individual && !empty($torneos_americanos)): ?>
+            <?php if (!empty($torneos_americanos)): ?>
                 const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
 
                 // Fixture - Agrupado por SET y con alias simplificado
