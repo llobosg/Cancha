@@ -338,11 +338,8 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           }
           let html = '<div style="display:flex;flex-direction:column;gap:0.8rem;">';
           data.forEach($torneo => {
-            const fecha = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
-            const fechaInicio = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL');
-            const fechaFin = new Date(torneo.fecha_fin).toLocaleDateString('es-CL');
-            const creado = new Date(torneo.created_at).toLocaleDateString('es-CL');
-            const publico = torneo.publico == 1 ? '✅ Sí' : '❌ No';
+            const fechaInicio = new Date($torneo.fecha_inicio).toLocaleDateString('es-CL');
+            const fechaFin = new Date($torneo.fecha_fin).toLocaleDateString('es-CL');
             const estadoMap = {
               'borrador': 'Borrador',
               'abierto': 'Abierto',
@@ -350,59 +347,40 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               'en_progreso': 'En progreso',
               'finalizado': 'Finalizado'
             };
-            const estadoLabel = estadoMap[torneo.estado] || torneo.estado;
-            const parejas = `${torneo.num_parejas_max} parejas`;
-            const pendientes = torneo.parejas_inscritas;
-            const valor = parseInt(torneo.valor) || 0;
-            const totalRecaudado = valor * (torneo.parejas_inscritas || 0);
+            const estadoLabel = estadoMap[$torneo.estado] || $torneo.estado;
+            const parejas = `${$torneo.num_parejas_max} parejas`;
+            const valor = parseInt($torneo.valor) || 0;
+            const totalRecaudado = valor * ($torneo.parejas_inscritas || 0);
+
             html += `
               <div style="background:rgba(255,255,255,0.2);padding:1.2rem;border-radius:12px;position:relative;">
-                <h4 style="margin:0 0 0.8rem 0;font-size:1.1rem;">${torneo.nombre}</h4>
-                <small>${torneo.categoria} • ${torneo.nivel} • ${fechaInicio} • ${parejas} • ${estadoLabel} • ${torneo.premios}</small>
-                <small><div>Inscritos: ${torneo.parejas_inscritas} / ${torneo.num_parejas_max}</div></small>
+                <h4 style="margin:0 0 0.8rem 0;font-size:1.1rem;">${$torneo.nombre}</h4>
+                <small>${$torneo.categoria} • ${$torneo.nivel} • ${fechaInicio} • ${parejas} • ${estadoLabel} • ${$torneo.premios}</small>
+                <small><div>Inscritos: ${$torneo.parejas_inscritas} / ${$torneo.num_parejas_max}</div></small>
                 <small><div>Valor: $${valor.toLocaleString()}</div></small>
-                <small><div>Recaudado:</strong> $${totalRecaudado.toLocaleString()} (${torneo.parejas_inscritas || 0} pendientes)</div></small>
+                <small><div>Recaudado: $${totalRecaudado.toLocaleString()} (${($torneo.parejas_inscritas || 0)} inscritos)</div></small>
 
-                <!-- Menú de acciones (tres puntos) -->
-                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;font-size:1.2rem;color: #ed0606;z-index:5;" onclick="toggleMenu(${torneo.id_torneo}, event)">
-                  ⋮
+                <!-- Menú de acciones -->
+                <div style="position:absolute;top:0.8rem;right:0.8rem;cursor:pointer;font-size:1.2rem;color:#ed0606;z-index:5;" onclick="toggleMenu(${$torneo.id_torneo}, event)">⋮</div>
+
+                <div id="menu-${$torneo.id_torneo}" style="display:none;position:absolute;top:2rem;right:0.5rem;background:white;color:#071289;padding:0.5rem;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:10;">
+                  <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="editarTorneo(${$torneo.id_torneo})">✏️ Editar</div>
+                  <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="cerrarTorneo(${$torneo.id_torneo})">🔒 Cerrar</div>
+                  <div style="padding:0.3rem 0.6rem;cursor:pointer;color:#FF6B6B;" onclick="eliminarTorneo(${$torneo.id_torneo})">🗑️ Eliminar</div>
                 </div>
 
-                <!-- Menú desplegable -->
-                <div id="menu-${torneo.id_torneo}" style="display:none;position:absolute;top:2rem;right:0.5rem;background:white;color:#071289;padding:0.5rem;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:10;">
-                  <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="editarTorneo(${torneo.id_torneo})">✏️ Editar</div>
-                  <div style="padding:0.3rem 0.6rem;cursor:pointer;" onclick="cerrarTorneo(${torneo.id_torneo})">🔒 Cerrar</div>
-                  <div style="padding:0.3rem 0.6rem;cursor:pointer;color:#FF6B6B;" onclick="eliminarTorneo(${torneo.id_torneo})">🗑️ Eliminar</div>
-                </div>
-
-                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
-                        onclick="compartirTorneo('${torneo.slug}')">
-                  Compartir link
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" onclick="compartirTorneo('${$torneo.slug}')">Compartir link</button>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" onclick="verParejas(${$torneo.id_torneo})">Parejas</button>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" onclick="generarFixture(${$torneo.id_torneo})">Generar Fixture</button>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" onclick="verFixture(${$torneo.id_torneo})">Ver Fixture</button>
+                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;background:#3b82f6;color:white;" onclick="irPanelTorneo(${$torneo.id_torneo})">📺 Panel Torneo</button>
+                
+                <!-- ✅ Botón Finalizado y UpRanking -->
+                <button 
+                    class="btn-action" style="background:#FF9800;margin-left:10px;" 
+                    onclick="finalizarTorneoYCalcularRanking(${parseInt($torneo.id_torneo)})">
+                    ✅ Finalizado y UpRanking
                 </button>
-                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
-                        onclick="verParejas(${torneo.id_torneo})">
-                  Parejas
-                </button>
-                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
-                        onclick="generarFixture(${torneo.id_torneo})">
-                  Generar Fixture
-                </button>
-                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;" 
-                        onclick="verFixture(${torneo.id_torneo})">
-                  Ver Fixture
-                </button>
-                <button class="action-btn" style="margin-top:0.5rem;padding:0.3rem;font-size:0.85rem;background:#3b82f6;color:white;" 
-                        onclick="irPanelTorneo(${torneo.id_torneo})">
-                  📺 Panel Torneo
-                </button>
-                <!-- Botón Finalizado y UpRanking -->
-                <?php if (!empty($torneo['id_torneo'])): ?>
-                  <button 
-                      class="btn-action" style="background:#FF9800;margin-left:10px;" 
-                      onclick="finalizarTorneoYCalcularRanking(<?= (int)$torneo['id_torneo'] ?>)">
-                      ✅ Finalizado y UpRanking
-                  </button>
-                <?php endif; ?>
               </div>
             `;
           });
