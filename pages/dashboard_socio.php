@@ -78,13 +78,8 @@ if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     
     if ($modo_individual) {
-        // Modo individual: no debe tener clubes activos
-        $stmt_validate = $pdo->prepare("
-            SELECT s.* 
-            FROM socios s
-            LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-            WHERE s.id_socio = ? AND sc.id_socio IS NULL
-        ");
+        // Modo individual: puede tener clubs, pero mostramos contenido genérico
+        $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
         $stmt_validate->execute([$id_socio]);
     } else {
         // Modo club: debe pertenecer al club actual
@@ -195,24 +190,24 @@ if (isset($_SESSION['id_socio'])) {
 }
 
 // === FORZAR MODO CLUB SI TIENE CLUBES ===
-if (!$modo_individual && !empty($clubes_del_socio)) {
-    // Usar el primer club activo
+if (!empty($clubes_del_socio)) {
     $c = $clubes_del_socio[0];
-    $club_id = (int)$c['id_club'];
-    $club_nombre = $c['club_nombre'];
-    $club_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    
-    // Actualizar sesión
-    $_SESSION['club_id'] = $club_id;
-    $_SESSION['current_club'] = $club_slug;
-    
-    error_log("✅ Forzando modo club. Club ID: $club_id");
-} elseif (!empty($clubes_del_socio) && $modo_individual) {
-    // Si vino en modo individual pero tiene clubes, redirigir al primer club
-    $c = $clubes_del_socio[0];
-    $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    header("Location: dashboard_socio.php?id_club=$redirect_slug");
-    exit;
+    $club_id_from_db = (int)$c['id_club'];
+    $club_slug_from_db = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+
+    if ($modo_individual) {
+        // Redirigir si llegó sin club en URL
+        header("Location: dashboard_socio.php?id_club=$club_slug_from_db");
+        exit;
+    } else {
+        // Asegurar que el club actual coincida con el de la sesión
+        $_SESSION['club_id'] = $club_id_from_db;
+        $_SESSION['current_club'] = $club_slug_from_db;
+        $club_id = $club_id_from_db;
+        $club_nombre = $c['club_nombre'];
+        $club_slug = $club_slug_from_db;
+        error_log("✅ Modo club forzado. Club ID: $club_id");
+    }
 }
 
 // Guardar en sesión
