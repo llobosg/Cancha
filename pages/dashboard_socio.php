@@ -189,25 +189,38 @@ if (isset($_SESSION['id_socio'])) {
     $clubes_del_socio = $stmt_clubes->fetchAll();
 }
 
-// === FORZAR MODO CLUB SI TIENE CLUBES ===
-if (!empty($clubes_del_socio)) {
-    $c = $clubes_del_socio[0];
-    $club_id_from_db = (int)$c['id_club'];
-    $club_slug_from_db = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-
-    if ($modo_individual) {
-        // Redirigir si llegó sin club en URL
-        header("Location: dashboard_socio.php?id_club=$club_slug_from_db");
-        exit;
-    } else {
-        // Asegurar que el club actual coincida con el de la sesión
-        $_SESSION['club_id'] = $club_id_from_db;
-        $_SESSION['current_club'] = $club_slug_from_db;
-        $club_id = $club_id_from_db;
-        $club_nombre = $c['club_nombre'];
-        $club_slug = $club_slug_from_db;
-        error_log("✅ Modo club forzado. Club ID: $club_id");
+// === VALIDAR Y USAR EL CLUB DE LA URL ===
+if (!$modo_individual) {
+    // Ya tenemos $club_id y $club_slug desde la URL
+    // Verificar que el socio pertenezca a ese club
+    $socio_en_club = false;
+    foreach ($clubes_del_socio as $c) {
+        if ((int)$c['id_club'] === $club_id) {
+            $socio_en_club = true;
+            break;
+        }
     }
+    
+    if (!$socio_en_club) {
+        // Si no pertenece, redirigir al primer club
+        if (!empty($clubes_del_socio)) {
+            $c = $clubes_del_socio[0];
+            $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+            header("Location: dashboard_socio.php?id_club=$redirect_slug");
+            exit;
+        } else {
+            // No pertenece a ningún club → modo individual
+            $modo_individual = true;
+        }
+    }
+}
+
+// Si es modo individual PERO tiene clubs, redirigir
+if ($modo_individual && !empty($clubes_del_socio)) {
+    $c = $clubes_del_socio[0];
+    $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+    header("Location: dashboard_socio.php?id_club=$redirect_slug");
+    exit;
 }
 
 // Guardar en sesión
@@ -282,7 +295,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         ORDER BY r.fecha ASC, r.hora_inicio ASC
         LIMIT 1
     ");
-    $stmt_evento->execute([$_SESSION['club_id']]);
+    $stmt_evento->execute([$_SESSION['r.club_id']]);
     $proximo_evento = $stmt_evento->fetch();
 }
 
