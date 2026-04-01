@@ -1277,14 +1277,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             comunaSelect.disabled = false;
             }
             });
-            // === SERVICE WORKER ===
-            if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registrado:', reg.scope))
-            .catch(err => console.log('Error SW:', err));
-            });
-            }
+           
             // === PUSH NOTIFICATIONS ===
             function requestNotificationPermission() {
             if (!('Notification' in window)) return;

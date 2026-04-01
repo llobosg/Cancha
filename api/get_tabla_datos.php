@@ -94,14 +94,15 @@ try {
                     WHERE 
                         r.id_club = ? 
                         AND s.id_socio = ?
-                        AND (
-                            r.fecha > CURDATE() 
-                            OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                        )
+                        AND r.fecha >= CURDATE()
                     ORDER BY r.fecha ASC, r.hora_inicio ASC
                     LIMIT 50
                 ";
                 $params = [$_SESSION['club_id'], $_SESSION['id_socio']];
+                error_log("🔍 Inscritos - Club ID: " . ($_SESSION['club_id'] ?? 'null'));
+                error_log("🔍 Inscritos - Socio ID: " . ($_SESSION['id_socio'] ?? 'null'));
+                error_log("🔍 Inscritos - SQL: " . $sql);
+                error_log("🔍 Inscritos - Params: " . json_encode($params));
                 break;
 
             case 'reservas':
@@ -229,6 +230,10 @@ try {
                     echo json_encode([]);
                     exit;
                 }
+                error_log("🔍 Inscritos - Club ID: " . ($_SESSION['club_id'] ?? 'null'));
+                error_log("🔍 Inscritos - Socio ID: " . ($_SESSION['id_socio'] ?? 'null'));
+                error_log("🔍 Inscritos - SQL: " . $sql);
+                error_log("🔍 Inscritos - Params: " . json_encode($params));
 
             case 'americanos':
                 $sql = "
