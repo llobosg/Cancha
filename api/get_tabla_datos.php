@@ -94,7 +94,7 @@ try {
                     WHERE 
                         r.id_club = ? 
                         AND s.id_socio = ?
-                        AND r.fecha >= CURDATE()
+                        AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
                     ORDER BY r.fecha ASC, r.hora_inicio ASC
                     LIMIT 50
                 ";
