@@ -920,37 +920,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     </div>
                 </div>
                 <?php endif; ?>
-
-            </div>
-
-            <!-- Sub sección derecha -->
-            <div class="upper-right">
-                <?php if (!empty($clubes_del_socio) && count($clubes_del_socio) > 1): ?>
-                <div><strong>🏆 Mis Clubes</strong></div>
-                <?php foreach ($clubes_del_socio as $c): ?>
-                    <?php
-                    $slug_actual = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-                    if (!$modo_individual && $club_id == $c['id_club']) continue;
-                    ?>
-                    <button class="btn-action" onclick="cambiarClub('<?= $slug_actual ?>')"><?= htmlspecialchars($c['club_nombre']) ?></button>
-                <?php endforeach; ?>
-                <?php endif; ?>
-
-                <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
-                <?php if ($es_responsable): ?>
-                    <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-                    <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
-                <?php endif; ?>
-                <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
-                <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
-                <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
-                <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
-                
-                <?php if ($pareja_activa): ?>
-                    <button class="btn-action" style="background:#FF9800;" onclick="reemplazarCompanero(<?= $pareja_activa['id_pareja'] ?>)">➕ Reemplazar compañero</button>
-                <?php endif; ?>
-                <?php endif; ?>
-            </div>
             </div>
 
             <!-- Sub sección derecha -->
