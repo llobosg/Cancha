@@ -92,8 +92,13 @@ try {
         }
         if (!$id_club) throw new Exception('Club no encontrado');
 
-        // Verificar duplicados
-        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
+        // Verificar duplicados en socio_club
+        $stmt = $pdo->prepare("
+            SELECT sc.id_socio 
+            FROM socio_club sc
+            JOIN socios s ON sc.id_socio = s.id_socio
+            WHERE s.email = ? AND sc.id_club = ?
+        ");
         $stmt->execute([$email, $id_club]);
         if ($stmt->fetch()) throw new Exception('Ya estás inscrito en este club');
     }
@@ -160,52 +165,52 @@ try {
     // Insertar socio
     $stmt = $pdo->prepare("
     INSERT INTO socios (
-        nombre,
-        alias,
-        fecha_nac,
-        celular,
-        email,
-        direccion,
-        pais,
-        region,
-        ciudad,
-        comuna,
-        rol,
-        foto_url,
-        genero,
-        deporte,
-        id_puesto,
-        habilidad,
-        activo,
-        email_verified,
-        verification_code,
-        es_responsable,
-        datos_completos,
-        password_hash
-    ) VALUES (
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        0,
-        ?,
-        0,
-        1,
-        ?
-    )
+            nombre,
+            alias,
+            fecha_nac,
+            celular,
+            email,
+            direccion,
+            pais,
+            region,
+            ciudad,
+            comuna,
+            rol,
+            foto_url,
+            genero,
+            deporte,
+            id_puesto,
+            habilidad,
+            activo,
+            email_verified,
+            verification_code,
+            es_responsable,
+            datos_completos,
+            password_hash
+        ) VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            0,
+            ?,
+            0,
+            1,
+            ?
+        )
     ");
     $stmt->execute([
         $nombre,
@@ -307,4 +312,4 @@ try {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-?>
+?> 
