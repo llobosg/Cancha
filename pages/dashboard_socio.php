@@ -181,10 +181,7 @@ $es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']
 $clubes_del_socio = [];
 if (isset($_SESSION['id_socio'])) {
     $stmt_clubes = $pdo->prepare("
-        SELECT 
-            c.id_club,
-            c.nombre AS club_nombre,
-            c.email_responsable
+        SELECT c.id_club, c.nombre AS club_nombre, c.email_responsable
         FROM socio_club sc
         JOIN clubs c ON sc.id_club = c.id_club
         WHERE sc.id_socio = ? AND sc.estado = 'activo'
@@ -192,6 +189,16 @@ if (isset($_SESSION['id_socio'])) {
     ");
     $stmt_clubes->execute([$_SESSION['id_socio']]);
     $clubes_del_socio = $stmt_clubes->fetchAll();
+}
+
+// Forzar modo club si tiene clubs y no viene de URL individual
+if (!empty($clubes_del_socio) && !$modo_individual) {
+    $club_id = $clubes_del_socio[0]['id_club'];
+    $club_nombre = $clubes_del_socio[0]['club_nombre'];
+    $club_slug = substr(md5($club_id . $clubes_del_socio[0]['email_responsable']), 0, 8);
+    $_SESSION['club_id'] = $club_id;
+    $_SESSION['current_club'] = $club_slug;
+    $modo_individual = false;
 }
 
 // Guardar en sesión

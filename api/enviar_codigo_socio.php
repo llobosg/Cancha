@@ -240,6 +240,14 @@ try {
         $_SESSION['torneo_slug_post_registro'] = $_POST['torneo_slug'];
     }
 
+    // === CREAR RELACIÓN EN SOCIO_CLUB (si aplica) ===
+if (!$modo_individual && $id_club) {
+    $pdo->prepare("
+        INSERT INTO socio_club (id_socio, id_club, estado)
+        VALUES (?, ?, 'activo')
+    ")->execute([$id_socio, $id_club]);
+}
+
     // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
     error_log("Iniciando envío de correo a: " . $email);
     try {
