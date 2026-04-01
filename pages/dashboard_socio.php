@@ -2057,7 +2057,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             }
 
             function cambiarClub(clubSlug) {
-                // Limpiar sesión de club actual
                 fetch('../api/cambiar_club_sesion.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -2066,7 +2065,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
+                        // Agregar timestamp para evitar caché
+                        const ts = Date.now();
+                        window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${ts}`;
                     } else {
                         alert('❌ Error al cambiar de club');
                     }

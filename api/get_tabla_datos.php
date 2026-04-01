@@ -7,17 +7,21 @@ error_log("=== INICIO get_tabla_datos.php ===");
 error_log("GET recibido: " . print_r($_GET, true));
 error_log("SESSION recibida: " . print_r($_SESSION, true));
 
+// === VALIDAR SESIÓN Y CLUB ===
 if (!isset($_SESSION['id_socio'])) {
-    error_log("❌ Acceso denegado: id_socio no encontrado en sesión");
-    http_response_code(403);
-    echo json_encode(['error' => 'Acceso no autorizado']);
+    echo json_encode([]);
     exit;
 }
 
-// Al inicio del archivo
-if (!isset($_SESSION['club_id']) || !$_SESSION['club_id']) {
-    echo json_encode([]);
-    exit;
+// Si viene de modo club, asegurar que el socio pertenezca a ese club
+if (isset($_SESSION['club_id']) && $_SESSION['club_id']) {
+    $stmt = $pdo->prepare("SELECT 1 FROM socio_club WHERE id_socio = ? AND id_club = ? AND estado = 'activo'");
+    $stmt->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
+    if (!$stmt->fetch()) {
+        // El socio no pertenece a este club → limpiar sesión
+        unset($_SESSION['club_id']);
+        unset($_SESSION['current_club']);
+    }
 }
 
 $club_id = (int)$_SESSION['club_id'];
@@ -87,15 +91,17 @@ try {
                     LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE r.id_club = ? 
-                      AND (
-                        r.fecha > CURDATE() 
-                        OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                      )
+                    WHERE 
+                        r.id_club = ? 
+                        AND s.id_socio = ?
+                        AND (
+                            r.fecha > CURDATE() 
+                            OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
+                        )
                     ORDER BY r.fecha ASC, r.hora_inicio ASC
                     LIMIT 50
                 ";
-                $params = [$club_id];
+                $params = [$_SESSION['club_id'], $_SESSION['id_socio']];
                 break;
 
             case 'reservas':
@@ -218,39 +224,11 @@ try {
         // === Modo individual ===
         switch ($filtro) {
             case 'inscritos':
-                $sql = "
-                    SELECT 
-                        r.fecha,
-                        r.hora_inicio,
-                        te.tipoevento AS id_tipoevento,
-                        NULL AS id_club,
-                        r.id_cancha,
-                        r.monto_total AS costo_evento,
-                        s.alias as nombre,
-                        i.posicion_jugador,
-                        i.lleva_cerveza,
-                        i.id_inscrito,
-                        c.monto AS cuota_monto,
-                        c.fecha_pago,
-                        c.comentario,
-                        r.id_reserva AS id_evento,
-                        s.id_socio
-                    FROM reservas r
-                    JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
-                    JOIN socios s ON i.id_socio = s.id_socio
-                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
-                    JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                    JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE s.id_socio = ?
-                    AND (
-                        r.fecha > CURDATE() 
-                        OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                    )
-                    ORDER BY r.fecha ASC, r.hora_inicio ASC
-                    LIMIT 50
-                ";
-                $params = [$_SESSION['id_socio']];
-                break;
+                // Si no hay club_id, devolver vacío para 'inscritos'
+                if ($filtro === 'inscritos' && (!isset($_SESSION['club_id']) || !$_SESSION['club_id'])) {
+                    echo json_encode([]);
+                    exit;
+                }
 
             case 'americanos':
                 $sql = "
