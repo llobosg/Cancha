@@ -16,8 +16,8 @@ if (strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
     exit;
 }
 
-// Buscar club por slug
-$stmt = $pdo->prepare("SELECT id_club FROM clubs WHERE email_verified = 1");
+// Buscar club por slug → ¡Incluir email_responsable!
+$stmt = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
 $stmt->execute();
 $clubs = $stmt->fetchAll();
 
