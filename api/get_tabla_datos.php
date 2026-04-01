@@ -180,21 +180,25 @@ try {
                 break;
 
             case 'socios':
-                $sql = "
+                if (!isset($_SESSION['club_id'])) {
+                    echo json_encode([]);
+                    return;
+                }
+                $stmt = $pdo->prepare("
                     SELECT 
                         s.id_socio AS id_evento,
-                        s.id_socio,
-                        s.alias,                -- ✅ ya existe
-                        s.nombre AS nombre_socio,
-                        s.rol AS posicion_jugador,
+                        s.alias,
                         s.email,
+                        p.puesto AS posicion_jugador,
                         s.created_at
                     FROM socios s
-                    WHERE s.id_club = ?
-                    ORDER BY s.alias ASC
-                    LIMIT 50
-                ";
-                $params = [$club_id];
+                    LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
+                    JOIN socio_club sc ON s.id_socio = sc.id_socio
+                    WHERE sc.id_club = ? AND sc.estado = 'activo'
+                    ORDER BY s.alias
+                ");
+                $stmt->execute([$_SESSION['club_id']]);
+                echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
                 break;
 
             default:
@@ -278,7 +282,8 @@ try {
     echo json_encode($resultados);
 
 } catch (Exception $e) {
-    error_log("Error en get_tabla_datos.php: " . $e->getMessage());
+    error_log("❌ Error en get_tabla_datos.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode(['error' => 'Error interno del servidor']);
 }

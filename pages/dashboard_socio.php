@@ -2041,8 +2041,24 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             }
 
             function cambiarClub(clubSlug) {
-                // Redirigir con el nuevo slug → esto recargará el dashboard y actualizará la sesión
-                window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
+                // Limpiar sesión de club actual
+                fetch('../api/cambiar_club_sesion.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ club_slug: clubSlug })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = 'dashboard_socio.php?id_club=' + clubSlug;
+                    } else {
+                        alert('❌ Error al cambiar de club');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert('❌ No se pudo cambiar de club');
+                });
             }
 
             function reemplazarCompanero(idPareja) {
