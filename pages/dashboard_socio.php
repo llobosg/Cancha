@@ -213,6 +213,9 @@ if (!$modo_individual) {
             $modo_individual = true;
         }
     }
+    // Asegurar que $club_id sea un entero válido
+    $club_id = (int)$club_id;
+    $_SESSION['club_id'] = $club_id;
 }
 
 // Si es modo individual PERO tiene clubs, redirigir
@@ -253,7 +256,7 @@ $torneo_actual = $torneos_americanos[0] ?? null;
 
 // === PRÓXIMO EVENTO (solo para club) ===
 $proximo_evento = null;
-if (!$modo_individual && isset($_SESSION['club_id'])) {
+if (!$modo_individual && $club_id > 0) {
     $stmt_evento = $pdo->prepare("
         SELECT
             r.id_reserva,
@@ -295,7 +298,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         ORDER BY r.fecha ASC, r.hora_inicio ASC
         LIMIT 1
     ");
-    $stmt_evento->execute([$_SESSION['r.club_id']]);
+    $stmt_evento->execute([$club_id]); // ← Usar $club_id, no $_SESSION
     $proximo_evento = $stmt_evento->fetch();
 }
 
@@ -336,9 +339,9 @@ $stmt_deudas = $pdo->prepare("
 // ✅ Solo UNA llamada con 4 parámetros
 $stmt_deudas->execute([
     $_SESSION['id_socio'],
-    $_SESSION['club_id'],
-    $_SESSION['club_id'],
-    $_SESSION['club_id']
+    $club_id,
+    $club_id,
+    $club_id
 ]);
 $deuda_mas_vigente = $stmt_deudas->fetch();
 

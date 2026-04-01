@@ -14,6 +14,14 @@ if (!isset($_SESSION['id_socio'])) {
     exit;
 }
 
+// Al inicio del archivo
+if (!isset($_SESSION['club_id']) || !$_SESSION['club_id']) {
+    echo json_encode([]);
+    exit;
+}
+
+$club_id = (int)$_SESSION['club_id'];
+
 if (!isset($_SESSION['club_id']) || $_SESSION['club_id'] === null) {
     // Intentar obtener el club desde socio_club
     $stmt = $pdo->prepare("
