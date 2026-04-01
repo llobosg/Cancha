@@ -14,6 +14,26 @@ if (!isset($_SESSION['id_socio'])) {
     exit;
 }
 
+if (!isset($_SESSION['club_id']) || $_SESSION['club_id'] === null) {
+    // Intentar obtener el club desde socio_club
+    $stmt = $pdo->prepare("
+        SELECT id_club FROM socio_club 
+        WHERE id_socio = ? AND estado = 'activo' 
+        LIMIT 1
+    ");
+    $stmt->execute([$_SESSION['id_socio']]);
+    $club_id_row = $stmt->fetch();
+    
+    if ($club_id_row) {
+        $_SESSION['club_id'] = $club_id_row['id_club'];
+        error_log("🔄 Club ID recuperado desde socio_club: " . $_SESSION['club_id']);
+    } else {
+        error_log("⚠️ Socio no pertenece a ningún club activo");
+        echo json_encode([]);
+        exit;
+    }
+}
+
 $filtro = $_GET['filtro'] ?? 'inscritos';
 $club_id = $_SESSION['club_id'] ?? null;
 
