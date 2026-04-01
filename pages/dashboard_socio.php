@@ -203,7 +203,6 @@ if (!$modo_individual) {
 // === DETECTAR TORNEOS AMERICANOS ===
 error_log("🔍 Buscando torneos para socio ID: " . ($_SESSION['id_socio'] ?? 'NULL'));
 $torneos_americanos = [];
-// DETECTAR TORNEOS AMERICANOS
 $stmt_torneos = $pdo->prepare("
     SELECT 
         t.id_torneo,
@@ -213,25 +212,13 @@ $stmt_torneos = $pdo->prepare("
     FROM parejas_torneo pt
     JOIN torneos t ON pt.id_torneo = t.id_torneo
     WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
-      AND t.estado IN ('abierto', 'en_progreso', 'finalizado')  -- ✅ Incluir finalizados
-      AND t.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)     -- Últimos 30 días
+      AND t.estado IN ('abierto', 'en_progreso', 'finalizado')
+      AND t.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)
     ORDER BY t.fecha_inicio DESC
-    LIMIT 1  -- Solo el más reciente
+    LIMIT 1
 ");
-
-$email = $_SESSION['user_email'] ?? '';
-$stmt_torneos->execute([
-    $_SESSION['id_socio'] ?? null,
-    $_SESSION['id_socio'] ?? null,
-    $email,
-    $email
-]);
-
+$stmt_torneos->execute([$_SESSION['id_socio'], $_SESSION['id_socio']]);
 $torneos_americanos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
-error_log("✅ Torneos encontrados: " . count($torneos_americanos));
-foreach ($torneos_americanos as $t) {
-    error_log("   - Torneo: {$t['torneo_nombre']} (ID: {$t['id_torneo']}) - Pareja: {$t['id_pareja']}");
-}
 $tiene_torneo = !empty($torneos_americanos);
 $torneo_actual = $torneos_americanos[0] ?? null;
 
