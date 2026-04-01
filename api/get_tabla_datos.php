@@ -76,7 +76,7 @@ try {
                         r.id_club,
                         r.id_cancha,
                         r.monto_total AS costo_evento,
-                        s.alias as nombre,
+                        s.alias AS nombre,
                         i.posicion_jugador,
                         i.lleva_cerveza,
                         i.id_inscrito,
@@ -99,10 +99,6 @@ try {
                     LIMIT 50
                 ";
                 $params = [$_SESSION['club_id'], $_SESSION['id_socio']];
-                error_log("🔍 Inscritos - Club ID: " . ($_SESSION['club_id'] ?? 'null'));
-                error_log("🔍 Inscritos - Socio ID: " . ($_SESSION['id_socio'] ?? 'null'));
-                error_log("🔍 Inscritos - SQL: " . $sql);
-                error_log("🔍 Inscritos - Params: " . json_encode($params));
                 break;
 
             case 'reservas':
