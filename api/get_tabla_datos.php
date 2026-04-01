@@ -92,13 +92,12 @@ try {
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                     WHERE 
-                        r.id_club = ? 
-                        AND s.id_socio = ?
+                        r.id_club = ?
                         AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-                    ORDER BY r.fecha ASC, r.hora_inicio ASC
-                    LIMIT 50
+                    ORDER BY r.fecha ASC, r.hora_inicio ASC, s.alias ASC
+                    LIMIT 100
                 ";
-                $params = [$_SESSION['club_id'], $_SESSION['id_socio']];
+                $params = [$_SESSION['club_id']];
                 break;
 
             case 'reservas':
