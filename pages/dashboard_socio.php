@@ -898,14 +898,23 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
                     <!-- Posiciones y Mis Resultados -->
                     <div class="stat-card">
-                    <h3>🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
-                    <div class="stat-card-content" id="tablaPosicionesTorneo">Cargando tabla de posiciones...</div>
-                    
-                    <!-- Ranking personal -->
-                    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.3);">
-                        <h4 style="color:#FFD700;">🏅 Tu Ranking Actual</h4>
-                        <div id="miRanking">Cargando ranking...</div>
-                    </div>
+                        <h3>🏆 Posiciones – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
+                        <div class="stat-card-content" id="tablaPosicionesTorneo">Cargando tabla de posiciones...</div>
+                        
+                        <!-- Ranking personal -->
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.3);">
+                            <h4 style="color:#FFD700;">🏅 Tu Ranking Actual</h4>
+                            <div id="miRanking">Cargando ranking...</div>
+                        </div>
+                        <!-- Link al ranking completo -->
+                        <div style="margin-top:1rem;text-align:center;">
+                            <button 
+                                class="btn-action" 
+                                style="background:rgba(255,215,0,0.2);color:#FFD700;border:none;padding:0.4rem 0.8rem;font-size:0.85rem;"
+                                onclick="abrirRankingCompleto()">
+                                🥇 Ver Ranking Completo
+                            </button>
+                        </div>
                     </div>
                     <div class="stat-card">
                     <h3>📊 Mis Resultados – <?= htmlspecialchars($torneo_actual['torneo_nombre']) ?></h3>
@@ -2177,6 +2186,80 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
             function cerrarModalTorneo() {
                 const modal = document.getElementById('modalDetalleTorneo');
+                if (modal) modal.remove();
+            }
+
+            function abrirRankingCompleto() {
+                fetch('../api/get_ranking_completo.php')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        alert('No hay datos de ranking aún.');
+                        return;
+                    }
+
+                    let html = `
+                        <div style="background:rgba(7,18,137,0.95);color:white;padding:1.5rem;border-radius:16px;max-height:80vh;overflow-y:auto;">
+                            <h3 style="margin-top:0;text-align:center;">🏆 Ranking Pádel CanchaSport</h3>
+                            <table style="width:100%;border-collapse:collapse;margin-top:1rem;font-size:0.85rem;">
+                                <thead>
+                                    <tr style="background:#FFD700;color:#071289;">
+                                        <th>#</th>
+                                        <th>Jugador</th>
+                                        <th>Nivel</th>
+                                        <th>Puntos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    data.forEach((j, i) => {
+                        html += `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                                <td style="text-align:center;">${i+1}</td>
+                                <td>${j.nombre}</td>
+                                <td>${j.nivel}</td>
+                                <td style="text-align:right;font-weight:bold;">${j.total_puntos}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `
+                                </tbody>
+                            </table>
+                            <button 
+                                onclick="cerrarRankingModal()" 
+                                style="margin-top:1rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;width:100%;">
+                                Cerrar
+                            </button>
+                        </div>
+                    `;
+
+                    // Crear modal
+                    const modal = document.createElement('div');
+                    modal.id = 'modalRanking';
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0; left: 0;
+                        width: 100%; height: 100%;
+                        background: rgba(0,0,0,0.7);
+                        z-index: 1000;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 1rem;
+                    `;
+                    modal.innerHTML = html;
+                    document.body.appendChild(modal);
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert('❌ Error al cargar el ranking');
+                });
+            }
+
+            function cerrarRankingModal() {
+                const modal = document.getElementById('modalRanking');
                 if (modal) modal.remove();
             }
         </script>
