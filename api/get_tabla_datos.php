@@ -93,7 +93,10 @@ try {
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                     WHERE 
                         r.id_club = ?
-                        AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+                        AND (
+                            r.fecha > CURDATE()
+                            OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
+                        )
                     ORDER BY r.fecha ASC, r.hora_inicio ASC, s.alias ASC
                     LIMIT 100
                 ";
