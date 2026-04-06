@@ -256,7 +256,7 @@ $torneo_actual = $torneos_americanos[0] ?? null;
 
 // === PRÓXIMO EVENTO (solo para club) ===
 $proximo_evento = null;
-if (!$modo_individual && $club_id > 0) {
+if (!$modo_individual && isset($_SESSION['club_id'])) {
     $stmt_evento = $pdo->prepare("
         SELECT
             r.id_reserva,
@@ -267,7 +267,7 @@ if (!$modo_individual && $club_id > 0) {
             c.id_deporte,
             te.players,
             te.tipoevento AS tipo_evento,
-            (SELECT COUNT(*) FROM inscritos WHERE id_evento = r.id_reserva AND tipo_actividad = 'reserva') AS inscritos_actuales,
+            COUNT(i.id_inscrito) AS inscritos_actuales,
             c.nombre_cancha,
             r.tipo_reserva,
             r.monto_total,
@@ -276,14 +276,29 @@ if (!$modo_individual && $club_id > 0) {
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
         JOIN tipoeventos te ON c.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+        LEFT JOIN inscritos i ON r.id_reserva = i.id_evento
         WHERE
             r.id_club = ?
             AND r.fecha >= CURDATE()
             AND r.estado = 'confirmada'
+        GROUP BY
+            r.id_reserva,
+            r.id_club,
+            r.fecha,
+            r.hora_inicio,
+            r.id_cancha,
+            c.id_deporte,
+            te.players,
+            te.tipoevento,
+            c.nombre_cancha,
+            r.tipo_reserva,
+            r.monto_total,
+            r.monto_recaudacion,
+            r.jugadores_esperados
         ORDER BY r.fecha ASC, r.hora_inicio ASC
         LIMIT 1
     ");
-    $stmt_evento->execute([$club_id]);
+    $stmt_evento->execute([$_SESSION['club_id']]); // ← Solo un parámetro
     $proximo_evento = $stmt_evento->fetch();
 }
 
