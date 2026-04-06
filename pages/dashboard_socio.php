@@ -747,7 +747,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
                                                 <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
                                                     <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?><br>
-                                                    <strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?>
+                                                    <strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>
                                                 </div>
                                             <?php endif; ?>
                                         </div>
