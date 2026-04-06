@@ -732,20 +732,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                             <!-- Próximo Partido -->
                             <?php if ($proximo_evento): ?>
                                 <?php
-                                $id_reserva = $proximo_evento['id_reserva'];
-                                $monto_total = (float)$proximo_evento['monto_total'];
-                                $deporte = 'futbolito'; // Asumiendo deporte fijo o puedes obtenerlo
-                                $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
-                                $ahora = new DateTime();
-                                $horas_restantes = $ahora->diff($fecha_evento)->h;
-                                $fecha_formateada = $fecha_evento->format('d-m');
-                                $hora_formateada = $fecha_evento->format('H:i');
-                                $lunes_semana_evento = clone $fecha_evento;
-                                $lunes_semana_evento->modify('this week monday');
-                                $lunes_semana_evento->setTime(9, 0, 0);
-                                $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
-                                $tipo_reserva_label = 'Semanal';
-                                $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
+                                    $id_reserva = $proximo_evento['id_reserva'];
+                                    $monto_total = (float)$proximo_evento['monto_total'];
+                                    $deporte = 'futbolito'; // Asumiendo deporte fijo o puedes obtenerlo
+                                    $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
+                                    $ahora = new DateTime();
+                                    $horas_restantes = $ahora->diff($fecha_evento)->h;
+                                    $fecha_formateada = $fecha_evento->format('d-m');
+                                    $hora_formateada = $fecha_evento->format('H:i');
+                                    $lunes_semana_evento = clone $fecha_evento;
+                                    $lunes_semana_evento->modify('this week monday');
+                                    $lunes_semana_evento->setTime(9, 0, 0);
+                                    $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+                                    $tipo_reserva_label = 'Semanal';
+                                    $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
                                 ?>
                                 <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                     <h3 style="color: white;">Próximo Partido</h3>
@@ -762,7 +762,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                         </div>
                                         <?php if ($despues_del_lunes_09): ?>
                                             <?php if (!empty($ya_inscrito)): ?>
-                                            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Bajarse</button>
+                                                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Bajarse</button>
                                             <?php else: ?>
                                             <?php if ($cupos_llenos): ?>
                                                 <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
@@ -770,7 +770,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                                 <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Anotarse</button>
                                                 <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="anotarseConCerveza(true)">Anotarse + llevo 🍺🍺</button>
                                             <?php endif; ?>
-                                            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</button>
+                                            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</button>
                                             <?php endif; ?>
                                             <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
                                             <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
@@ -1320,34 +1320,35 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             }
             // === BAJARSE DE EVENTO ===
             function bajarseEvento(idReserva, idSocioObjetivo = null) {
-            if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
-            const params = new URLSearchParams({
-            action: 'bajarse',
-            id_actividad: idReserva,
-            tipo_actividad: 'reserva'
-            });
-            if (idSocioObjetivo) {
-            params.append('id_socio_objetivo', idSocioObjetivo);
+                if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
+                const params = new URLSearchParams({
+                action: 'bajarse',
+                id_actividad: idReserva,
+                tipo_actividad: 'reserva'
+                });
+                if (idSocioObjetivo) {
+                params.append('id_socio_objetivo', idSocioObjetivo);
+                }
+                fetch('../api/gestion_eventos.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: params
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast(data.message);
+                setTimeout(() => location.reload(), 1500);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                })
+                .catch(err => {
+                console.error('Error:', err);
+                mostrarToast('❌ Error al procesar la baja');
+                });
             }
-            fetch('../api/gestion_eventos.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: params
-            })
-            .then(r => r.json())
-            .then(data => {
-            if (data.success) {
-            mostrarToast(data.message);
-            setTimeout(() => location.reload(), 1500);
-            } else {
-            mostrarToast('❌ ' + data.message);
-            }
-            })
-            .catch(err => {
-            console.error('Error:', err);
-            mostrarToast('❌ Error al procesar la baja');
-            });
-            }
+
             // === REVISAR PAGO ===
             function revisarPago(idCuota) {
             fetch('../api/revisar_pago.php', {

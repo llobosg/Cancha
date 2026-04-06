@@ -71,8 +71,9 @@ try {
             case 'inscritos':
                 if (!isset($_SESSION['club_id']) || !$_SESSION['club_id']) {
                     echo json_encode([]);
-                    return;
+                    exit; // ← Salir inmediatamente
                 }
+                
                 // Obtener el PRÓXIMO id_reserva del club
                 $stmt_next = $pdo->prepare("
                     SELECT id_reserva 
@@ -88,7 +89,7 @@ try {
 
                 if (!$next_reserva) {
                     echo json_encode([]);
-                    return;
+                    exit; // ← Salir inmediatamente
                 }
 
                 $id_reserva = $next_reserva['id_reserva'];
@@ -124,7 +125,7 @@ try {
                 ");
                 $stmt->execute([$id_reserva]);
                 echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-                break;
+                exit;
 
             // === reservas ===
             case 'reservas':
