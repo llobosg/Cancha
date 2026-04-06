@@ -752,7 +752,20 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <?php endif; ?>
                                         </div>
                                         <?php if ($despues_del_lunes_09): ?>
-                                            <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', 10, <?= $monto_total ?>)">Anotarse</button>
+                                            <?php if (!empty($ya_inscrito)): ?>
+                                            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Bajarse</button>
+                                            <?php else: ?>
+                                            <?php if ($cupos_llenos): ?>
+                                                <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
+                                            <?php else: ?>
+                                                <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Anotarse</button>
+                                                <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="anotarseConCerveza(true)">Anotarse + llevo 🍺🍺</button>
+                                            <?php endif; ?>
+                                            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</button>
+                                            <?php endif; ?>
+                                            <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
+                                            <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">⏰ Los botones se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs</p>
                                         <?php endif; ?>
