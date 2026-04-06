@@ -746,6 +746,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                     $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
                                     $tipo_reserva_label = 'Semanal';
                                     $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
+                                    $players = 20; // Valor por defecto para Futbolito
+                                    if (isset($proximo_evento['jugadores_esperados'])) {
+                                        $players = (int)$proximo_evento['jugadores_esperados'];
+                                    }
                                 ?>
                                 <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                     <h3 style="color: white;">Próximo Partido</h3>
@@ -762,21 +766,38 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                         </div>
                                         <?php if ($despues_del_lunes_09): ?>
                                             <?php if (!empty($ya_inscrito)): ?>
-                                                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Bajarse</button>
+                                                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" 
+                                                        onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                                    Bajarse
+                                                </button>
                                             <?php else: ?>
-                                            <?php if ($cupos_llenos): ?>
-                                                <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
-                                            <?php else: ?>
-                                                <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">Anotarse</button>
-                                                <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="anotarseConCerveza(true)">Anotarse + llevo 🍺🍺</button>
-                                            <?php endif; ?>
-                                            <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</button>
+                                                <?php if ($cupos_llenos): ?>
+                                                    <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
+                                                <?php else: ?>
+                                                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
+                                                            onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                                        Anotarse
+                                                    </button>
+                                                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
+                                                            onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                                        Anotarse + llevo 🍺🍺
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
+                                                        onclick="pasoEvento(<?= (int)$id_reserva ?>)">
+                                                    Paso
+                                                </button>
                                             <?php endif; ?>
                                             <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                                            <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
+                                                <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
+                                                        onclick="armarEquiposIA(<?= (int)$id_reserva ?>)">
+                                                    🤖 Armar Equipos IA
+                                                </button>
                                             <?php endif; ?>
                                         <?php else: ?>
-                                            <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">⏰ Los botones se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs</p>
+                                            <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
+                                                ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
+                                            </p>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -1405,25 +1426,29 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             }
 
             // === ANOTARSE CON CERVEZA ===
-            function anotarseConCerveza(llevaCerveza) {
-                document.getElementById('cervezaMenu').style.display = 'none';
+            function anotarseConCerveza(llevaCerveza, idReserva, deporte, playersMax, montoTotal) {
                 const formData = new FormData();
                 formData.append('action', 'anotarse');
-                formData.append('id_actividad', <?= $id_reserva ?? 0 ?>);
+                formData.append('id_actividad', idReserva);
                 formData.append('tipo_actividad', 'reserva');
-                formData.append('deporte', '<?= $deporte ?? '' ?>');
-                formData.append('players_max', <?= $players ?? 0 ?>);
-                formData.append('monto_total', <?= $monto_total ?? 0 ?>);
+                formData.append('deporte', deporte);
+                formData.append('players_max', playersMax);
+                formData.append('monto_total', montoTotal);
                 formData.append('lleva_cerveza', llevaCerveza ? '1' : '0');
+                
                 fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
                     .then(r => r.json())
-                        .then(data => {
-                                if (data.success) {
-                                mostrarToast(data.message);
-                                setTimeout(() => location.reload(), 1500);
-                            } else {
+                    .then(data => {
+                        if (data.success) {
+                            mostrarToast(data.message);
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
                             mostrarToast('❌ ' + data.message);
                         }
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        mostrarToast('❌ Error al procesar la inscripción');
                     });
             }
             
