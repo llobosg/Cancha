@@ -256,25 +256,44 @@ $torneo_actual = $torneos_americanos[0] ?? null;
 
 // === PRÓXIMO EVENTO (solo para club) ===
 $proximo_evento = null;
+error_log("🔍 [DEBUG] Iniciando búsqueda de próximo evento");
+error_log("🔍 [DEBUG] modo_individual: " . ($modo_individual ? 'true' : 'false'));
+error_log("🔍 [DEBUG] club_id en sesión: " . ($_SESSION['club_id'] ?? 'null'));
+
 if (!$modo_individual && isset($_SESSION['club_id'])) {
-    $stmt_evento = $pdo->prepare("
-        SELECT
-            r.id_reserva,
-            r.fecha,
-            r.hora_inicio,
-            r.monto_total,
-            r.monto_recaudacion,
-            r.jugadores_esperados
-        FROM reservas r
-        WHERE
-            r.id_club = ?
-            AND r.fecha >= CURDATE()
-            AND r.estado = 'confirmada'
-        ORDER BY r.fecha ASC, r.hora_inicio ASC
-        LIMIT 1
-    ");
-    $stmt_evento->execute([$_SESSION['club_id']]);
-    $proximo_evento = $stmt_evento->fetch();
+    $club_id = (int)$_SESSION['club_id'];
+    error_log("🔍 [DEBUG] Ejecutando consulta para club_id: $club_id");
+    
+    try {
+        $stmt_evento = $pdo->prepare("
+            SELECT
+                r.id_reserva,
+                r.fecha,
+                r.hora_inicio,
+                r.monto_total,
+                r.monto_recaudacion,
+                r.jugadores_esperados
+            FROM reservas r
+            WHERE
+                r.id_club = ?
+                AND r.fecha >= CURDATE()
+                AND r.estado = 'confirmada'
+            ORDER BY r.fecha ASC, r.hora_inicio ASC
+            LIMIT 1
+        ");
+        $stmt_evento->execute([$club_id]);
+        $proximo_evento = $stmt_evento->fetch();
+        
+        error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));
+        
+        if (!$proximo_evento) {
+            error_log("⚠️ [DEBUG] No se encontraron reservas futuras para el club $club_id");
+        }
+    } catch (Exception $e) {
+        error_log("❌ [DEBUG] Error en consulta: " . $e->getMessage());
+    }
+} else {
+    error_log("⚠️ [DEBUG] No se ejecutó la consulta: modo_individual=" . ($modo_individual ? 'true' : 'false') . ", club_id=" . ($_SESSION['club_id'] ?? 'null'));
 }
 
 // === DEUDAS PENDIENTES (solo del club activo) ===
