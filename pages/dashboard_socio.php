@@ -272,12 +272,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 r.hora_inicio,
                 r.monto_total,
                 r.monto_recaudacion,
-                r.jugadores_esperados
+                r.jugadores_esperados,
+                COUNT(i.id_inscrito) AS inscritos_actuales
             FROM reservas r
+            LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
             WHERE
                 r.id_club = ?
                 AND r.fecha >= CURDATE()
                 AND r.estado = 'confirmada'
+            GROUP BY
+                r.id_reserva,
+                r.fecha,
+                r.hora_inicio,
+                r.monto_total,
+                r.monto_recaudacion,
+                r.jugadores_esperados
             ORDER BY r.fecha ASC, r.hora_inicio ASC
             LIMIT 1
         ");
@@ -736,7 +745,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                 $lunes_semana_evento->setTime(9, 0, 0);
                                 $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
                                 $tipo_reserva_label = 'Semanal';
-                                $cupos_llenos = false; // Puedes calcularlo si tienes inscritos
+                                $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
                                 ?>
                                 <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                     <h3 style="color: white;">Próximo Partido</h3>
