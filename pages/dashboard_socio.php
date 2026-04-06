@@ -2217,7 +2217,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         html += `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
                                 <td style="text-align:center;">${i+1}</td>
-                                <td>${j.nombre}</td>
+                                <td> ${j.nombre}</td>
                                 <td>${j.nivel}</td>
                                 <td style="text-align:right;font-weight:bold;">${j.total_puntos}</td>
                             </tr>

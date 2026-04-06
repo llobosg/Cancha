@@ -33,13 +33,18 @@ try {
         throw new Exception('Correo electrónico inválido');
     }
     
-    // Verificar que el socio exista (permitir recuperación para todos los socios)
+    // Verificar que el socio exista
     error_log("BUSCANDO SOCIO CON EMAIL: $email");
     $stmt = $pdo->prepare("
-        SELECT s.id_socio, s.alias, c.nombre as club_nombre
+        SELECT 
+            s.id_socio, 
+            s.alias, 
+            COALESCE(c.nombre, 'Individual') as club_nombre
         FROM socios s
-        JOIN clubs c ON s.id_club = c.id_club
+        LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+        LEFT JOIN clubs c ON sc.id_club = c.id_club
         WHERE s.email = ?
+        LIMIT 1
     ");
     $stmt->execute([$email]);
     $socio = $stmt->fetch();
