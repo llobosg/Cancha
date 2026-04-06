@@ -67,8 +67,34 @@ try {
         // === Modo club ===
         $club_id = $_SESSION['club_id'];
         switch ($filtro) {
+            // === Inscritos ===
             case 'inscritos':
-                $sql = "
+                if (!isset($_SESSION['club_id']) || !$_SESSION['club_id']) {
+                    echo json_encode([]);
+                    return;
+                }
+                // Obtener el PRÓXIMO id_reserva del club
+                $stmt_next = $pdo->prepare("
+                    SELECT id_reserva 
+                    FROM reservas 
+                    WHERE id_club = ? 
+                    AND fecha >= CURDATE() 
+                    AND estado = 'confirmada'
+                    ORDER BY fecha ASC, hora_inicio ASC
+                    LIMIT 1
+                ");
+                $stmt_next->execute([$_SESSION['club_id']]);
+                $next_reserva = $stmt_next->fetch();
+
+                if (!$next_reserva) {
+                    echo json_encode([]);
+                    return;
+                }
+
+                $id_reserva = $next_reserva['id_reserva'];
+
+                // Obtener TODOS los inscritos de esa reserva
+                $stmt = $pdo->prepare("
                     SELECT 
                         r.fecha,
                         r.hora_inicio,
@@ -88,21 +114,19 @@ try {
                     FROM reservas r
                     JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
                     JOIN socios s ON i.id_socio = s.id_socio
-                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento AND i.id_socio = c.id_socio AND c.tipo_actividad = 'reserva'
+                    LEFT JOIN cuotas c ON r.id_reserva = c.id_evento 
+                                    AND i.id_socio = c.id_socio 
+                                    AND c.tipo_actividad = 'reserva'
                     JOIN canchas ca ON r.id_cancha = ca.id_cancha
                     JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                    WHERE 
-                        r.id_club = ?
-                        AND (
-                            r.fecha > CURDATE()
-                            OR (r.fecha = CURDATE() AND r.hora_inicio > CURTIME())
-                        )
-                    ORDER BY r.fecha ASC, r.hora_inicio ASC, s.alias ASC
-                    LIMIT 100
-                ";
-                $params = [$_SESSION['club_id']];
+                    WHERE r.id_reserva = ?
+                    ORDER BY s.alias ASC
+                ");
+                $stmt->execute([$id_reserva]);
+                echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
                 break;
 
+            // === reservas ===
             case 'reservas':
                 $sql = "
                     SELECT 
@@ -130,6 +154,7 @@ try {
                 $params = [$club_id];
                 break;
 
+            // === eventos ===
             case 'eventos':
                 $sql = "
                     SELECT 
@@ -155,6 +180,7 @@ try {
                 $params = [$club_id];
                 break;
 
+            // === cuotas ===
             case 'cuotas':
                 $sql = "
                     SELECT 
@@ -192,6 +218,7 @@ try {
                 $params = [$_SESSION['id_socio'], $_SESSION['club_id']];
                 break;
 
+            // === Socios ===
             case 'socios':
                 if (!isset($_SESSION['club_id'])) {
                     echo json_encode([]);
