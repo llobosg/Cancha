@@ -1748,16 +1748,16 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                     }
                                     html += `
                                         <tr>
-                                            <td>${formatDate(row.created_at)}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>${row.alias || '-'}</td>
+                                            <td>${formatDate(row.fecha)}</td>
+                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                                            <td>${row.id_tipoevento || '-'}</td>
+                                            <td>${row.origen || '-'}</td>
+                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                            <td>${row.nombre || '-'}</td>
                                             <td>${row.posicion_jugador || '-'}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>${row.email || '-'}</td>
+                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                                            <td>${row.comentario_completo}</td>
                                             <td>${botonAccion}</td>
                                         </tr>
                                     `;
@@ -1809,14 +1809,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <td>${row.nombre || '-'}</td>
                                             <td>${row.posicion_jugador || '-'}</td>
                                             <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                            <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                            <td>
-                                                ${[
-                                                    row.estado,
-                                                    (row.comentario || '').trim(),
-                                                    (row.fecha_pago ? formatDate(row.fecha_pago) : '')
-                                                ].filter(part => part !== '').join(' - ') || '-'}
-                                            </td>
+                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                                            <td>${row.comentario_completo}</td>
                                             <td>${botonAccion}</td>
                                         </tr>
                                     `;
@@ -1855,10 +1849,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                                             <td>${row.nombre || '-'}</td>
                                             <td>${row.posicion_jugador || '-'}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
+                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
+                                            <td>${row.comentario_completo}</td>
+                                            <td>${botonAccion}</td>
                                         </tr>
                                     `;
                                 });
