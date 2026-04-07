@@ -1641,59 +1641,56 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 switch (filtro) {
                     case 'torneos':
                         fetch('../api/get_mis_torneos.php')
-                        .then(r => r.json())
-                        .then(data => {
-                            if (!Array.isArray(data) || data.length === 0) {
-                                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
-                                return;
-                            }
-                            let html = '';
-                            data.forEach(row => {
-                                // Formatear fecha sin hora
-                                const fecha = row.fecha_inicio ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') : '-';
-                                html += `
-                                    <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
-                                        <td>${fecha}</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>${row.id_club || '-'}</td>
-                                        <td>'Pasco'</td>
-                                        <td>${row.torneo || '-'}</td>
-                                        <td>${row.posicion || '-'}</td>
-                                        <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                        <td>-</td>
-                                        <td>${row.comentario || '-'}</td>
-                                        <td>-</td>
-                                    </tr>
-                                `;
+                            .then(r => r.json())
+                            .then(data => {
+                                if (!Array.isArray(data) || data.length === 0) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
+                                    return;
+                                }
+                                let html = '';
+                                data.forEach(row => {
+                                    const fecha = row.fecha_inicio ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') : '-';
+                                    html += `
+                                        <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
+                                            <td>${fecha}</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>${row.id_club || '-'}</td>
+                                            <td>'Pasco'</td>
+                                            <td>${row.torneo || '-'}</td>
+                                            <td>${row.posicion || '-'}</td>
+                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                            <td>-</td>
+                                            <td>${row.comentario || '-'}</td>
+                                            <td>-</td>
+                                        </tr>
+                                    `;
+                                });
+                                tbody.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los torneos</td></tr>';
                             });
-                            tbody.innerHTML = html;
-                        })
-                        .catch(err => {
-                            console.error('Error:', err);
-                            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los torneos</td></tr>';
-                        });
                         break;
 
-                    default:
-                        // Caso general: otros filtros usan get_tabla_datos.php
+                    case 'cuotas':
                         fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.error) {
-                                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-                                return;
-                            }
-                            if (!Array.isArray(data) || data.length === 0) {
-                                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-                                return;
-                            }
-                            let html = '';
-                            data.forEach(row => {
-                                let botonAccion = '-';
-                                let comentario = '-';
-                                if (filtro === 'cuotas') {
-                                    const esResponsable = <?= json_encode($es_responsable) ?>;
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.error) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+                                    return;
+                                }
+                                if (!Array.isArray(data) || data.length === 0) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+                                    return;
+                                }
+                                let html = '';
+                                const esResponsable = <?= json_encode($es_responsable) ?>;
+                                data.forEach(row => {
+                                    let botonAccion = '-';
+                                    let comentario = row.comentario || '-';
                                     if (esResponsable) {
                                         if (row.estado === 'pendiente') {
                                             botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍 Revisar</button>`;
@@ -1701,25 +1698,51 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
                                         }
                                     }
-                                    comentario = row.comentario || '-';
                                     html += `
                                         <tr>
-                                            <td>${formatDate(row.fecha_evento)}</td>
-                                            <td>-</td>
+                                            <td>${formatDate(row.fecha)}</td>
+                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                                            <td>${row.id_tipoevento || '-'}</td>
                                             <td>${row.origen || '-'}</td>
-                                            <td>-</td>
-                                            <td>-</td>
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre_socio || '-'}</td>
+                                            <td>${row.nombre || '-'}</td>
+                                            <td>${row.posicion_jugador || '-'}</td>
                                             <td>${row.rol || '-'}</td>
                                             <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                            <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                            <td>${row.estado}${comentario !== '-' ? ' - ' + comentario : ''}</td>
+                                            <td>
+                                                ${[
+                                                    row.estado,
+                                                    (row.comentario || '').trim(),
+                                                    (row.fecha_pago ? formatDate(row.fecha_pago) : '')
+                                                ].filter(part => part !== '').join(' - ') || '-'}
+                                            </td>
                                             <td>${botonAccion}</td> 
                                         </tr>
                                     `;
-                                } else if (filtro === 'socios') {
-                                    const esResponsable = <?= json_encode($es_responsable) ?>;
+                                });
+                                tbody.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar las cuotas</td></tr>';
+                            });
+                        break;
+
+                    case 'socios':
+                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.error) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+                                    return;
+                                }
+                                if (!Array.isArray(data) || data.length === 0) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+                                    return;
+                                }
+                                let html = '';
+                                const esResponsable = <?= json_encode($es_responsable) ?>;
+                                data.forEach(row => {
                                     let botonAccion = '-';
                                     if (esResponsable) {
                                         botonAccion = `
@@ -1744,9 +1767,33 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <td>${botonAccion}</td>
                                         </tr>
                                     `;
-                                } else if (filtro === 'inscritos') {
-                                    const esResponsable = <?= json_encode($es_responsable) ?>;
-                                    const esMiInscripcion = (row.id_socio == <?= (int)($_SESSION['id_socio'] ?? 0) ?>);
+                                });
+                                tbody.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los socios</td></tr>';
+                            });
+                        break;
+
+                    case 'inscritos':
+                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.error) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+                                    return;
+                                }
+                                if (!Array.isArray(data) || data.length === 0) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+                                    return;
+                                }
+                                let html = '';
+                                const esResponsable = <?= json_encode($es_responsable) ?>;
+                                const miIdSocio = <?= (int)($_SESSION['id_socio'] ?? 0) ?>;
+                                data.forEach(row => {
+                                    let botonAccion = '-';
+                                    const esMiInscripcion = (row.id_socio == miIdSocio);
                                     const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
                                     const ahora = new Date();
                                     let acciones = '';
@@ -1758,31 +1805,53 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                         acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
                                     }
                                     botonAccion = acciones || '-';
-                                    comentario = row.comentario || '-';
                                     html += `
                                         <tr>
                                             <td>${formatDate(row.fecha)}</td>
                                             <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
                                             <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.id_cancha || '-'}</td>   
+                                            <td>${row.origen || '-'}</td>
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre || '-'}</td>                 <!-- Nombre -->
-                                            <td>${row.posicion_jugador || '-'}</td>       <!-- Pos -->
-                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td> <!-- Monto -->
+                                            <td>${row.nombre || '-'}</td>
+                                            <td>${row.posicion_jugador || '-'}</td>
+                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
                                             <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                            <td>${row.comentario || '-'}</td>             <!-- Comentario -->
+                                            <td>${row.comentario || '-'}</td>
                                             <td>${botonAccion}</td>
                                         </tr>
                                     `;
-                                } else {
-                                    // Equipos IA, Reservas, Eventos → sin acciones ni comentario
+                                });
+                                tbody.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los inscritos</td></tr>';
+                            });
+                        break;
+
+                    case 'reservas':
+                    case 'eventos':
+                    case 'equipos':
+                        // Filtros sin acciones ni comentarios
+                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.error) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+                                    return;
+                                }
+                                if (!Array.isArray(data) || data.length === 0) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+                                    return;
+                                }
+                                let html = '';
+                                data.forEach(row => {
                                     html += `
                                         <tr>
                                             <td>${formatDate(row.fecha)}</td>
                                             <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
                                             <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.id_club || '-'}</td>
-                                            <td>${row.id_cancha || '-'}</td>
+                                            <td>${row.origen || '-'}</td>
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                                             <td>${row.nombre || '-'}</td>
                                             <td>${row.posicion_jugador || '-'}</td>
@@ -1792,17 +1861,21 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <td>-</td>
                                         </tr>
                                     `;
-                                }
+                                });
+                                tbody.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
                             });
-                            tbody.innerHTML = html;
-                        })
-                        .catch(err => {
-                            console.error('Error:', err);
-                            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
-                        });
+                        break;
+
+                    default:
+                        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Filtro no reconocido: "${filtro}"</td></tr>`;
                         break;
                 }
             }
+
             // === INICIALIZAR AL CARGAR LA PÁGINA ===
             document.addEventListener('DOMContentLoaded', () => {
                 // 1. Configurar botones de filtro
