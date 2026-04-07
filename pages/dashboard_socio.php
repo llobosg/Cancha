@@ -764,7 +764,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                 }
                                 ?>
 
-                                <!-- Próximo Partido -->
                                 <?php if ($proximo_evento): ?>
                                     <?php
                                     $id_reserva = $proximo_evento['id_reserva'];
