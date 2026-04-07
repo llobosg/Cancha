@@ -751,62 +751,95 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                         $players = (int)$proximo_evento['jugadores_esperados'];
                                     }
                                 ?>
-                                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                    <h3 style="color: white;">Próximo Partido</h3>
-                                    <div class="stat-card-content">
-                                        <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
-                                        <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                                            <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
-                                            <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
-                                                <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                                                    <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?><br>
-                                                    <strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                        <?php if ($despues_del_lunes_09): ?>
-                                            <?php if (!empty($ya_inscrito)): ?>
-                                                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;" 
-                                                        onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
-                                                    Bajarse
-                                                </button>
-                                            <?php else: ?>
-                                                <?php if ($cupos_llenos): ?>
-                                                    <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
-                                                <?php else: ?>
-                                                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                            onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
-                                                        Anotarse
+                                <!-- === DEFINIR SI EL SOCIO YA ESTÁ INSCRITO === -->
+                                <?php
+                                $ya_inscrito = false;
+                                if ($proximo_evento && isset($_SESSION['id_socio'])) {
+                                    $stmt_check = $pdo->prepare("
+                                        SELECT 1 FROM inscritos 
+                                        WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'
+                                    ");
+                                    $stmt_check->execute([$proximo_evento['id_reserva'], $_SESSION['id_socio']]);
+                                    $ya_inscrito = (bool)$stmt_check->fetch();
+                                }
+                                ?>
+
+                                <!-- Próximo Partido -->
+                                <?php if ($proximo_evento): ?>
+                                    <?php
+                                    $id_reserva = $proximo_evento['id_reserva'];
+                                    $monto_total = (float)$proximo_evento['monto_total'];
+                                    $deporte = 'futbolito';
+                                    $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
+                                    
+                                    $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
+                                    $ahora = new DateTime();
+                                    $lunes_semana_evento = clone $fecha_evento;
+                                    $lunes_semana_evento->modify('this week monday');
+                                    $lunes_semana_evento->setTime(9, 0, 0);
+                                    $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+                                    $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
+                                    $fecha_formateada = $fecha_evento->format('d-m');
+                                    $hora_formateada = $fecha_evento->format('H:i');
+                                    ?>
+                                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                        <h3 style="color: white;">Próximo Partido</h3>
+                                        <div class="stat-card-content">
+                                            <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
+                                            <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
+                                                <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
+                                                <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
+                                                    <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
+                                                        <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?><br>
+                                                        <strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <?php if ($despues_del_lunes_09): ?>
+                                                <?php if ($ya_inscrito): ?>
+                                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;width:100%;" 
+                                                            onclick="bajarseEvento(<?= (int)$id_reserva ?>)">
+                                                        Bajarse
                                                     </button>
-                                                    <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                                            onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
-                                                        Anotarse + llevo 🍺🍺
+                                                <?php else: ?>
+                                                    <?php if ($cupos_llenos): ?>
+                                                        <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
+                                                    <?php else: ?>
+                                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
+                                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                                            Anotarse
+                                                        </button>
+                                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
+                                                                onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                                            Anotarse + llevo 🍺🍺
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
+                                                            onclick="pasoEvento(<?= (int)$id_reserva ?>)">
+                                                        Paso
                                                     </button>
                                                 <?php endif; ?>
-                                                <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                                        onclick="pasoEvento(<?= (int)$id_reserva ?>)">
-                                                    Paso
-                                                </button>
+                                                
+                                                <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
+                                                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
+                                                            onclick="armarEquiposIA(<?= (int)$id_reserva ?>)">
+                                                        🤖 Armar Equipos IA
+                                                    </button>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
+                                                    ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
+                                                </p>
                                             <?php endif; ?>
-                                            <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                                                <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                        onclick="armarEquiposIA(<?= (int)$id_reserva ?>)">
-                                                    🤖 Armar Equipos IA
-                                                </button>
-                                            <?php endif; ?>
-                                        <?php else: ?>
-                                            <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
-                                                ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
-                                            </p>
-                                        <?php endif; ?>
+                                        </div>
                                     </div>
-                                </div>
-                            <?php else: ?>
-                                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                    <h3 style="color: white;">Próximo Partido</h3>
-                                    <p style="margin-top:1rem;">📭 No hay partidos programados próximamente</p>
-                                </div>
-                            <?php endif; ?>
+                                <?php else: ?>
+                                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                        <h3 style="color: white;">Próximo Partido</h3>
+                                        <p style="margin-top:1rem;">📭 No hay partidos programados próximamente</p>
+                                    </div>
+                                <?php endif; ?>
 
                             <!-- Deudas Pendientes -->
                             <?php if ($deuda_mas_vigente): ?>
@@ -1750,11 +1783,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <td>${row.id_club || '-'}</td>
                                             <td>${row.id_cancha || '-'}</td>
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre || '-'}</td>
-                                            <td>${row.posicion_jugador || '-'}</td>
-                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
+                                            <td>${row.nombre || '-'}</td>                 <!-- Nombre -->
+                                            <td>${row.posicion_jugador || '-'}</td>       <!-- Pos -->
+                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td> <!-- Monto -->
                                             <td>${row.fecha_pago ? formatDate(row.fecha_pago) : '-'}</td>
-                                            <td>${comentario}</td>
+                                            <td>${row.comentario || '-'}</td>             <!-- Comentario -->
                                             <td>${botonAccion}</td>
                                         </tr>
                                     `;
