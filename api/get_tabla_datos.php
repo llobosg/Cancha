@@ -125,7 +125,7 @@ try {
                     r.id_reserva AS id_inscrito
                 FROM reservas r
                 JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                JOIN tipoeventos te ON ca.id_deporte = te.tipoevento
+                JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
                 WHERE r.id_club = ? AND r.fecha >= CURDATE()
                 ORDER BY r.fecha DESC
                 LIMIT 50
