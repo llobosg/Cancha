@@ -961,7 +961,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         </thead>
                         <tbody id="tablaContenido">
                             <tr>
-                                <td colspan="12" style="text-align: center; padding: 2rem;">Selecciona un filtro para ver los datos</td>
+                                <td colspan="11" style="text-align: center; padding: 2rem;">Selecciona un filtro para ver los datos</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1635,8 +1635,10 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             // === CARGAR TABLA ÚNICA ===
             function cargarTabla(filtro) {
                 const tbody = document.getElementById('tablaContenido');
-                if (!tbody) return;
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;">Cargando...</td></tr>';
+                if (!tbody) {
+                    console.warn('⚠️ Contenedor #tablaContenido no encontrado');
+                    return;
+                }
 
                 switch (filtro) {
                     case 'torneos':
@@ -1649,6 +1651,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                 }
                                 let html = '';
                                 data.forEach(row => {
+                                    let botonAccion = '-';
                                     const fecha = row.fecha_inicio ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') : '-';
                                     html += `
                                         <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
@@ -1840,6 +1843,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                 }
                                 let html = '';
                                 data.forEach(row => {
+                                    let botonAccion = '-';
+                                    const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                                    const ahora = new Date();
                                     html += `
                                         <tr>
                                             <td>${formatDate(row.fecha)}</td>
