@@ -79,9 +79,9 @@ try {
                 SELECT
                     COALESCE(r.fecha, e.fecha) AS fecha,
                     r.hora_inicio,
-                    COALESCE(te.tipoevento, evte.tipoevento) AS id_tipoevento,
-                    COALESCE(rd.nombre, evrd.nombre, cl.nombre) AS origen,
-                    COALESCE(r.monto_total, e.valor_cuota) AS costo_evento,
+                    COALESCE(te.tipoevento, ete.tipoevento) AS id_tipoevento,
+                    COALESCE(rd.nombre, cl.nombre, 'Evento') AS origen,
+                    COALESCE(r.monto_total, e.valor_cuota, 0) AS costo_evento,
                     s.alias AS nombre,
                     p.puesto AS posicion_jugador,
                     c.monto AS cuota_monto,
@@ -99,8 +99,7 @@ try {
                 LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
                 LEFT JOIN clubs cl ON r.id_club = cl.id_club
                 LEFT JOIN tipoeventos te ON ca.id_deporte = te.tipoevento
-                LEFT JOIN tipoeventos evte ON e.id_tipoevento = evte.id_tipoevento
-                LEFT JOIN recintos_deportivos evrd ON e.id_recinto = evrd.id_recinto
+                LEFT JOIN tipoeventos ete ON e.id_tipoevento = ete.id_tipoevento
                 WHERE c.id_socio = ? AND COALESCE(r.id_club, e.id_club) = ?
                 ORDER BY c.fecha_vencimiento DESC
             ");
