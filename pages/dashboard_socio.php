@@ -1511,9 +1511,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
             // === CARGAR DETALLE EVENTOS ===
             function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const [y, m, d] = dateStr.split('-');
-            return `${d}/${m}`;
+                if (!dateStr) return '-';
+                const [y, m, d] = dateStr.split('-');
+                return `${d}/${m}`;
             }
 
             // === MODAL EQUIPOS IA ===
@@ -1764,8 +1764,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                             <td>${formatDate(row.fecha)}</td>
                                             <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
                                             <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.id_club || '-'}</td>
-                                            <td>${row.id_cancha || '-'}</td>
+                                            <td>${row.id_cancha || '-'}</td>   
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                                             <td>${row.nombre || '-'}</td>                 <!-- Nombre -->
                                             <td>${row.posicion_jugador || '-'}</td>       <!-- Pos -->
