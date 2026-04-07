@@ -98,8 +98,8 @@ try {
                 LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
                 LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
                 LEFT JOIN clubs cl ON r.id_club = cl.id_club
-                LEFT JOIN tipoeventos te ON ca.id_deporte = te.tipoevento
-                LEFT JOIN tipoeventos ete ON e.id_tipoevento = ete.id_tipoevento
+                LEFT JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                LEFT JOIN tipoeventos ete ON e.id_tipoevento COLLATE utf8mb4_unicode_ci = ete.id_tipoevento COLLATE utf8mb4_unicode_ci
                 WHERE c.id_socio = ? AND COALESCE(r.id_club, e.id_club) = ?
                 ORDER BY c.fecha_vencimiento DESC
             ");
