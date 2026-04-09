@@ -38,15 +38,11 @@ if (!$stmt->fetch()) {
 }
 
 // Obtener datos del usuario
-// Obtener datos del usuario
 $stmt_user = $pdo->prepare("
-    SELECT 
-        s.alias, s.email, s.celular, s.es_responsable,
-        c.nombre as nombre_club, c.logo as logo_club
+SELECT s.* 
     FROM socios s
-    JOIN clubs c ON s.id_club = c.id_club
-    WHERE s.id_socio = ? AND c.id_club = ?
-");
+    JOIN socio_club sc ON s.id_socio = sc.id_socio
+    WHERE sc.id_club = ? AND sc.estado = 'activo'
 $stmt_user->execute([$id_socio, $club_id]);
 $usuario_data = $stmt_user->fetch();
 
