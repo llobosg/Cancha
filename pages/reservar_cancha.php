@@ -39,12 +39,12 @@ if (!$stmt->fetch()) {
 
 // Obtener datos del usuario
 $stmt_user = $pdo->prepare("
-SELECT s.* 
+    SELECT s.* 
     FROM socios s
     JOIN socio_club sc ON s.id_socio = sc.id_socio
-    WHERE sc.id_club = ? AND sc.estado = 'activo'
+    WHERE sc.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+");
 $stmt_user->execute([$id_socio, $club_id]);
-$usuario_data = $stmt_user->fetch();
 
 if (!$usuario_data) {
     header('Location: ../index.php');
