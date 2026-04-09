@@ -62,8 +62,18 @@ $stmt_clubes = $pdo->prepare("
 $stmt_clubes->execute([$id_socio]);
 $recintos_club = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
 
-// Combinar y eliminar duplicados
-$recintos = array_unique(array_merge($recintos, $recintos_club), SORT_REGULAR);
+$recintos = array_values(array_unique(array_merge($recintos, $recintos_club), SORT_REGULAR));
+
+// ⬇️ AGREGA ESTO ⬇️
+$deportes = [
+    'futbol' => 'Fútbol',
+    'futbolito' => 'Futbolito', 
+    'futsal' => 'Futsal',
+    'tenis' => 'Tenis',
+    'padel' => 'Pádel',
+    'voleyball' => 'Voleyball',
+    'otro' => 'Quincho/Otro'
+];
 ?>
 <!DOCTYPE html>
 <html lang="es">
