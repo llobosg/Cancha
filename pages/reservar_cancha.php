@@ -37,10 +37,10 @@ if (!$usuario_data) {
     exit;
 }
 
-// Obtener recintos deportivos disponibles para el socio
+// === OBTENER RECINTOS DISPONIBLES ===
 $recintos = [];
 
-// 1. Recintos públicos (siempre visibles)
+// 1. Recintos públicos
 $stmt_publicos = $pdo->prepare("
     SELECT id_recinto, nombre 
     FROM recintos_deportivos 
@@ -50,7 +50,7 @@ $stmt_publicos = $pdo->prepare("
 $stmt_publicos->execute();
 $recintos = $stmt_publicos->fetchAll(PDO::FETCH_ASSOC);
 
-// 2. Recintos de clubes a los que pertenece el socio
+// 2. Recintos de clubes del socio
 $stmt_clubes = $pdo->prepare("
     SELECT DISTINCT rd.id_recinto, rd.nombre
     FROM recintos_deportivos rd
@@ -62,9 +62,10 @@ $stmt_clubes = $pdo->prepare("
 $stmt_clubes->execute([$id_socio]);
 $recintos_club = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
 
+// Combinar y eliminar duplicados
 $recintos = array_values(array_unique(array_merge($recintos, $recintos_club), SORT_REGULAR));
 
-// ⬇️ AGREGA ESTO ⬇️
+// Deportes disponibles
 $deportes = [
     'futbol' => 'Fútbol',
     'futbolito' => 'Futbolito', 
@@ -515,12 +516,10 @@ $deportes = [
 
     async function cargarDisponibilidad(filtros = {}) {
         try {
-            // En cargarDisponibilidad()
             const formData = new FormData();
             formData.append('deporte', filtros.deporte || '');
             formData.append('recinto', filtros.recinto || '');
             formData.append('rango', filtros.rango || 'semana');
-            formData.append('id_socio', '<?= $id_socio ?>');
             
             // ✅ ENVIAR DATOS DE SESIÓN EN CADA SOLICITUD
             formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
