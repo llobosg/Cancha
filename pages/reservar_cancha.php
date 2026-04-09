@@ -12,65 +12,58 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Validación de sesión
-if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+// Validación mínima: solo requiere id_socio
+if (!isset($_SESSION['id_socio'])) {
     // Fallback con cookies
-    if (isset($_COOKIE['cancha_id_socio']) && isset($_COOKIE['cancha_club_id'])) {
+    if (isset($_COOKIE['cancha_id_socio'])) {
         $_SESSION['id_socio'] = $_COOKIE['cancha_id_socio'];
-        $_SESSION['club_id'] = $_COOKIE['cancha_club_id'];
     } else {
         header('Location: ../index.php');
         exit;
     }
 }
 
-$id_socio = $_SESSION['id_socio'];
-$club_id = $_SESSION['club_id'];
+$id_socio = (int)$_SESSION['id_socio'];
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Verificar que el socio exista
-$stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-$stmt->execute([$id_socio, $club_id]);
-if (!$stmt->fetch()) {
-    header('Location: ../index.php');
-    exit;
-}
-
-// Obtener datos del usuario
-$stmt_user = $pdo->prepare("
-    SELECT s.* 
-    FROM socios s
-    JOIN socio_club sc ON s.id_socio = sc.id_socio
-    WHERE sc.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
-");
-$stmt_user->execute([$id_socio, $club_id]);
+// Verificar que el socio exista (sin club)
+$stmt = $pdo->prepare("SELECT id_socio, nombre, alias, email, celular FROM socios WHERE id_socio = ? AND datos_completos = 1");
+$stmt->execute([$id_socio]);
+$usuario_data = $stmt->fetch();
 
 if (!$usuario_data) {
     header('Location: ../index.php');
     exit;
 }
 
-// Obtener recintos deportivos disponibles
-$stmt_recintos = $pdo->prepare("
+// Obtener recintos deportivos disponibles para el socio
+$recintos = [];
+
+// 1. Recintos públicos (siempre visibles)
+$stmt_publicos = $pdo->prepare("
     SELECT id_recinto, nombre 
     FROM recintos_deportivos 
-    WHERE email_verified = 1
+    WHERE publico = 1 AND email_verified = 1
     ORDER BY nombre
 ");
-$stmt_recintos->execute();
-$recintos = $stmt_recintos->fetchAll();
+$stmt_publicos->execute();
+$recintos = $stmt_publicos->fetchAll(PDO::FETCH_ASSOC);
 
-// Obtener deportes disponibles
-$deportes = [
-    'futbol' => 'Fútbol',
-    'futbolito' => 'Futbolito', 
-    'futsal' => 'Futsal',
-    'tenis' => 'Tenis',
-    'padel' => 'Pádel',
-    'voleyball' => 'Voleyball',
-    'otro' => 'Quincho/Otro'
-];
+// 2. Recintos de clubes a los que pertenece el socio
+$stmt_clubes = $pdo->prepare("
+    SELECT DISTINCT rd.id_recinto, rd.nombre
+    FROM recintos_deportivos rd
+    JOIN clubs c ON rd.id_club = c.id_club
+    JOIN socio_club sc ON c.id_club = sc.id_club
+    WHERE sc.id_socio = ? AND sc.estado = 'activo' AND rd.email_verified = 1
+    ORDER BY rd.nombre
+");
+$stmt_clubes->execute([$id_socio]);
+$recintos_club = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
+
+// Combinar y eliminar duplicados
+$recintos = array_unique(array_merge($recintos, $recintos_club), SORT_REGULAR);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -512,10 +505,12 @@ $deportes = [
 
     async function cargarDisponibilidad(filtros = {}) {
         try {
+            // En cargarDisponibilidad()
             const formData = new FormData();
             formData.append('deporte', filtros.deporte || '');
             formData.append('recinto', filtros.recinto || '');
             formData.append('rango', filtros.rango || 'semana');
+            formData.append('id_socio', '<?= $id_socio ?>');
             
             // ✅ ENVIAR DATOS DE SESIÓN EN CADA SOLICITUD
             formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
