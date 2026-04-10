@@ -1934,65 +1934,71 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 }
                 cargarTabla(filtro);
 
-                // === CARGAR POSICIONES EN DASHBOARD ===
                 <?php if ($tiene_torneo): ?>
-                console.log("📊 Cargando posiciones para torneo ID:", <?= (int)$torneo_actual['id_torneo'] ?>);
-                const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
+                    <script>
+                    // === CARGAR POSICIONES EN DASHBOARD ===
+                    console.log("📊 Cargando posiciones para torneo ID:", <?= (int)$torneo_actual['id_torneo'] ?>);
+                    const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
 
-                // Tabla de posiciones
-                fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
-                .then(r => r.json())
-                .then(data => {
-                    let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
-                    html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
-                    data.forEach((p, i) => {
-                        html += `<tr style="border-bottom:1px solid #eee;">
-                            <td style="text-align:center;">${i+1}</td>
-                            <td>${p.nombre_pareja}</td>
-                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
-                        </tr>`;
-                    });
-                    html += '</tbody></table>';
-                    
-                    const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
-                    if (contenedorPosiciones) {  // ← VALIDAR
-                        contenedorPosiciones.innerHTML = html || 'Sin posiciones';
-                    }
-                });
+                    // Tabla de posiciones
+                    fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
+                        html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
+                        data.forEach((p, i) => {
+                            html += `<tr style="border-bottom:1px solid #eee;">
+                                <td style="text-align:center;">${i+1}</td>
+                                <td>${p.nombre_pareja}</td>
+                                <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table>';
+                        
+                        const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
+                        if (contenedorPosiciones) {
+                            contenedorPosiciones.innerHTML = html || 'Sin posiciones';
+                        }
+                    })
+                    .catch(err => console.error('Error posiciones:', err));
 
-                // Cargar ranking personal
-                fetch(`../api/get_ranking_personal.php?id_socio=<?= $_SESSION['id_socio'] ?>`)
-                .then(r => r.json())
-                .then(data => {
-                    const miRanking = document.getElementById('miRanking');  // ← VALIDAR
-                    if (miRanking && data && data.total_puntos !== undefined) {
-                        miRanking.innerHTML = `
-                            <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
-                            <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
-                        `;
-                    }
-                });
+                    // Ranking personal
+                    fetch(`../api/get_ranking_personal.php?id_socio=<?= $_SESSION['id_socio'] ?>`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const miRanking = document.getElementById('miRanking');
+                        if (miRanking && data && data.total_puntos !== undefined) {
+                            miRanking.innerHTML = `
+                                <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
+                                <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
+                            `;
+                        }
+                    })
+                    .catch(err => console.error('Error ranking:', err));
 
-                // Mis resultados personales
-                fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
-                .then(r => r.json())
-                .then(data => {
-                    const contenedorResultados = document.getElementById('misResultadosTorneo');  // ← VALIDAR
-                    if (!contenedorResultados) return;
-                    
-                    if (!data.length) {
-                        contenedorResultados.innerHTML = 'No hay partidos jugados aún.';
-                        return;
-                    }
-                    let html = '<ul style="list-style:none;padding:0;">';
-                    data.forEach(p => {
-                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
-                        html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
-                    });
-                    html += '</ul>';
-                    contenedorResultados.innerHTML = html;
-                });
+                    // Resultados personales
+                    fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const contenedorResultados = document.getElementById('misResultadosTorneo');
+                        if (!contenedorResultados) return;
+                        
+                        if (!data.length) {
+                            contenedorResultados.innerHTML = 'No hay partidos jugados aún.';
+                            return;
+                        }
+                        let html = '<ul style="list-style:none;padding:0;">';
+                        data.forEach(p => {
+                            const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
+                            html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
+                        });
+                        html += '</ul>';
+                        contenedorResultados.innerHTML = html;
+                    })
+                    .catch(err => console.error('Error resultados:', err));
+                    </script>
                 <?php endif; ?>
+            });
 
             // === INICIALIZAR PUESTOS ===
             document.addEventListener('DOMContentLoaded', () => {
