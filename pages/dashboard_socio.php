@@ -907,7 +907,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
                 <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
                 <?php if ($es_responsable): ?>
-                    <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+                    <form action="reservar_cancha.php" method="GET" style="display:inline;">
+                        <button type="submit" class="btn-action">Reservar Cancha</button>
+                    </form>
                     <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
                 <?php endif; ?>
                 <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
