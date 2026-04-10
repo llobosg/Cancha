@@ -1938,7 +1938,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
             // === CARGAR POSICIONES/RANKING/RESULTADOS (solo si hay torneo) ===
             <?php if ($tiene_torneo && isset($torneo_actual['id_torneo'])): ?>
-            <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
                 const idSocio = <?= (int)($_SESSION['id_socio'] ?? 0) ?>;
@@ -2000,7 +1999,6 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 })
                 .catch(err => console.error('Error resultados:', err));
             });
-            </script>
             <?php endif; ?>
 
             // === INICIALIZAR PUESTOS ===
