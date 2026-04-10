@@ -1,9 +1,8 @@
 <?php
-// 1. Cargar configuración primero
-require_once __DIR__ . '/../includes/config.php';
-
-// 2. Configurar y arrancar sesión
+// Forzar nombre de sesión
 session_name('CANCHASPORT_SESSION');
+
+// Configuración robusta
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 86400,
@@ -16,7 +15,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 3. Asegurar club_id en sesión
+// 🔥 ¡AGREGA ESTA LÍNEA!
+require_once __DIR__ . '/../includes/config.php';
+
+// Asegurar que club_id exista en sesión
 if (!isset($_SESSION['club_id'])) {
     $_SESSION['club_id'] = null;
 }
