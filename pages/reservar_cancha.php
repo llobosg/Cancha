@@ -39,7 +39,7 @@ $id_socio = (int)$_SESSION['id_socio'];
 require_once __DIR__ . '/../includes/config.php';
 
 // Verificar que el socio exista (sin club)
-$stmt = $pdo->prepare("SELECT id_socio, nombre, alias, email, celular FROM socios WHERE id_socio = ? AND datos_completos = 1");
+$stmt = $pdo->prepare("SELECT id_socio, nombre, alias, email, celular FROM socios WHERE id_socio = ?");
 $stmt->execute([$id_socio]);
 $usuario_data = $stmt->fetch();
 
