@@ -1920,11 +1920,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
+                        btn.classList.add('active');
                         const filtro = btn.getAttribute('data-filter');
                         cargarTabla(filtro);
                     });
                 });
+                
                 // 2. Cargar tabla según parámetro de URL o por defecto
                 const urlParams = new URLSearchParams(window.location.search);
                 const filtro = urlParams.get('filtro') || 'inscritos';
@@ -1933,72 +1934,74 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     activeBtn.classList.add('active');
                 }
                 cargarTabla(filtro);
-
-                <?php if ($tiene_torneo): ?>
-                    <script>
-                    // === CARGAR POSICIONES EN DASHBOARD ===
-                    console.log("📊 Cargando posiciones para torneo ID:", <?= (int)$torneo_actual['id_torneo'] ?>);
-                    const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
-
-                    // Tabla de posiciones
-                    fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
-                        html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
-                        data.forEach((p, i) => {
-                            html += `<tr style="border-bottom:1px solid #eee;">
-                                <td style="text-align:center;">${i+1}</td>
-                                <td>${p.nombre_pareja}</td>
-                                <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
-                            </tr>`;
-                        });
-                        html += '</tbody></table>';
-                        
-                        const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
-                        if (contenedorPosiciones) {
-                            contenedorPosiciones.innerHTML = html || 'Sin posiciones';
-                        }
-                    })
-                    .catch(err => console.error('Error posiciones:', err));
-
-                    // Ranking personal
-                    fetch(`../api/get_ranking_personal.php?id_socio=<?= $_SESSION['id_socio'] ?>`)
-                    .then(r => r.json())
-                    .then(data => {
-                        const miRanking = document.getElementById('miRanking');
-                        if (miRanking && data && data.total_puntos !== undefined) {
-                            miRanking.innerHTML = `
-                                <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
-                                <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
-                            `;
-                        }
-                    })
-                    .catch(err => console.error('Error ranking:', err));
-
-                    // Resultados personales
-                    fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        const contenedorResultados = document.getElementById('misResultadosTorneo');
-                        if (!contenedorResultados) return;
-                        
-                        if (!data.length) {
-                            contenedorResultados.innerHTML = 'No hay partidos jugados aún.';
-                            return;
-                        }
-                        let html = '<ul style="list-style:none;padding:0;">';
-                        data.forEach(p => {
-                            const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
-                            html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
-                        });
-                        html += '</ul>';
-                        contenedorResultados.innerHTML = html;
-                    })
-                    .catch(err => console.error('Error resultados:', err));
-                    </script>
-                <?php endif; ?>
             });
+
+            // === CARGAR POSICIONES/RANKING/RESULTADOS (solo si hay torneo) ===
+            <?php if ($tiene_torneo && isset($torneo_actual['id_torneo'])): ?>
+            <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
+                const idSocio = <?= (int)($_SESSION['id_socio'] ?? 0) ?>;
+                
+                // Tabla de posiciones
+                fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
+                    html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
+                    data.forEach((p, i) => {
+                        html += `<tr style="border-bottom:1px solid #eee;">
+                            <td style="text-align:center;">${i+1}</td>
+                            <td>${p.nombre_pareja || ''}</td>
+                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados || 0}</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    
+                    const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
+                    if (contenedorPosiciones) {
+                        contenedorPosiciones.innerHTML = html || 'Sin posiciones';
+                    }
+                })
+                .catch(err => console.error('Error posiciones:', err));
+
+                // Ranking personal
+                fetch(`../api/get_ranking_personal.php?id_socio=${idSocio}`)
+                .then(r => r.json())
+                .then(data => {
+                    const miRanking = document.getElementById('miRanking');
+                    if (miRanking && data && typeof data.total_puntos !== 'undefined') {
+                        miRanking.innerHTML = `
+                            <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
+                            <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
+                        `;
+                    }
+                })
+                .catch(err => console.error('Error ranking:', err));
+
+                // Resultados personales
+                fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
+                .then(r => r.json())
+                .then(data => {
+                    const contenedorResultados = document.getElementById('misResultadosTorneo');
+                    if (!contenedorResultados) return;
+                    
+                    if (!data || data.length === 0) {
+                        contenedorResultados.innerHTML = 'No hay partidos jugados aún.';
+                        return;
+                    }
+                    let html = '<ul style="list-style:none;padding:0;">';
+                    data.forEach(p => {
+                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
+                        html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1 || 0}-${p.juegos_pareja_2 || 0} vs ${p.rival || ''}</li>`;
+                    });
+                    html += '</ul>';
+                    contenedorResultados.innerHTML = html;
+                })
+                .catch(err => console.error('Error resultados:', err));
+            });
+            </script>
+            <?php endif; ?>
 
             // === INICIALIZAR PUESTOS ===
             document.addEventListener('DOMContentLoaded', () => {
@@ -2007,7 +2010,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     cargarPuestosPorDeporte(deporteSelect.value);
                 }
                 deporteSelect?.addEventListener('change', function() {
-                cargarPuestosPorDeporte(this.value);
+                    cargarPuestosPorDeporte(this.value);
                 });
             });
 
@@ -2015,28 +2018,55 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 fetch('../api/listar_clubes_publicos.php')
                 .then(r => r.json())
                 .then(clubes => {
-                    let html = '<h3>Selecciona un club</h3>';
-                    html += '<input type="text" id="buscador-club" placeholder="Buscar..." onkeyup="filtrarClubes()" style="width:100%;padding:0.5rem;margin:0.5rem 0;">';
-                    html += '<div id="lista-clubes" style="max-height:300px;overflow-y:auto;">';
-                    clubes.forEach(c => {
-                        // Evitar clubes ya unidos
-                        const yaUnido = <?= json_encode(array_column($clubes_del_socio, 'id_club')) ?>;
-                        if (yaUnido.includes(c.id_club)) return;
-                        html += `<div style="padding:0.5rem;cursor:pointer;border-bottom:1px solid #eee;" onclick="solicitarUnirseAClub(${c.id_club})">${c.nombre}</div>`;
-                    });
-                    html += '</div>';
+                    // Crear modal con DOM API (seguro contra PHP)
+                    const overlay = document.createElement('div');
+                    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;';
                     
-                    // Mostrar en modal
                     const modal = document.createElement('div');
-                    modal.id = 'modalOtroClub';
-                    modal.innerHTML = `
-                        <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;">
-                            <div style="background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;">
-                                <button onclick="cerrarModalOtroClub()" style="margin-top:1rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
+                    modal.style.cssText = 'background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;';
+                    
+                    const title = document.createElement('h3');
+                    title.textContent = 'Selecciona un club';
+                    
+                    const search = document.createElement('input');
+                    search.type = 'text';
+                    search.id = 'buscador-club';
+                    search.placeholder = 'Buscar...';
+                    search.style.cssText = 'width:100%;padding:0.5rem;margin:0.5rem 0;';
+                    search.onkeyup = function() {
+                        const input = this.value.toLowerCase();
+                        document.querySelectorAll('#lista-clubes > div').forEach(item => {
+                            item.style.display = item.textContent.toLowerCase().includes(input) ? 'block' : 'none';
+                        });
+                    };
+                    
+                    const lista = document.createElement('div');
+                    lista.id = 'lista-clubes';
+                    lista.style.cssText = 'max-height:300px;overflow-y:auto;';
+                    
+                    const yaUnido = <?= json_encode(array_column($clubes_del_socio, 'id_club')) ?>;
+                    
+                    clubes.forEach(c => {
+                        if (yaUnido.includes(c.id_club)) return;
+                        const item = document.createElement('div');
+                        item.style.cssText = 'padding:0.5rem;cursor:pointer;border-bottom:1px solid #eee;';
+                        item.textContent = c.nombre;
+                        item.onclick = function() { solicitarUnirseAClub(c.id_club); };
+                        lista.appendChild(item);
+                    });
+                    
+                    const btnCerrar = document.createElement('button');
+                    btnCerrar.textContent = 'Cerrar';
+                    btnCerrar.style.cssText = 'margin-top:1rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;';
+                    btnCerrar.onclick = function() { document.body.removeChild(overlay); };
+                    
+                    // Ensamblar
+                    modal.appendChild(title);
+                    modal.appendChild(search);
+                    modal.appendChild(lista);
+                    modal.appendChild(btnCerrar);
+                    overlay.appendChild(modal);
+                    document.body.appendChild(overlay);
                 });
             }
 
