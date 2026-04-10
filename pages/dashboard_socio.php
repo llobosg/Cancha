@@ -78,14 +78,14 @@ if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     
     if ($modo_individual) {
-        $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ? AND datos_completos = 1");
+        $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
         $stmt_validate->execute([$id_socio]);
     } else {
         $stmt_validate = $pdo->prepare("
             SELECT s.*
             FROM socios s
             JOIN socio_club sc ON s.id_socio = sc.id_socio
-            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo' AND s.datos_completos = 1
+            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
         ");
         $stmt_validate->execute([$id_socio, $club_id]);
     }
@@ -111,7 +111,7 @@ if (!$id_socio) {
                 SELECT s.id_socio 
                 FROM socios s
                 LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-                WHERE s.email = ? AND sc.id_socio IS NULL AND s.datos_completos = 1
+                WHERE s.email = ? AND sc.id_socio IS NULL
             ");
             $stmt_socio->execute([$user_email]);
         } else {
@@ -119,7 +119,7 @@ if (!$id_socio) {
                 SELECT s.id_socio
                 FROM socios s
                 JOIN socio_club sc ON s.id_socio = sc.id_socio
-                WHERE s.email = ? AND sc.id_club = ? AND sc.estado = 'activo' AND s.datos_completos = 1
+                WHERE s.email = ? AND sc.id_club = ? AND sc.estado = 'activo'
             ");
             $stmt_socio->execute([$user_email, $club_id]);
         }
