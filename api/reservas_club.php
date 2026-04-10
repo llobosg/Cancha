@@ -14,7 +14,7 @@ try {
     $id_socio = $_POST['id_socio'] ?? ($_SESSION['id_socio'] ?? ($_COOKIE['cancha_id_socio'] ?? null));
     $club_id = $_POST['club_id'] ?? ($_SESSION['club_id'] ?? ($_COOKIE['cancha_club_id'] ?? null));
     
-    if (!$id_socio || !$club_id) {
+    if (!$id_socio) {
         throw new Exception('Acceso no autorizado', 401);
     }
     
@@ -24,20 +24,33 @@ try {
         throw new Exception('Error de conexión a la base de datos', 500);
     }
     
-    // Verificar socio
-    $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
-    $stmt->execute([$id_socio, $club_id]);
-    if (!$stmt->fetch()) {
-        throw new Exception('Socio no válido', 401);
+    // ✅ Validar socio usando socio_club (no socios.id_club)
+    if ($club_id) {
+        $stmt = $pdo->prepare("
+            SELECT s.id_socio 
+            FROM socios s
+            JOIN socio_club sc ON s.id_socio = sc.id_socio
+            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+        ");
+        $stmt->execute([$id_socio, $club_id]);
+        if (!$stmt->fetch()) {
+            throw new Exception('Socio no pertenece al club', 403);
+        }
+    } else {
+        // Socio individual: solo verificar que exista
+        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ?");
+        $stmt->execute([$id_socio]);
+        if (!$stmt->fetch()) {
+            throw new Exception('Socio no válido', 401);
+        }
     }
-    
+
     // Calcular rango de fechas y horarios
     $fecha_inicio = date('Y-m-d');
     $fecha_fin = date('Y-m-d', strtotime('+7 days'));
-    $hora_actual = date('H:i:s'); // Hora actual del servidor
+    $hora_actual = date('H:i:s');
     
     $rango = $_POST['rango'] ?? 'semana';
-    error_log("Rango recibido: $rango");
     
     switch ($rango) {
         case 'hoy':
@@ -45,31 +58,23 @@ try {
             $fecha_fin = date('Y-m-d');
             $filtrar_hora = true;
             break;
-            
         case 'mañana':
             $fecha_inicio = date('Y-m-d', strtotime('+1 day'));
             $fecha_fin = date('Y-m-d', strtotime('+1 day'));
             $filtrar_hora = false;
             break;
-            
         case 'mes':
             $fecha_inicio = date('Y-m-d');
             $fecha_fin = date('Y-m-d', strtotime('+30 days'));
             $filtrar_hora = false;
             break;
-            
-        default: // semana
+        default:
             $fecha_inicio = date('Y-m-d');
             $fecha_fin = date('Y-m-d', strtotime('+7 days'));
             $filtrar_hora = false;
             break;
     }
-    
-    error_log("Fechas calculadas: $fecha_inicio - $fecha_fin");
-    if ($filtrar_hora) {
-        error_log("Filtrando por hora: $hora_actual");
-    }
-    
+
     // Construir consulta base
     $sql = "
         SELECT 
@@ -87,39 +92,32 @@ try {
         JOIN canchas c ON dc.id_cancha = c.id_cancha
         JOIN recintos_deportivos r ON c.id_recinto = r.id_recinto
         WHERE dc.fecha BETWEEN ? AND ?
-        AND dc.estado = 'disponible'
+          AND dc.estado = 'disponible'
     ";
     
     $params = [$fecha_inicio, $fecha_fin];
     
-    // Agregar condición de hora para "hoy"
     if ($filtrar_hora) {
         $sql .= " AND dc.hora_inicio > ?";
         $params[] = $hora_actual;
-        error_log("Agregando condición de hora a la consulta");
     }
     
     // Filtros adicionales
-    if (!empty($_POST['deporte']) && $_POST['deporte'] !== '') {
+    if (!empty($_POST['deporte'])) {
         $sql .= " AND c.id_deporte = ?";
         $params[] = $_POST['deporte'];
     }
     
-    if (!empty($_POST['recinto']) && $_POST['recinto'] !== '') {
+    if (!empty($_POST['recinto'])) {
         $sql .= " AND r.id_recinto = ?";
         $params[] = $_POST['recinto'];
     }
     
     $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
     
-    error_log("Consulta SQL final: " . $sql);
-    error_log("Parámetros: " . json_encode($params));
-    
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $disponibilidad = $stmt->fetchAll();
-    
-    error_log("Registros encontrados: " . count($disponibilidad));
+    $disponibilidad = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     echo json_encode($disponibilidad);
     
@@ -128,7 +126,9 @@ try {
         ob_clean();
     }
     error_log("API Reservas Error: " . $e->getMessage());
-    http_response_code($e->getCode() ?: 500);
+    // ✅ Asegurar que el código sea entero
+    $code = is_numeric($e->getCode()) ? (int)$e->getCode() : 500;
+    http_response_code($code);
     echo json_encode(['error' => $e->getMessage()]);
 }
 
