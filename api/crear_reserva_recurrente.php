@@ -4,12 +4,14 @@ require_once __DIR__ . '/../includes/config.php';
 
 try {
     session_start();
-    if (!isset($_SESSION['id_socio']) || !isset($_SESSION['club_id'])) {
+    
+    if (!isset($_SESSION['id_socio'])) {
         throw new Exception('Acceso no autorizado', 401);
     }
     
     $id_socio = $_SESSION['id_socio'];
-    $id_club = $_SESSION['club_id'];
+    $id_club = $_SESSION['club_id'] ?? null; // Opcional
+    
     $id_cancha = (int)($_POST['id_cancha'] ?? 0);
     $fecha_base = $_POST['fecha_base'] ?? '';
     $hora_inicio = $_POST['hora_inicio'] ?? '';
@@ -18,18 +20,16 @@ try {
     $fecha_desde = $_POST['fecha_desde'] ?? $fecha_base;
     $fecha_hasta = $_POST['fecha_hasta'] ?? $fecha_base;
     
-    // === Nuevos campos para recaudación ===
     $monto_recaudacion = !empty($_POST['monto_recaudacion']) ? (float)$_POST['monto_recaudacion'] : null;
     $jugadores_esperados = !empty($_POST['jugadores_esperados']) ? (int)$_POST['jugadores_esperados'] : null;
 
-    // Validaciones básicas
     if (!$id_cancha || !$fecha_base || !$hora_inicio || !$hora_fin) {
         throw new Exception('Datos incompletos');
     }
     
-    // Obtener datos del socio y cancha
-    $stmt_socio = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ? AND id_club = ?");
-    $stmt_socio->execute([$id_socio, $id_club]);
+    // Obtener datos del socio (sin depender de id_club)
+    $stmt_socio = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
+    $stmt_socio->execute([$id_socio]);
     $socio = $stmt_socio->fetch();
     
     if (!$socio) {
