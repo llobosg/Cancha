@@ -146,6 +146,73 @@ if (!$id_socio) {
     $_SESSION['id_socio'] = $id_socio;
 }
 
+// === OBTENCIÓN Y ASEGURAMIENTO DE ID_SOCIO EN SESIÓN ===
+$id_socio = null;
+
+// 1. Si ya está en sesión, usarlo
+if (isset($_SESSION['id_socio'])) {
+    $id_socio = (int)$_SESSION['id_socio'];
+    
+    // Validar que el socio exista y tenga datos completos
+    if ($modo_individual) {
+        $stmt_validate = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND datos_completos = 1");
+    } else {
+        $stmt_validate = $pdo->prepare("
+            SELECT s.id_socio
+            FROM socios s
+            JOIN socio_club sc ON s.id_socio = sc.id_socio
+            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo' AND s.datos_completos = 1
+        ");
+        $stmt_validate->execute([$id_socio, $club_id]);
+    }
+    
+    if (!$stmt_validate->fetch()) {
+        $id_socio = null;
+        unset($_SESSION['id_socio']);
+    }
+}
+
+// 2. Si no hay id_socio, buscar por email
+if (!$id_socio && isset($_SESSION['user_email'])) {
+    $user_email = $_SESSION['user_email'];
+    
+    if ($modo_individual) {
+        $stmt_socio = $pdo->prepare("
+            SELECT id_socio 
+            FROM socios 
+            WHERE email = ? AND datos_completos = 1
+        ");
+        $stmt_socio->execute([$user_email]);
+    } else {
+        $stmt_socio = $pdo->prepare("
+            SELECT s.id_socio
+            FROM socios s
+            JOIN socio_club sc ON s.id_socio = sc.id_socio
+            WHERE s.email = ? AND sc.id_club = ? AND sc.estado = 'activo' AND s.datos_completos = 1
+        ");
+        $stmt_socio->execute([$user_email, $club_id]);
+    }
+    
+    $socio_data = $stmt_socio->fetch();
+    if ($socio_data) {
+        $id_socio = (int)$socio_data['id_socio'];
+        $_SESSION['id_socio'] = $id_socio;
+    }
+}
+
+// 3. Si aún no hay id_socio, redirigir a completar perfil
+if (!$id_socio) {
+    if ($modo_individual) {
+        header('Location: completar_perfil.php?modo=individual');
+    } else {
+        header('Location: completar_perfil.php?id=' . $club_slug);
+    }
+    exit;
+}
+
+// 4. Asegurar en sesión para uso posterior
+$_SESSION['id_socio'] = $id_socio;
+
 // Asegurar socio_actual
 if (!$socio_actual) {
     if ($modo_individual) {
