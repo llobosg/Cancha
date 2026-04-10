@@ -10,7 +10,7 @@ try {
     }
     
     $id_socio = $_SESSION['id_socio'];
-    $id_club = $_SESSION['club_id'] ?? null; // Opcional
+    $id_club = $_POST['club_id'] ?? ($_SESSION['club_id'] ?? null); // ← Prioridad al POST
     
     $id_cancha = (int)($_POST['id_cancha'] ?? 0);
     $fecha_base = $_POST['fecha_base'] ?? '';

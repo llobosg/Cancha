@@ -831,14 +831,14 @@ $deportes = [
       const jugadoresEsperados = document.getElementById('jugadores_esperados')?.value || '';
       
       const datos = {
-          id_cancha: reservaActual.id_cancha,
-          fecha_base: reservaActual.fecha,
-          hora_inicio: reservaActual.hora_inicio,
-          hora_fin: reservaActual.hora_fin,
-          tipo_patron: tipoPatronAPI,
-          // === AGREGAR CAMPOS NUEVOS ===
-          monto_recaudacion: montoRecaudacion,
-          jugadores_esperados: jugadoresEsperados
+            id_cancha: reservaActual.id_cancha,
+            fecha_base: reservaActual.fecha,
+            hora_inicio: reservaActual.hora_inicio,
+            hora_fin: reservaActual.hora_fin,
+            tipo_patron: tipoPatronAPI,
+            monto_recaudacion: montoRecaudacion,
+            jugadores_esperados: jugadoresEsperados,
+            club_id: '<?= $_SESSION['club_id'] ?? "" ?>'  // ← ¡Clave!
       };
       
       if (tipoReserva === 'patron') {
