@@ -2110,28 +2110,56 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     body: JSON.stringify({ id_pareja: idPareja })
                 })
                 .then(r => r.json())
-                .then(data => {
+                .then(function(data) {
                     if (data.success) {
-                        // Crear modal con concatenación (no template literals)
+                        // Crear elementos con DOM API (más seguro que innerHTML)
+                        const overlay = document.createElement('div');
+                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;';
+                        
                         const modal = document.createElement('div');
-                        modal.innerHTML = 
-                            '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;">' +
-                                '<div style="background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;">' +
-                                    '<h3>🔗 Nuevo link de reemplazo</h3>' +
-                                    '<p>Envía este link a tu nuevo compañero:</p>' +
-                                    '<div style="background:#f1f1f1;padding:0.6rem;border-radius:6px;margin:1rem 0;word-break:break-all;font-family:monospace;font-size:0.9rem;">' +
-                                        (data.link || '') +
-                                    '</div>' +
-                                    '<button onclick="copiarYCerrar(this)" style="background:#071289;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;margin-right:0.5rem;">📋 Copiar</button>' +
-                                    '<button onclick="this.closest(\'div\').remove()" style="background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;">Cerrar</button>' +
-                                '</div>' +
-                            '</div>';
-                        document.body.appendChild(modal);
+                        modal.style.cssText = 'background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;';
+                        
+                        const title = document.createElement('h3');
+                        title.textContent = '🔗 Nuevo link de reemplazo';
+                        title.style.marginTop = '0';
+                        
+                        const desc = document.createElement('p');
+                        desc.textContent = 'Envía este link a tu nuevo compañero:';
+                        
+                        const linkBox = document.createElement('div');
+                        linkBox.style.cssText = 'background:#f1f1f1;padding:0.6rem;border-radius:6px;margin:1rem 0;word-break:break-all;font-family:monospace;font-size:0.9rem;';
+                        linkBox.textContent = data.link || ''; // ✅ Seguro: textContent escapa HTML
+                        
+                        const btnCopiar = document.createElement('button');
+                        btnCopiar.textContent = '📋 Copiar';
+                        btnCopiar.style.cssText = 'background:#071289;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;margin-right:0.5rem;cursor:pointer;';
+                        btnCopiar.onclick = function() {
+                            navigator.clipboard.writeText(data.link || '').then(function() {
+                                alert('✅ Link copiado');
+                            });
+                        };
+                        
+                        const btnCerrar = document.createElement('button');
+                        btnCerrar.textContent = 'Cerrar';
+                        btnCerrar.style.cssText = 'background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;';
+                        btnCerrar.onclick = function() {
+                            document.body.removeChild(overlay);
+                        };
+                        
+                        // Ensamblar
+                        modal.appendChild(title);
+                        modal.appendChild(desc);
+                        modal.appendChild(linkBox);
+                        modal.appendChild(btnCopiar);
+                        modal.appendChild(btnCerrar);
+                        overlay.appendChild(modal);
+                        document.body.appendChild(overlay);
+                        
                     } else {
                         alert('❌ ' + data.message);
                     }
                 })
-                .catch(err => {
+                .catch(function(err) {
                     console.error('Error:', err);
                     alert('❌ Error al generar link de reemplazo');
                 });
