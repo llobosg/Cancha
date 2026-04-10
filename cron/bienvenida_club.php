@@ -58,11 +58,11 @@ try {
                 ";
             } else {
                 // Socio individual
-                $asunto = '🎾🏐 ¡Bienvenido a CanchaSport como socio individual!';
+                $asunto = '🎾🏐 ¡Bienvenido a CanchaSport!';
                 $mensaje = "
                     <p>¡Hola {$socio['nombre']}!</p>
-                    <p>Gracias por unirte a CanchaSport como socio individual.</p>
-                    <p>Aquí podrás gestionar tus partidos, torneos, Americanos, reservar canchas y participar en la comunidad deportiva multi-deporte.</p>
+                    <p>Gracias por unirte a CanchaSport.</p>
+                    <p>Aquí podrás gestionar tus partidos, torneos, Americanos, reservar canchas y participar en la comunidad deportiva CanchaSport.</p>
                     <p><a href='https://canchasport.com/pages/dashboard_socio.php' 
                        style='background: #071289; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;'>
                         Ir a tu dashboard
