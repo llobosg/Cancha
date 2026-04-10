@@ -6,14 +6,18 @@ session_name('CANCHASPORT_SESSION');
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 86400,
-        'path' => '/',               // accesible en todo el sitio
-        'domain' => '',              // sin subdominio
+        'path' => '/',
+        'domain' => '',
         'secure' => isset($_SERVER['HTTPS']),
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
     session_start();
 }
+
+// 🔥 ¡AGREGA ESTA LÍNEA!
+require_once __DIR__ . '/../includes/config.php';
+
 // Asegurar que club_id exista en sesión
 if (!isset($_SESSION['club_id'])) {
     $_SESSION['club_id'] = null;
