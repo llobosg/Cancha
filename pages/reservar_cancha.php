@@ -51,30 +51,15 @@ if (!$usuario_data) {
 // === OBTENER RECINTOS DISPONIBLES ===
 $recintos = [];
 
-// 1. Recintos públicos
-$stmt_publicos = $pdo->prepare("
+// Obtener recintos deportivos disponibles
+$stmt_recintos = $pdo->prepare("
     SELECT id_recinto, nombre 
     FROM recintos_deportivos 
-    WHERE publico = 1 AND email_verified = 1
+    WHERE email_verified = 1
     ORDER BY nombre
 ");
-$stmt_publicos->execute();
-$recintos = $stmt_publicos->fetchAll(PDO::FETCH_ASSOC);
-
-// 2. Recintos de clubes del socio
-$stmt_clubes = $pdo->prepare("
-    SELECT DISTINCT rd.id_recinto, rd.nombre
-    FROM recintos_deportivos rd
-    JOIN clubs c ON rd.id_club = c.id_club
-    JOIN socio_club sc ON c.id_club = sc.id_club
-    WHERE sc.id_socio = ? AND sc.estado = 'activo' AND rd.email_verified = 1
-    ORDER BY rd.nombre
-");
-$stmt_clubes->execute([$id_socio]);
-$recintos_club = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
-
-// Combinar y eliminar duplicados
-$recintos = array_values(array_unique(array_merge($recintos, $recintos_club), SORT_REGULAR));
+$stmt_recintos->execute();
+$recintos = $stmt_recintos->fetchAll();
 
 // Deportes disponibles
 $deportes = [
