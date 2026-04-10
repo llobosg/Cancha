@@ -158,6 +158,15 @@ if (!$id_socio) {
 // 4. Asegurar en sesión para uso posterior
 $_SESSION['id_socio'] = $id_socio;
 
+// Guardar en cookie para compatibilidad con Railway/FrankenPHP
+setcookie('cancha_id_socio', $_SESSION['id_socio'], [
+    'expires' => time() + 86400,
+    'path' => '/',
+    'secure' => isset($_SERVER['HTTPS']),
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
 // Asegurar socio_actual
 if (!$socio_actual) {
     if ($modo_individual) {

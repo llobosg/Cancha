@@ -12,12 +12,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Validación mínima: solo requiere id_socio
+// Validación mejorada con múltiples capas
 if (!isset($_SESSION['id_socio'])) {
-    // Fallback con cookies
-    if (isset($_COOKIE['cancha_id_socio'])) {
-        $_SESSION['id_socio'] = $_COOKIE['cancha_id_socio'];
-    } else {
+    // Intentar con cookie
+    if (isset($_COOKIE['cancha_id_socio']) && is_numeric($_COOKIE['cancha_id_socio'])) {
+        $_SESSION['id_socio'] = (int)$_COOKIE['cancha_id_socio'];
+    }
+    // Si aún no hay id_socio, redirigir
+    if (!isset($_SESSION['id_socio'])) {
         header('Location: ../index.php');
         exit;
     }
