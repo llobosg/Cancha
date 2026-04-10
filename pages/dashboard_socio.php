@@ -293,9 +293,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 r.monto_total,
                 r.monto_recaudacion,
                 r.jugadores_esperados,
+                c.id_deporte,  -- ← AGREGAR ESTO
                 COUNT(i.id_inscrito) AS inscritos_actuales
             FROM reservas r
             LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
+            LEFT JOIN canchas c ON r.id_cancha = c.id_cancha  -- ← ASEGURAR JOIN
             WHERE
                 r.id_club = ?
                 AND r.fecha >= CURDATE()
@@ -306,7 +308,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 r.hora_inicio,
                 r.monto_total,
                 r.monto_recaudacion,
-                r.jugadores_esperados
+                r.jugadores_esperados,
+                c.id_deporte
             ORDER BY r.fecha ASC, r.hora_inicio ASC
             LIMIT 1
         ");
@@ -1952,10 +1955,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     html += '</tbody></table>';
                     
                     const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
-                    if (contenedorPosiciones) {
+                    if (contenedorPosiciones) {  // ← VALIDAR
                         contenedorPosiciones.innerHTML = html || 'Sin posiciones';
-                    } else {
-                        console.warn('⚠️ Contenedor de posiciones no encontrado');
                     }
                 });
 
@@ -1963,13 +1964,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 fetch(`../api/get_ranking_personal.php?id_socio=<?= $_SESSION['id_socio'] ?>`)
                 .then(r => r.json())
                 .then(data => {
-                    if (data && data.total_puntos !== undefined) {
-                        document.getElementById('miRanking').innerHTML = `
+                    const miRanking = document.getElementById('miRanking');  // ← VALIDAR
+                    if (miRanking && data && data.total_puntos !== undefined) {
+                        miRanking.innerHTML = `
                             <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
                             <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
                         `;
-                    } else {
-                        document.getElementById('miRanking').innerHTML = 'No hay ranking disponible.';
                     }
                 });
 
@@ -1977,8 +1977,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
                 .then(r => r.json())
                 .then(data => {
+                    const contenedorResultados = document.getElementById('misResultadosTorneo');  // ← VALIDAR
+                    if (!contenedorResultados) return;
+                    
                     if (!data.length) {
-                        document.getElementById('misResultadosTorneo').innerHTML = 'No hay partidos jugados aún.';
+                        contenedorResultados.innerHTML = 'No hay partidos jugados aún.';
                         return;
                     }
                     let html = '<ul style="list-style:none;padding:0;">';
@@ -1987,18 +1990,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
                     });
                     html += '</ul>';
-                    
-                    const contenedorResultados = document.getElementById('misResultadosTorneo');
-                    if (contenedorResultados) {
-                        contenedorResultados.innerHTML = html;
-                    } else {
-                        console.warn('⚠️ Contenedor de resultados no encontrado');
-                    }
+                    contenedorResultados.innerHTML = html;
                 });
-                <?php else: ?>
-                    console.log("📰 No hay torneos activos para este socio");
                 <?php endif; ?>
-            });
 
             // === INICIALIZAR PUESTOS ===
             document.addEventListener('DOMContentLoaded', () => {
