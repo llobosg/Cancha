@@ -1,8 +1,13 @@
 <?php
-// 1. Cargar configuración primero
+// 1. Cargar configuración
 require_once __DIR__ . '/../includes/config.php';
 
-// 2. Configurar y arrancar sesión
+// 2. Restaurar sesión desde cookie si existe
+if (isset($_COOKIE['cancha_session_id'])) {
+    session_id($_COOKIE['cancha_session_id']);
+}
+
+// 3. Configurar y arrancar sesión
 session_name('CANCHASPORT_SESSION');
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -14,11 +19,6 @@ if (session_status() === PHP_SESSION_NONE) {
         'samesite' => 'Lax'
     ]);
     session_start();
-}
-
-// 3. Asegurar club_id en sesión
-if (!isset($_SESSION['club_id'])) {
-    $_SESSION['club_id'] = null;
 }
 
 error_log("SESSION después de start: " . print_r($_SESSION, true));

@@ -25,6 +25,20 @@ if (isset($_POST['login_alternativo'])) {
             $_SESSION['id_socio'] = $socio['id_socio'];
             $_SESSION['user_email'] = $email;
 
+            // Después de validar credenciales en index.php
+            $_SESSION['id_socio'] = $id_socio;
+            $_SESSION['user_email'] = $email;
+
+            // 🔥 Forzar cookie de respaldo
+            setcookie('cancha_session_id', session_id(), [
+                'expires' => time() + 86400,
+                'path' => '/',
+                'domain' => '',
+                'secure' => isset($_SERVER['HTTPS']),
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+
             // Verificar si pertenece a algún club
             $stmt_clubes = $pdo->prepare("
                 SELECT c.id_club, c.email_responsable, c.nombre
