@@ -1,17 +1,14 @@
 <?php
-error_log("=== INICIO DASHBOARD_SOCIO.PHP ===");
-error_log("GET recibido: " . print_r($_GET, true));
-require_once __DIR__ . '/../includes/config.php';
-if (!defined('VAPID_PUBLIC_KEY')) {
-    define('VAPID_PUBLIC_KEY', '');
-}
-// Configuración robusta de sesiones
+// Forzar nombre de sesión
+session_name('CANCHASPORT_SESSION');
+
+// Configuración robusta
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 86400,
-        'path' => '/',
-        'domain' => '',
-        'Secure' => isset($_SERVER['HTTPS']),
+        'path' => '/',               // accesible en todo el sitio
+        'domain' => '',              // sin subdominio
+        'secure' => isset($_SERVER['HTTPS']),
         'httponly' => true,
         'samesite' => 'Lax'
     ]);

@@ -1,10 +1,13 @@
 <?php
-// Configuración robusta de sesiones
+// Forzar nombre de sesión
+session_name('CANCHASPORT_SESSION');
+
+// Configuración robusta
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 86400,
-        'path' => '/',
-        'domain' => '',
+        'path' => '/',               // accesible en todo el sitio
+        'domain' => '',              // sin subdominio
         'secure' => isset($_SERVER['HTTPS']),
         'httponly' => true,
         'samesite' => 'Lax'
