@@ -11,15 +11,17 @@ try {
             s.id_socio,
             s.email,
             s.nombre,
-            s.id_club,
+            sc.id_club,
             c.nombre as club_nombre,
             c.email_responsable
         FROM socios s
-        LEFT JOIN clubs c ON s.id_club = c.id_club
+        LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+        LEFT JOIN clubs c ON sc.id_club = c.id_club
         LEFT JOIN logs_notificaciones ln ON s.id_socio = ln.id_socio AND ln.tipo = 'bienvenida'
         WHERE ln.id_socio IS NULL
           AND s.email_verified = 1
           AND s.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ORDER BY s.created_at DESC
     ");
     $stmt->execute();
     $nuevos_socios = $stmt->fetchAll();
