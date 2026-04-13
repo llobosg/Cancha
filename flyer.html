@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>QR CanchaSport</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0; }
+        .qr-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
+        img { width: 250px; height: 250px; }
+        h3 { color: #071289; margin-top: 15px; margin-bottom: 5px; }
+        p { color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <!-- API de QR Code Generator -->
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://canchasport.com/pages/registro_socio.php&color=071289&bgcolor=ffffff&margin=10" alt="QR CanchaSport">
+        <h3>¡Únete a CanchaSport!</h3>
+        <p>Escanea para registrarte y jugar</p>
+    </div>
+</body>
+</html>
