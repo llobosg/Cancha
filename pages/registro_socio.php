@@ -320,31 +320,44 @@ $club_slug = $_GET['club'] ?? '';
 <div id="toast">Mensaje</div>
 
 <script>
-    const pass = document.getElementById('password').value;
-    const passConf = document.getElementById('password_confirm').value;
+    // === VARIABLES GLOBALES ===
+    let codigoEnviado = '';
+    let emailTemp = '';
 
-    if (!passConf) {
-        showToast("️ Por favor confirma tu contraseña");
-        return; // Detener ejecución
-    }
-    if (pass !== passConf) {
-        showToast("❌ Las contraseñas no coinciden");
-        return;
+    // === FUNCIÓN 1: Toggle Ver Contraseña (GLOBAL) ===
+    function togglePassword(inputId, iconElement) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        
+        if (input.type === "password") {
+            input.type = "text";
+            iconElement.textContent = "🔒"; 
+        } else {
+            input.type = "password";
+            iconElement.textContent = "👁️"; 
+        }
     }
 
-    formData.append('password_confirm', passConf);
-    // Lógica Dinámica de Deporte
+    // === FUNCIÓN 2: Actualizar Campo Deporte (GLOBAL) ===
     function actualizarCampoDeporte() {
-        const deporte = document.getElementById('deporte').value;
+        const deporteSelect = document.getElementById('deporte');
+        if (!deporteSelect) return;
+
+        const deporte = deporteSelect.value;
         const label = document.getElementById('label_puesto_nivel');
         const select = document.getElementById('puesto_nivel');
         const deportesRestringidos = ['futbol', 'futbolito', 'voleyball'];
 
+        if (!label || !select) return;
+
         if (deportesRestringidos.includes(deporte)) {
             // Mostrar Mini Modal de Bloqueo
-            document.getElementById('textoBloqueo').innerHTML = `Para registrarte en <strong>${deporte.toUpperCase()}</strong> debes crear un Club de amigos o unirte a uno existente.`;
-            document.getElementById('modalBloqueoDeporte').classList.remove('hidden');
-            // Resetear select visualmente para forzar elección
+            const modal = document.getElementById('modalBloqueoDeporte');
+            if (modal) {
+                document.getElementById('textoBloqueo').innerHTML = `Para registrarte en <strong>${deporte.toUpperCase()}</strong> debes crear un Club de amigos o unirte a uno existente.`;
+                modal.classList.remove('hidden');
+            }
+            // Resetear select visualmente
             select.value = ""; 
         } else if (deporte === 'padel') {
             // Cambiar a Niveles de Pádel
@@ -359,7 +372,7 @@ $club_slug = $_GET['club'] ?? '';
                 <option value="Primera">Primera Categoría</option>
             `;
         } else {
-            // Volver a Puestos normales (Fútbol genérico u otros)
+            // Volver a Puestos normales
             label.textContent = "Puesto";
             select.innerHTML = `
                 <option value="">Indistinto</option>
@@ -372,32 +385,39 @@ $club_slug = $_GET['club'] ?? '';
         }
     }
 
+    // === FUNCIÓN 3: Cerrar Modal Bloqueo ===
     function cerrarModalBloqueo() {
-        document.getElementById('modalBloqueoDeporte').classList.add('hidden');
-        document.getElementById('deporte').value = ""; // Resetear selección
+        const modal = document.getElementById('modalBloqueoDeporte');
+        if (modal) modal.classList.add('hidden');
+        const deporteSelect = document.getElementById('deporte');
+        if (deporteSelect) deporteSelect.value = ""; 
     }
 
-    // Acción 1: Crear Club
+    // === FUNCIÓN 4: Abrir Registro Club ===
     function abrirRegistroClub() {
         cerrarModalBloqueo();
-        // Redirigir al registro de club pasando los datos actuales si es posible, o simplemente redirigir
-        window.location.href = 'registro_club.php?prefill_nombre=' + encodeURIComponent(document.getElementById('nombre').value) + '&prefill_email=' + encodeURIComponent(document.getElementById('email').value);
+        const nombre = document.getElementById('nombre') ? encodeURIComponent(document.getElementById('nombre').value) : '';
+        const email = document.getElementById('email') ? encodeURIComponent(document.getElementById('email').value) : '';
+        window.location.href = 'registro_club.php?prefill_nombre=' + nombre + '&prefill_email=' + email;
     }
 
-    // Acción 2: Buscar Club
+    // === FUNCIÓN 5: Mostrar Lista Clubes ===
     async function mostrarListaClubes() {
-        document.getElementById('modalBloqueoDeporte').classList.add('hidden');
+        cerrarModalBloqueo();
         const modalLista = document.getElementById('modalListaClubes');
         const container = document.getElementById('listaClubesContainer');
         
+        if (!modalLista || !container) return;
+
         modalLista.classList.remove('hidden');
-        container.innerHTML = '<div style="text-align:center; padding:10px;">Cargando...</div>';
+        container.innerHTML = '<div style="text-align:center; padding:10px; color:#64748b;">Cargando clubes...</div>';
 
         try {
             const response = await fetch('../api/listar_clubes_publicos.php');
+            if (!response.ok) throw new Error('Error red');
             const clubes = await response.json();
             
-            if (clubes.length === 0) {
+            if (!clubes || clubes.length === 0) {
                 container.innerHTML = '<div style="padding:10px; text-align:center;">No hay clubes registrados aún.</div>';
                 return;
             }
@@ -414,16 +434,27 @@ $club_slug = $_GET['club'] ?? '';
             });
 
         } catch (error) {
+            console.error(error);
             container.innerHTML = '<div style="padding:10px; color:red;">Error al cargar clubes.</div>';
         }
     }
 
-    // Enviar Solicitud de Unión
+    // === FUNCIÓN 6: Solicitar Unión ===
     async function solicitarUnion(id_club, email_responsable) {
-        const nombre = document.getElementById('nombre').value;
-        const email = document.getElementById('email').value;
-        const celular = document.getElementById('celular').value;
-        const deporte = document.getElementById('deporte').value;
+        const nombreInput = document.getElementById('nombre');
+        const emailInput = document.getElementById('email');
+        const celularInput = document.getElementById('celular');
+        const deporteInput = document.getElementById('deporte');
+
+        if (!nombreInput || !emailInput) {
+            showToast("️ Completa Nombre y Correo primero.");
+            return;
+        }
+
+        const nombre = nombreInput.value;
+        const email = emailInput.value;
+        const celular = celularInput ? celularInput.value : '';
+        const deporte = deporteInput ? deporteInput.value : '';
 
         if (!nombre || !email) {
             showToast("⚠️ Completa Nombre y Correo primero.");
@@ -452,50 +483,80 @@ $club_slug = $_GET['club'] ?? '';
             if (data.success) {
                 showToast("✅ Solicitud enviada al responsable del club.");
                 document.getElementById('modalListaClubes').classList.add('hidden');
-                // Opcional: Redirigir o dejar en espera
             } else {
-                showToast("❌ Error: " + data.message);
+                showToast(" Error: " + data.message);
                 btn.textContent = "Solicitar";
                 btn.disabled = false;
             }
         } catch (error) {
+            console.error(error);
             showToast("❌ Error de conexión");
             btn.textContent = "Solicitar";
             btn.disabled = false;
         }
     }
 
-    // Lógica de Registro Normal (Email/Pass)
+    // === FUNCIÓN 7: Enviar Código (Registro Principal) ===
     async function enviarCodigo(e) {
-        e.preventDefault();
-        const deporte = document.getElementById('deporte').value;
-        if (!deporte) { showToast("Selecciona un deporte"); return; }
+        e.preventDefault(); // Evita recarga
         
-        // Si es fútbol/voley y no se resolvió el modal, bloquear
+        const deporteSelect = document.getElementById('deporte');
+        const deporte = deporteSelect ? deporteSelect.value : '';
+        
+        if (!deporte) { 
+            showToast("Selecciona un deporte"); 
+            return; 
+        }
+        
+        // Validación específica para deportes restringidos
         if (['futbol', 'futbolito', 'voleyball'].includes(deporte)) {
             showToast("⚠️ Debes crear o unirte a un club para este deporte.");
             actualizarCampoDeporte(); // Reabre modal
             return;
         }
 
-        if (document.getElementById('password').value !== document.getElementById('password_confirm').value) {
+        const passInput = document.getElementById('password');
+        const passConfInput = document.getElementById('password_confirm');
+        
+        if (!passInput || !passConfInput) {
+            showToast("Error en el formulario");
+            return;
+        }
+
+        const password = passInput.value;
+        const passConfirm = passConfInput.value;
+
+        if (!passConfirm) {
+            showToast("⚠️ Por favor confirma tu contraseña");
+            return;
+        }
+
+        if (password !== passConfirm) {
             showToast("❌ Las contraseñas no coinciden");
+            return;
+        }
+        
+        if (password.length < 6) {
+            showToast("❌ La contraseña debe tener al menos 6 caracteres");
             return;
         }
 
         const btn = document.getElementById('btnEnviar');
-        btn.innerHTML = 'Enviando...';
-        btn.disabled = true;
+        if (btn) {
+            btn.innerHTML = 'Enviando...';
+            btn.disabled = true;
+        }
 
         const formData = new FormData();
         formData.append('nombre', document.getElementById('nombre').value);
-        formData.append('alias', document.getElementById('nombre').value.split(' ')[0]); // Alias simple
+        formData.append('alias', document.getElementById('nombre').value.split(' ')[0]); 
         formData.append('genero', document.getElementById('genero').value);
         formData.append('celular', document.getElementById('celular').value);
         formData.append('email', document.getElementById('email').value);
         formData.append('deporte', deporte);
-        formData.append('puesto', document.getElementById('puesto_nivel').value); // Guarda puesto o nivel
-        formData.append('password', document.getElementById('password').value);
+        formData.append('puesto', document.getElementById('puesto_nivel').value); 
+        formData.append('password', password);
+        formData.append('password_confirm', passConfirm); // Asegurado
         formData.append('rol', 'Jugador');
         formData.append('fecha_nac', '2000-01-01');
         formData.append('region', 'Metropolitana');
@@ -510,31 +571,51 @@ $club_slug = $_GET['club'] ?? '';
             const data = await response.json();
 
             if (data.success) {
-                document.getElementById('verify-email-display').textContent = document.getElementById('email').value;
-                document.getElementById('formRegistro').closest('.card').classList.add('hidden');
-                document.getElementById('verify-modal').classList.remove('hidden');
+                emailTemp = document.getElementById('email').value;
+                const verifyDisplay = document.getElementById('verify-email-display');
+                if (verifyDisplay) verifyDisplay.textContent = emailTemp;
+
+                const formCard = document.getElementById('formRegistro').closest('.card');
+                const verifyModal = document.getElementById('verify-modal');
+                
+                if (formCard) formCard.classList.add('hidden');
+                if (verifyModal) verifyModal.classList.remove('hidden');
+                
                 showToast("✅ Código enviado");
             } else {
                 showToast("❌ " + data.message);
-                btn.innerHTML = '🚀 Enviar Código';
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = '🚀 Enviar Código de Verificación';
+                    btn.disabled = false;
+                }
             }
         } catch (error) {
+            console.error(error);
             showToast("❌ Error de conexión");
-            btn.innerHTML = '🚀 Enviar Código';
-            btn.disabled = false;
+            if (btn) {
+                btn.innerHTML = '🚀 Enviar Código de Verificación';
+                btn.disabled = false;
+            }
         }
     }
 
+    // === FUNCIÓN 8: Validar y Registrar Final ===
     async function validarYRegistrar() {
-        const codigo = document.getElementById('codigo_verificacion').value;
-        if (codigo.length !== 6) { showToast("Ingresa el código"); return; }
+        const codigoInput = document.getElementById('codigo_verificacion');
+        if (!codigoInput) return;
+        
+        const codigo = codigoInput.value;
+        if (codigo.length !== 6) { 
+            showToast("Ingresa el código de 6 dígitos"); 
+            return; 
+        }
 
         const btn = document.querySelector('#verify-modal .btn');
-        btn.innerHTML = 'Activando...';
-        btn.disabled = true;
+        if (btn) {
+            btn.innerHTML = 'Activando...';
+            btn.disabled = true;
+        }
 
-        // Reenviar datos completos para registro final
         const formData = new FormData();
         formData.append('email', document.getElementById('verify-email-display').textContent);
         formData.append('codigo', codigo);
@@ -545,6 +626,7 @@ $club_slug = $_GET['club'] ?? '';
         formData.append('deporte', document.getElementById('deporte').value);
         formData.append('puesto', document.getElementById('puesto_nivel').value);
         formData.append('password', document.getElementById('password').value);
+        formData.append('password_confirm', document.getElementById('password_confirm').value);
         formData.append('rol', 'Jugador');
         formData.append('fecha_nac', '2000-01-01');
         formData.append('region', 'Metropolitana');
@@ -562,37 +644,34 @@ $club_slug = $_GET['club'] ?? '';
                 setTimeout(() => window.location.href = '../index.php', 2000);
             } else {
                 showToast("❌ " + data.message);
+                if (btn) {
+                    btn.innerHTML = '✅ Activar Cuenta';
+                    btn.disabled = false;
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("❌ Error al verificar");
+            if (btn) {
                 btn.innerHTML = '✅ Activar Cuenta';
                 btn.disabled = false;
             }
-        } catch (error) {
-            showToast("❌ Error");
-            btn.innerHTML = '✅ Activar Cuenta';
-            btn.disabled = false;
         }
     }
 
     function volverAlRegistro() {
-        document.getElementById('verify-modal').classList.add('hidden');
-        document.getElementById('formRegistro').closest('.card').classList.remove('hidden');
+        const verifyModal = document.getElementById('verify-modal');
+        const formCard = document.getElementById('formRegistro').closest('.card');
+        if (verifyModal) verifyModal.classList.add('hidden');
+        if (formCard) formCard.classList.remove('hidden');
     }
 
     function showToast(msg) {
         const t = document.getElementById("toast");
+        if (!t) return;
         t.textContent = msg;
         t.className = "show";
         setTimeout(() => t.className = t.className.replace("show", ""), 3000);
-    }
-
-    function togglePassword(inputId, iconElement) {
-        const input = document.getElementById(inputId);
-        if (input.type === "password") {
-            input.type = "text";
-            iconElement.textContent = "🔒"; // Cambia icono a candado
-        } else {
-            input.type = "password";
-            iconElement.textContent = "👁️"; // Vuelve a ojo
-        }
     }
 </script>
 </body>
