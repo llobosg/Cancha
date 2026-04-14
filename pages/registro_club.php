@@ -1,7 +1,4 @@
 <?php
-// MARCADOR DE VERSIÓN NUEVA - BORRAR DESPUÉS
-die("VERSIÓN 2.0 CARGADA CORRECTAMENTE"); 
-
 require_once __DIR__ . '/../includes/config.php';
 
 // Obtener regiones desde la base de datos
@@ -210,184 +207,151 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Registra tu Club - Cancha</title>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=2.0">
   <style>
+    /* FORZAR ESTILOS GLOBALES PARA ESTA PÁGINA */
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
+    
     body {
-      background: 
-        linear-gradient(rgba(0, 10, 20, 0.40), rgba(0, 15, 30, 0.50)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      background-blend-mode: multiply;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
+        background-color: #0f172a !important;
+        background-image: url('../assets/img/cancha_pasto2.jpg') !important;
+        background-size: cover !important;
+        background-position: center !important;
+        color: #f1f5f9 !important;
+        min-height: 100vh !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        padding: 20px 0 !important;
+        position: relative;
+    }
+    
+    /* Capa oscura sobre la imagen */
+    body::before {
+        content: '' !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+        pointer-events: none !important;
+        z-index: -1 !important;
     }
 
-    .form-container {
-      width: 95%;
-      max-width: 900px;
-      background: white;
-      padding: 2rem;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      position: relative;
-      margin: 0 auto;
+    .app-container { 
+        width: 100% !important; 
+        max-width: 480px !important; 
+        padding-bottom: 40px !important; 
+        position: relative !important;
+        z-index: 1;
+    }
+    
+    .logo-header { text-align: center !important; margin: 20px 0 15px !important; }
+    .logo-header h1 { 
+        font-size: 1.8rem !important; 
+        background: linear-gradient(135deg, #4ade80, #3b82f6) !important; 
+        -webkit-background-clip: text !important; 
+        -webkit-text-fill-color: transparent !important; 
+        font-weight: 900 !important;
+    }
+    .logo-header p { color: #cbd5e1 !important; font-size: 0.9rem !important; margin-top: 5px !important; }
+
+    .card {
+        background: rgba(30, 41, 59, 0.9) !important; /* Más opaco para asegurar lectura */
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border-radius: 20px !important;
+        padding: 25px !important;
+        margin: 0 16px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+        color: #f1f5f9 !important; /* Asegurar texto blanco */
     }
 
-    @media (max-width: 768px) {
-      body {
-        background: white !important;
-        color: #333 !important;
-      }
-      
-      .form-container {
-        width: 100%;
-        max-width: none;
-        height: auto;
-        min-height: 100vh;
-        border-radius: 0;
-        box-shadow: none;
-        margin: 0;
-        padding: 1.5rem;
-        background: white !important;
-      }
+    .form-group { margin-bottom: 15px !important; }
+    .input-label { 
+        display: block !important; 
+        color: #94a3b8 !important; 
+        font-size: 0.75rem !important; 
+        font-weight: 600 !important; 
+        margin-bottom: 5px !important; 
+        text-transform: uppercase !important; 
+        letter-spacing: 0.5px !important; 
+    }
+    
+    .input, select {
+        width: 100% !important;
+        padding: 10px 12px !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        background: rgba(15,23,42,0.8) !important; /* Fondo oscuro input */
+        color: white !important; /* Texto blanco */
+        font-size: 0.95rem !important;
+        transition: all 0.3s !important;
+        appearance: none; /* Quitar estilo nativo */
+    }
+    
+    .input:focus, select:focus {
+        outline: none !important;
+        border-color: #3b82f6 !important;
+        background: rgba(15,23,42,1) !important;
+        color: white !important;
     }
 
+    /* Opciones del select también deben ser oscuras si es posible */
+    option {
+        background: #1e293b;
+        color: white;
+    }
+
+    .btn {
+        width: 100% !important;
+        padding: 14px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+        color: white !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+        cursor: pointer !important;
+        margin-top: 10px !important;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+    }
+    
     .close-btn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      font-size: 2.2rem;
-      color: #003366;
-      text-decoration: none;
-      opacity: 0.7;
-      transition: opacity 0.2s;
-      z-index: 10;
+        position: absolute !important;
+        top: 15px !important;
+        right: 15px !important;
+        font-size: 2rem !important;
+        color: #94a3b8 !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        z-index: 10 !important;
     }
 
-    h2 {
-      text-align: center;
-      color: #003366;
-      margin-bottom: 1.8rem;
-      font-weight: 700;
-      font-size: 1.6rem;
+    .error-box {
+        background: rgba(239, 68, 68, 0.2) !important;
+        border: 1px solid rgba(239, 68, 68, 0.5) !important;
+        color: #fca5a5 !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        margin-bottom: 20px !important;
+        font-size: 0.9rem !important;
+        line-height: 1.5 !important;
     }
-
-    .error {
-      background: #ffebee;
-      color: #c62828;
-      padding: 0.7rem;
-      border-radius: 6px;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      font-size: 0.85rem;
+    
+    .success-box {
+        background: rgba(34, 197, 94, 0.2) !important;
+        border: 1px solid rgba(34, 197, 94, 0.5) !important;
+        color: #86efac !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        margin-bottom: 20px !important;
+        font-size: 0.9rem !important;
+        text-align: center !important;
     }
-
-    .success {
-      background: #e8f5e9;
-      color: #2e7d32;
-      padding: 0.7rem;
-      border-radius: 6px;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      font-size: 0.85rem;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 0.8rem 1.2rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group {
-      margin: 0;
-    }
-
-    .form-group label {
-      text-align: right;
-      padding-right: 0.5rem;
-      display: block;
-      font-size: 0.85rem;
-      color: #333;
-      font-weight: normal;
-    }
-
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 0.85rem;
-      color: #071289;
-      background: #fafcff;
-    }
-
-    .col-span-2 {
-      grid-column: span 2;
-    }
-
-    .col-span-nombre {
-      grid-column: span 2;
-    }
-
-    .empty-col {
-      visibility: hidden;
-    }
-
-    .submit-section {
-      grid-column: 1 / -1;
-      text-align: center;
-      margin-top: 1.8rem;
-    }
-
-    .btn-submit {
-      width: auto;
-      min-width: 220px;
-      padding: 0.65rem 1.8rem;
-      background: #071289;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    /* Responsive móvil */
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.7rem;
-      }
-      
-      .col-span-nombre {
-        grid-column: span 2 !important;
-      }
-      
-      .empty-col {
-        display: none;
-      }
-      
-      .form-group label {
-        text-align: left;
-        padding-right: 0;
-        font-size: 0.8rem;
-      }
-      
-      .form-group input,
-      .form-group select {
-        font-size: 0.85rem;
-        padding: 0.45rem;
-      }
-    }
-  </style>
+</style>
 </head>
 <body>
   <div class="form-container">
