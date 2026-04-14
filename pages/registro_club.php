@@ -422,15 +422,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <!-- Fila 5: Contraseñas -->
-                <div class="form-grid">
-                    <div class="input-group">
-                        <label>Contraseña *</label>
-                        <input type="password" name="password" placeholder="Mínimo 6 caracteres" minlength="6" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.85rem; width: 100%;">
-                    </div>
-                    <div class="input-group">
-                        <label>Confirmar Contraseña *</label>
-                        <input type="password" name="password_confirm" placeholder="Repite contraseña" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.85rem; width: 100%;">
-                    </div>
+                <div class="input-group">
+                    <label>Contraseña *</label>
+                    <input type="password" name="password" placeholder="Mínimo 6 caracteres" minlength="6" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.85rem; width: 100%;">
+                </div>
+                <div class="input-group">
+                    <label>Confirmar Contraseña *</label>
+                    <input type="password" name="password_confirm" placeholder="Repite contraseña" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.85rem; width: 100%;">
                 </div>
             </div>
 

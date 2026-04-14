@@ -289,7 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           Ir al Dashboard
         </button>
         <div class="redirect-message">
-          Redirigiendo automáticamente en 3 segundos...
+          Redirigiendo a Inicio para que hagas login y pruebes tu cuenta... Si no eres redirigido automáticamente, haz clic en el botón de arriba.
         </div>
       </div>
       
