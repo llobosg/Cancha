@@ -190,9 +190,9 @@ $club_slug = $_GET['club'] ?? '';
 
             <!-- FILA 1: Nombre | Género -->
             <div class="form-grid">
-                <div class="input-group full-width"> <!-- Nombre ocupa todo o mitad? El prompt dice 2 por fila. Nombre suele ser largo, lo dejo full o half. Prompt: "Nombre Género". Asumo mitad/mitad. -->
+                <div class="input-group"> 
                     <label class="input-label">Nombre Completo</label>
-                    <input type="text" id="nombre" class="input" placeholder="Ej: Juan Pérez" required autocomplete="name">
+                    <input type="text" id="nombre" class="input" placeholder="Ej: Nico Pérez" required autocomplete="name">
                 </div>
                 <div class="input-group">
                     <label class="input-label">Género</label>
