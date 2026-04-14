@@ -77,6 +77,19 @@ try {
         throw new Exception('Correo electrónico inválido');
     }
 
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception('Correo electrónico inválido');
+    }
+
+    // === NUEVA VALIDACIÓN: VERIFICAR SI EL CORREO YA EXISTE ===
+    $stmt_check_email = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+    $stmt_check_email->execute([$email]);
+    
+    if ($stmt_check_email->fetch()) {
+        // El correo ya existe
+        throw new Exception('Este correo electrónico ya está registrado. Por favor inicia sesión o recupera tu contraseña.');
+    }
+
     // Lógica de club (solo si no es modo individual)
     $id_club = null;
     if (!$modo_individual) {
