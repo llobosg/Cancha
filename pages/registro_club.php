@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Obtener regiones (aunque usaremos default, las cargamos por si acaso)
+// Obtener regiones (solo por si acaso, aunque usaremos default)
 $stmt_regiones = $pdo->query("SELECT DISTINCT codigo_region, nombre_region FROM regiones_chile ORDER BY nombre_region");
 $regiones_chile = [];
 while ($row = $stmt_regiones->fetch()) {
@@ -20,7 +20,7 @@ $prefill_email = $_GET['prefill_email'] ?? '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validar campos requeridos
-        $required = ['nombre', 'deporte', 'ciudad', 'comuna', 'responsable', 'email_responsable'];
+        $required = ['nombre', 'deporte', 'comuna', 'responsable', 'email_responsable'];
         foreach ($required as $field) {
             if (empty($_POST[$field])) {
                 throw new Exception('Todos los campos marcados son obligatorios');
@@ -32,44 +32,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Correo electrónico inválido.');
         }
 
-        // Validar Jugadores (Hidden pero validado por seguridad)
-        $jugadores = (int)$_POST['jugadores_por_lado'];
-        if ($jugadores < 1 || $jugadores > 50) {
-             // Permitimos rango amplio ya que es hidden
-        }
-
-        // === VALIDAR NOMBRE DE CLUB EXISTENTE ===
+        // === VALIDAR NOMBRE DE CLUB EXISTENTE (Backend también) ===
         $stmt_check_name = $pdo->prepare("SELECT id_club FROM clubs WHERE LOWER(nombre) = LOWER(?)");
         $stmt_check_name->execute([$_POST['nombre']]);
         if ($stmt_check_name->fetch()) {
-            throw new Exception('️ Ya existe un club con ese nombre. Por favor elige otro.');
+            throw new Exception('⚠️ Ya existe un club con ese nombre. Por favor elige otro.');
         }
 
-        // Verificar email duplicado (Responsable)
+        // Verificar email duplicado
         $stmt_check_email = $pdo->prepare("SELECT id_club FROM clubs WHERE email_responsable = ?");
         $stmt_check_email->execute([$_POST['email_responsable']]);
         if ($stmt_check_email->fetch()) {
-            $error_type = 'duplicate';
-            $error_message = 'Este correo ya tiene un club registrado.';
-            throw new Exception($error_message);
+            throw new Exception('Este correo ya tiene un club registrado.');
         }
 
         // Generar código
         $verification_code = rand(1000, 9999);
         
         // Datos (usando defaults hidden)
+        // NOTA: Se eliminó 'region' del INSERT si tu tabla no lo tiene.
         $club_data = [
             'nombre' => $_POST['nombre'],
             'deporte' => $_POST['deporte'],
-            'jugadores_por_lado' => $jugadores,
-            'fecha_fundacion' => $_POST['fecha_fundacion'], // Hoy desde hidden
-            'ciudad' => $_POST['ciudad'], // Santiago desde hidden
-            'comuna' => $_POST['comuna'], // Comuna desde input o hidden? Pediste Comuna en form.
+            'jugadores_por_lado' => 20, // Hardcoded según requerimiento
+            'fecha_fundacion' => date('Y-m-d'), // Hoy
+            'ciudad' => 'Santiago', // Hardcoded
+            'comuna' => $_POST['comuna'],
             'responsable' => $_POST['responsable'],
             'telefono' => $_POST['telefono'] ?: null,
             'email_responsable' => $_POST['email_responsable'],
-            'verification_code' => $verification_code,
-            'region' => $_POST['region'] // Metropolitana desde hidden
+            'verification_code' => $verification_code
         ];
 
         // Subir Logo
@@ -126,14 +118,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Error al enviar correo de verificación.');
         }
 
-        // Insertar BD
+        // Insertar BD (CORREGIDO: Sin 'region' si no existe en tu tabla)
+        // Ajusta los campos según tu tabla real. Si tienes 'region', agrégalos de vuelta.
         $stmt = $pdo->prepare("
-            INSERT INTO clubs (nombre, deporte, jugadores_por_lado, fecha_fundacion, pais, region, ciudad, comuna, responsable, telefono, email_responsable, logo, verification_code, email_verified, created_at)
-            VALUES (?, ?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
+            INSERT INTO clubs (nombre, deporte, jugadores_por_lado, fecha_fundacion, ciudad, comuna, responsable, telefono, email_responsable, logo, verification_code, email_verified, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
         ");
         $stmt->execute([
             $club_data['nombre'], $club_data['deporte'], $club_data['jugadores_por_lado'], $club_data['fecha_fundacion'],
-            $club_data['region'], $club_data['ciudad'], $club_data['comuna'], $club_data['responsable'], 
+            $club_data['ciudad'], $club_data['comuna'], $club_data['responsable'], 
             $club_data['telefono'], $club_data['email_responsable'], $logo_filename, $club_data['verification_code']
         ]);
 
@@ -143,7 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $error_type = 'general';
         $error_message = $e->getMessage();
-        // Limpiar logo si falla
         if (!empty($logo_filename) && file_exists(__DIR__ . '/../uploads/logos/' . $logo_filename)) {
             unlink(__DIR__ . '/../uploads/logos/' . $logo_filename);
         }
@@ -161,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
         
         body {
-            /* Fondo con imagen visible pero suave */
             background-color: #eef2f6;
             background-image: url('/assets/img/cancha_pasto2.jpg');
             background-size: cover;
@@ -174,24 +165,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 20px;
         }
         
-        /* Capa blanca translúcida sobre la imagen para legibilidad */
         body::before {
             content: '';
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.6); /* Blanco translúcido */
+            background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(4px);
             z-index: -1;
         }
 
-        /* Contenedor Flotante */
         .float-card {
-            background: #ffffff; /* Blanco puro */
+            background: #ffffff;
             width: 100%;
             max-width: 500px;
             border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15); /* Sombra suave flotante */
+            padding: 25px; /* Reducido un poco */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             position: relative;
             border: 1px solid rgba(255,255,255,0.8);
             animation: floatIn 0.5s ease-out;
@@ -202,13 +191,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Botón Cerrar (X) */
         .close-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 32px;
-            height: 32px;
+            top: 15px;
+            right: 15px;
+            width: 28px;
+            height: 28px;
             background: #f1f5f9;
             border-radius: 50%;
             display: flex;
@@ -216,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             text-decoration: none;
             color: #64748b;
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: bold;
             transition: all 0.2s;
             cursor: pointer;
@@ -226,40 +214,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         h2 {
             text-align: center;
             color: #1e293b;
-            margin-bottom: 25px;
-            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-size: 1.3rem; /* Fuente más pequeña */
             font-weight: 800;
         }
 
-        /* GRID LAYOUT 2 COLUMNAS */
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 12px; /* Gap reducido */
+            margin-bottom: 15px;
+            position: relative; /* Para posicionar resultados búsqueda */
         }
         
         .full-width { grid-column: span 2; }
 
-        .input-group { display: flex; flex-direction: column; }
+        .input-group { display: flex; flex-direction: column; position: relative; }
         
         label {
-            font-size: 0.8rem;
+            font-size: 0.7rem; /* Fuente más pequeña */
             font-weight: 600;
             color: #475569;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         input, select {
             width: 100%;
-            padding: 12px;
-            border-radius: 10px;
+            padding: 8px 10px; /* Padding reducido */
+            border-radius: 8px;
             border: 1px solid #cbd5e1;
-            background: #f8fafc; /* Tono pastel muy claro */
+            background: #f8fafc;
             color: #334155;
-            font-size: 0.95rem;
+            font-size: 0.85rem; /* Fuente más pequeña */
             transition: all 0.2s;
         }
         
@@ -267,42 +255,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             outline: none;
             border-color: #3b82f6;
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
 
-        /* Botón Registrar */
+        /* Estilos para la lista de búsqueda */
+        #search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+            margin-top: 2px;
+        }
+        .search-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .search-item:hover { background: #eff6ff; color: #2563eb; }
+        .search-item:last-child { border-bottom: none; }
+
         .btn-submit {
             width: 100%;
-            padding: 14px;
-            border-radius: 12px;
+            padding: 10px; /* Padding reducido */
+            border-radius: 10px;
             border: none;
-            background: linear-gradient(135deg, #10b981, #059669); /* Verde Pastel/Emerald */
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.9rem; /* Fuente más pequeña */
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
             transition: transform 0.2s;
-            margin-top: 10px;
+            margin-top: 5px;
         }
-        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4); }
-        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:hover { transform: translateY(-2px); }
 
-        /* Mensajes Error/Exito */
         .alert {
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
             text-align: center;
         }
         .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
         .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 
-        /* Responsive Móvil */
         @media (max-width: 480px) {
-            .float-card { padding: 20px; margin: 10px; }
-            .form-grid { grid-template-columns: 1fr; gap: 12px; } /* 1 columna en móvil muy pequeño */
+            .float-card { padding: 15px; margin: 10px; }
+            .form-grid { grid-template-columns: 1fr; gap: 10px; }
             .full-width { grid-column: span 1; }
         }
     </style>
@@ -310,20 +320,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <div class="float-card">
-    <!-- Botón Volver -->
-    <a href="registro_socio_v2.php" class="close-btn" title="Volver al registro de socio">×</a>
+    <a href="registro_socio_v2.php" class="close-btn" title="Volver">×</a>
 
     <?php if ($success): ?>
         <h2 style="color: #166534;">✅ ¡Club Registrado!</h2>
         <div class="alert alert-success">
-            Hemos enviado un código de verificación a:<br>
-            <strong><?= htmlspecialchars($email_to_verify) ?></strong>
+            Código enviado a:<br><strong><?= htmlspecialchars($email_to_verify) ?></strong>
         </div>
-        <button class="btn-submit" onclick="window.location.href='verificar_codigo.php?email=<?= urlencode($email_to_verify) ?>'">
-            Ir a Verificar Código
-        </button>
+        <button class="btn-submit" onclick="window.location.href='verificar_codigo.php?email=<?= urlencode($email_to_verify) ?>'">Ir a Verificar</button>
     <?php else: ?>
-        <h2>Registra tu Club ⚽🏟️</h2>
+        <h2>Registra tu Club ⚽</h2>
 
         <?php if ($error_message): ?>
             <div class="alert alert-error"><?= htmlspecialchars($error_message) ?></div>
@@ -332,49 +338,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
             
-            <!-- CAMPOS HIDDEN CON DEFAULTS -->
+            <!-- HIDDEN DEFAULTS -->
             <input type="hidden" name="fecha_fundacion" value="<?= date('Y-m-d') ?>">
-            <input type="hidden" name="region" value="Metropolitana">
             <input type="hidden" name="ciudad" value="Santiago">
             <input type="hidden" name="jugadores_por_lado" value="20">
 
             <div class="form-grid">
-                <!-- Fila 1: Nombre Club | Deporte -->
-                <div class="input-group full-width"> <!-- Nombre ocupa todo o mitad? Prompt dice 2 por fila. Pero nombre suele ser largo. Lo pondré full-width o half. El prompt dice: "Nombre Club Deporte". Asumo mitad. -->
-                    <!-- Corrección: El prompt dice "Nombre Club [espacio] Deporte". Voy a poner Nombre en full-width si es muy largo, pero intentaré mitad si cabe. Para mejor UX, Nombre va completo o mitad grande. Dejemos mitad. -->
-                    <div class="input-group">
-                        <label>Nombre Club *</label>
-                        <input type="text" name="nombre" placeholder="Ej: Los Tigres" required value="<?= htmlspecialchars($prefill_nombre) ?>">
-                    </div>
-                    <div class="input-group">
-                        <label>Deporte *</label>
-                        <select name="deporte" required>
-                            <option value="">Seleccionar</option>
-                            <option value="futbol">Fútbol</option>
-                            <option value="futbolito">Futbolito</option>
-                            <option value="baby">Baby Fútbol</option>
-                            <option value="tenis">Tenis</option>
-                            <option value="padel">Pádel</option>
-                            <option value="voleyball">Vóleibol</option>
-                        </select>
-                    </div>
+                <!-- Fila 1: Nombre Club (con búsqueda) | Deporte -->
+                <div class="input-group">
+                    <label>Nombre Club *</label>
+                    <input type="text" id="nombre_club_input" name="nombre" placeholder="Ej: Los Tigres" required value="<?= htmlspecialchars($prefill_nombre) ?>" autocomplete="off">
+                    <!-- Contenedor de resultados -->
+                    <div id="search-results"></div>
+                </div>
+                <div class="input-group">
+                    <label>Deporte *</label>
+                    <select name="deporte" required>
+                        <option value="">Seleccionar</option>
+                        <option value="futbol">Fútbol</option>
+                        <option value="futbolito">Futbolito</option>
+                        <option value="baby">Baby Fútbol</option>
+                        <option value="tenis">Tenis</option>
+                        <option value="padel">Pádel</option>
+                        <option value="voleyball">Vóleibol</option>
+                    </select>
                 </div>
 
                 <!-- Fila 2: Comuna | Responsable -->
-                <!-- Nota: Comuna requiere Región/Ciudad previos. Como Región/Ciudad son hidden (Santiago), puedo poner Comuna directo. -->
                 <div class="input-group">
                     <label>Comuna *</label>
-                    <!-- Podríamos hacer un select dinámico, pero como ciudad es fija Santiago, podríamos listar comunas de Santiago o dejar input texto. Para simplificar, input texto o select estático de comunas comunes -->
                     <input type="text" name="comuna" placeholder="Ej: Las Condes" required list="comunas-santiago">
                     <datalist id="comunas-santiago">
-                        <option value="Las Condes">
-                        <option value="Providencia">
-                        <option value="Santiago Centro">
-                        <option value="Ñuñoa">
-                        <option value="Vitacura">
-                        <option value="La Reina">
-                        <option value="Maipú">
-                        <option value="Quilicura">
+                        <option value="Las Condes"><option value="Providencia"><option value="Santiago Centro">
+                        <option value="Ñuñoa"><option value="Vitacura"><option value="La Reina">
+                        <option value="Maipú"><option value="Quilicura"><option value="Puente Alto">
                     </datalist>
                 </div>
                 <div class="input-group">
@@ -392,11 +389,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="tel" name="telefono" placeholder="+56 9..." autocomplete="tel">
                 </div>
 
-                <!-- Fila 4: Logo (Full Width) -->
+                <!-- Fila 4: Logo -->
                 <div class="input-group full-width">
                     <label>Logo del Club (Opcional)</label>
-                    <input type="file" name="logo" accept="image/*" style="padding: 8px; background: white;">
-                    <small style="color:#64748b; font-size:0.7rem; margin-top:4px;">JPG, PNG (Max 2MB)</small>
+                    <input type="file" name="logo" accept="image/*" style="padding: 6px; background: white; font-size: 0.75rem;">
                 </div>
             </div>
 
@@ -406,7 +402,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <script>
-    // Formato automático celular
+    // 1. Búsqueda en tiempo real de clubes
+    const inputNombre = document.getElementById('nombre_club_input');
+    const resultsDiv = document.getElementById('search-results');
+    let timeout = null;
+
+    if (inputNombre) {
+        inputNombre.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            resultsDiv.style.display = 'none';
+            resultsDiv.innerHTML = '';
+
+            if (query.length < 2) return;
+
+            // Debounce para no saturar el servidor
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                fetch(`../api/buscar_clubes_nombre.php?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            resultsDiv.innerHTML = '';
+                            data.forEach(club => {
+                                const div = document.createElement('div');
+                                div.className = 'search-item';
+                                div.textContent = club.nombre + (club.deporte ? ` (${club.deporte})` : '');
+                                div.onclick = () => {
+                                    // Opcional: Si quieres bloquear la selección, solo muestra alerta
+                                    // inputNombre.value = ''; 
+                                    // alert('Este nombre ya está en uso. Elige otro.');
+                                    
+                                    // O simplemente mostrar que existe y dejar que el usuario decida cambiarlo
+                                    // Aquí solo mostramos la lista para informar
+                                };
+                                resultsDiv.appendChild(div);
+                            });
+                            resultsDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(err => console.error(err));
+            }, 300);
+        });
+
+        // Cerrar resultados al hacer click fuera
+        document.addEventListener('click', function(e) {
+            if (!inputNombre.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.style.display = 'none';
+            }
+        });
+    }
+
+    // 2. Formato celular
     document.querySelector('input[name="telefono"]').addEventListener('input', function(e) {
         this.value = this.value.replace(/[^0-9+]/g, '');
     });
