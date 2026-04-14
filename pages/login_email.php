@@ -99,27 +99,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt_club->execute([$socio['id_socio']]);
                         $club_data = $stmt_club->fetch();
 
+                                                // ... (código anterior donde obtienes $club_data y generas $club_slug) ...
+
                         if ($club_data) {
                             $_SESSION['club_id'] = $club_data['id_club'];
                             $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
                             $_SESSION['current_club'] = $club_slug;
+                            
                             error_log("🏟️ [LOGIN] Club asignado: ID=" . $club_data['id_club'] . " | Slug=" . $club_slug);
+                            
+                            // Forzar escritura de sesión (útil en algunos entornos como Railway/FrankenPHP)
+                            session_write_close(); 
                         } else {
                             error_log("⚠️ [LOGIN] Usuario válido pero SIN CLUB asociado activo.");
+                            // Opcional: Redirigir a página de error o selección de club
+                            header('Location: ../index.php?error=no_club_found');
+                            exit;
                         }
 
-                        // 5. Redirección
+                        // 5. Redirección FINAL
                         if ($socio['datos_completos'] == 0) {
-                            error_log("➡️ [LOGIN] Redirigiendo a COMPLETAR PERFIL (datos incompletos)");
-                            header('Location: completar_perfil.php?first_time=1');
+                            error_log("➡️ [LOGIN] Redirigiendo a COMPLETAR PERFIL");
+                            // Pasamos el club_slug también a completar perfil
+                            header('Location: completar_perfil.php?first_time=1&id_club=' . $club_slug);
                             exit;
                         } elseif (!empty($_SESSION['current_club'])) {
-                            error_log("➡️ [LOGIN] Redirigiendo a DASHBOARD: " . $_SESSION['current_club']);
-                            header('Location: dashboard_socio.php?id_club=' . $_SESSION['current_club']);
+                            // REDIRECCIÓN CORREGIDA: Usar la variable $club_slug generada arriba
+                            $redirect_url = 'dashboard_socio.php?id_club=' . $club_slug;
+                            error_log("➡️ [LOGIN] Redirigiendo a DASHBOARD: " . $redirect_url);
+                            
+                            header('Location: ' . $redirect_url);
                             exit;
                         } else {
-                            error_log("️ [LOGIN] Redirigiendo a INDEX (Sin club)");
-                            header('Location: ../index.php?msg=sin_club');
+                            error_log("⚠️ [LOGIN] Fallback a INDEX");
+                            header('Location: ../index.php?msg=sin_club_session');
                             exit;
                         }
                     }
