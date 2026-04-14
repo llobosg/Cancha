@@ -1,4 +1,7 @@
 <?php
+// MARCADOR DE VERSIÓN NUEVA - BORRAR DESPUÉS
+die("VERSIÓN 2.0 CARGADA CORRECTAMENTE"); 
+
 require_once __DIR__ . '/../includes/config.php';
 
 // Obtener regiones desde la base de datos
