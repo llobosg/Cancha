@@ -20,8 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     // Validar campos comunes
     $required_common = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
+
     foreach ($required_common as $field) {
-        if (empty($_POST[$field])) {
+        // Verificar si existe y no está vacío (trim para quitar espacios)
+        if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
+            // Log para depuración si falla en producción
+            error_log("Falta campo obligatorio: $field"); 
             throw new Exception("El campo '$field' es obligatorio");
         }
     }

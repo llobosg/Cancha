@@ -198,8 +198,8 @@ $club_slug = $_GET['club'] ?? '';
                     <label class="input-label">Género</label>
                     <select id="genero" class="input" required>
                         <option value="" disabled selected>...</option>
-                        <option value="masculino">Masc.</option>
-                        <option value="femenino">Fem.</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="femenino">Femenino</option>
                         <option value="otro">Otro</option>
                     </select>
                 </div>
@@ -244,14 +244,14 @@ $club_slug = $_GET['club'] ?? '';
                 </div>
             </div>
 
-            <!-- FILA 4: Contraseña | Confirmar -->
+            <!-- FILA 4: Contraseña | Confirmar (Con Ojo) -->
             <div class="form-grid">
                 <div class="input-group">
-                    <label class="input-label">Contraseña</label>
+                    <label class="input-label">Contraseña <span style="cursor:pointer; float:right;" onclick="togglePassword('password', this)">👁️</span></label>
                     <input type="password" id="password" class="input" placeholder="Mín. 6 caracteres" minlength="6" required>
                 </div>
                 <div class="input-group">
-                    <label class="input-label">Confirmar</label>
+                    <label class="input-label">Confirmar <span style="cursor:pointer; float:right;" onclick="togglePassword('password_confirm', this)">👁️</span></label>
                     <input type="password" id="password_confirm" class="input" placeholder="Repite contraseña" required>
                 </div>
             </div>
@@ -320,6 +320,19 @@ $club_slug = $_GET['club'] ?? '';
 <div id="toast">Mensaje</div>
 
 <script>
+    const pass = document.getElementById('password').value;
+    const passConf = document.getElementById('password_confirm').value;
+
+    if (!passConf) {
+        showToast("️ Por favor confirma tu contraseña");
+        return; // Detener ejecución
+    }
+    if (pass !== passConf) {
+        showToast("❌ Las contraseñas no coinciden");
+        return;
+    }
+
+    formData.append('password_confirm', passConf);
     // Lógica Dinámica de Deporte
     function actualizarCampoDeporte() {
         const deporte = document.getElementById('deporte').value;
@@ -569,6 +582,17 @@ $club_slug = $_GET['club'] ?? '';
         t.textContent = msg;
         t.className = "show";
         setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+    }
+
+    function togglePassword(inputId, iconElement) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            iconElement.textContent = "🔒"; // Cambia icono a candado
+        } else {
+            input.type = "password";
+            iconElement.textContent = "👁️"; // Vuelve a ojo
+        }
     }
 </script>
 </body>
