@@ -39,63 +39,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($club['email_verified']) {
             // Ya verificado - solo generar slug
             $club_slug = substr(md5($club['id_club'] . $club['email_responsable']), 0, 8);
-                } else {
-            // Activar club
-            $stmt_update = $pdo->prepare("
-                UPDATE clubs SET email_verified = 1, verification_code = NULL WHERE email_responsable = ?
-            ");
-            $stmt_update->execute([$email]);
-            
-            $club_id = $club['id_club'];
-            
-            // === CREAR SOCIO AUTOMÁTICO SI NO EXISTE ===
-            // 1. Buscar si ya existe por email (en cualquier club o individual)
-            $stmt_socio_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
-            $stmt_socio_check->execute([$email]);
-            $socio_data = $stmt_socio_check->fetch();
-            
-            $id_socio_creado = null;
-
-            if (!$socio_data) {
-                // Obtener alias (primer nombre)
-                $alias_socio = explode(' ', trim($club['responsable']))[0];
-                
-                // CAMBIO CLAVE: Usar 'Director' en lugar de 'Responsable'
-                // 'Director' SÍ existe en tu ENUM de roles.
-                $rol_defecto = 'Director'; 
-
-                $stmt_insert_socio = $pdo->prepare("
-                    INSERT INTO socios (email, nombre, alias, rol, es_responsable, activo, created_at) 
-                    VALUES (?, ?, ?, ?, 1, 'Si', NOW())
-                ");
-                
-                $stmt_insert_socio->execute([
-                    $email,
-                    $club['responsable'], 
-                    $alias_socio,
-                    $rol_defecto
-                ]);
-                
-                $id_socio_creado = $pdo->lastInsertId();
             } else {
-                $id_socio_creado = $socio_data['id_socio'];
-            }
+              // 1. Activar Club
+              $stmt_update_club = $pdo->prepare("
+                  UPDATE clubs 
+                  SET email_verified = 1, verification_code = NULL 
+                  WHERE email_responsable = ?
+              ");
+              $stmt_update_club->execute([$email]);
+              
+              $club_id = $club['id_club'];
+              $responsable_nombre = $club['responsable'];
+              
+              // 2. Verificar si el socio ya existe por email
+              $stmt_socio_check = $pdo->prepare("SELECT id_socio, es_responsable, datos_completos FROM socios WHERE email = ?");
+              $stmt_socio_check->execute([$email]);
+              $socio_existente = $stmt_socio_check->fetch();
+              
+              $id_socio_final = null;
+              $nuevo_socio_creado = false;
 
-            // 3. Vincular Socio al Club en la tabla intermedia socio_club
-            // Verificar si ya existe la relación
-            $stmt_link_check = $pdo->prepare("SELECT id_socio FROM socio_club WHERE id_socio = ? AND id_club = ?");
-            $stmt_link_check->execute([$id_socio_creado, $club_id]);
-            
-            if (!$stmt_link_check->fetch()) {
-                $stmt_link = $pdo->prepare("
-                    INSERT INTO socio_club (id_socio, id_club, estado, es_responsable) 
-                    VALUES (?, ?, 'activo', 1)
-                ");
-                $stmt_link->execute([$id_socio_creado, $club_id]);
-            }
-            
-            $club_slug = substr(md5($club_id . $email), 0, 8);
-        }
+              if (!$socio_existente) {
+                  // === CREAR NUEVO SOCIO RESPONSABLE ===
+                  $alias = explode(' ', trim($responsable_nombre))[0]; // Primer nombre como alias
+                  
+                  // Generar contraseña temporal aleatoria (opcional, pero recomendado para seguridad)
+                  // El usuario deberá cambiarla al completar perfil o usar "Olvidé mi contraseña"
+                  $temp_password = bin2hex(random_bytes(8)); 
+                  $password_hash = password_hash($temp_password, PASSWORD_DEFAULT);
+
+                  $stmt_insert_socio = $pdo->prepare("
+                      INSERT INTO socios (
+                          nombre, alias, email, rol, es_responsable, activo, datos_completos, 
+                          password_hash, created_at
+                      ) VALUES (?, ?, ?, 'Director', 1, 'Si', 0, ?, NOW())
+                  ");
+                  
+                  $stmt_insert_socio->execute([
+                      $responsable_nombre,
+                      $alias,
+                      $email,
+                      $password_hash
+                  ]);
+                  
+                  $id_socio_final = $pdo->lastInsertId();
+                  $nuevo_socio_creado = true;
+                  
+                  // Opcional: Enviar correo con contraseña temporal si deseas
+                  // mail($email, "Tu acceso a CanchaSport", "Tu contraseña temporal es: $temp_password");
+                  
+              } else {
+                  // === ACTUALIZAR SOCIO EXISTENTE A RESPONSABLE ===
+                  // Si el socio ya existía (ej. se registró antes como jugador), lo marcamos como responsable
+                  $id_socio_final = $socio_existente['id_socio'];
+                  
+                  $stmt_update_socio = $pdo->prepare("
+                      UPDATE socios 
+                      SET es_responsable = 1, rol = 'Director'
+                      WHERE id_socio = ?
+                  ");
+                  $stmt_update_socio->execute([$id_socio_final]);
+              }
+
+              // 3. Vincular Socio al Club en socio_club
+              $stmt_link_check = $pdo->prepare("SELECT id_socio FROM socio_club WHERE id_socio = ? AND id_club = ?");
+              $stmt_link_check->execute([$id_socio_final, $club_id]);
+              
+              if (!$stmt_link_check->fetch()) {
+                  $stmt_link = $pdo->prepare("
+                      INSERT INTO socio_club (id_socio, id_club, estado) 
+                      VALUES (?, ?, 'activo')
+                  ");
+                  $stmt_link->execute([$id_socio_final, $club_id]);
+              }
+              
+              // Generar Slug para redirección
+              $club_slug = substr(md5($club_id . $email), 0, 8);
+              
+              // Guardar datos en sesión para login automático o redirección inteligente
+              $_SESSION['temp_auth_email'] = $email;
+              $_SESSION['temp_auth_club_slug'] = $club_slug;
+              $_SESSION['needs_profile_complete'] = true; // Flag para forzar completar perfil
+          }
         
         $success = true;
         $email_verified = $email;
