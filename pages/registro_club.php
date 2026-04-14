@@ -27,6 +27,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Agrega esto al inicio de la validación POST
+        if (empty($_POST['password']) || empty($_POST['password_confirm'])) {
+            throw new Exception('La contraseña es obligatoria');
+        }
+        if ($_POST['password'] !== $_POST['password_confirm']) {
+            throw new Exception('Las contraseñas no coinciden');
+        }
+        if (strlen($_POST['password']) < 6) {
+            throw new Exception('La contraseña debe tener al menos 6 caracteres');
+        }
+
+        // Hashear la contraseña para guardarla luego en el socio
+        $password_hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
+
         // Validar email
         if (!filter_var($_POST['email_responsable'], FILTER_VALIDATE_EMAIL)) {
             throw new Exception('Correo electrónico inválido.');
@@ -129,6 +143,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $club_data['ciudad'], $club_data['comuna'], $club_data['responsable'], 
             $club_data['telefono'], $club_data['email_responsable'], $logo_filename, $club_data['verification_code']
         ]);
+
+        // Después de insertar el club y antes de mostrar éxito:
+        if (session_status() === PHP_SESSION_NONE) session_start();
+
+        $_SESSION['temp_club_data'] = [
+            'email' => $club_data['email_responsable'],
+            'responsable' => $club_data['responsable'],
+            'password_hash' => $password_hash, // La que generaste arriba
+            'club_id' => $pdo->lastInsertId() // O el ID que obtuviste
+        ];
+
+        // Luego muestra el formulario de verificación normalmente
 
         $success = true;
         $email_to_verify = $club_data['email_responsable'];
@@ -393,6 +419,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="input-group full-width">
                     <label>Logo del Club (Opcional)</label>
                     <input type="file" name="logo" accept="image/*" style="padding: 6px; background: white; font-size: 0.75rem;">
+                </div>
+
+                <!-- Fila 5: Contraseñas -->
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>Contraseña *</label>
+                        <input type="password" name="password" placeholder="Mínimo 6 caracteres" minlength="6" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.85rem; width: 100%;">
+                    </div>
+                    <div class="input-group">
+                        <label>Confirmar Contraseña *</label>
+                        <input type="password" name="password_confirm" placeholder="Repite contraseña" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.85rem; width: 100%;">
+                    </div>
                 </div>
             </div>
 

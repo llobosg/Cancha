@@ -331,6 +331,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <script>
+    // Al inicio del script
+    if (session_status() === PHP_SESSION_NONE) session_start();
+
+    // ... lógica de verificación de código ...
+
+    if ($success_logic) { // Tu lógica actual de verificar código
+        
+        // Recuperar datos temporales
+        if (!isset($_SESSION['temp_club_data'])) {
+            throw new Exception("Datos de registro no encontrados. Intenta registrar el club nuevamente.");
+        }
+        
+        $temp_data = $_SESSION['temp_club_data'];
+        $password_hash_to_use = $temp_data['password_hash'];
+        
+        // Crear Socio con contraseña
+        if (!$socio_existente) {
+            // ... código anterior ...
+            $stmt_insert_socio = $pdo->prepare("INSERT INTO socios (nombre, alias, email, rol, es_responsable, activo, datos_completos, password_hash, created_at) VALUES (?, ?, ?, 'Director', 1, 'Si', 0, ?, NOW())");
+            $stmt_insert_socio->execute([$temp_data['responsable'], $alias, $temp_data['email'], $password_hash_to_use]);
+            // ...
+        }
+        
+        // Iniciar Sesión REAL (Crucial)
+        $_SESSION['id_socio'] = $id_socio_final;
+        $_SESSION['user_email'] = $temp_data['email'];
+        $_SESSION['club_id'] = $temp_data['club_id'];
+        $_SESSION['current_club'] = $club_slug; // Generado aquí
+        $_SESSION['es_responsable'] = 1;
+        
+        // Limpiar datos temporales
+        unset($_SESSION['temp_club_data']);
+    }
     // Auto-focus en el campo de código
     document.getElementById('codigo')?.focus();
     
