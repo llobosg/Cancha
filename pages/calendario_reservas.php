@@ -1,536 +1,916 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-// Obtener regiones desde la base de datos
-$stmt_regiones = $pdo->query("SELECT DISTINCT codigo_region, nombre_region FROM regiones_chile ORDER BY nombre_region");
-$regiones_chile = [];
-while ($row = $stmt_regiones->fetch()) {
-    $regiones_chile[$row['codigo_region']] = $row['nombre_region'];
+session_start();
+
+if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+    header('Location: ../index.php');
+    exit;
 }
 
-$error_message = '';
-$error_type = '';
-$success = false;
-$email_to_verify = '';
-$club_data = [];
+$id_recinto = $_SESSION['id_recinto'];
 
-// Valores por defecto desde URL (para prefill)
-$prefill_nombre = $_GET['prefill_nombre'] ?? '';
-$prefill_email = $_GET['prefill_email'] ?? '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        // Validar campos requeridos
-        $required = ['nombre', 'deporte', 'jugadores_por_lado', 'ciudad', 'comuna', 'responsable', 'email_responsable'];
-        foreach ($required as $field) {
-            if (empty($_POST[$field])) {
-                throw new Exception('Todos los campos marcados son obligatorios');
-            }
-        }
-
-        // Validar email_responsable
-        if (!filter_var($_POST['email_responsable'], FILTER_VALIDATE_EMAIL)) {
-            throw new Exception('Correo electrónico del responsable inválido.');
-        }
-
-        // Validar jugadores_por_lado
-        $jugadores = (int)$_POST['jugadores_por_lado'];
-        if ($jugadores < 1 || $jugadores > 20) {
-            throw new Exception('Jugadores por lado debe estar entre 1 y 20');
-        }
-
-        // Verificar si el correo ya tiene un club registrado
-        $stmt_check = $pdo->prepare("SELECT id_club FROM clubs WHERE email_responsable = ?");
-        $stmt_check->execute([$_POST['email_responsable']]);
-        if ($stmt_check->fetch()) {
-            $error_type = 'duplicate';
-            $error_message = 'duplicate_email';
-        } else {
-            // Generar código de verificación
-            $verification_code = rand(1000, 9999);
-            
-            // Preparar datos del club
-            $club_data = [
-                'nombre' => $_POST['nombre'],
-                'deporte' => $_POST['deporte'],
-                'jugadores_por_lado' => $jugadores,
-                'fecha_fundacion' => $_POST['fecha_fundacion'] ?: null,
-                'ciudad' => $_POST['ciudad'],
-                'comuna' => $_POST['comuna'],
-                'responsable' => $_POST['responsable'],
-                'telefono' => $_POST['telefono'] ?: null,
-                'email_responsable' => $_POST['email_responsable'],
-                'verification_code' => $verification_code
-            ];
-
-            // Subir logo si existe
-            $logo_filename = null;
-            if (!empty($_FILES['logo']['name'])) {
-                $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-                if (!in_array($_FILES['logo']['type'], $allowed_types)) {
-                    throw new Exception('Solo se permiten imágenes JPG, PNG o GIF');
-                }
-                
-                if ($_FILES['logo']['size'] > 2 * 1024 * 1024) {
-                    throw new Exception('El logo debe pesar menos de 2MB');
-                }
-                
-                $logo_filename = uniqid() . '_' . basename($_FILES['logo']['name']);
-                $upload_dir = __DIR__ . '/../uploads/logos/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0755, true);
-                }
-                
-                if (!move_uploaded_file($_FILES['logo']['tmp_name'], $upload_dir . $logo_filename)) {
-                    throw new Exception('Error al subir el logo');
-                }
-                $club_data['logo'] = $logo_filename;
-            }
-
-            // ENVIAR CORREO DE VERIFICACIÓN CON BREVO
-            $email_to_verify = $_POST['email_responsable'];
-            $brevo_api_key = $_ENV['BREVO_API_KEY'] ?? '';
-
-            if (!$brevo_api_key) {
-                throw new Exception('Error de configuración del servicio de correo');
-            }
-
-            $from_email = $_ENV['MAILER_FROM_EMAIL'] ?? 'llobos@gltcomex.com';
-            $from_name = 'CanchaSport';
-
-            $correo_data = [
-                'sender' => [
-                    'name' => $from_name,
-                    'email' => $from_email
-                ],
-                'to' => [[
-                    'email' => $email_to_verify,
-                    'name' => $_POST['responsable']
-                ]],
-                'subject' => '⚽ Código de verificación - CanchaSport',
-                'htmlContent' => "
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 12px;'>
-                    <div style='text-align: center; margin-bottom: 30px;'>
-                        <h1 style='color: #003366; font-size: 28px;'>⚽ CanchaSport</h1>
-                        <p style='color: #666; font-size: 14px;'>Tu club deportivo a un click</p>
-                    </div>
-                    
-                    <div style='background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'>
-                        <h2 style='color: #003366; margin-bottom: 15px;'>¡Hola " . htmlspecialchars($_POST['responsable']) . "!</h2>
-                        <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px;'>
-                            Gracias por registrar tu club en CanchaSport. 
-                        </p>
-                        <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
-                            Tu código de verificación es:
-                        </p>
-                        
-                        <div style='text-align: center; margin: 25px 0;'>
-                            <span style='background: #003366; color: white; padding: 15px 25px; font-size: 24px; font-weight: bold; border-radius: 8px; letter-spacing: 3px; display: inline-block;'>
-                                " . $verification_code . "
-                            </span>
-                        </div>
-                        
-                        <p style='font-size: 16px; line-height: 1.6; color: #333; text-align: center;'>
-                            Ingresa este código en la página de verificación para activar tu club.
-                        </p>
-                    </div>
-                    
-                    <div style='text-align: center; color: #666; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee;'>
-                        <p>¡Bienvenido a CanchaSport!</p>
-                        <p>El equipo de CanchaSport</p>
-                    </div>
-                </div>
-                "
-            ];
-
-            // Enviar con Brevo API
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://api.brevo.com/v3/smtp/email');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($correo_data));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'accept: application/json',
-                'api-key: ' . $brevo_api_key,
-                'content-type: application/json'
-            ]);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-
-            if ($httpCode !== 201) {
-                error_log("Brevo error: HTTP $httpCode, Response: " . substr($response, 0, 200));
-                throw new Exception('No se pudo enviar el correo de verificación. Por favor, inténtalo nuevamente.');
-            }
-
-            // Guardar en base de datos
-            $stmt = $pdo->prepare("
-                INSERT INTO clubs (
-                    nombre, deporte, jugadores_por_lado, fecha_fundacion, pais, ciudad, comuna, 
-                    responsable, telefono, email_responsable, logo, verification_code, email_verified, created_at
-                ) VALUES (?, ?, ?, ?, 'Chile', ?, ?, ?, ?, ?, ?, ?, 0, NOW())
-            ");
-            $stmt->execute([
-                $club_data['nombre'],
-                $club_data['deporte'],
-                $club_data['jugadores_por_lado'],
-                $club_data['fecha_fundacion'],
-                $club_data['ciudad'],
-                $club_data['comuna'],
-                $club_data['responsable'],
-                $club_data['telefono'],
-                $club_data['email_responsable'],
-                $club_data['logo'] ?? null,
-                $club_data['verification_code']
-            ]);
-
-            $club_id = $pdo->lastInsertId();
-            // El slug se genera al verificar o al usar el club, pero podemos prepararlo
-            // $club_slug = substr(md5($club_id . $club_data['email_responsable']), 0, 8);
-
-            $success = true;
-        }
-
-    } catch (Exception $e) {
-        $error_type = 'general';
-        $error_message = $e->getMessage();
-        
-        if (!empty($logo_filename)) {
-            $upload_dir = __DIR__ . '/../uploads/logos/';
-            if (file_exists($upload_dir . $logo_filename)) {
-                unlink($upload_dir . $logo_filename);
-            }
-        }
-    }
-}
+// Obtener datos del recinto
+$stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
+$stmt->execute([$id_recinto]);
+$recinto = $stmt->fetch();
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Registra tu Club - CanchaSport</title>
-    <link rel="stylesheet" href="../styles.css">
-    <style>
-        /* Estilos Base (Igual que registro_socio_v2) */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body {
-            background-color: #0f172a;
-            background-image: url('/assets/img/cancha_pasto2.jpg');
-            background-size: cover;
-            background-position: center;
-            color: #f1f5f9;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px 0;
-        }
-        body::before {
-            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
-            pointer-events: none; z-index: -1;
-        }
-        .app-container { width: 100%; max-width: 480px; padding-bottom: 40px; position: relative; }
-        
-        .logo-header { text-align: center; margin: 20px 0 15px; }
-        .logo-header h1 { 
-            font-size: 1.8rem; 
-            background: linear-gradient(135deg, #4ade80, #3b82f6); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            font-weight: 900;
-        }
-        .logo-header p { color: #cbd5e1; font-size: 0.9rem; margin-top: 5px; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CanchaBoard - <?= htmlspecialchars($recinto['nombre']) ?> | Cancha</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+  body {
+    background: linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+               url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+    background-blend-mode: multiply;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    color: white;
+  }
+  
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: 4fr 1fr;
+    gap: 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+    /* Eliminamos height fija para permitir alineación natural */
+  }
+  
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(0, 51, 102, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1.5rem;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  
+  .main-title-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .logo-corporativo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #FFD700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+  
+  .main-title {
+    color: #FFD700;
+    font-size: 1.5rem;
+    margin: 0;
+  }
+  
+  .controls-section {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    position: sticky;
+    top: 70px;
+    z-index: 999;
+  }
+  
+  .control-select {
+    background: white;
+    padding: 0.3rem;
+    border-radius: 4px;
+    color: #071289;
+    border: none;
+  }
+  
+  .reservas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+  
+  .reserva-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .reserva-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  
+  .reserva-card.selected {
+    border: 3px solid #071289;
+  }
+  
+  .deporte-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .cancha-nombre {
+    font-weight: bold;
+    color: #071289;
+    margin-bottom: 0.3rem;
+  }
+  
+  .fecha-hora {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+  }
+  
+  .estado-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .estado-disponible { background: #FFD700; } /* Amarillo */
+  .estado-reservada { background: #9C27B0; }  /* Morado */
+  .estado-ocupada { background: #4CAF50; }    /* Verde */
+  .estado-cancelada { background: #F44336; }  /* Rojo */
+  .estado-mantencion { background: #FF9800; } /* Naranja */
+  
+  /* Panel lateral - CORREGIDO */
+    .detail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top: 120px;
+    align-self: flex-start;
+    height: fit-content;
+    max-height: calc(100vh - 140px);
+    overflow: visible;
+    }
 
-        .card {
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 25px;
-            margin: 0 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
+    .detail-section {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    width: 100%;
+    overflow-y: auto;
+    max-height: 350px; /* Aumentado para más espacio */
+    }
 
-        .form-group { margin-bottom: 15px; }
-        .input-label { display: block; color: #94a3b8; font-size: 0.75rem; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        .input, select {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(15,23,42,0.6);
-            color: white;
-            font-size: 0.95rem;
-            transition: all 0.3s;
-        }
-        .input:focus, select:focus {
-            outline: none;
-            border-color: #3b82f6;
-            background: rgba(15,23,42,0.9);
-        }
+    .actions-section {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    width: 100%;
+    overflow-y: auto;
+    max-height: 320px; /* Aumentado para que quepan todas las opciones */
+    }
+  
+  .detail-title {
+    color: #071289;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+  }
+  
+  .detail-item {
+    margin-bottom: 0.5rem;
+  }
+  
+  .detail-label {
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    color: black;
+  }
+  
+  .action-btn {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+    color: #333; /* Texto negro por defecto */
+    }
 
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 12px;
-            border: none;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-        }
-        .btn:active { transform: scale(0.98); }
-        
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 2rem;
-            color: #94a3b8;
-            text-decoration: none;
-            cursor: pointer;
-            z-index: 10;
-        }
+    .action-btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #000; /* Texto negro en hover */
+    }
+  
+  .btn-anular { background: #F44336; color: white; }
+  .btn-cancelar { background: #FF9800; color: white; }
+  .btn-cambiar { background: #2196F3; color: white; }
+  .btn-mensaje { background: #4CAF50; color: white; }
+  .btn-campeonato { background: #00cc66; color: white; }
+  
+  /* Submodal */
+  .submodal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+  }
+  
+  .submodal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 500px;
+    position: relative;
+  }
+  
+  .close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 28px;
+    cursor: pointer;
+  }
+  
+  /* Responsive móvil */
+  @media (max-width: 768px) {
+    .dashboard-container {
+      grid-template-columns: 1fr;
+      padding-top: 80px;
+    }
+    
+    .reservas-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+    
+    .detail-panel {
+      position: static;
+      top: auto;
+      align-self: auto;
+    }
+  }
+    /* Toast Notifications */
+    .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    z-index: 10000;
+    transform: translateX(120%);
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
 
-        .hidden { display: none !important; }
-        
-        /* Toast */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
-            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    .toast.show {
+    transform: translateX(0);
+    }
 
-        .error-box {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.5);
-            color: #fca5a5;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-        .success-box {
-            background: rgba(34, 197, 94, 0.2);
-            border: 1px solid rgba(34, 197, 94, 0.5);
-            color: #86efac;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-    </style>
+    .toast.success {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    }
+
+    .toast.error {
+    background: linear-gradient(135deg, #F44336, #C62828);
+    }
+
+    .toast.warning {
+    background: linear-gradient(135deg, #FF9800, #EF6C00);
+    }
+
+    .toast.info {
+    background: linear-gradient(135deg, #2196F3, #1565C0);
+    }
+</style>
 </head>
 <body>
-
-<div class="app-container">
-    <!-- Botón Cerrar -->
-    <a href="../index.php" class="close-btn" title="Volver">×</a>
-
-    <div class="logo-header">
-        <h1>CanchaSport ⚽</h1>
-        <p>Registra tu Club de Amigos</p>
+  <div class="header">
+    <div class="main-title-section">
+      <div class="logo-corporativo">⚽</div>
+      <h1 class="main-title">Cancha</h1>
     </div>
-
-    <div class="card">
-        <?php if ($success): ?>
-            <!-- VISTA ÉXITO -->
-            <div class="success-box">
-                <h3 style="margin-bottom:10px;">✅ ¡Club Registrado!</h3>
-                <p>Hemos enviado un código de verificación a:<br><strong><?= htmlspecialchars($email_to_verify) ?></strong></p>
-                <p style="font-size:0.8rem; margin-top:10px; opacity:0.8;">Revisa tu bandeja de entrada (y spam).</p>
-            </div>
-            <button class="btn" onclick="window.location.href='verificar_codigo.php?email=<?= urlencode($email_to_verify) ?>'">
-                Ingresar Código de Verificación
-            </button>
-            <p style="text-align:center; margin-top:15px; font-size:0.85rem; color:#94a3b8;">
-                ¿No llegó el correo? <a href="#" onclick="location.reload()" style="color:#60a5fa;">Intentar de nuevo</a>
-            </p>
-
-        <?php else: ?>
-            <!-- FORMULARIO -->
-            <?php if ($error_message): ?>
-                <div class="error-box">
-                    <?php if ($error_type === 'duplicate'): ?>
-                        <strong>⚠️ ¡Hola! Ya tienes un club registrado.</strong><br><br>
-                        La versión <strong>Gratuita</strong> permite 1 club por responsable.<br>
-                        ¿Necesitas gestionar múltiples clubes? Contáctanos para la versión <strong>Premiere League</strong>:<br>
-                        📧 contacto@canchasport.com |  +569 3656 0392
-                    <?php else: ?>
-                        <?= htmlspecialchars($error_message) ?>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
-                
-                <!-- Nombre Club -->
-                <div class="form-group">
-                    <label class="input-label">Nombre del Club *</label>
-                    <input type="text" name="nombre" class="input" placeholder="Ej: Los Guerreros del Sábado" required value="<?= htmlspecialchars($prefill_nombre) ?>">
-                </div>
-
-                <!-- Deporte y Jugadores (Fila) -->
-                <div style="display:flex; gap:15px;">
-                    <div class="form-group" style="flex:1;">
-                        <label class="input-label">Deporte *</label>
-                        <select name="deporte" class="input" required>
-                            <option value="">Seleccionar</option>
-                            <option value="futbol">Fútbol</option>
-                            <option value="futbolito">Futbolito</option>
-                            <option value="baby">Baby fútbol</option>
-                            <option value="tenis">Tenis</option>
-                            <option value="padel">Pádel</option>
-                            <option value="voleyball">Vóleibol</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label class="input-label">Jugadores/Lado</label>
-                        <input type="number" name="jugadores_por_lado" class="input" placeholder="Ej: 7" min="1" max="20" value="7" required>
-                    </div>
-                </div>
-
-                <!-- Fecha Fundación -->
-                <div class="form-group">
-                    <label class="input-label">Fecha Fundación (Opcional)</label>
-                    <input type="date" name="fecha_fundacion" class="input">
-                </div>
-
-                <!-- Ubicación (Región, Ciudad, Comuna) -->
-                <div class="form-group">
-                    <label class="input-label">Región *</label>
-                    <select id="region" name="region" class="input" required onchange="actualizarCiudades()">
-                        <option value="">Seleccionar región</option>
-                        <?php foreach ($regiones_chile as $codigo => $nombre): ?>
-                            <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="input-label">Ciudad *</label>
-                    <select id="ciudad" name="ciudad" class="input" required disabled>
-                        <option value="">Seleccionar región primero</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="input-label">Comuna *</label>
-                    <select id="comuna" name="comuna" class="input" required disabled>
-                        <option value="">Seleccionar ciudad primero</option>
-                    </select>
-                </div>
-
-                <!-- Datos Responsable -->
-                <div class="form-group">
-                    <label class="input-label">Nombre Responsable *</label>
-                    <input type="text" name="responsable" class="input" placeholder="Tu nombre completo" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="input-label">Correo Electrónico *</label>
-                    <input type="email" name="email_responsable" class="input" placeholder="tu@email.com" required value="<?= htmlspecialchars($prefill_email) ?>">
-                </div>
-
-                <div class="form-group">
-                    <label class="input-label">Teléfono (Opcional)</label>
-                    <input type="tel" id="telefono" name="telefono" class="input" placeholder="+56 9..." autocomplete="tel">
-                </div>
-
-                <!-- Logo -->
-                <div class="form-group">
-                    <label class="input-label">Logo del Club (Opcional)</label>
-                    <input type="file" name="logo" class="input" accept="image/*" style="padding: 8px;">
-                    <small style="color:#64748b; font-size:0.75rem; display:block; margin-top:5px;">JPG, PNG o GIF (Máx 2MB)</small>
-                </div>
-
-                <button type="submit" class="btn"> Registrar Club</button>
-            </form>
-        <?php endif; ?>
+    <div>
+      <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
     </div>
-</div>
-
-<div id="toast">Mensaje</div>
-
-<script>
-    let datosChile = {};
+  </div>
+  
+  <div class="dashboard-container" style="margin-top: 70px;">
+    <div>
+      <div class="controls-section">
+        <select class="control-select" id="filtroDeporte">
+          <option value="">Todos los deportes</option>
+          <option value="futbol">Fútbol</option>
+          <option value="futbolito">Futbolito</option>
+          <option value="futsal">Futsal</option>
+          <option value="tenis">Tenis</option>
+          <option value="padel">Pádel</option>
+          <option value="voleyball">Voleyball</option>
+          <option value="otro">Quincho/Otro</option>
+        </select>
+        
+        <select class="control-select" id="filtroEstado">
+          <option value="">Todos los estados</option>
+          <option value="disponible">Disponible</option>
+          <option value="reservada">Reservada</option>
+          <option value="ocupada">Ocupada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+        
+        <select class="control-select" id="filtroFecha">
+          <option value="">Últimos 30 días</option>
+          <option value="hoy">Hoy</option>
+          <option value="mañana">Mañana</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+        </select>
+      </div>
+      
+      <div class="reservas-grid" id="reservasGrid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
+          Cargando disponibilidad...
+        </div>
+      </div>
+    </div>
     
-    // Cargar datos desde API
-    fetch('../api/get_regiones.php')
-      .then(response => response.json())
-      .then(data => {
-        datosChile = data;
-      })
-      .catch(error => console.error('Error regiones:', error));
+    <div class="detail-panel">
+        <div class="detail-section" id="detalleReserva">
+            <h3 class="detail-title">📋 Detalle de Reserva</h3>
+            <div id="detalleContent">
+            <p>Selecciona una reserva para ver detalles</p>
+            </div>
+        </div>
+        
+        <div class="actions-section">
+            <h3 class="detail-title">⚙️ Acciones</h3>
+            <div class="actions-grid">
+                <button class="action-btn btn-anular" onclick="anularReserva()">🗑️ Anular</button>
+                <button class="action-btn btn-cancelar" onclick="cancelarReserva()">❌ Cancelar Reserva</button>
+                <button class="action-btn btn-cambiar" onclick="cambiarCancha()">🔄 Cambiar de Cancha</button>
+                <button class="action-btn btn-mensaje" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
+                <button class="action-btn btn-campeonato" onclick="crearCampeonato()">
+                    🏆 Crear Campeonato
+                </button>
+            </div>
+        </div>
+    </div>
 
-    function actualizarCiudades() {
-      const region = document.getElementById('region').value;
-      const ciudadSelect = document.getElementById('ciudad');
-      const comunaSelect = document.getElementById('comuna');
-      
-      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
-      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-      ciudadSelect.disabled = !region;
-      comunaSelect.disabled = true;
-      
-      if (region && datosChile[region]) {
-        Object.entries(datosChile[region].ciudades).forEach(([codigo, nombre]) => {
-          const option = document.createElement('option');
-          option.value = codigo;
-          option.textContent = nombre;
-          ciudadSelect.appendChild(option);
+    <!-- Submodal para mensaje - CORREGIDO -->
+    <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
+        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px; position:relative;">
+            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
+            <h3>Enviar Mensaje</h3>
+            <form id="mensajeForm">
+            <div class="form-group">
+                <label for="mensajeTexto">Mensaje *</label>
+                <textarea id="mensajeTexto" name="mensaje" rows="4" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;"></textarea>
+            </div>
+            <button type="submit" class="btn-submit" style="width:100%;">Enviar Mensaje y Correo</button>
+            </form>
+        </div>
+    </div>
+
+  <script>
+    let reservaSeleccionada = null;
+    let reservasData = [];
+
+    // Definir todas las funciones primero
+    function renderizarReservas(reservas) {
+        const grid = document.getElementById('reservasGrid');
+        
+        if (reservas.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">No hay disponibilidad en el período seleccionado</div>';
+            return;
+        }
+        
+        // Agrupar por fecha para mejor visualización
+        const reservasPorFecha = {};
+        reservas.forEach(reserva => {
+            const fecha = reserva.fecha;
+            if (!reservasPorFecha[fecha]) {
+                reservasPorFecha[fecha] = [];
+            }
+            reservasPorFecha[fecha].push(reserva);
         });
-        ciudadSelect.disabled = false;
-      }
+        
+        grid.innerHTML = '';
+        
+        // Renderizar por fechas
+        Object.keys(reservasPorFecha).sort().forEach(fecha => {
+            const fechaDiv = document.createElement('div');
+            fechaDiv.style.gridColumn = '1/-1';
+            fechaDiv.style.marginTop = '1.5rem';
+            fechaDiv.style.paddingBottom = '0.5rem';
+            fechaDiv.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
+            fechaDiv.style.color = '#FFD700';
+            fechaDiv.style.fontWeight = 'bold';
+            fechaDiv.textContent = formatDateDisplay(fecha);
+            grid.appendChild(fechaDiv);
+            
+            reservasPorFecha[fecha].forEach(reserva => {
+                const card = document.createElement('div');
+                card.className = 'reserva-card';
+                card.onclick = () => selectReserva(reserva.id_disponibilidad || `${reserva.id_cancha}_${reserva.fecha}_${reserva.hora_inicio}`);
+                
+                const iconos = {
+                    'futbol': '⚽', 'futbolito': '⚽', 'futsal': '⚽',
+                    'tenis': '🎾', 'padel': '🎾', 'voleyball': '🏐',
+                    'otro': '🏟️'
+                };
+                
+                const estadoClass = getEstadoClass(reserva.estado_disponibilidad || 'disponible');
+                
+                card.innerHTML = `
+                    <div class="deporte-icon">${iconos[reserva.id_deporte] || '🏟️'}</div>
+                    <div class="cancha-nombre">${reserva.nro_cancha || 'Sin nombre'}</div>
+                    <div class="fecha-hora">
+                        ${formatTimeDisplay(reserva.hora_inicio)}<br>
+                        ${getEstadoTexto(reserva.estado_disponibilidad || 'disponible')}
+                    </div>
+                    <div class="estado-indicator ${estadoClass}"></div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        });
     }
 
-    document.getElementById('ciudad')?.addEventListener('change', function() {
-      const region = document.getElementById('region').value;
-      const ciudad = this.value;
-      const comunaSelect = document.getElementById('comuna');
-      
-      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-      comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
-      
-      if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
-        datosChile[region].comunas[ciudad].forEach(comuna => {
-          const option = document.createElement('option');
-          option.value = comuna.toLowerCase().replace(/\s+/g, '_');
-          option.textContent = comuna;
-          comunaSelect.appendChild(option);
-        });
-        comunaSelect.disabled = false;
-      }
-    });
+    function formatDateDisplay(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        return date.toLocaleDateString('es-ES', options);
+    }
 
-    // Formato teléfono
-    document.getElementById('telefono')?.addEventListener('input', function(e) {
-      this.value = this.value.replace(/[^0-9+]/g, '');
-    });
+    function formatTimeDisplay(timeString) {
+        if (!timeString) return 'N/A';
+        return timeString.substring(0, 5);
+    }
 
-    function showToast(msg) {
-        const t = document.getElementById("toast");
-        if(t) {
-            t.textContent = msg;
-            t.className = "show";
-            setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+    function getEstadoTexto(estado) {
+        const estados = {
+            'disponible': 'Disponible',
+            'reservada': 'Reservada',
+            'ocupada': 'Ocupada',
+            'cancelada': 'Cancelada',
+            'mantencion': 'Mantención'
+        };
+        return estados[estado] || estado;
+    }
+
+    function getEstadoClass(estado) {
+        switch(estado) {
+            case 'disponible': return 'estado-disponible';
+            case 'reservada': return 'estado-reservada';
+            case 'ocupada': return 'estado-ocupada';
+            case 'cancelada': return 'estado-cancelada';
+            case 'mantencion': return 'estado-mantencion';
+            default: return 'estado-disponible';
         }
     }
-</script>
+
+    function selectReserva(id) {
+        // Quitar selección anterior
+        document.querySelectorAll('.reserva-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Seleccionar nueva
+        event.currentTarget.classList.add('selected');
+        reservaSeleccionada = id;
+        
+        // Buscar la reserva completa en los datos
+        const selectedReserva = reservasData.find(r => 
+            (r.id_disponibilidad && r.id_disponibilidad.toString() === id.toString()) || 
+            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString())
+        );
+        
+        if (selectedReserva) {
+            // Verificar si es una reserva real o solo disponibilidad
+            if (selectedReserva.id_disponibilidad && 
+                selectedReserva.id_disponibilidad !== 'null' && 
+                selectedReserva.id_disponibilidad !== null && 
+                selectedReserva.id_disponibilidad !== 'undefined') {
+                // Es una reserva real
+                cargarDetalleReserva(selectedReserva.id_disponibilidad);
+            } else {
+                // Es solo disponibilidad
+                mostrarDetalleDisponibilidad(selectedReserva);
+            }
+        } else {
+            document.getElementById('detalleContent').innerHTML = '<p>Reserva no encontrada</p>';
+        }
+    }
+
+    async function cargarDetalleReserva(id) {
+        try {
+            const formData = new FormData();
+            formData.append('id_disponibilidad', id);
+            
+            const response = await fetch('../api/canchaboard.php?action=get_detalle_reserva', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const detalle = await response.json();
+            
+            if (detalle.error) {
+                throw new Error(detalle.error);
+            }
+            
+            mostrarDetalleReserva(detalle);
+            
+        } catch (error) {
+            console.error('Error al cargar detalle:', error);
+            document.getElementById('detalleContent').innerHTML = '<p>Error al cargar el detalle</p>';
+        }
+    }
+
+    function mostrarDetalleDisponibilidad(reserva) {
+        if (!reserva) {
+            document.getElementById('detalleContent').innerHTML = '<p>Disponibilidad básica</p>';
+            return;
+        }
+        
+        document.getElementById('detalleContent').innerHTML = `
+            <div class="detail-item">
+                <span class="detail-label">Cancha:</span> 
+                <span>${reserva.nro_cancha || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Deporte:</span> 
+                <span>${reserva.id_deporte || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Fecha/Hora:</span> 
+                <span>${formatDateDisplay(reserva.fecha)} ${formatTimeDisplay(reserva.hora_inicio)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Estado:</span> 
+                <span>${getEstadoTexto(reserva.estado_disponibilidad || 'disponible')}</span>
+            </div>
+            <div class="detail-item" style="margin-top: 1rem; color: #00cc66; font-weight: bold;">
+                ✅ Disponible para reservar
+            </div>
+        `;
+    }
+
+    function mostrarDetalleReserva(detalle) {
+        const pagoColor = {
+            'pagado': '#4CAF50',
+            'pendiente': '#FF9800',
+            'reembolsado': '#2196F3',
+            'fallido': '#F44336'
+        };
+        
+        const pagoTexto = {
+            'pagado': 'Pagado',
+            'pendiente': 'Pendiente',
+            'reembolsado': 'Reembolsado',
+            'fallido': 'Fallido'
+        };
+        
+        const tipoReservaTexto = {
+            'spot': 'Spot',
+            'semanal': 'Semanal',
+            'mensual': 'Mensual',
+            'campeonato': 'Campeonato',
+            'evento': 'Evento'
+        };
+        
+        const estadoReservaTexto = {
+            'pendiente': 'Pendiente',
+            'confirmada': 'Confirmada',
+            'cancelada': 'Cancelada',
+            'completada': 'Completada'
+        };
+        
+        // Formatear fecha y hora
+        const fechaHora = formatDateDisplay(detalle.fecha) + ' ' + formatTimeDisplay(detalle.hora_inicio);
+        
+        // Construir contenido del detalle
+        let contenido = `
+            <div class="detail-item">
+                <span class="detail-label">Cancha:</span> 
+                <span>${detalle.nro_cancha || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Deporte:</span> 
+                <span>${detalle.id_deporte || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Fecha/Hora:</span> 
+                <span>${fechaHora}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Club:</span> 
+                <span>${detalle.nombre_club || 'Particular'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Responsable Club:</span> 
+                <span>${detalle.nombre_responsable || detalle.email_cliente || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Teléfono:</span> 
+                <span>${detalle.telefono_cliente || 'N/A'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Tipo Reserva:</span> 
+                <span>${tipoReservaTexto[detalle.tipo_reserva] || detalle.tipo_reserva || 'Spot'}</span>
+            </div>
+        `;
+        
+        // Agregar ID Convenio si existe
+        if (detalle.id_convenio && detalle.id_convenio !== 'null' && detalle.id_convenio !== 0) {
+            contenido += `
+            <div class="detail-item">
+                <span class="detail-label">ID Convenio:</span> 
+                <span>${detalle.id_convenio}</span>
+            </div>
+            `;
+        }
+        
+        contenido += `
+            <div class="detail-item">
+                <span class="detail-label">Monto Total:</span> 
+                <span>$${detalle.monto_total || '0'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Estado Reserva:</span> 
+                <span>${estadoReservaTexto[detalle.estado_reserva] || detalle.estado_reserva || 'Pendiente'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Estado Pago:</span> 
+                <span style="color: ${pagoColor[detalle.estado_pago] || '#666'};">
+                    ${pagoTexto[detalle.estado_pago] || detalle.estado_pago || 'Pendiente'}
+                </span>
+            </div>
+        `;
+        
+        // Agregar notas si existen
+        if (detalle.notas && detalle.notas.trim() !== '') {
+            contenido += `
+            <div class="detail-item">
+                <span class="detail-label">Notas:</span> 
+                <span>${detalle.notas}</span>
+            </div>
+            `;
+        }
+        
+        document.getElementById('detalleContent').innerHTML = contenido;
+    }
+
+    async function anularReserva() {
+        if (!validarReservaActiva()) return;
+        
+        if (confirm('¿Estás seguro de anular esta reserva? Esta acción no se puede deshacer.')) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'anular');
+                formData.append('id_disponibilidad', reservaSeleccionada);
+                
+                const response = await fetch('../api/gestion_reservas.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('✅ Reserva anulada correctamente', 'success');
+                    cargarReservasConRango(0);
+                    document.getElementById('detalleContent').innerHTML = '<p>Selecciona una reserva para ver detalles</p>';
+                    reservaSeleccionada = null;
+                } else {
+                    throw new Error(result.message || 'Error al anular');
+                }
+                
+            } catch (error) {
+                console.error('Error al anular:', error);
+                showToast(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+    }
+
+    function cancelarReserva() {
+        if (!validarReservaActiva()) return;
+        alert('Funcionalidad de cancelación en desarrollo');
+    }
+
+    function cambiarCancha() {
+        if (!validarReservaActiva()) return;
+        alert('Funcionalidad de cambio de cancha en desarrollo');
+    }
+
+    function enviarMensaje() {
+        if (!validarReservaActiva()) return;
+        document.getElementById('mensajeModal').style.display = 'flex';
+    }
+
+    // La acción "Crear Campeonato" NO requiere validación de reserva
+    function crearCampeonato() {
+        window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
+    }
+
+    function closeMensajeModal() {
+        document.getElementById('mensajeModal').style.display = 'none';
+    }
+
+    async function enviarMensajeYCorreo(formData) {
+        try {
+            // Aquí iría la lógica para enviar notificación y correo
+            // Por ahora simulamos el envío
+            alert('Mensaje enviado y correo de respaldo enviado');
+            closeMensajeModal();
+        } catch (error) {
+            console.error('Error al enviar mensaje:', error);
+            alert('Error al enviar el mensaje: ' + error.message);
+        }
+    }
+
+    function crearCampeonato() {
+        window.location.href = 'crear_campeonato.php?id_recinto=<?= $id_recinto ?>';
+    }
+
+    function aplicarFiltros() {
+        const deporte = document.getElementById('filtroDeporte').value;
+        const estado = document.getElementById('filtroEstado').value;
+        
+        let datosFiltrados = [...reservasData];
+        
+        if (deporte) {
+            datosFiltrados = datosFiltrados.filter(r => r.id_deporte === deporte);
+        }
+        
+        if (estado) {
+            datosFiltrados = datosFiltrados.filter(r => (r.estado_disponibilidad || 'disponible') === estado);
+        }
+        
+        renderizarReservas(datosFiltrados);
+    }
+
+    // Función para verificar si hay una reserva real (no solo disponibilidad)
+    function validarReservaActiva() {
+        if (!reservaSeleccionada) {
+            showToast('⚠️ Debes seleccionar una reserva primero', 'warning');
+            return false;
+        }
+        
+        // Buscar la reserva en los datos cargados
+        const selectedReserva = reservasData.find(r => 
+            r.id_disponibilidad == reservaSeleccionada || 
+            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` == reservaSeleccionada)
+        );
+        
+        // Verificar si es una reserva real (tiene id_disponibilidad válido)
+        if (!selectedReserva || !selectedReserva.id_disponibilidad || selectedReserva.id_disponibilidad === 'null') {
+            showToast('⚠️ Para ejecutar esta acción debe existir una reserva activa', 'warning');
+            return false;
+        }
+        
+        // Verificar que el estado no sea cancelado
+        if (selectedReserva.estado_reserva === 'cancelada') {
+            showToast('⚠️ No se pueden ejecutar acciones sobre reservas canceladas', 'warning');
+            return false;
+        }
+        
+        return true;
+    }
+
+    // Ahora sí, cargar los datos iniciales
+    async function cargarReservasConRango(rangoDias = 30) {
+        try {
+            const response = await fetch(`../api/canchaboard.php?action=get_reservas&rango_dias=${rangoDias}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            reservasData = data;
+            renderizarReservas(reservasData);
+            
+        } catch (error) {
+            console.error('Error al cargar reservas:', error);
+            document.getElementById('reservasGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Error al cargar las reservas</div>';
+        }
+    }
+
+    // Cargar datos iniciales con filtro HOY por defecto
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarReservasConRango(0); // 0 = Hoy
+    });
+
+    // Actualizar el select para mostrar "Hoy" como seleccionado por defecto
+    document.getElementById('filtroFecha').value = 'hoy';
+    document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+
+        const valor = this.value;
+        let rangoDias = 30;
+        
+        if (valor === 'hoy') rangoDias = 0;
+        else if (valor === 'mañana') rangoDias = 1;
+        else if (valor === 'semana') rangoDias = 7;
+        else if (valor === 'mes') rangoDias = 30;
+        
+        cargarReservasConRango(rangoDias);
+
+    document.getElementById('mensajeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const mensaje = document.getElementById('mensajeTexto').value.trim();
+        
+        if (!mensaje) {
+            showToast('⚠️ El mensaje no puede estar vacío', 'warning');
+            return;
+        }
+        
+        // Simular envío
+        showToast('✅ Mensaje enviado y correo de respaldo enviado', 'success');
+        closeMensajeModal();
+        document.getElementById('mensajeTexto').value = '';
+    });
+
+    // Cerrar modal con escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMensajeModal();
+        }
+    });
+
+    // Sistema de Toast Notifications
+    function showToast(message, type = 'info') {
+        // Eliminar toast anterior si existe
+        const existingToast = document.querySelector('.toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Mostrar toast
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 100);
+        
+        // Ocultar y eliminar después de 3 segundos
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Función de validación para acciones
+    function validarReservaSeleccionada() {
+        if (!reservaSeleccionada) {
+            showToast('⚠️ Debes seleccionar una reserva primero', 'warning');
+            return false;
+        }
+        return true;
+    }
+  </script>
 </body>
 </html>

@@ -334,8 +334,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Al inicio del script
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    // ... lógica de verificación de código ...
-
     if ($success_logic) { // Tu lógica actual de verificar código
         
         // Recuperar datos temporales
@@ -348,11 +346,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Crear Socio con contraseña
         if (!$socio_existente) {
-            // ... código anterior ...
             $stmt_insert_socio = $pdo->prepare("INSERT INTO socios (nombre, alias, email, rol, es_responsable, activo, datos_completos, password_hash, created_at) VALUES (?, ?, ?, 'Director', 1, 'Si', 0, ?, NOW())");
             $stmt_insert_socio->execute([$temp_data['responsable'], $alias, $temp_data['email'], $password_hash_to_use]);
-            // ...
         }
+
+        // Después de crear o actualizar el socio...
+        $stmt_verify_socio = $pdo->prepare("
+            UPDATE socios 
+            SET email_verified = 1 
+            WHERE id_socio = ?
+        ");
+        $stmt_verify_socio->execute([$id_socio_final]);
         
         // Iniciar Sesión REAL (Crucial)
         $_SESSION['id_socio'] = $id_socio_final;
