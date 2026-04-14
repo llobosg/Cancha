@@ -467,8 +467,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <option value="futbol">Fútbol</option>
               <option value="futbolito">Futbolito</option>
               <option value="baby">Baby fútbol</option>
-              <option value="tenis">Tenis</option>
-              <option value="padel">Pádel</option>
+              <option value="tenis">Vóleybol</option>
             </select>
           </div>
           <div class="form-group"><label for="jugadores_por_lado">Jugadores</label></div>
