@@ -88,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (!$stmt_link_check->fetch()) {
                 $stmt_link = $pdo->prepare("
-                    INSERT INTO socio_club (id_socio, id_club, estado, fecha_registro, es_responsable) 
-                    VALUES (?, ?, 'activo', NOW(), 1)
+                    INSERT INTO socio_club (id_socio, id_club, estado, es_responsable) 
+                    VALUES (?, ?, 'activo', 1)
                 ");
                 $stmt_link->execute([$id_socio_creado, $club_id]);
             }
