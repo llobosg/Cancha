@@ -24,63 +24,110 @@ $back_url = !empty($_SESSION['torneo_slug'])
     : '../index.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $email_input = trim($_POST['email'] ?? '');
+    $password_input = $_POST['password'] ?? '';
 
-    if (empty($email) || empty($password)) {
+    error_log("🔍 [LOGIN] Intento de login para: " . $email_input);
+
+    if (empty($email_input) || empty($password_input)) {
         $error = 'Email y contraseña son requeridos';
+        error_log("❌ [LOGIN] Campos vacíos");
     } else {
-        // 1. Buscar socio SOLO por email y password_hash (SIN id_club aquí)
-        $stmt = $pdo->prepare("
-            SELECT id_socio, password_hash, nombre, es_responsable, datos_completos
-            FROM socios 
-            WHERE email = ? AND password_hash IS NOT NULL AND activo = 'Si'
-            LIMIT 1
-        ");
-        $stmt->execute([$email]);
-        $socio = $stmt->fetch();
-
-        if ($socio && password_verify($password, $socio['password_hash'])) {
-            // ✅ Login Exitoso
-            $_SESSION['id_socio'] = $socio['id_socio'];
-            $_SESSION['user_email'] = $email;
-            $_SESSION['nombre'] = $socio['nombre'];
-            $_SESSION['es_responsable'] = $socio['es_responsable'];
-
-            // 2. Obtener el Club asociado desde la tabla socio_club
-            $stmt_club = $pdo->prepare("
-                SELECT c.id_club, c.email_responsable, sc.estado
-                FROM socio_club sc
-                JOIN clubs c ON sc.id_club = c.id_club
-                WHERE sc.id_socio = ? AND sc.estado = 'activo'
+        // 1. Buscar socio
+        try {
+            $stmt = $pdo->prepare("
+                SELECT id_socio, password_hash, nombre, es_responsable, datos_completos, email_verified, activo
+                FROM socios 
+                WHERE email = ? AND password_hash IS NOT NULL
                 LIMIT 1
             ");
-            $stmt_club->execute([$socio['id_socio']]);
-            $club_data = $stmt_club->fetch();
+            $stmt->execute([$email_input]);
+            $socio = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($club_data) {
-                $_SESSION['club_id'] = $club_data['id_club'];
-                // Generar slug correcto
-                $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
-                $_SESSION['current_club'] = $club_slug;
-            }
-
-            // 3. Redirigir según estado
-            if ($socio['datos_completos'] == 0) {
-                // Forzar completar perfil si faltan datos
-                header('Location: completar_perfil.php?first_time=1');
-                exit;
-            } elseif (!empty($_SESSION['current_club'])) {
-                header('Location: dashboard_socio.php?id_club=' . $_SESSION['current_club']);
-                exit;
+            if (!$socio) {
+                error_log("❌ [LOGIN] Usuario NO encontrado en BD para email: " . $email_input);
+                $error = 'Credenciales incorrectas (Usuario no encontrado)';
             } else {
-                // Sin club asignado (caso raro)
-                header('Location: ../index.php?msg=sin_club');
-                exit;
-            }
+                error_log("✅ [LOGIN] Usuario encontrado: ID=" . $socio['id_socio'] . " | Verificado: " . $socio['email_verified'] . " | Activo: " . $socio['activo']);
 
-        } else {
-            $error = 'Credenciales incorrectas o usuario inactivo';
+                // 2. Validar Contraseña
+                $pass_valid = password_verify($password_input, $socio['password_hash']);
+                
+                if (!$pass_valid) {
+                    error_log("❌ [LOGIN] Contraseña INCORRECTA para usuario: " . $socio['id_socio']);
+                    // Debug: Mostrar hash parcial para verificar que existe
+                    error_log("🔑 [DEBUG] Hash en BD: " . substr($socio['password_hash'], 0, 20) . "...");
+                    error_log("🔑 [DEBUG] Pass ingresada: " . $password_input);
+                    
+                    $error = 'Credenciales incorrectas (Contraseña inválida)';
+                } else {
+                    error_log("✅ [LOGIN] Contraseña CORRECTA!");
+
+                    // 3. Verificar estado del usuario (Activo / Verificado)
+                    if ($socio['activo'] !== 'Si') {
+                        error_log("⚠️ [LOGIN] Usuario encontrado pero INACTIVO.");
+                        $error = 'Tu cuenta está desactivada. Contacta al administrador.';
+                    } 
+                    // Opcional: Si quieres forzar verificación de email también
+                    /*
+                    elseif ($socio['email_verified'] == 0) {
+                         error_log("️ [LOGIN] Usuario encontrado pero EMAIL NO VERIFICADO.");
+                         $error = 'Debes verificar tu correo electrónico.';
+                    }
+                    */
+                    else {
+                        // ✅ LOGIN EXITOSO - Iniciar Sesión
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+
+                        $_SESSION['id_socio'] = $socio['id_socio'];
+                        $_SESSION['user_email'] = $email_input;
+                        $_SESSION['nombre'] = $socio['nombre'];
+                        $_SESSION['es_responsable'] = $socio['es_responsable'];
+                        
+                        error_log("🚀 [LOGIN] Sesión iniciada para ID: " . $socio['id_socio']);
+
+                        // 4. Obtener Club
+                        $stmt_club = $pdo->prepare("
+                            SELECT c.id_club, c.email_responsable, sc.estado
+                            FROM socio_club sc
+                            JOIN clubs c ON sc.id_club = c.id_club
+                            WHERE sc.id_socio = ? AND sc.estado = 'activo'
+                            LIMIT 1
+                        ");
+                        $stmt_club->execute([$socio['id_socio']]);
+                        $club_data = $stmt_club->fetch();
+
+                        if ($club_data) {
+                            $_SESSION['club_id'] = $club_data['id_club'];
+                            $club_slug = substr(md5($club_data['id_club'] . $club_data['email_responsable']), 0, 8);
+                            $_SESSION['current_club'] = $club_slug;
+                            error_log("🏟️ [LOGIN] Club asignado: ID=" . $club_data['id_club'] . " | Slug=" . $club_slug);
+                        } else {
+                            error_log("⚠️ [LOGIN] Usuario válido pero SIN CLUB asociado activo.");
+                        }
+
+                        // 5. Redirección
+                        if ($socio['datos_completos'] == 0) {
+                            error_log("➡️ [LOGIN] Redirigiendo a COMPLETAR PERFIL (datos incompletos)");
+                            header('Location: completar_perfil.php?first_time=1');
+                            exit;
+                        } elseif (!empty($_SESSION['current_club'])) {
+                            error_log("➡️ [LOGIN] Redirigiendo a DASHBOARD: " . $_SESSION['current_club']);
+                            header('Location: dashboard_socio.php?id_club=' . $_SESSION['current_club']);
+                            exit;
+                        } else {
+                            error_log("️ [LOGIN] Redirigiendo a INDEX (Sin club)");
+                            header('Location: ../index.php?msg=sin_club');
+                            exit;
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("💥 [LOGIN] ERROR EXCEPTION: " . $e->getMessage());
+            $error = 'Error interno del servidor';
         }
     }
 }
