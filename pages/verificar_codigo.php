@@ -57,16 +57,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id_socio_creado = null;
 
             if (!$socio_data) {
-                // 2. Insertar socio SIN id_club
+                // Obtener alias (primer nombre)
+                $alias_socio = explode(' ', trim($club['responsable']))[0];
+                
+                // CAMBIO CLAVE: Usar 'Director' en lugar de 'Responsable'
+                // 'Director' SÍ existe en tu ENUM de roles.
+                $rol_defecto = 'Director'; 
+
                 $stmt_insert_socio = $pdo->prepare("
                     INSERT INTO socios (email, nombre, alias, rol, es_responsable, activo, created_at) 
-                    VALUES (?, ?, ?, 'Responsable', 1, 1, NOW())
+                    VALUES (?, ?, ?, ?, 1, 'Si', NOW())
                 ");
+                
                 $stmt_insert_socio->execute([
                     $email,
                     $club['responsable'], 
-                    explode(' ', $club['responsable'])[0] // Alias = primer nombre
+                    $alias_socio,
+                    $rol_defecto
                 ]);
+                
                 $id_socio_creado = $pdo->lastInsertId();
             } else {
                 $id_socio_creado = $socio_data['id_socio'];
