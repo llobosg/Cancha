@@ -320,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <div class="float-card">
-    <a href="registro_socio_v2.php" class="close-btn" title="Volver">×</a>
+    <a href="registro_socio.php" class="close-btn" title="Volver">×</a>
 
     <?php if ($success): ?>
         <h2 style="color: #166534;">✅ ¡Club Registrado!</h2>
