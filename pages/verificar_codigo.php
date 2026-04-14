@@ -39,33 +39,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($club['email_verified']) {
             // Ya verificado - solo generar slug
             $club_slug = substr(md5($club['id_club'] . $club['email_responsable']), 0, 8);
-        } else {
+                } else {
             // Activar club
             $stmt_update = $pdo->prepare("
                 UPDATE clubs SET email_verified = 1, verification_code = NULL WHERE email_responsable = ?
             ");
             $stmt_update->execute([$email]);
             
-            // Crear socio automático si no existe
-            $stmt_socio = $pdo->prepare("
-                SELECT id_socio FROM socios WHERE email = ? AND id_club = ?
-            ");
-            $stmt_socio->execute([$email, $club['id_club']]);
+            $club_id = $club['id_club'];
             
-            if (!$stmt_socio->fetch()) {
+            // === CREAR SOCIO AUTOMÁTICO SI NO EXISTE ===
+            // 1. Buscar si ya existe por email (en cualquier club o individual)
+            $stmt_socio_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
+            $stmt_socio_check->execute([$email]);
+            $socio_data = $stmt_socio_check->fetch();
+            
+            $id_socio_creado = null;
+
+            if (!$socio_data) {
+                // 2. Insertar socio SIN id_club
                 $stmt_insert_socio = $pdo->prepare("
-                    INSERT INTO socios (id_club, email, nombre, alias, es_responsable, created_at) 
-                    VALUES (?, ?, ?, ?, 1, NOW())
+                    INSERT INTO socios (email, nombre, alias, rol, es_responsable, activo, created_at) 
+                    VALUES (?, ?, ?, 'Responsable', 1, 1, NOW())
                 ");
                 $stmt_insert_socio->execute([
-                    $club['id_club'],
                     $email,
-                    $club['responsable'], // Nombre real del responsable
-                    'Responsable'
+                    $club['responsable'], 
+                    explode(' ', $club['responsable'])[0] // Alias = primer nombre
                 ]);
+                $id_socio_creado = $pdo->lastInsertId();
+            } else {
+                $id_socio_creado = $socio_data['id_socio'];
+            }
+
+            // 3. Vincular Socio al Club en la tabla intermedia socio_club
+            // Verificar si ya existe la relación
+            $stmt_link_check = $pdo->prepare("SELECT id_socio FROM socio_club WHERE id_socio = ? AND id_club = ?");
+            $stmt_link_check->execute([$id_socio_creado, $club_id]);
+            
+            if (!$stmt_link_check->fetch()) {
+                $stmt_link = $pdo->prepare("
+                    INSERT INTO socio_club (id_socio, id_club, estado, fecha_registro, es_responsable) 
+                    VALUES (?, ?, 'activo', NOW(), 1)
+                ");
+                $stmt_link->execute([$id_socio_creado, $club_id]);
             }
             
-            $club_slug = substr(md5($club['id_club'] . $email), 0, 8);
+            $club_slug = substr(md5($club_id . $email), 0, 8);
         }
         
         $success = true;
