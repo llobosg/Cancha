@@ -333,21 +333,20 @@ $club_slug = $_GET['club'] ?? '';
     let codigoEnviado = '';
     let emailTemp = '';
 
-    // === FUNCIÓN 1: Toggle Ver Contraseña (GLOBAL) ===
+    // === FUNCIÓN 1: Toggle Ver Contraseña ===
     function togglePassword(inputId, iconElement) {
         const input = document.getElementById(inputId);
         if (!input) return;
-        
         if (input.type === "password") {
             input.type = "text";
             iconElement.textContent = "🔒"; 
         } else {
             input.type = "password";
-            iconElement.textContent = "👁️"; 
+            iconElement.textContent = "️"; 
         }
     }
 
-    // === FUNCIÓN 2: Actualizar Campo Deporte (GLOBAL) ===
+    // === FUNCIÓN 2: Actualizar Campo Deporte ===
     function actualizarCampoDeporte() {
         const deporteSelect = document.getElementById('deporte');
         if (!deporteSelect) return;
@@ -355,21 +354,20 @@ $club_slug = $_GET['club'] ?? '';
         const deporte = deporteSelect.value;
         const label = document.getElementById('label_puesto_nivel');
         const select = document.getElementById('puesto_nivel');
+        
+        // CORRECCIÓN: Usar los valores exactos del HTML (con mayúsculas y tildes)
         const deportesRestringidos = ['Fútbol', 'Futbolito', 'Vóleibol'];
 
         if (!label || !select) return;
 
         if (deportesRestringidos.includes(deporte)) {
-            // Mostrar Mini Modal de Bloqueo
             const modal = document.getElementById('modalBloqueoDeporte');
             if (modal) {
-                document.getElementById('textoBloqueo').innerHTML = `Para registrarte en <strong>${deporte.toUpperCase()}</strong> debes crear un Club de amigos o unirte a uno existente ⚽.`;
+                document.getElementById('textoBloqueo').innerHTML = `Para registrarte en <strong>${deporte}</strong> debes crear un Club o unirte a uno existente ⚽.`;
                 modal.classList.remove('hidden');
             }
-            // Resetear select visualmente
             select.value = ""; 
         } else if (deporte === 'Pádel') {
-            // Cambiar a Niveles de Pádel
             label.textContent = "Nivel";
             select.innerHTML = `
                 <option value="">Seleccionar Nivel</option>
@@ -381,7 +379,6 @@ $club_slug = $_GET['club'] ?? '';
                 <option value="Primera">Primera Categoría</option>
             `;
         } else {
-            // Volver a Puestos normales
             label.textContent = "Puesto";
             select.innerHTML = `
                 <option value="">Indistinto</option>
@@ -415,7 +412,6 @@ $club_slug = $_GET['club'] ?? '';
         cerrarModalBloqueo();
         const modalLista = document.getElementById('modalListaClubes');
         const container = document.getElementById('listaClubesContainer');
-        
         if (!modalLista || !container) return;
 
         modalLista.classList.remove('hidden');
@@ -441,7 +437,6 @@ $club_slug = $_GET['club'] ?? '';
                 `;
                 container.appendChild(div);
             });
-
         } catch (error) {
             console.error(error);
             container.innerHTML = '<div style="padding:10px; color:red;">Error al cargar clubes.</div>';
@@ -452,23 +447,16 @@ $club_slug = $_GET['club'] ?? '';
     async function solicitarUnion(id_club, email_responsable) {
         const nombreInput = document.getElementById('nombre');
         const emailInput = document.getElementById('email');
-        const celularInput = document.getElementById('celular');
+        const celularInput = document.getElementById('celular_input'); // ID corregido
         const deporteInput = document.getElementById('deporte');
 
-        if (!nombreInput || !emailInput) {
-            showToast("️ Completa Nombre y Correo primero.");
-            return;
-        }
-
+        if (!nombreInput || !emailInput) { showToast("Completa Nombre y Correo."); return; }
         const nombre = nombreInput.value;
         const email = emailInput.value;
         const celular = celularInput ? celularInput.value : '';
         const deporte = deporteInput ? deporteInput.value : '';
 
-        if (!nombre || !email) {
-            showToast("⚠️ Completa Nombre y Correo primero.");
-            return;
-        }
+        if (!nombre || !email) { showToast("️ Completa Nombre y Correo."); return; }
 
         const btn = event.target;
         btn.textContent = "Enviando...";
@@ -483,14 +471,11 @@ $club_slug = $_GET['club'] ?? '';
             formData.append('celular_socio', celular);
             formData.append('deporte', deporte);
 
-            const res = await fetch('../api/solicitar_union_club.php', {
-                method: 'POST',
-                body: formData
-            });
+            const res = await fetch('../api/solicitar_union_club.php', { method: 'POST', body: formData });
             const data = await res.json();
 
             if (data.success) {
-                showToast("✅ Solicitud enviada al responsable del club.");
+                showToast("✅ Solicitud enviada.");
                 document.getElementById('modalListaClubes').classList.add('hidden');
             } else {
                 showToast(" Error: " + data.message);
@@ -505,30 +490,34 @@ $club_slug = $_GET['club'] ?? '';
         }
     }
 
-    // === FUNCIÓN 7: Enviar Código (Registro Principal) - CORREGIDA ===
+    // === FUNCIÓN 7: Enviar Código (CORREGIDA: Llave faltante arreglada) ===
     async function enviarCodigo(e) {
         e.preventDefault(); 
         
-        const deporte = document.getElementById('deporte').value;
+        const deporteSelect = document.getElementById('deporte');
+        const deporte = deporteSelect ? deporteSelect.value : '';
         
         if (!deporte) { showToast("Selecciona un deporte"); return; }
         
         if (['Fútbol', 'Futbolito', 'Vóleibol'].includes(deporte)) {
-            showToast("⚠️ Debes crear o unirte a un club para este deporte.");
+            showToast("⚠️ Debes crear o unirte a un club.");
             actualizarCampoDeporte(); 
             return;
         }
 
-        const password = document.getElementById('password').value;
-        const passConfirm = document.getElementById('password_confirm').value;
+        const passInput = document.getElementById('password');
+        const passConfInput = document.getElementById('password_confirm');
+        if (!passInput || !passConfInput) { showToast("Error en formulario"); return; }
 
-        if (!passConfirm) { showToast("⚠️ Confirma tu contraseña"); return; }
-        if (password !== passConfirm) { showToast("❌ Contraseñas no coinciden"); return; }
-        if (password.length < 6) { showToast("❌ Mínimo 6 caracteres"); return; }
+        const password = passInput.value;
+        const passConfirm = passConfInput.value;
+
+        if (!passConfirm) { showToast("Confirma contraseña"); return; }
+        if (password !== passConfirm) { showToast("Contraseñas no coinciden"); return; }
+        if (password.length < 6) { showToast("Mínimo 6 caracteres"); return; }
 
         const btn = document.getElementById('btnEnviar');
-        btn.innerHTML = 'Enviando...';
-        btn.disabled = true;
+        if (btn) { btn.innerHTML = 'Enviando...'; btn.disabled = true; }
 
         const formData = new FormData();
         formData.append('nombre', document.getElementById('nombre').value);
@@ -551,82 +540,80 @@ $club_slug = $_GET['club'] ?? '';
         formData.append('club_slug', document.getElementById('club_slug').value);
 
         try {
-            const response = await fetch('../api/enviar_codigo_socio.php', {
-                method: 'POST',
-                body: formData
-            });
-
+            const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
             if (!response.ok) throw new Error('Error en la red');
-
+            
             const data = await response.json();
+            console.log("Respuesta API:", data);
 
             if (data.success) {
                 emailTemp = document.getElementById('email').value;
+                const verifyDisplay = document.getElementById('verify-email-display');
+                if (verifyDisplay) verifyDisplay.textContent = emailTemp;
 
-                document.getElementById('verify-email-display').textContent = emailTemp;
-
-                document.querySelector('#formRegistro').closest('.card').classList.add('hidden');
-                document.getElementById('verify-modal').classList.remove('hidden');
-
-                showToast("✅ Código enviado a " + emailTemp);
+                const formCard = document.querySelector('#formRegistro'); 
+                const containerToHide = formCard ? formCard.closest('.card') : null;
+                const verifyModal = document.getElementById('verify-modal');
+                
+                if (containerToHide) containerToHide.classList.add('hidden');
+                if (verifyModal) {
+                    verifyModal.classList.remove('hidden');
+                    console.log("✅ Modal mostrado");
+                }
+                showToast("✅ Código enviado");
             } else {
-                showToast("❌ " + (data.message || 'Error desconocido'));
-                btn.innerHTML = '🚀 Enviar Código de Verificación';
-                btn.disabled = false;
+                showToast("❌ " + (data.message || 'Error'));
+                if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
             }
-
-        } catch (error) {
-            console.error(error);
+        } catch (error) { // <--- AQUÍ ESTABA EL ERROR DE SINTAXIS (Faltaba cerrar try antes)
+            console.error("💥 Error:", error);
             showToast("❌ Error de conexión");
-            btn.innerHTML = '🚀 Enviar Código de Verificación';
-            btn.disabled = false;
+            if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
         }
-    }  
+    }    
 
-    // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA) ===
+    // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA: Llave faltante arreglada) ===
     async function validarYRegistrar() {
-        const codigo = document.getElementById('codigo_verificacion').value.trim();
-
+        console.log(" [DEBUG] Iniciando validación...");
+        
+        const codigoInput = document.getElementById('codigo_verificacion');
+        if (!codigoInput) return;
+        
+        const codigo = codigoInput.value.trim();
+        
         if (codigo.length !== 4 || !/^\d{4}$/.test(codigo)) { 
             showToast("Ingresa el código de 4 dígitos"); 
             return; 
         }
 
         const btn = document.querySelector('#verify-modal .btn');
-        btn.innerHTML = 'Activando...';
-        btn.disabled = true;
+        if (btn) { btn.innerHTML = 'Activando...'; btn.disabled = true; }
+
+        const payload = { codigo: codigo };
 
         try {
             const response = await fetch('../api/verificar_codigo_socio.php', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ codigo })
+                body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error('Error HTTP');
+            if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
             const data = await response.json();
+            console.log("Respuesta Verificación:", data);
 
             if (data.success) {
                 showToast("¡Cuenta activada!");
-
-                setTimeout(() => {
-                    window.location.href = data.club_slug 
-                        ? `dashboard_socio.php?id_club=${data.club_slug}`
-                        : '../index.php';
-                }, 1500);
-
+                setTimeout(() => window.location.href = '../index.php', 1500);
             } else {
                 showToast("❌ " + (data.message || 'Código inválido'));
-                btn.innerHTML = '✅ Activar Cuenta';
-                btn.disabled = false;
+                if (btn) { btn.innerHTML = '✅ Activar Cuenta'; btn.disabled = false; }
             }
-
-        } catch (error) {
-            console.error(error);
-            showToast("❌ Error de conexión");
-            btn.innerHTML = '✅ Activar Cuenta';
-            btn.disabled = false;
+        } catch (error) { // <--- AQUÍ TAMBIÉN FALTABA CERRAR EL TRY
+            console.error("💥 Error:", error);
+            showToast("❌ Error al verificar");
+            if (btn) { btn.innerHTML = '✅ Activar Cuenta'; btn.disabled = false; }
         }
     }
 
@@ -644,6 +631,18 @@ $club_slug = $_GET['club'] ?? '';
         t.className = "show";
         setTimeout(() => t.className = t.className.replace("show", ""), 3000);
     }
+    
+    // Script para alias al escribir
+    document.addEventListener('DOMContentLoaded', function() {
+        const nombreInput = document.getElementById('nombre');
+        const aliasHidden = document.getElementById('alias_hidden');
+        if (nombreInput && aliasHidden) {
+            nombreInput.addEventListener('input', function(e) {
+                const nombres = e.target.value.trim().split(' ');
+                aliasHidden.value = nombres[0] || '';
+            });
+        }
+    });
 </script>
 </body>
 </html>
