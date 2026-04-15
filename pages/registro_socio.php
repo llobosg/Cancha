@@ -605,21 +605,22 @@ $club_slug = $_GET['club'] ?? '';
                 if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
             }
 
-       catch (error) {
-        console.error("💥 Error:", error);
-        
-        // Intentar leer la respuesta cruda si existe
-        if (error.response) {
-            error.response.text().then(text => {
-                console.log("📝 Respuesta CRUDA del servidor (NO JSON):", text);
-                // Esto te dirá si es un warning de PHP como: Warning: ... in ...
-            });
+        catch (error) {
+            console.error("💥 Error:", error);
+            
+            // Intentar leer la respuesta cruda si existe
+            if (error.response) {
+                error.response.text().then(text => {
+                    console.log("📝 Respuesta CRUDA del servidor (NO JSON):", text);
+                    // Esto te dirá si es un warning de PHP como: Warning: ... in ...
+                });
+            }
+            
+            showToast("❌ Error de conexión. Revisa consola.");
+            if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
+            }
         }
-        
-        showToast("❌ Error de conexión. Revisa consola.");
-        if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
-        }
-    }
+    }    
 
     // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA) ===
     async function validarYRegistrar() {
