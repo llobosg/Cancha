@@ -260,11 +260,15 @@ $club_slug = $_GET['club'] ?? '';
             <input type="hidden" id="alias_hidden">
             <input type="hidden" id="rol" value="Jugador">
             <input type="hidden" id="fecha_nac" value="2000-01-01">
+            <input type="hidden" name="pais" value="Chile">
             <input type="hidden" id="region" value="Metropolitana">
             <input type="hidden" id="ciudad" value="Santiago">
-            <input type="hidden" id="comuna" value="Comuna">
+            <input type="hidden" id="comuna" value="Ñuñoa">
             <input type="hidden" id="direccion" value="Pendiente">
             <input type="hidden" id="habilidad" value="Intermedia">
+            <input type="hidden" name="deporte" value="Futbolito"> 
+            <input type="hidden" name="id_puesto" value="1"
+            <input type="hidden" name="celular" value="+56900000000"> 
 
             <button type="submit" class="btn" id="btnEnviar">🚀 Enviar Código de Verificación</button>
             
@@ -559,9 +563,10 @@ $club_slug = $_GET['club'] ?? '';
         formData.append('password_confirm', passConfirm); // Asegurado
         formData.append('rol', 'Jugador');
         formData.append('fecha_nac', '2000-01-01');
+        formData.append('pais', 'Chile');
         formData.append('region', 'Metropolitana');
         formData.append('ciudad', 'Santiago');
-        formData.append('comuna', 'Comuna');
+        formData.append('comuna', 'Ñuñoa');
         formData.append('direccion', 'Pendiente');
         formData.append('habilidad', 'Intermedia');
         formData.append('club_slug', document.getElementById('club_slug').value);
