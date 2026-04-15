@@ -67,11 +67,6 @@ try {
     if ($pass !== $passConf) throw new Exception('Contraseñas no coinciden');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Email inválido');
 
-    // Verificar duplicado
-    $chk = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
-    $chk->execute([$email]);
-    if ($chk->fetch()) throw new Exception('Email ya registrado');
-
     // Insertar
     $hash = password_hash($pass, PASSWORD_DEFAULT);
     $code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
