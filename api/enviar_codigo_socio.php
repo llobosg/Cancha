@@ -18,14 +18,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
+     // === LOGS DE DEPURACIÓN ===
+    error_log("📥 [DEBUG] Datos recibidos en enviar_codigo_socio.php:");
+    foreach ($_POST as $key => $value) {
+        if ($key === 'password' || $key === 'password_confirm') continue;
+        error_log("   - $key: " . ($value ?: '[VACÍO]'));
+    }
+    
     // Validar campos comunes
     $required_common = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
-
     foreach ($required_common as $field) {
-        // Verificar si existe y no está vacío (trim para quitar espacios)
         if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
-            // Log para depuración si falla en producción
-            error_log("Falta campo obligatorio: $field"); 
+            error_log("❌ FALTA CAMPO OBLIGATORIO: $field");
             throw new Exception("El campo '$field' es obligatorio");
         }
     }

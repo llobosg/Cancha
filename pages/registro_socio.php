@@ -257,7 +257,13 @@ $club_slug = $_GET['club'] ?? '';
             </div>
 
             <!-- Campos Ocultos -->
-            <input type="hidden" id="alias_hidden">
+            <input type="hidden" id="alias_hidden" name="alias">
+            <script>
+                document.getElementById('nombre').addEventListener('input', function(e) {
+                    const nombres = e.target.value.trim().split(' ');
+                    document.getElementById('alias_hidden').value = nombres[0] || '';
+                });
+            </script>
             <input type="hidden" id="rol" value="Jugador">
             <input type="hidden" id="fecha_nac" value="2000-01-01">
             <input type="hidden" name="pais" value="Chile">
@@ -267,7 +273,7 @@ $club_slug = $_GET['club'] ?? '';
             <input type="hidden" id="direccion" value="Pendiente">
             <input type="hidden" id="habilidad" value="Intermedia">
             <input type="hidden" name="deporte" value="Futbolito"> 
-            <input type="hidden" name="id_puesto" value="1"
+            <input type="hidden" name="id_puesto" value="1">
             <input type="hidden" name="celular" value="+56900000000"> 
 
             <button type="submit" class="btn" id="btnEnviar">🚀 Enviar Código de Verificación</button>
