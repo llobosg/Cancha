@@ -292,29 +292,14 @@
         require_once __DIR__ . '/../includes/brevo_mailer.php';
         $mail = new BrevoMailer();
         $mail->setTo($email, $nombre);
-        $mail->setSubject('🔐 Código de verificación - CanchaSport');
-
-        if ($modo_individual) {
-            $mail->setHtmlBody("
-                <h2>¡Bienvenido a CanchaSport!</h2>
-                <p>Tu código de verificación para activar tu cuenta es:</p>
-                <h1 style='color:#009966;'>{$verification_code}</h1>
-                <p>Ingresa este código en la página de verificación para completar tu registro.</p>
-                <p>¡Disfruta de CanchaSport!</p>
-            ");
-        } else {
-            // Obtener nombre del club
-            $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
-            $stmt->execute([$id_club]);
-            $club_nombre = $stmt->fetchColumn() ?: 'tu club';
-
-            $mail->setHtmlBody("
-                <h2>¡Bienvenido a CanchaSport!</h2>
-                <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
-                <h1 style='color:#009966;'>{$verification_code}</h1>
-                <p>Ingresa este código para confirmar tu inscripción.</p>
-                <p>El código tiene validez de medio tiempo sin alargue</p>
-            ");
+        $mail->setSubject('🔐 Código: ' . $verification_code);
+        
+        $body = "<h1>Tu código es: <b>{$verification_code}</b></h1><p>Activa tu cuenta en CanchaSport.</p>";
+        $mail->setHtmlBody($body);
+        
+        if ($mail->send()) {
+            $mail_ok = true;
+            error_log("✓ Correo enviado.");
         }
     } catch (Exception $e) {
         error_log("Error mail: " . $e->getMessage());
@@ -344,7 +329,7 @@
     // 5. Escribir en salida y MATAR PROCESO INMEDIATAMENTE
     print($json_str);
     flush(); 
-    die(); // Die es más agresivo que exit, asegurando que no se ejecute nada más después de esto
+    die(); // Die es más agresivo que exit
 
     } catch (Exception $e) {
         // Manejo de errores globales
