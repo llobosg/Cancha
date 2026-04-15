@@ -1,137 +1,340 @@
 <?php
-// api/enviar_codigo_socio.php - Versión Streaming Puro (Sin Buffers)
+// Limpiar cualquier output previo
+if (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
 
-// Configuración inmediata de errores y cabeceras
+header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
-header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Respuesta por defecto en caso de fallo catastrófico
-http_response_code(500);
-$final_response = ['success' => false, 'message' => 'Error interno no capturado'];
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    exit;
+}
 
 try {
-    // 1. Validar Método
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('Método no permitido');
-    }
+    // Validar campos comunes
+    $required_common = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
 
-    // 2. Logs de Debug (Solo en servidor, no afecta output)
-    error_log(" [DEBUG] Inicio proceso registro");
-
-    // 3. Validar Campos Obligatorios
-    $required = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
-    foreach ($required as $field) {
+    foreach ($required_common as $field) {
+        // Verificar si existe y no está vacío (trim para quitar espacios)
         if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
-            throw new Exception("Falta campo obligatorio: $field");
+            // Log para depuración si falla en producción
+            error_log("Falta campo obligatorio: $field"); 
+            throw new Exception("El campo '$field' es obligatorio");
         }
     }
 
-    // 4. Recoger Datos
+    // Obtener club_slug (puede estar vacío para modo individual)
+    $club_slug = $_POST['club_slug'] ?? '';
+    $modo_individual = empty($club_slug);
+
+    // Validar deporte
+    $deporte = $_POST['deporte'];
+    
+    // Verificar que el deporte sea válido según el modo
+    $stmt_check = $pdo->prepare("
+        SELECT 1 FROM deportes 
+        WHERE TRIM(deporte) = TRIM(?) 
+        AND tipo_deporte = ?
+    ");
+    $stmt_check->execute([$deporte, $modo_individual ? '1' : '2']);
+    
+    if (!$stmt_check->fetch()) {
+        throw new Exception('Deporte no válido para este tipo de registro');
+    }
+
+    // Definir otras variables
     $nombre = trim($_POST['nombre']);
     $alias = trim($_POST['alias']);
     $email = trim($_POST['email']);
     $genero = $_POST['genero'];
     $rol = $_POST['rol'];
-    $deporte = $_POST['deporte'];
+    $fecha_nac = $_POST['fecha_nac'] ?? null;
+    $celular = trim($_POST['celular'] ?? '');
+    $direccion = trim($_POST['direccion'] ?? '');
+    $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : null;
+    $habilidad = $_POST['habilidad'] ?? null;
+    
+    // Validar contraseña
     $password = $_POST['password'];
     $password_confirm = $_POST['password_confirm'];
-    $club_slug = $_POST['club_slug'] ?? '';
     
-    // Datos con defaults
-    $fecha_nac = $_POST['fecha_nac'] ?? '2000-01-01';
-    $celular = trim($_POST['celular'] ?? '+56900000000');
-    $direccion = trim($_POST['direccion'] ?? 'Pendiente');
-    $pais = $_POST['pais'] ?? 'Chile';
-    $region = $_POST['region'] ?? 'Metropolitana';
-    $ciudad = $_POST['ciudad'] ?? 'Santiago';
-    $comuna = $_POST['comuna'] ?? 'Ñuñoa';
-    $habilidad = $_POST['habilidad'] ?? 'Intermedia';
-    $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : 1;
-
-    // Validaciones básicas
-    if ($password !== $password_confirm) throw new Exception('Contraseñas no coinciden');
-    if (strlen($password) < 6) throw new Exception('Contraseña muy corta');
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Email inválido');
-
-    // Verificar email duplicado
-    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-    $stmt_check->execute([$email]);
-    if ($stmt_check->fetch()) throw new Exception('Email ya registrado');
-
-    // 5. Preparar Hash y Código
-    $password_hash = password_hash($password, PASSWORD_DEFAULT);
-    $verification_code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
-    $modo_individual = empty($club_slug);
-    $id_club = null;
-
-    // Lógica Club (simplificada)
-    if (!$modo_individual) {
-        // Aquí iría tu lógica de buscar club por slug. 
-        // Si falla, lanzamos excepción o lo tratamos como individual.
-        // Por simplicidad en este debug, asumimos individual si no encontramos club válido rápido.
-        $id_club = null; 
-        $modo_individual = true; 
+    if ($password !== $password_confirm) {
+        throw new Exception('Las contraseñas no coinciden');
+    }
+    
+    if (strlen($password) < 6) {
+        throw new Exception('La contraseña debe tener al menos 6 caracteres');
     }
 
-    // 6. INSERTAR EN BD
-    $stmt_insert = $pdo->prepare("
-        INSERT INTO socios (
-            nombre, alias, fecha_nac, celular, email, direccion, pais, region, ciudad, comuna,
-            rol, genero, deporte, id_puesto, habilidad, activo, email_verified, verification_code,
-            es_responsable, datos_completos, password_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
-    ");
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception('Correo electrónico inválido');
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception('Correo electrónico inválido');
+    }
+
+    // === NUEVA VALIDACIÓN: VERIFICAR SI EL CORREO YA EXISTE ===
+    $stmt_check_email = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+    $stmt_check_email->execute([$email]);
     
-    $stmt_insert->execute([
-        $nombre, $alias, $fecha_nac, $celular, $email, $direccion, $pais, $region, $ciudad, $comuna,
-        $rol, $genero, $deporte, $id_puesto, $habilidad, $verification_code, $password_hash
+    if ($stmt_check_email->fetch()) {
+        // El correo ya existe
+        throw new Exception('Este correo electrónico ya está registrado. Por favor inicia sesión o recupera tu contraseña.');
+    }
+
+    // Lógica de club (solo si no es modo individual)
+    $id_club = null;
+    if (!$modo_individual) {
+        if (strlen($club_slug) !== 8 || !ctype_alnum($club_slug)) {
+            throw new Exception('Club no encontrado');
+        }
+
+        $stmt = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
+        $stmt->execute();
+        $clubs = $stmt->fetchAll();
+        
+        foreach ($clubs as $c) {
+            if (substr(md5($c['id_club'] . $c['email_responsable']), 0, 8) === $club_slug) {
+                $id_club = $c['id_club'];
+                break;
+            }
+        }
+        if (!$id_club) throw new Exception('Club no encontrado');
+
+        // Verificar duplicados en socio_club
+        $stmt = $pdo->prepare("
+            SELECT sc.id_socio 
+            FROM socio_club sc
+            JOIN socios s ON sc.id_socio = s.id_socio
+            WHERE s.email = ? AND sc.id_club = ?
+        ");
+        $stmt->execute([$email, $id_club]);
+        if ($stmt->fetch()) throw new Exception('Ya estás inscrito en este club');
+    }
+
+    // Validar fecha de nacimiento y edad mínima
+    if (!empty($fecha_nac)) {
+        $fecha_nac_obj = DateTime::createFromFormat('Y-m-d', $fecha_nac);
+        if (!$fecha_nac_obj || $fecha_nac_obj->format('Y-m-d') !== $fecha_nac) {
+            throw new Exception('Formato de fecha de nacimiento inválido');
+        }
+        
+        $hoy = new DateTime();
+        $edad = $hoy->diff($fecha_nac_obj)->y;
+        
+        if ($edad < 6) {
+            throw new Exception('La edad mínima para CanchaSport es de 6 años');
+        }
+    }
+
+    // === Manejar subida de foto ===
+    $foto_url = null;
+    if (!empty($_FILES['foto']['name'])) {
+        if ($_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('Error al subir la foto. Intenta con una imagen más pequeña.');
+        }
+
+        $upload_dir = __DIR__ . '/../uploads/socios/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+
+        $ext = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
+        $allowed_ext = ['jpg', 'jpeg', 'png', 'gif'];
+        if (!in_array(strtolower($ext), $allowed_ext)) {
+            throw new Exception('Formato de imagen no permitido. Usa JPG, PNG o GIF.');
+        }
+
+        $filename = 'socio_' . time() . '.' . strtolower($ext);
+        $filepath = $upload_dir . $filename;
+
+        if (move_uploaded_file($_FILES['foto']['tmp_name'], $filepath)) {
+            $foto_url = $filename;
+        } else {
+            throw new Exception('No se pudo guardar la imagen. Contacta al administrador.');
+        }
+    }
+
+    // Validar campos de ubicación
+    $pais = $_POST['pais'] ?? 'Chile';
+    $region = $_POST['region'] ?? null;
+    $ciudad = $_POST['ciudad'] ?? null;
+    $comuna = $_POST['comuna'] ?? null;
+
+    if ($region && (!$ciudad || !$comuna)) {
+        throw new Exception('Debes seleccionar región, ciudad y comuna completos');
+    }
+
+    // Hashear contraseña
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+
+    // Generar código de verificación
+    $verification_code = rand(1000, 9999);
+
+    // Insertar socio
+    $stmt = $pdo->prepare("
+    INSERT INTO socios (
+            nombre,
+            alias,
+            fecha_nac,
+            celular,
+            email,
+            direccion,
+            pais,
+            region,
+            ciudad,
+            comuna,
+            rol,
+            foto_url,
+            genero,
+            deporte,
+            id_puesto,
+            habilidad,
+            activo,
+            email_verified,
+            verification_code,
+            es_responsable,
+            datos_completos,
+            password_hash
+        ) VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            0,
+            ?,
+            0,
+            1,
+            ?
+        )
+    ");
+    $stmt->execute([
+        $nombre,
+        $alias,
+        !empty($fecha_nac) ? $fecha_nac : null,
+        !empty($celular) ? $celular : null,
+        $email,
+        !empty($direccion) ? $direccion : null,
+        $pais,
+        $region,
+        $ciudad,
+        $comuna,
+        $rol,
+        $foto_url,
+        $genero,
+        $deporte,
+        $id_puesto ?: null,
+        $habilidad ?: 'Básica',
+        'Si',
+        $verification_code,
+        $password_hash
     ]);
 
     $id_socio = $pdo->lastInsertId();
-    error_log("✅ Socio insertado ID: $id_socio");
-
-    // 7. ENVIAR CORREO
-    $mail_sent = false;
-    try {
-        require_once __DIR__ . '/../includes/brevo_mailer.php';
-        $mailer = new BrevoMailer();
-        $mailer->setTo($email, $nombre);
-        $mailer->setSubject('🔐 Tu código de verificación');
-        $mailer->setHtmlBody("<h1>Código: <b>$verification_code</b></h1><p>Activa tu cuenta.</p>");
-        
-        if ($mailer->send()) {
-            $mail_sent = true;
-            error_log("✅ Correo enviado");
-        } else {
-            error_log("⚠️ Brevo retornó false");
-        }
-    } catch (Exception $e_mail) {
-        error_log("❌ Error Mail: " . $e_mail->getMessage());
+    
+    if (!empty($_POST['torneo_slug'])) {
+        $_SESSION['torneo_slug_post_registro'] = $_POST['torneo_slug'];
     }
 
-    // 8. PREPARAR RESPUESTA EXITOSA
-    $final_response = [
-        'success' => true,
-        'id_socio' => intval($id_socio),
-        'verification_code' => $verification_code, // Opcional: para debug
-        'message' => 'Registro exitoso'
-    ];
-    http_response_code(200);
-
-} catch (Exception $e) {
-    // Manejo de Errores
-    error_log("💥 ERROR: " . $e->getMessage());
-    $final_response = [
-        'success' => false,
-        'message' => $e->getMessage()
-    ];
-    http_response_code(400);
+    // === CREAR RELACIÓN EN SOCIO_CLUB (si aplica) ===
+if (!$modo_individual && $id_club) {
+    $pdo->prepare("
+        INSERT INTO socio_club (id_socio, id_club, estado)
+        VALUES (?, ?, 'activo')
+    ")->execute([$id_socio, $id_club]);
 }
 
-// 9. SALIDA FINAL DIRECTA (SIN BUFFERS)
-// Imprimir JSON y morir inmediatamente.
-print(json_encode($final_response));
-exit;
+    // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
+    error_log("Iniciando envío de correo a: " . $email);
+    try {
+        require_once __DIR__ . '/../includes/brevo_mailer.php';
+        error_log("✓ BrevoMailer incluido correctamente");
+        
+        $mail = new BrevoMailer();
+        error_log("✓ Instancia de BrevoMailer creada");
+        
+        $mail->setTo($email, $nombre);
+        $mail->setSubject('🔐 Código de verificación - CanchaSport');
+
+        if ($modo_individual) {
+            $mail->setHtmlBody("
+                <h2>¡Bienvenido a CanchaSport!</h2>
+                <p>Tu código de verificación para activar tu cuenta es:</p>
+                <h1 style='color:#009966;'>{$verification_code}</h1>
+                <p>Ingresa este código en la página de verificación para completar tu registro.</p>
+                <p>¡Disfruta de CanchaSport!</p>
+            ");
+        } else {
+            // Obtener nombre del club
+            $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
+            $stmt->execute([$id_club]);
+            $club_nombre = $stmt->fetchColumn() ?: 'tu club';
+
+            $mail->setHtmlBody("
+                <h2>¡Bienvenido a CanchaSport!</h2>
+                <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
+                <h1 style='color:#009966;'>{$verification_code}</h1>
+                <p>Ingresa este código para confirmar tu inscripción.</p>
+                <p>El código tiene validez de medio tiempo sin alargue</p>
+            ");
+        }
+
+        error_log("Intentando enviar correo...");
+        $send_result = $mail->send();
+        
+        if (!$send_result) {
+            error_log("❌ ERROR: Fallo al enviar correo. Resultado: " . var_export($send_result, true));
+            throw new Exception('Error al enviar el correo de verificación');
+        } else {
+            error_log("✓ Correo enviado exitosamente a: " . $email);
+        }
+        
+    } catch (Exception $e) {
+        error_log("❌ EXCEPCIÓN en envío de correo: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        // No detenemos el flujo, pero registramos el error
+    }
+
+    $response_data = [
+        'success' => true,
+        'id_socio' => $id_socio,
+        'club_slug' => $club_slug,
+        'modo_individual' => $modo_individual
+    ];
+    // Limpiar cualquier output accidental
+    ob_end_clean();
+    // Si es modo reemplazo, guardar en sesión
+    if (!empty($_POST['torneo_reemplazo'])) {
+        $_SESSION['torneo_reemplazo_post_registro'] = $_POST['torneo_reemplazo'];
+        $_SESSION['id_pareja_reemplazo_post_registro'] = $_SESSION['id_pareja_reemplazo'] ?? null;
+    }
+    echo json_encode($response_data);
+    exit;
+
+} catch (Exception $e) {
+    error_log("Registro socio error: " . $e->getMessage());
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+?> 
