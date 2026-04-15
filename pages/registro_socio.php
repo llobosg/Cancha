@@ -223,12 +223,12 @@ $club_slug = $_GET['club'] ?? '';
                     <label class="input-label">Deporte Principal</label>
                     <select id="deporte" class="input" required onchange="actualizarCampoDeporte()">
                         <option value="" disabled selected>Seleccionar</option>
-                        <option value="futbol">Fútbol</option>
-                        <option value="futbolito">Futbolito</option>
-                        <option value="padel">Pádel</option>
-                        <option value="tenis">Tenis</option>
-                        <option value="voleyball">Vóleibol</option>
-                        <option value="otro">Otro</option>
+                        <option value="Fútbol">Fútbol</option>
+                        <option value="Futbolito">Futbolito</option>
+                        <option value="Pádel">Pádel</option>
+                        <option value="Tenis">Tenis</option>
+                        <option value="Vóleibol">Vóleibol</option>
+                        <option value="Otro">Otro</option>
                     </select>
                 </div>
                 <div class="input-group">
@@ -272,7 +272,6 @@ $club_slug = $_GET['club'] ?? '';
             <input type="hidden" id="comuna" value="Ñuñoa">
             <input type="hidden" id="direccion" value="Pendiente">
             <input type="hidden" id="habilidad" value="Intermedia">
-            <input type="hidden" name="deporte" value="Futbolito"> 
             <input type="hidden" name="id_puesto" value="1">
             <input type="hidden" name="celular" value="+56900000000"> 
 
@@ -369,7 +368,7 @@ $club_slug = $_GET['club'] ?? '';
             }
             // Resetear select visualmente
             select.value = ""; 
-        } else if (deporte === 'padel') {
+        } else if (deporte === 'Pádel') {
             // Cambiar a Niveles de Pádel
             label.textContent = "Nivel";
             select.innerHTML = `
