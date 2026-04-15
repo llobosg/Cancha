@@ -280,58 +280,71 @@
                 ->execute([$id_socio, $id_club]);
         }
 
-        // === ENVIAR CORREO (Sin try-catch anidado peligroso) ===
-        error_log("Iniciando envío de correo a: " . $email);
-        $correo_enviado = false;
+            // ... (Todo tu código anterior de validación e INSERT debe estar aquí arriba) ...
+    
+    // Asegurarnos de tener el ID
+    $id_socio = $pdo->lastInsertId(); 
 
-        try {
-            require_once __DIR__ . '/../includes/brevo_mailer.php';
-            $mail = new BrevoMailer();
-            $mail->setTo($email, $nombre);
-            $mail->setSubject('🔐 Código de verificación - CanchaSport');
+    // === ENVIAR CORREO (Lógica simplificada) ===
+    error_log("Iniciando envío de correo a: " . $email);
+    $mail_ok = false;
+    try {
+        require_once __DIR__ . '/../includes/brevo_mailer.php';
+        $mail = new BrevoMailer();
+        $mail->setTo($email, $nombre);
+        $mail->setSubject('🔐 Código de verificación - CanchaSport');
 
-            if ($modo_individual) {
-                $mail->setHtmlBody("<h2>¡Bienvenido!</h2><p>Tu código es: <b>{$verification_code}</b></p>");
-            } else {
-                $stmt_nom = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
-                $stmt_nom->execute([$id_club]);
-                $club_nombre = $stmt_nom->fetchColumn() ?: 'tu club';
-                $mail->setHtmlBody("<h2>¡Bienvenido a {$club_nombre}!</h2><p>Tu código es: <b>{$verification_code}</b></p>");
-            }
+        if ($modo_individual) {
+            $mail->setHtmlBody("
+                <h2>¡Bienvenido a CanchaSport!</h2>
+                <p>Tu código de verificación para activar tu cuenta es:</p>
+                <h1 style='color:#009966;'>{$verification_code}</h1>
+                <p>Ingresa este código en la página de verificación para completar tu registro.</p>
+                <p>¡Disfruta de CanchaSport!</p>
+            ");
+        } else {
+            // Obtener nombre del club
+            $stmt = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
+            $stmt->execute([$id_club]);
+            $club_nombre = $stmt->fetchColumn() ?: 'tu club';
 
-            if ($mail->send()) {
-                $correo_enviado = true;
-                error_log("✓ Correo enviado exitosamente.");
-            } else {
-                error_log("❌ Fallo al enviar correo (Brevo retornó false).");
-            }
-        } catch (Exception $mail_ex) {
-            error_log("❌ Excepción al enviar correo: " . $mail_ex->getMessage());
-            // No lanzamos excepción aquí para no bloquear el registro si el mail falla, 
-            // pero marcamos que no se envió.
+            $mail->setHtmlBody("
+                <h2>¡Bienvenido a CanchaSport!</h2>
+                <p>Tu código de inscripción para entrar a <strong>{$club_nombre}</strong> es:</p>
+                <h1 style='color:#009966;'>{$verification_code}</h1>
+                <p>Ingresa este código para confirmar tu inscripción.</p>
+                <p>El código tiene validez de medio tiempo sin alargue</p>
+            ");
         }
+    } catch (Exception $e) {
+        error_log("Error mail: " . $e->getMessage());
+    }
 
-        // === RESPUESTA JSON FINAL (CRÍTICO) ===
-        
-        // 1. Limpiar QUALQUIER buffer de salida previo (warnings, espacios, etc.)
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-
-        // 2. Preparar respuesta
-        $response_data = [
-            'success' => true,
-            'id_socio' => $id_socio,
-            'club_slug' => $club_slug,
-            'modo_individual' => $modo_individual,
-            'correo_enviado' => $correo_enviado,
-            'message' => 'Registro exitoso. Revisa tu correo.'
-        ];
-
-        // 3. Forzar cabecera y salir
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($response_data);
-        exit; // <--- DETENER EJECUCIÓN AQUÍ MISMO
+    // === SALIDA FORZADA DE JSON (TÉCNICA NUCLEAR) ===
+    
+    // 1. Matar cualquier buffer existente sin importar qué haya dentro
+    while (@ob_end_clean()); 
+    
+    // 2. Definir datos
+    $datos = [
+        'success' => true,
+        'id_socio' => intval($id_socio),
+        'message' => 'Código enviado',
+        'mail_status' => $mail_ok
+    ];
+    
+    // 3. Imprimir CABECERAS frescas
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+    
+    // 4. Imprimir JSON directamente
+    $json_str = json_encode($datos);
+    
+    // 5. Escribir en salida y MATAR PROCESO INMEDIATAMENTE
+    print($json_str);
+    flush(); 
+    die(); // Die es más agresivo que exit, asegurando que no se ejecute nada más después de esto
 
     } catch (Exception $e) {
         // Manejo de errores globales
