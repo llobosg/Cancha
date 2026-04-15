@@ -400,9 +400,9 @@ while ($row = $stmt_regiones->fetch()) {
             window.location.href = '/torneo_pair.php?slug=<?= $torneo_slug ?>&code=<?= $torneo_code ?>';
           <?php else: ?>
             if (data.club_slug && data.club_slug.trim() !== '') {
-              window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
+              window.location.href = 'verificar_codigo_socio.php?club=' + encodeURIComponent(data.club_slug);
             } else {
-              window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
+              window.location.href = 'verificar_codigo_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
             }
           <?php endif; ?>
         } else {
