@@ -1,4 +1,5 @@
 <?php
+error_log("🚨 [DEBUG] EL ARCHIVO login_email.php SE HA EJECUTADO A LAS " . date('H:i:s'));
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 

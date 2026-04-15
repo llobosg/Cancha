@@ -1,4 +1,5 @@
 <?php
+error_log("🚨 [DEBUG] EL ARCHIVO index.php SE HA EJECUTADO A LAS " . date('H:i:s'));
 session_start();
 // Procesar login alternativo - ACTUALIZADO PARA SOCIOS INDIVIDUALES Y CLUBES
 $error_login = '';
