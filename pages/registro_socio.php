@@ -211,7 +211,6 @@ while ($row = $stmt_regiones->fetch()) {
 
       <!-- Modo torneo: forzar valores -->
       <?php if ($modo_torneo): ?>
-        <input type="hidden" name="rol" value="Jugador">
         <input type="hidden" name="deporte" value="Pádel">
       <?php endif; ?>
 
