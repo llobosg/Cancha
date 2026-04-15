@@ -355,7 +355,7 @@ $club_slug = $_GET['club'] ?? '';
         const deporte = deporteSelect.value;
         const label = document.getElementById('label_puesto_nivel');
         const select = document.getElementById('puesto_nivel');
-        const deportesRestringidos = ['futbol', 'futbolito', 'voleyball'];
+        const deportesRestringidos = ['Fútbol', 'Futbolito', 'Vóleibol'];
 
         if (!label || !select) return;
 
@@ -509,43 +509,32 @@ $club_slug = $_GET['club'] ?? '';
     async function enviarCodigo(e) {
         e.preventDefault(); 
         
-        const deporteSelect = document.getElementById('deporte');
-        const deporte = deporteSelect ? deporteSelect.value : '';
+        const deporte = document.getElementById('deporte').value;
         
         if (!deporte) { showToast("Selecciona un deporte"); return; }
         
-        // Validación deportes restringidos (ajustada a tus valores reales del select)
-        // Tus opciones son "Fútbol", "Futbolito", etc. (con mayúscula)
         if (['Fútbol', 'Futbolito', 'Vóleibol'].includes(deporte)) {
             showToast("⚠️ Debes crear o unirte a un club para este deporte.");
             actualizarCampoDeporte(); 
             return;
         }
 
-        const passInput = document.getElementById('password');
-        const passConfInput = document.getElementById('password_confirm');
-        
-        if (!passInput || !passConfInput) { showToast("Error en el formulario"); return; }
-
-        const password = passInput.value;
-        const passConfirm = passConfInput.value;
+        const password = document.getElementById('password').value;
+        const passConfirm = document.getElementById('password_confirm').value;
 
         if (!passConfirm) { showToast("⚠️ Confirma tu contraseña"); return; }
         if (password !== passConfirm) { showToast("❌ Contraseñas no coinciden"); return; }
         if (password.length < 6) { showToast("❌ Mínimo 6 caracteres"); return; }
 
         const btn = document.getElementById('btnEnviar');
-        if (btn) { btn.innerHTML = 'Enviando...'; btn.disabled = true; }
+        btn.innerHTML = 'Enviando...';
+        btn.disabled = true;
 
-        // Construir FormData manualmente para asegurar que tomamos los valores correctos
         const formData = new FormData();
         formData.append('nombre', document.getElementById('nombre').value);
         formData.append('alias', document.getElementById('nombre').value.split(' ')[0]); 
         formData.append('genero', document.getElementById('genero').value);
-        
-        // USAR EL ID CORREGIDO 'celular_input'
         formData.append('celular', document.getElementById('celular_input').value); 
-        
         formData.append('email', document.getElementById('email').value);
         formData.append('deporte', deporte);
         formData.append('puesto', document.getElementById('puesto_nivel').value); 
@@ -562,141 +551,82 @@ $club_slug = $_GET['club'] ?? '';
         formData.append('club_slug', document.getElementById('club_slug').value);
 
         try {
-            const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-            
+            const response = await fetch('../api/enviar_codigo_socio.php', {
+                method: 'POST',
+                body: formData
+            });
+
             if (!response.ok) throw new Error('Error en la red');
-            
+
             const data = await response.json();
-            console.log("Respuesta API:", data); // Debug
 
             if (data.success) {
                 emailTemp = document.getElementById('email').value;
-                
-                // Actualizar modal
-                const verifyDisplay = document.getElementById('verify-email-display');
-                if (verifyDisplay) verifyDisplay.textContent = emailTemp;
 
-                // OCULTAR FORMULARIO Y MOSTRAR MODAL
-                const formCard = document.querySelector('#formRegistro'); 
-                // Si formCard es el form, su padre es .card. Si formCard es la card, úsalo directo.
-                // En tu HTML, <form id="formRegistro"> está DENTRO de <div class="card">
-                const containerToHide = formCard ? formCard.closest('.card') : null;
-                
-                const verifyModal = document.getElementById('verify-modal');
-                
-                if (containerToHide) {
-                    containerToHide.classList.add('hidden');
-                    console.log("✅ Formulario ocultado");
-                } else {
-                    console.error("❌ No se encontró el contenedor del formulario");
-                }
+                document.getElementById('verify-email-display').textContent = emailTemp;
 
-                if (verifyModal) {
-                    verifyModal.classList.remove('hidden');
-                    console.log("✅ Modal mostrado");
-                } else {
-                    console.error("❌ No se encontró el modal #verify-modal");
-                    alert("Registro exitoso, pero hubo un error mostrando la pantalla de verificación.");
-                }
-                
+                document.querySelector('#formRegistro').closest('.card').classList.add('hidden');
+                document.getElementById('verify-modal').classList.remove('hidden');
+
                 showToast("✅ Código enviado a " + emailTemp);
             } else {
                 showToast("❌ " + (data.message || 'Error desconocido'));
-                if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
+                btn.innerHTML = '🚀 Enviar Código de Verificación';
+                btn.disabled = false;
             }
 
-        catch (error) {
-            console.error("💥 Error:", error);
-            
-            // Intentar leer la respuesta cruda si existe
-            if (error.response) {
-                error.response.text().then(text => {
-                    console.log("📝 Respuesta CRUDA del servidor (NO JSON):", text);
-                    // Esto te dirá si es un warning de PHP como: Warning: ... in ...
-                });
-            }
-            
-            showToast("❌ Error de conexión. Revisa consola.");
-            if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
-            }
+        } catch (error) {
+            console.error(error);
+            showToast("❌ Error de conexión");
+            btn.innerHTML = '🚀 Enviar Código de Verificación';
+            btn.disabled = false;
         }
-    }    
+    }  
 
     // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA) ===
     async function validarYRegistrar() {
-        console.log("🔥 [DEBUG] Iniciando validación...");
-        
-        const codigoInput = document.getElementById('codigo_verificacion');
-        if (!codigoInput) return;
-        
-        const codigo = codigoInput.value.trim();
-        
-        // CORRECCIÓN 1: Validar 4 dígitos (no 6)
+        const codigo = document.getElementById('codigo_verificacion').value.trim();
+
         if (codigo.length !== 4 || !/^\d{4}$/.test(codigo)) { 
             showToast("Ingresa el código de 4 dígitos"); 
             return; 
         }
 
         const btn = document.querySelector('#verify-modal .btn');
-        if (btn) {
-            btn.innerHTML = 'Activando...';
-            btn.disabled = true;
-        }
-
-        // CORRECCIÓN 2: Preparar datos como JSON (no FormData)
-        // El backend espera: { "codigo": "1234" }
-        const payload = {
-            codigo: codigo
-        };
+        btn.innerHTML = 'Activando...';
+        btn.disabled = true;
 
         try {
-            // CORRECCIÓN 3: Apuntar al archivo existente 'verificar_codigo_socio.php'
             const response = await fetch('../api/verificar_codigo_socio.php', { 
                 method: 'POST', 
-                headers: {
-                    'Content-Type': 'application/json' // Importante para que PHP lo lea como JSON
-                },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo })
             });
 
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
-            }
+            if (!response.ok) throw new Error('Error HTTP');
 
             const data = await response.json();
-            console.log("Respuesta Verificación:", data);
 
             if (data.success) {
-                showToast("¡Cuenta activada! Redirigiendo...");
-                
-                // Lógica de redirección según respuesta del servidor
-                if (data.torneo_slug) {
-                    setTimeout(() => window.location.href = `/torneo.php?slug=${data.torneo_slug}`, 1500);
-                } else if (data.club_slug) {
-                    setTimeout(() => window.location.href = `dashboard_socio.php?id_club=${data.club_slug}`, 1500);
-                } else {
-                    // Si no hay contexto especial, ir al login o dashboard general
-                    setTimeout(() => window.location.href = '../index.php', 1500);
-                }
+                showToast("¡Cuenta activada!");
+
+                setTimeout(() => {
+                    window.location.href = data.club_slug 
+                        ? `dashboard_socio.php?id_club=${data.club_slug}`
+                        : '../index.php';
+                }, 1500);
+
             } else {
                 showToast("❌ " + (data.message || 'Código inválido'));
-                if (btn) {
-                    btn.innerHTML = '✅ Activar Cuenta';
-                    btn.disabled = false;
-                }
+                btn.innerHTML = '✅ Activar Cuenta';
+                btn.disabled = false;
             }
-        catch (error) {
-            console.error("💥 Error:", error);
-        
-            // Intentar leer la respuesta cruda si existe
-            if (error.response) {
-                error.response.text().then(text => {
-                    console.log("📝 Respuesta CRUDA del servidor (NO JSON):", text);
-                    // Esto te dirá si es un warning de PHP como: Warning: ... in ...
-                });
-            }
-            
-            showToast("❌ Error de conexión. Revisa consola.");
+
+        } catch (error) {
+            console.error(error);
+            showToast("❌ Error de conexión");
+            btn.innerHTML = '✅ Activar Cuenta';
+            btn.disabled = false;
         }
     }
 
