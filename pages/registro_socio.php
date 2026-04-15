@@ -209,7 +209,7 @@ $club_slug = $_GET['club'] ?? '';
             <div class="form-grid">
                 <div class="input-group">
                     <label class="input-label">Celular</label>
-                    <input type="tel" id="celular" class="input" placeholder="+56 9..." required autocomplete="tel">
+                    <input type="tel" id="celular_input" class="input" placeholder="+56 9..." required autocomplete="tel">
                 </div>
                 <div class="input-group">
                     <label class="input-label">Correo</label>
@@ -273,7 +273,7 @@ $club_slug = $_GET['club'] ?? '';
             <input type="hidden" id="direccion" value="Pendiente">
             <input type="hidden" id="habilidad" value="Intermedia">
             <input type="hidden" name="id_puesto" value="1">
-            <input type="hidden" name="celular" value="+56900000000"> 
+            <input type="hidden" name="celular_hidden" value="+56900000000"> 
 
             <button type="submit" class="btn" id="btnEnviar">🚀 Enviar Código de Verificación</button>
             
@@ -505,67 +505,52 @@ $club_slug = $_GET['club'] ?? '';
         }
     }
 
-    // === FUNCIÓN 7: Enviar Código (Registro Principal) ===
+    // === FUNCIÓN 7: Enviar Código (Registro Principal) - CORREGIDA ===
     async function enviarCodigo(e) {
-        e.preventDefault(); // Evita recarga
+        e.preventDefault(); 
         
         const deporteSelect = document.getElementById('deporte');
         const deporte = deporteSelect ? deporteSelect.value : '';
         
-        if (!deporte) { 
-            showToast("Selecciona un deporte"); 
-            return; 
-        }
+        if (!deporte) { showToast("Selecciona un deporte"); return; }
         
-        // Validación específica para deportes restringidos
-        if (['futbol', 'futbolito', 'voleyball'].includes(deporte)) {
+        // Validación deportes restringidos (ajustada a tus valores reales del select)
+        // Tus opciones son "Fútbol", "Futbolito", etc. (con mayúscula)
+        if (['Fútbol', 'Futbolito', 'Vóleibol'].includes(deporte)) {
             showToast("⚠️ Debes crear o unirte a un club para este deporte.");
-            actualizarCampoDeporte(); // Reabre modal
+            actualizarCampoDeporte(); 
             return;
         }
 
         const passInput = document.getElementById('password');
         const passConfInput = document.getElementById('password_confirm');
         
-        if (!passInput || !passConfInput) {
-            showToast("Error en el formulario");
-            return;
-        }
+        if (!passInput || !passConfInput) { showToast("Error en el formulario"); return; }
 
         const password = passInput.value;
         const passConfirm = passConfInput.value;
 
-        if (!passConfirm) {
-            showToast("⚠️ Por favor confirma tu contraseña");
-            return;
-        }
-
-        if (password !== passConfirm) {
-            showToast("❌ Las contraseñas no coinciden");
-            return;
-        }
-        
-        if (password.length < 6) {
-            showToast("❌ La contraseña debe tener al menos 6 caracteres");
-            return;
-        }
+        if (!passConfirm) { showToast("⚠️ Confirma tu contraseña"); return; }
+        if (password !== passConfirm) { showToast("❌ Contraseñas no coinciden"); return; }
+        if (password.length < 6) { showToast("❌ Mínimo 6 caracteres"); return; }
 
         const btn = document.getElementById('btnEnviar');
-        if (btn) {
-            btn.innerHTML = 'Enviando...';
-            btn.disabled = true;
-        }
+        if (btn) { btn.innerHTML = 'Enviando...'; btn.disabled = true; }
 
+        // Construir FormData manualmente para asegurar que tomamos los valores correctos
         const formData = new FormData();
         formData.append('nombre', document.getElementById('nombre').value);
         formData.append('alias', document.getElementById('nombre').value.split(' ')[0]); 
         formData.append('genero', document.getElementById('genero').value);
-        formData.append('celular', document.getElementById('celular').value);
+        
+        // USAR EL ID CORREGIDO 'celular_input'
+        formData.append('celular', document.getElementById('celular_input').value); 
+        
         formData.append('email', document.getElementById('email').value);
         formData.append('deporte', deporte);
         formData.append('puesto', document.getElementById('puesto_nivel').value); 
         formData.append('password', password);
-        formData.append('password_confirm', passConfirm); // Asegurado
+        formData.append('password_confirm', passConfirm);
         formData.append('rol', 'Jugador');
         formData.append('fecha_nac', '2000-01-01');
         formData.append('pais', 'Chile');
@@ -578,34 +563,52 @@ $club_slug = $_GET['club'] ?? '';
 
         try {
             const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
+            
+            if (!response.ok) throw new Error('Error en la red');
+            
             const data = await response.json();
+            console.log("Respuesta API:", data); // Debug
 
             if (data.success) {
                 emailTemp = document.getElementById('email').value;
+                
+                // Actualizar modal
                 const verifyDisplay = document.getElementById('verify-email-display');
                 if (verifyDisplay) verifyDisplay.textContent = emailTemp;
 
-                const formCard = document.getElementById('formRegistro').closest('.card');
+                // OCULTAR FORMULARIO Y MOSTRAR MODAL
+                const formCard = document.querySelector('#formRegistro'); 
+                // Si formCard es el form, su padre es .card. Si formCard es la card, úsalo directo.
+                // En tu HTML, <form id="formRegistro"> está DENTRO de <div class="card">
+                const containerToHide = formCard ? formCard.closest('.card') : null;
+                
                 const verifyModal = document.getElementById('verify-modal');
                 
-                if (formCard) formCard.classList.add('hidden');
-                if (verifyModal) verifyModal.classList.remove('hidden');
-                
-                showToast("✅ Código enviado");
-            } else {
-                showToast("❌ " + data.message);
-                if (btn) {
-                    btn.innerHTML = '🚀 Enviar Código de Verificación';
-                    btn.disabled = false;
+                if (containerToHide) {
+                    containerToHide.classList.add('hidden');
+                    console.log("✅ Formulario ocultado");
+                } else {
+                    console.error("❌ No se encontró el contenedor del formulario");
                 }
+
+                if (verifyModal) {
+                    verifyModal.classList.remove('hidden');
+                    console.log("✅ Modal mostrado");
+                } else {
+                    console.error("❌ No se encontró el modal #verify-modal");
+                    alert("Registro exitoso, pero hubo un error mostrando la pantalla de verificación.");
+                }
+                
+                showToast("✅ Código enviado a " + emailTemp);
+            } else {
+                showToast("❌ " + (data.message || 'Error desconocido'));
+                if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
             }
+
         } catch (error) {
-            console.error(error);
+            console.error("💥 Error:", error);
             showToast("❌ Error de conexión");
-            if (btn) {
-                btn.innerHTML = '🚀 Enviar Código de Verificación';
-                btn.disabled = false;
-            }
+            if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
         }
     }
 
