@@ -554,9 +554,20 @@ $club_slug = $_GET['club'] ?? '';
             return;
         }
 
-        try {
-            const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-            data = await response.json();
+            const response = await fetch('../api/enviar_codigo_socio.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            let data;
+
+            try {
+                data = await response.json(); // ✅ SOLO UNA VEZ
+            } catch (e) {
+                console.error("Respuesta no es JSON");
+                showToast("❌ Error servidor (no JSON)");
+                return;
+            }
 
             if (!response.ok) {
                 console.error("ERROR BACKEND:", data);
@@ -565,9 +576,6 @@ $club_slug = $_GET['club'] ?? '';
                 btn.disabled = false;
                 return;
             }
-            
-            data = await response.json();
-            console.log("Respuesta API:", data);
 
             if (data.success) {
                 emailTemp = document.getElementById('email').value;
@@ -584,15 +592,7 @@ $club_slug = $_GET['club'] ?? '';
                     console.log("✅ Modal mostrado");
                 }
                 showToast("✅ Código enviado");
-            } else {
-                showToast("❌ " + (data.message || 'Error'));
-                if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
             }
-        } catch (error) { // <--- AQUÍ ESTABA EL ERROR DE SINTAXIS (Faltaba cerrar try antes)
-            console.error("💥 Error:", error);
-            showToast("❌ Error de conexión");
-            if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
-        }
     }    
 
     // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA: Llave faltante arreglada) ===

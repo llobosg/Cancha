@@ -50,9 +50,9 @@ try {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Email inválido');
 
     // Verificar email duplicado
-    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-    $stmt_check->execute([$email]);
-    if ($stmt_check->fetch()) throw new Exception('Email ya registrado');
+    //$stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+    //$stmt_check->execute([$email]);
+    //if ($stmt_check->fetch()) throw new Exception('Email ya registrado');
 
     // 5. Preparar Hash y Código
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
