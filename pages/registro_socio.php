@@ -474,7 +474,7 @@ $club_slug = $_GET['club'] ?? '';
             const res = await fetch('../api/solicitar_union_club.php', { method: 'POST', body: formData });
             const data = await res.json();
 
-            if (data.success) {
+            if (datasu.success) {
                 showToast("✅ Solicitud enviada.");
                 document.getElementById('modalListaClubes').classList.add('hidden');
             } else {
@@ -556,7 +556,7 @@ $club_slug = $_GET['club'] ?? '';
 
         try {
             const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-            const data = await response.json();
+            data = await response.json();
 
             if (!response.ok) {
                 console.error("ERROR BACKEND:", data);
@@ -566,7 +566,7 @@ $club_slug = $_GET['club'] ?? '';
                 return;
             }
             
-            const data = await response.json();
+            data = await response.json();
             console.log("Respuesta API:", data);
 
             if (data.success) {
@@ -623,7 +623,7 @@ $club_slug = $_GET['club'] ?? '';
 
             if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
-            const data = await response.json();
+            data = await response.json();
             console.log("Respuesta Verificación:", data);
 
             if (data.success) {
