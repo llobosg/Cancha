@@ -612,7 +612,7 @@ $club_slug = $_GET['club'] ?? '';
         }
     }
 
-        // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA) ===
+    // === FUNCIÓN 8: Validar y Registrar Final (CORREGIDA) ===
     async function validarYRegistrar() {
         console.log("🔥 [DEBUG] Iniciando validación...");
         
