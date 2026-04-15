@@ -44,18 +44,6 @@ try {
     if (!$stmt_check->fetch()) {
         throw new Exception('Deporte no válido para este tipo de registro');
     }
-
-    // Definir otras variables
-    $nombre = trim($_POST['nombre']);
-    $alias = trim($_POST['alias']);
-    $email = trim($_POST['email']);
-    $genero = $_POST['genero'];
-    $rol = $_POST['rol'];
-    $fecha_nac = $_POST['fecha_nac'] ?? null;
-    $celular = trim($_POST['celular'] ?? '');
-    $direccion = trim($_POST['direccion'] ?? '');
-    $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : null;
-    $habilidad = $_POST['habilidad'] ?? null;
     
     // Validar contraseña
     $password = $_POST['password'];
@@ -162,7 +150,7 @@ try {
     $alias = trim($_POST['alias']);
     $email = trim($_POST['email']);
     $genero = $_POST['genero'];
-    $rol = $_POST['rol'];
+    $rol = $_POST['rol'] ?? 'Jugador'; // Rol por defecto para modo individual
     $deporte = $_POST['deporte'];
     $password = $_POST['password'];
     $password_confirm = $_POST['password_confirm'];
