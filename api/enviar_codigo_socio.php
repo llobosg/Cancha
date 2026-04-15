@@ -157,6 +157,28 @@ try {
     // Generar código de verificación
     $verification_code = rand(1000, 9999);
 
+    // 4. Recoger Datos
+    $nombre = trim($_POST['nombre']);
+    $alias = trim($_POST['alias']);
+    $email = trim($_POST['email']);
+    $genero = $_POST['genero'];
+    $rol = $_POST['rol'];
+    $deporte = $_POST['deporte'];
+    $password = $_POST['password'];
+    $password_confirm = $_POST['password_confirm'];
+    $club_slug = $_POST['club_slug'] ?? '';
+    
+    // Datos con defaults
+    $fecha_nac = $_POST['fecha_nac'] ?? '2000-01-01';
+    $celular = trim($_POST['celular'] ?? '+56900000000');
+    $direccion = trim($_POST['direccion'] ?? 'Pendiente');
+    $pais = $_POST['pais'] ?? 'Chile';
+    $region = $_POST['region'] ?? 'Metropolitana';
+    $ciudad = $_POST['ciudad'] ?? 'Santiago';
+    $comuna = $_POST['comuna'] ?? 'Ñuñoa';
+    $habilidad = $_POST['habilidad'] ?? 'Intermedia';
+    $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : 1;
+
     // 6. INSERTAR EN BD
     $stmt_insert = $pdo->prepare("
         INSERT INTO socios (
