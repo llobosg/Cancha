@@ -57,9 +57,9 @@ try {
         throw new Exception('La contraseña debe tener al menos 6 caracteres');
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new Exception('Correo electrónico inválido');
-    }
+    //if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    //    throw new Exception('Correo electrónico inválido');
+    //}
 
     // Lógica de club (solo si no es modo individual)
     $id_club = null;
