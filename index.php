@@ -1,101 +1,81 @@
 <?php
-error_log("🚨 [DEBUG] EL ARCHIVO index.php SE HA EJECUTADO A LAS " . date('H:i:s'));
+// index.php - Versión Limpia y Depurada
+error_log("🚨 [DEBUG] INDEX.PHP INICIADO A LAS " . date('H:i:s'));
 session_start();
-// Procesar login alternativo - ACTUALIZADO PARA SOCIOS INDIVIDUALES Y CLUBES
 
-// Procesar login - Simplificado y Robusto
 $error_login = '';
 
-// Verificamos si hay POST y si existen los campos de email/password (independiente del nombre 'login_alternativo')
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['email']) && !empty($_POST['password'])) {
-    error_log("🔥 [LOGIN] BLOQUE POST DETECTADO EN INDEX.PHP");
+// LÓGICA DE LOGIN UNIFICADA
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    error_log(" [LOGIN] POST RECIBIDO EN INDEX.PHP");
     
-    $email = trim($_POST['email']); // Ajusta si tu HTML usa 'email_alt'
-    $password = $_POST['password']; // Ajusta si tu HTML usa 'password_alt'
+    // Obtener datos (soporta ambos nombres por seguridad)
+    $email = trim($_POST['email'] ?? $_POST['email_alt'] ?? '');
+    $password = $_POST['password'] ?? $_POST['password_alt'] ?? '';
 
-    // Si tu HTML usa 'email_alt', cambia la línea de arriba por:
-    // $email = trim($_POST['email_alt'] ?? '');
-    // $password = $_POST['password_alt'] ?? '';
-    
+    error_log("📧 Email detectado: " . ($email ?: 'VACÍO'));
+    error_log("🔑 Pass detectada: " . ($password ? '[OK]' : 'VACÍA'));
+
     if (empty($email) || empty($password)) {
         $error_login = 'Email y contraseña son requeridos';
+        error_log("❌ Campos vacíos");
     } else {
         require_once __DIR__ . '/includes/config.php';
         
-        error_log("📧 Email recibido: " . $email);
-        
-        // Buscar socio
-        $stmt = $pdo->prepare("
-            SELECT id_socio, password_hash, email, nombre, es_responsable, datos_completos, activo
-            FROM socios 
-            WHERE email = ? AND password_hash IS NOT NULL AND activo = 'Si'
-            LIMIT 1
-        ");
-        $stmt->execute([$email]);
-        $socio = $stmt->fetch();
+        try {
+            // Buscar usuario
+            $stmt = $pdo->prepare("SELECT id_socio, password_hash, nombre, es_responsable, datos_completos, activo FROM socios WHERE email = ? AND activo = 'Si' LIMIT 1");
+            $stmt->execute([$email]);
+            $socio = $stmt->fetch();
 
-        if (!$socio) {
-            error_log("❌ [LOGIN] Usuario NO encontrado: " . $email);
-            $error_login = 'Usuario no encontrado o inactivo';
-        } elseif (password_verify($password, $socio['password_hash'])) {
-            error_log("✅ [LOGIN] Contraseña CORRECTA para ID: " . $socio['id_socio']);
-            
-            // Login exitoso
-            if (session_status() === PHP_SESSION_NONE) session_start();
-            
-            $_SESSION['id_socio'] = $socio['id_socio'];
-            $_SESSION['user_email'] = $email;
-            $_SESSION['nombre'] = $socio['nombre'];
-            $_SESSION['es_responsable'] = $socio['es_responsable'];
-            
-            // Forzar cookie de respaldo
-            setcookie('cancha_session_id', session_id(), [
-                'expires' => time() + 86400,
-                'path' => '/',
-                'secure' => isset($_SERVER['HTTPS']),
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
-
-            // Verificar club
-            $stmt_clubes = $pdo->prepare("
-                SELECT c.id_club, c.email_responsable
-                FROM socio_club sc
-                JOIN clubs c ON sc.id_club = c.id_club
-                WHERE sc.id_socio = ? AND sc.estado = 'activo'
-                LIMIT 1
-            ");
-            $stmt_clubes->execute([$socio['id_socio']]);
-            $primer_club = $stmt_clubes->fetch();
-
-            if ($primer_club) {
-                $club_slug = substr(md5($primer_club['id_club'] . $primer_club['email_responsable']), 0, 8);
-                $_SESSION['club_id'] = $primer_club['id_club'];
-                $_SESSION['current_club'] = $club_slug;
+            if (!$socio) {
+                error_log("❌ Usuario NO encontrado: " . $email);
+                $error_login = 'Usuario no encontrado o inactivo';
+            } elseif (password_verify($password, $socio['password_hash'])) {
+                error_log("✅ CONTRASEÑA CORRECTA para ID: " . $socio['id_socio']);
                 
-                error_log("🏟️ [LOGIN] Club encontrado: " . $club_slug);
+                // Iniciar Sesión
+                $_SESSION['id_socio'] = $socio['id_socio'];
+                $_SESSION['user_email'] = $email;
+                $_SESSION['nombre'] = $socio['nombre'];
+                $_SESSION['es_responsable'] = $socio['es_responsable'];
                 
-                // Redirección según estado de perfil
-                if ($socio['datos_completos'] == 0) {
-                    error_log("➡️ [LOGIN] Redirigiendo a COMPLETAR PERFIL");
-                    header('Location: pages/completar_perfil.php?first_time=1');
+                // Buscar Club
+                $stmt_club = $pdo->prepare("SELECT c.id_club, c.email_responsable FROM socio_club sc JOIN clubs c ON sc.id_club = c.id_club WHERE sc.id_socio = ? AND sc.estado = 'activo' LIMIT 1");
+                $stmt_club->execute([$socio['id_socio']]);
+                $club = $stmt_club->fetch();
+
+                if ($club) {
+                    $slug = substr(md5($club['id_club'] . $club['email_responsable']), 0, 8);
+                    $_SESSION['club_id'] = $club['id_club'];
+                    $_SESSION['current_club'] = $slug;
+                    error_log("🏟️ Club encontrado: $slug");
+                    
+                    // Redirección
+                    if ($socio['datos_completos'] == 0) {
+                        header('Location: pages/completar_perfil.php?first_time=1');
+                    } else {
+                        header('Location: pages/dashboard_socio.php?id_club=' . $slug);
+                    }
+                    exit;
                 } else {
-                    error_log("➡️ [LOGIN] Redirigiendo a DASHBOARD");
-                    header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
+                    error_log("️ Sin club asociado");
+                    header('Location: pages/dashboard_socio.php');
+                    exit;
                 }
-                exit;
             } else {
-                error_log("⚠️ [LOGIN] Sin club, redirigiendo a Dashboard Individual");
-                header('Location: pages/dashboard_socio.php');
-                exit;
+                error_log("❌ Contraseña INCORRECTA");
+                $error_login = 'Credenciales incorrectas';
             }
-        } else {
-            error_log("❌ [LOGIN] Contraseña INCORRECTA");
-            $error_login = 'Credenciales incorrectas';
+        } catch (Exception $e) {
+            error_log("💥 ERROR: " . $e->getMessage());
+            $error_login = 'Error interno';
         }
     }
 }
-$show_splash = !isset($_SESSION['visited_index']) || $_SESSION['visited_index'] === false;
+
+// Variable para mostrar splash screen (opcional)
+$show_splash = !isset($_SESSION['visited_index']);
 $_SESSION['visited_index'] = true;
 ?>
 <!DOCTYPE html>
@@ -815,35 +795,19 @@ $_SESSION['visited_index'] = true;
     </div>
   <?php endif; ?>
   
-  <form method="POST" style="display: flex; flex-direction: column; gap: 1.5rem;">
-    <div>
-      <label for="email_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Email *</label>
-      <input type="email" id="email_alt" name="email_alt" required 
-            style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-    </div>
-    
-    <div>
-      <label for="password_alt" style="display: block; font-weight: bold; color: white; margin-bottom: 0.6rem; text-align: left; font-size: 0.95rem;">Contraseña *</label>
-      <input type="password" id="password_alt" name="password_alt" required 
-            style="width: 100%; padding: 0.9rem; border: 2px solid #ccc; border-radius: 8px; color: #071289; font-size: 1rem; background: white;">
-    </div>
-    
-    <button type="submit" name="login_alternativo" 
-            style="padding: 1rem; background: #071289; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 0.5rem; transition: background 0.3s;">
-      Iniciar Sesión
-    </button>
-    
-    <div style="text-align: center; margin-top: 1rem;">
-      <a href="#" onclick="mostrarRecuperarPassword(); return false;" 
-         style="color: #FFD700; text-decoration: underline; font-size: 0.9rem;">
-        ¿Olvidaste tu contraseña?
-      </a>
-    </div>
-    
-    <button type="button" onclick="toggleLoginAlternativo()" 
-            style="padding: 0.5rem; background: #666; color: white; border: none; border-radius: 4px; font-size: 0.9rem;">
-      Cerrar
-    </button>
+  <form method="POST">
+        <?php if($error_login): ?>
+            <p style="color:red;"><?= $error_login ?></p>
+        <?php endif; ?>
+        
+        <label>Email:</label>
+        <!-- NOMBRES CLAVE: 'email' y 'password' -->
+        <input type="email" name="email" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+        
+        <label>Contraseña:</label>
+        <input type="password" name="password" required>
+        
+        <button type="submit">Iniciar Sesión</button>
   </form>
 </div>
 
