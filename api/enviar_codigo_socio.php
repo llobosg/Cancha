@@ -8,15 +8,59 @@ error_reporting(0);
 require_once __DIR__ . '/../includes/config.php';
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception('Método no permitido');
+    // 1. Validar Método
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {throw new Exception('Método no permitido');}
 
-    // Validar campos básicos
+    // 2. Logs de Debug (Solo en servidor, no afecta output)
+    error_log(" [DEBUG] Inicio proceso registro");
+
+    // 3. Validar Campos Obligatorios
     $required = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
-    foreach ($required as $f) {
-        if (empty($_POST[$f])) throw new Exception("Falta campo: $f");
+    foreach ($required as $field) {
+        if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
+            throw new Exception("Falta campo obligatorio: $field");
+        }
     }
 
+    // 4. Recoger Datos
+    $nombre = trim($_POST['nombre']);
+    $alias = trim($_POST['alias']);
     $email = trim($_POST['email']);
+    $genero = $_POST['genero'] ?? 'Masculino';
+    $rol = $_POST['rol'] ?? 'Jugador';
+    $deporte = $_POST['deporte'] ?? 'Pádel';
+    $password = $_POST['password'];
+    $password_confirm = $_POST['password_confirm'];
+    $club_slug = $_POST['club_slug'] ?? '';
+    
+    // Datos con defaults
+    $fecha_nac = $_POST['fecha_nac'] ?? '2000-01-01';
+    $celular = trim($_POST['celular'] ?? '+56900000000');
+    $direccion = trim($_POST['direccion'] ?? 'Pendiente');
+    $pais = $_POST['pais'] ?? 'Chile';
+    $region = $_POST['region'] ?? 'Metropolitana';
+    $ciudad = $_POST['ciudad'] ?? 'Santiago';
+    $comuna = $_POST['comuna'] ?? 'Ñuñoa';
+    $habilidad = $_POST['habilidad'] ?? 'Intermedia';
+    $id_puesto = !empty($_POST['id_puesto']) ? (int)$_POST['id_puesto'] : 1;
+
+    // Validaciones básicas
+    if ($password !== $password_confirm) throw new Exception('Contraseñas no coinciden');
+    if (strlen($password) < 6) throw new Exception('Contraseña muy corta');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Email inválido');
+
+    // Verificar email duplicado
+    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+    $stmt_check->execute([$email]);
+    if ($stmt_check->fetch()) throw new Exception('Email ya registrado');
+
+    // 5. Preparar Hash y Código
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+    $verification_code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+    $modo_individual = empty($club_slug);
+    $id_club = null;
+
+     // Verificar contraseña y email
     $pass = $_POST['password'];
     $passConf = $_POST['password_confirm'];
 

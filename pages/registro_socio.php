@@ -197,7 +197,7 @@ $club_slug = $_GET['club'] ?? '';
                 <div class="input-group">
                     <label class="input-label">Género</label>
                     <select id="genero" class="input" required>
-                        <option value="" disabled selected>...</option>
+                        <option value="selected">...</option>
                         <option value="masculino">Masculino</option>
                         <option value="femenino">Femenino</option>
                         <option value="otro">Otro</option>
@@ -521,7 +521,7 @@ $club_slug = $_GET['club'] ?? '';
 
         const formData = new FormData();
         formData.append('nombre', document.getElementById('nombre').value);
-        formData.append('alias', document.getElementById('nombre').value.split(' ')[0]); 
+        
         formData.append('genero', document.getElementById('genero').value);
         formData.append('celular', document.getElementById('celular_input').value); 
         formData.append('email', document.getElementById('email').value);
@@ -539,9 +539,32 @@ $club_slug = $_GET['club'] ?? '';
         formData.append('habilidad', 'Intermedia');
         formData.append('club_slug', document.getElementById('club_slug').value);
 
+        const nombre = document.getElementById('nombre').value.trim();
+        if (!nombre) {
+            showToast("Ingresa tu nombre");
+            return;
+        }
+
+        formData.append('nombre', nombre);
+        formData.append('alias', nombre.split(' ')[0]);
+
+        const genero = document.getElementById('genero').value;
+        if (!genero) {
+            showToast("Selecciona género");
+            return;
+        }
+
         try {
             const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-            if (!response.ok) throw new Error('Error en la red');
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error("ERROR BACKEND:", data);
+                showToast(data.message || "Error servidor");
+                btn.innerHTML = '🚀 Enviar Código de Verificación';
+                btn.disabled = false;
+                return;
+            }
             
             const data = await response.json();
             console.log("Respuesta API:", data);
