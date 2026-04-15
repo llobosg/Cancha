@@ -967,7 +967,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
         <div class="dashboard-lower" style="margin-top: 8rem;">
                 <h3>Detalle Eventos</h3>
                 <!-- Filtros -->
-                <button class="filter-btn" data-filter="inscritos">Inscritos Próximo futbolito</button>
+                <button class="filter-btn" data-filter="inscritos">Inscritos Próximo Evento</button>
                 <button class="filter-btn" data-filter="torneos">Americanos</button>
                 <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
                     <button class="filter-btn" data-filter="equipos">Equipos IA</button>
