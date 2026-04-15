@@ -931,7 +931,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
                 <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
                 <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
-                <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
+                <!-- <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button> -->
                 
                 <?php if ($pareja_activa): ?>
                     <button class="btn-action" style="background:#FF9800;" onclick="reemplazarCompanero(<?= $pareja_activa['id_pareja'] ?>)">➕ Reemplazar compañero</button>

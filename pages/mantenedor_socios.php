@@ -38,7 +38,11 @@ if (!$modo_individual && isset($_GET['id_socio'])) {
     }
     // Si es responsable, permitir editar cualquier socio del club
     elseif (!empty($socio_logueado) && isset($socio_logueado['es_responsable']) && $socio_logueado['es_responsable'] == 1) {
-        $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ? AND id_club = ?");
+        $stmt_check = $pdo->prepare("
+            SELECT sc.id_socio 
+            FROM socio_club sc 
+            WHERE sc.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+        ");
         $stmt_check->execute([$id_socio_request, $_SESSION['club_id']]);
         if ($row = $stmt_check->fetch()) {
             $id_socio_a_editar = $row['id_socio'];
@@ -52,11 +56,18 @@ if (!$modo_individual && isset($_GET['id_socio'])) {
 }
 
 // Cargar datos del socio a editar
-$stmt_edit = $pdo->prepare("SELECT s.*, c.nombre as club_nombre, p.puesto as puesto_nombre 
-                           FROM socios s 
-                           LEFT JOIN clubs c ON s.id_club = c.id_club 
-                           LEFT JOIN puestos p ON s.id_puesto = p.id_puesto 
-                           WHERE s.id_socio = ?");
+$stmt_edit = $pdo->prepare("
+    SELECT s.*, 
+           c.nombre as club_nombre, 
+           p.puesto as puesto_nombre,
+           sc.id_club as id_club_asociado
+    FROM socios s 
+    LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+    LEFT JOIN clubs c ON sc.id_club = c.id_club 
+    LEFT JOIN puestos p ON s.id_puesto = p.id_puesto 
+    WHERE s.id_socio = ?
+    LIMIT 1
+");
 $stmt_edit->execute([$id_socio_a_editar]);
 $socio_editar = $stmt_edit->fetch();
 
