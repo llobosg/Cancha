@@ -1,678 +1,509 @@
 <?php
-// pages/registro_socio_v2.php
-session_start();
 require_once __DIR__ . '/../includes/config.php';
 
-if (isset($_SESSION['id_socio'])) {
-    header('Location: dashboard_socio.php');
-    exit;
+// Evitar problemas de headers
+ob_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-$club_slug = $_GET['club'] ?? '';
+// === DETECTAR MODO TORNEO ===
+$modo_torneo = ($_GET['modo'] ?? '') === 'torneo';
+$torneo_slug = $modo_torneo ? ($_GET['slug'] ?? '') : null;
+$torneo_code = $modo_torneo ? ($_GET['code'] ?? '') : null;
+
+if ($modo_torneo) {
+    if (!$torneo_slug || !$torneo_code || strlen($torneo_slug) !== 8 || strlen($torneo_code) !== 8) {
+        header('Location: ../index.php');
+        exit;
+    }
+    // Guardar contexto para redirigir tras registro
+    $_SESSION['post_registro_torneo'] = ['slug' => $torneo_slug, 'code' => $torneo_code];
+}
+
+// === MODO CLUB O INDIVIDUAL ===
+$club_slug_from_url = $_GET['club'] ?? '';
+$modo_individual = empty($club_slug_from_url) && !$modo_torneo;
+
+if ($modo_individual) {
+    // Modo individual: deportes no grupales
+    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '1' ORDER BY deporte");
+    $stmt_deportes->execute();
+    $deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
+    $club = null;
+    $club_nombre = 'Registro Individual';
+    $club_logo = null;
+} else {
+    // Modo club
+    if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+        header('Location: ../index.php');
+        exit;
+    }
+
+    $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
+    $stmt_club->execute();
+    $clubs = $stmt_club->fetchAll();
+
+    $club = null;
+    foreach ($clubs as $c) {
+        $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+        if ($generated_slug === $club_slug_from_url) {
+            $club = $c;
+            break;
+        }
+    }
+
+    if (!$club) {
+        header('Location: ../index.php');
+        exit;
+    }
+
+    $club_id = (int)$club['id_club'];
+    $club_nombre = $club['nombre'];
+    $club_logo = $club['logo'] ?? null;
+
+    // Deportes grupales
+    $stmt_deportes = $pdo->prepare("SELECT deporte FROM deportes WHERE tipo_deporte = '2' ORDER BY deporte");
+    $stmt_deportes->execute();
+    $deportes_disponibles = $stmt_deportes->fetchAll(PDO::FETCH_COLUMN);
+}
+
+// Cargar regiones de Chile
+$stmt_regiones = $pdo->query("SELECT DISTINCT codigo_region, nombre_region FROM regiones_chile ORDER BY nombre_region");
+$regiones_chile = [];
+while ($row = $stmt_regiones->fetch()) {
+    $regiones_chile[$row['codigo_region']] = $row['nombre_region'];
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Únete a CanchaSport ⚽🎾🏐</title>
-    <!-- Usamos tu CSS base, pero agregamos estilos específicos inline para este layout -->
-    <link rel="stylesheet" href="../styles.css">
-    <style>
-        /* Estilos Base (Similares a tu styles.css) */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body {
-            background-color: #0f172a;
-            background-image: url('/assets/img/cancha_pasto2.jpg');
-            background-size: cover;
-            background-position: center;
-            color: #f1f5f9;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px 0;
-        }
-        body::before {
-            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
-            pointer-events: none; z-index: -1;
-        }
-        .app-container { width: 100%; max-width: 480px; padding-bottom: 40px; }
-        
-        .logo-header { text-align: center; margin: 20px 0 15px; }
-        .logo-header h1 { 
-            font-size: 1.8rem; 
-            background: linear-gradient(135deg, #4ade80, #3b82f6); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            font-weight: 900;
-        }
-
-        .card {
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 25px;
-            margin: 0 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-
-        /* GRID LAYOUT 2 COLUMNAS */
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .full-width {
-            grid-column: span 2;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .input-label {
-            color: #94a3b8;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .input, select {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(15,23,42,0.6);
-            color: white;
-            font-size: 0.95rem;
-            transition: all 0.3s;
-        }
-        .input:focus, select:focus {
-            outline: none;
-            border-color: #3b82f6;
-            background: rgba(15,23,42,0.9);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 12px;
-            border: none;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-        }
-        .btn:active { transform: scale(0.98); }
-        
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: #cbd5e1;
-            margin-top: 10px;
-        }
-
-        .hidden { display: none !important; }
-        
-        /* Toast */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
-            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
-        /* Mini Submodal Style */
-        .mini-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 3000;
-            display: flex; justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
-        }
-        .mini-modal-content {
-            background: #1e293b;
-            width: 90%; max-width: 350px;
-            padding: 25px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
-        
-        .modal-title { color: #f1f5f9; font-size: 1.2rem; margin-bottom: 10px; font-weight: bold; }
-        .modal-text { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5; }
-        
-        .btn-group { display: flex; flex-direction: column; gap: 10px; }
-        .btn-primary-action { background: #4ade80; color: #0f172a; }
-        .btn-outline-action { background: transparent; border: 1px solid #4ade80; color: #4ade80; }
-
-        /* Lista de Clubes (dentro del mini modal o nuevo modal) */
-        .club-list-container {
-            max-height: 200px; overflow-y: auto; text-align: left;
-            background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px;
-            margin-bottom: 15px;
-        }
-        .club-item {
-            padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);
-            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-        }
-        .club-item:hover { background: rgba(255,255,255,0.05); }
-        .club-name { font-weight: bold; color: #e2e8f0; }
-        .club-btn { font-size: 0.7rem; background: #3b82f6; padding: 4px 8px; border-radius: 4px; color: white; border: none; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><?= $modo_torneo ? 'Registro Express - Torneo' : ($modo_individual ? 'Socio Individual 💪' : 'Inscríbete a: ' . htmlspecialchars($club_nombre)) ?></title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#003366">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>
+    body {
+      background: linear-gradient(rgba(0, 10, 20, 0.40), rgba(0, 15, 30, 0.50)),
+                 url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+      background-blend-mode: multiply;
+      margin: 0; padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      color: white;
+    }
+    .form-container {
+      width: 95%; max-width: 1200px;
+      background: white; padding: 2rem;
+      border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      position: relative; margin: 0 auto;
+    }
+    .form-container::before, .form-container::after {
+      content: "⚽🎾🏐";
+      position: absolute; font-size: 2.2rem; color: #003366; opacity: 0.65; z-index: 2;
+    }
+    .form-container::before { top: 22px; left: 22px; }
+    .form-container::after { bottom: 22px; right: 22px; }
+    .close-btn {
+      position: absolute; top: 15px; right: 15px; font-size: 2.2rem; color: #003366;
+      text-decoration: none; opacity: 0.7; transition: opacity 0.2s; z-index: 10;
+    }
+    .header-container {
+      display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.8rem;
+    }
+    .header-container h2 {
+      text-align: center; color: #003366; font-weight: 700; font-size: 1.4rem; margin: 0;
+    }
+    .club-header {
+      display: flex; align-items: center; gap: 0.8rem;
+      background: rgba(0, 51, 102, 0.05); padding: 0.6rem 1.2rem;
+      border-radius: 12px; border: 1px solid rgba(0, 51, 102, 0.1);
+    }
+    .club-logo {
+      width: 45px; height: 45px; border-radius: 8px; object-fit: cover;
+      background: #e0e0e0; display: flex; align-items: center; justify-content: center;
+      font-weight: bold; color: #666; font-size: 1.1rem;
+    }
+    .club-name { font-size: 1.2rem; font-weight: 600; color: #ba08e7ff; white-space: nowrap; }
+    .form-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem 1.5rem; margin-bottom: 1.5rem;
+    }
+    .form-group { margin: 0; }
+    .form-group label {
+      text-align: right; padding-right: 0.5rem; display: block;
+      font-size: 0.85rem; color: #333; font-weight: normal;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 5px;
+      font-size: 0.9rem; color: #071289; background: #fafcff;
+    }
+    .col-span-2 { grid-column: span 2; }
+    .submit-section {
+      grid-column: 1 / -1; text-align: center; margin-top: 1.8rem;
+    }
+    .btn-submit {
+      width: auto; min-width: 220px; padding: 0.65rem 1.8rem;
+      background: #071289; color: white; border: none; border-radius: 6px;
+      font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-submit:hover { background: #050d66; }
+    .error {
+      background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px;
+      margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem;
+    }
+    @media (max-width: 768px) {
+      body { background: white !important; color: #333 !important; }
+      .form-container {
+        width: 100%; max-width: none; min-height: 100vh; border-radius: 0;
+        box-shadow: none; padding: 1.5rem; background: white !important;
+      }
+      .form-container::before, .form-container::after { display: none; }
+      .form-grid { grid-template-columns: 1fr 2fr; gap: 0.8rem; }
+      .form-group label { text-align: left; padding-right: 0; font-weight: bold; }
+      .full-width-mobile { grid-column: span 2 !important; }
+    }
+  </style>
 </head>
 <body>
+  <div class="form-container">
+    <a href="../index.php" class="close-btn" title="Volver al inicio">×</a>
 
-<div class="app-container">
-    <div class="logo-header">
-        <h1>CanchaSport ⚽🎾🏐</h1>
-        <p>Registro Rápido de Socio</p>
-    </div>
-
-    <div class="card">
-        <form id="formRegistro" onsubmit="enviarCodigo(event)">
-            <input type="hidden" id="club_slug" value="<?= htmlspecialchars($club_slug) ?>">
-
-            <!-- FILA 1: Nombre | Género -->
-            <div class="form-grid">
-                <div class="input-group"> 
-                    <label class="input-label">Nombre Completo</label>
-                    <input type="text" id="nombre" class="input" placeholder="Ej: Nico Pérez" required autocomplete="name">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Género</label>
-                    <select id="genero" class="input" required>
-                        <option value="" disabled selected>...</option>
-                        <option value="masculino">Masculino</option>
-                        <option value="femenino">Femenino</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- FILA 2: Celular | Correo -->
-            <div class="form-grid">
-                <div class="input-group">
-                    <label class="input-label">Celular</label>
-                    <input type="tel" id="celular" class="input" placeholder="+56 9..." required autocomplete="tel">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Correo</label>
-                    <input type="email" id="email" class="input" placeholder="tu@email.com" required autocomplete="email">
-                </div>
-            </div>
-
-            <!-- FILA 3: Deporte | Puesto/Nivel -->
-            <div class="form-grid">
-                <div class="input-group">
-                    <label class="input-label">Deporte Principal</label>
-                    <select id="deporte" class="input" required onchange="actualizarCampoDeporte()">
-                        <option value="" disabled selected>Seleccionar</option>
-                        <option value="futbol">Fútbol</option>
-                        <option value="futbolito">Futbolito</option>
-                        <option value="padel">Pádel</option>
-                        <option value="tenis">Tenis</option>
-                        <option value="voleyball">Vóleibol</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label class="input-label" id="label_puesto_nivel">Puesto</label>
-                    <select id="puesto_nivel" class="input">
-                        <!-- Se llena dinámicamente -->
-                        <option value="">Indistinto</option>
-                        <option value="Arquero">Arquero</option>
-                        <option value="Defensa">Defensa</option>
-                        <option value="Mediocampo">Mediocampo</option>
-                        <option value="Delantero">Delantero</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- FILA 4: Contraseña | Confirmar (Con Ojo) -->
-            <div class="form-grid">
-                <div class="input-group">
-                    <label class="input-label">Contraseña <span style="cursor:pointer; float:right;" onclick="togglePassword('password', this)">👁️</span></label>
-                    <input type="password" id="password" class="input" placeholder="Mín. 6 caracteres" minlength="6" required>
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Confirmar <span style="cursor:pointer; float:right;" onclick="togglePassword('password_confirm', this)">👁️</span></label>
-                    <input type="password" id="password_confirm" class="input" placeholder="Repite contraseña" required>
-                </div>
-            </div>
-
-            <!-- Campos Ocultos -->
-            <input type="hidden" id="alias_hidden">
-            <input type="hidden" id="rol" value="Jugador">
-            <input type="hidden" id="fecha_nac" value="2000-01-01">
-            <input type="hidden" id="region" value="Metropolitana">
-            <input type="hidden" id="ciudad" value="Santiago">
-            <input type="hidden" id="comuna" value="Comuna">
-            <input type="hidden" id="direccion" value="Pendiente">
-            <input type="hidden" id="habilidad" value="Intermedia">
-
-            <button type="submit" class="btn" id="btnEnviar">🚀 Enviar Código de Verificación</button>
-            
-            <p style="text-align: center; margin-top: 20px; color: #94a3b8; font-size: 0.85rem;">
-                ¿Ya tienes cuenta? <a href="../index.php" style="color: #60a5fa; text-decoration: none; font-weight: bold;">Iniciar sesión</a>
-            </p>
-        </form>
-    </div>
-</div>
-
-<!-- MINI SUBMODAL PARA FÚTBOL/VÓLEY -->
-<div id="modalBloqueoDeporte" class="mini-modal-overlay hidden">
-    <div class="mini-modal-content">
-        <div class="modal-title">⚠️ Información Importante</div>
-        <p class="modal-text" id="textoBloqueo">
-            Para registrarte en <strong>Fútbol/Futbolito</strong> o <strong>Vóleibol</strong> debes pertenecer a un club.
-        </p>
-        
-        <div class="btn-group">
-            <button class="btn btn-primary-action" onclick="abrirRegistroClub()">➕ Crear Club de Amigos</button>
-            <button class="btn btn-outline-action" onclick="mostrarListaClubes()">🔍 Buscar Club para Unirme</button>
-            <button class="btn btn-secondary" onclick="cerrarModalBloqueo()" style="background:transparent; border:none; color:#64748b; font-size:0.8rem; margin-top:5px;">Cancelar y cambiar deporte</button>
+    <div class="header-container">
+      <h2>
+        <?= $modo_torneo ? '✅ Registro Express - Torneo' : ($modo_individual ? 'Socio Individual 💪' : 'Inscríbete a:') ?>
+      </h2>
+      <div class="club-header">
+        <?php if ($modo_individual || $modo_torneo): ?>
+          🎾🏐🏊‍♂️
+        <?php else: ?>
+          <div class="club-logo">
+            <?php if ($club_logo): ?>
+              <img src="../uploads/logos/<?= htmlspecialchars($club_logo) ?>" alt="Logo" style="width:100%;height:100%;border-radius:8px;">
+            <?php else: ?>
+              ⚽
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
+        <div class="club-name">
+          <?= htmlspecialchars($modo_individual || $modo_torneo ? '' : $club_nombre) ?>
         </div>
+      </div>
     </div>
-</div>
 
-<!-- MODAL LISTA DE CLUBES (Dentro del overlay o separado) -->
-<div id="modalListaClubes" class="mini-modal-overlay hidden">
-    <div class="mini-modal-content" style="max-height: 80vh; display:flex; flex-direction:column;">
-        <div class="modal-title">Clubes Disponibles</div>
-        <p class="modal-text">Selecciona un club para enviar tu solicitud de incorporación.</p>
+    <?php if ($_GET['error'] ?? ''): ?>
+      <div class="error"><?= htmlspecialchars($_GET['error']) ?></div>
+    <?php endif; ?>
+
+    <form id="registroForm" enctype="multipart/form-data">
+      <input type="hidden" name="MAX_FILE_SIZE" value="2097152">
+      <input type="hidden" name="pais" value="Chile">
+      
+      <?php if (!$modo_individual && !$modo_torneo): ?>
+        <input type="hidden" name="club_slug" value="<?= htmlspecialchars($club_slug_from_url) ?>">
+      <?php endif; ?>
+
+      <!-- Modo torneo: forzar valores -->
+      <?php if ($modo_torneo): ?>
+        <input type="hidden" name="rol" value="Jugador">
+        <input type="hidden" name="deporte" value="Pádel">
+      <?php endif; ?>
+
+      <div class="form-grid">
+        <!-- Fila 1 -->
+        <div class="form-group"><label for="nombre">Nombre</label></div>
+        <div class="form-group"><input type="text" id="nombre" name="nombre" required></div>
+        <div class="form-group"><label for="alias">Alias</label></div>
+        <div class="form-group"><input type="text" id="alias" name="alias" required></div>
         
-        <div id="listaClubesContainer" class="club-list-container">
-            <!-- Se llena con JS -->
-            <div style="text-align:center; padding:10px; color:#64748b;">Cargando clubes...</div>
+        <!-- Rol -->
+        <div class="form-group"><label for="rol">Rol</label></div>
+        <div class="form-group">
+          <?php if ($modo_individual || $modo_torneo): ?>
+            <input type="text" id="rol" value="Jugador" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#fafcff;color:#071289;width:100%;">
+          <?php else: ?>
+            <select id="rol" name="rol" required>
+              <option value="">Seleccionar</option>
+              <option value="Jugador">Jugador</option>
+              <option value="Galleta">Galleta</option>
+              <option value="Amigo del club">Amigo del club</option>
+              <option value="Tesorero">Tesorero</option>
+              <option value="Director">Director</option>
+              <option value="Delegado">Delegado</option>
+              <option value="Profe">Profe</option>
+              <option value="Kine">Kine</option>
+              <option value="Preparador Físico">Preparador Físico</option>
+              <option value="Utilero">Utilero</option>
+            </select>
+          <?php endif; ?>
         </div>
 
-        <button class="btn btn-secondary" onclick="document.getElementById('modalListaClubes').classList.add('hidden')">Cerrar</button>
-    </div>
-</div>
+        <!-- Fila 2 -->
+        <div class="form-group"><label for="fecha_nac">Fecha Nac.</label></div>
+        <div class="form-group"><input type="date" id="fecha_nac" name="fecha_nac"></div>
+        <div class="form-group"><label for="genero">Género</label></div>
+        <div class="form-group">
+          <select id="genero" name="genero" required>
+            <option value="">Seleccionar</option>
+            <option value="Femenino">Femenino</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="celular">Celular</label></div>
+        <div class="form-group"><input type="tel" id="celular" name="celular"></div>
 
-<!-- Modal de Verificación (Simple) -->
-<div id="verify-modal" class="mini-modal-overlay hidden">
-    <div class="mini-modal-content">
-        <div class="modal-title">Verifica tu correo</div>
-        <p class="modal-text">Código enviado a: <span id="verify-email-display" style="color:#4ade80; font-weight:bold;"></span></p>
-        <input type="text" id="codigo_verificacion" class="input" placeholder="000000" maxlength="6" style="text-align:center; letter-spacing:5px; font-size:1.5rem; font-weight:bold; margin-bottom:15px;">
-        <button class="btn" onclick="validarYRegistrar()">✅ Activar Cuenta</button>
-        <button class="btn btn-secondary" onclick="volverAlRegistro()">Cancelar</button>
-    </div>
-</div>
+        <!-- Fila 3 -->
+        <div class="form-group"><label for="region">Región *</label></div>
+        <div class="form-group">
+          <select id="region" name="region" required onchange="actualizarCiudades()">
+            <option value="">Seleccionar región</option>
+            <?php foreach ($regiones_chile as $codigo => $nombre): ?>
+              <option value="<?= $codigo ?>"><?= htmlspecialchars($nombre) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="form-group"><label for="ciudad">Ciudad *</label></div>
+        <div class="form-group">
+          <select id="ciudad" name="ciudad" required disabled>
+            <option value="">Seleccionar región primero</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="comuna">Comuna *</label></div>
+        <div class="form-group">
+          <select id="comuna" name="comuna" required disabled>
+            <option value="">Seleccionar ciudad primero</option>
+          </select>
+        </div>
 
-<div id="toast">Mensaje</div>
+        <!-- Fila 4 -->
+        <div class="form-group"><label for="direccion">Dirección</label></div>
+        <div class="form-group full-width-mobile"><input type="text" id="direccion" name="direccion" placeholder="Ej: Av. Grecia 2001, Ñuñoa"></div>
+        <div class="form-group"><label for="email">Correo</label></div>
+        <div class="form-group"><input type="email" id="email" name="email" required></div>
 
-<script>
-    // === VARIABLES GLOBALES ===
-    let codigoEnviado = '';
-    let emailTemp = '';
+        <!-- Fila 5 -->
+        <div class="form-group"><label for="deporte">Deporte *</label></div>
+        <div class="form-group">
+          <?php if ($modo_torneo): ?>
+            <input type="text" value="Pádel" disabled style="padding:0.6rem;border:1px solid #ccc;border-radius:5px;background:#f0f0f0;color:#071289;width:100%;">
+          <?php else: ?>
+            <select id="deporte" name="deporte" required>
+              <option value="">Seleccionar deporte..</option>
+              <?php foreach ($deportes_disponibles as $dep): ?>
+                <option value="<?= $dep ?>"><?= htmlspecialchars($dep) ?></option>
+              <?php endforeach; ?>
+            </select>
+          <?php endif; ?>
+        </div>
+        <div class="form-group"><label for="id_puesto">Puesto</label></div>
+        <div class="form-group">
+          <select id="id_puesto" name="id_puesto" required>
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="habilidad">Habilidad</label></div>
+        <div class="form-group">
+          <select id="habilidad" name="habilidad" required>
+            <option value="">Seleccionar</option>
+            <option value="Básica">Malo</option>
+            <option value="Intermedia">Más o Menos</option>
+            <option value="Avanzada">Crack</option>
+          </select>
+        </div>
 
-    // === FUNCIÓN 1: Toggle Ver Contraseña (GLOBAL) ===
-    function togglePassword(inputId, iconElement) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
+        <!-- Fila 6 -->
+        <div class="form-group"><label for="foto">Foto</label></div>
+        <div class="form-group col-span-2"><input type="file" id="foto" name="foto" accept="image/*"></div>
+        <div></div><div></div><div></div><div></div>
+
+        <!-- Fila 7 -->
+        <div class="form-group"><label for="password">Contraseña *</label></div>
+        <div class="form-group"><input type="password" id="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group"><label for="password_confirm">Confirmar *</label></div>
+        <div class="form-group"><input type="password" id="password_confirm" name="password_confirm" required></div>
+        <div></div><div></div>
+      </div>
+
+      <div class="submit-section">
+        <button type="submit" class="btn-submit">Enviar código de verificación</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" style="display:none;">
+    <span>ℹ️</span>
+    <span id="toast-message">Mensaje</span>
+  </div>
+
+  <script>
+    // === VALIDACIÓN EDAD ===
+    function validarEdad(fechaNac) {
+      if (!fechaNac) return true;
+      const hoy = new Date();
+      const nacimiento = new Date(fechaNac);
+      let edad = hoy.getFullYear() - nacimiento.getFullYear();
+      const mes = hoy.getMonth() - nacimiento.getMonth();
+      if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+      return edad >= 14;
+    }
+
+    // === MANEJO FORMULARIO ===
+    document.getElementById('registroForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fechaNacInput = document.getElementById('fecha_nac');
+      if (fechaNacInput.value && !validarEdad(fechaNacInput.value)) {
+        alert('La edad mínima es 14 años');
+        return;
+      }
+      
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('password_confirm').value;
+      if (password !== passwordConfirm) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+      if (password.length < 6) {
+        alert('La contraseña debe tener al menos 6 caracteres');
+        return;
+      }
+
+      const formData = new FormData(e.target);
+      const btn = e.submitter;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Enviando...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('../api/enviar_codigo_socio.php', {
+          method: 'POST',
+          body: formData
+        });
+        const textResponse = await response.text();
+        let data;
+        try {
+          data = JSON.parse(textResponse);
+        } catch (e) {
+          throw new Error('Error interno del servidor');
+        }
         
-        if (input.type === "password") {
-            input.type = "text";
-            iconElement.textContent = "🔒"; 
+        if (data.success) {
+          alert('✅ Código enviado a tu correo');
+          <?php if ($modo_torneo): ?>
+            window.location.href = '/torneo_pair.php?slug=<?= $torneo_slug ?>&code=<?= $torneo_code ?>';
+          <?php else: ?>
+            if (data.club_slug && data.club_slug.trim() !== '') {
+              window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
+            } else {
+              window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
+            }
+          <?php endif; ?>
         } else {
-            input.type = "password";
-            iconElement.textContent = "👁️"; 
+          alert('❌ ' + data.message);
+          btn.innerHTML = originalText;
+          btn.disabled = false;
         }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al enviar el código');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    // === CARGAR PUESTOS ===
+    function cargarPuestosPorDeporte(deporte) {
+      const url = deporte 
+        ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
+        : '../api/get_puestos.php';
+      
+      fetch(url)
+        .then(r => r.json())
+        .then(puestos => {
+          const select = document.getElementById('id_puesto');
+          select.innerHTML = '<option value="">Seleccionar</option>';
+          puestos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id_puesto;
+            opt.textContent = p.puesto;
+            select.appendChild(opt);
+          });
+          
+          // En modo torneo + Pádel, seleccionar "Sexta"
+          if (<?= json_encode($modo_torneo) ?> && deporte === 'Pádel') {
+            const sextaOpt = Array.from(select.options).find(opt => opt.textContent.trim() === 'Sexta');
+            if (sextaOpt) select.value = sextaOpt.value;
+          }
+        })
+        .catch(error => console.error('Error al cargar puestos:', error));
     }
 
-    // === FUNCIÓN 2: Actualizar Campo Deporte (GLOBAL) ===
-    function actualizarCampoDeporte() {
-        const deporteSelect = document.getElementById('deporte');
-        if (!deporteSelect) return;
+    // === INICIALIZAR ===
+    document.addEventListener('DOMContentLoaded', () => {
+      const deporteSelect = document.getElementById('deporte');
+      if (deporteSelect?.value) {
+        cargarPuestosPorDeporte(deporteSelect.value);
+      }
+      deporteSelect?.addEventListener('change', function() {
+        cargarPuestosPorDeporte(this.value);
+      });
 
-        const deporte = deporteSelect.value;
-        const label = document.getElementById('label_puesto_nivel');
-        const select = document.getElementById('puesto_nivel');
-        const deportesRestringidos = ['futbol', 'futbolito', 'voleyball'];
+      // Cargar regiones
+      fetch('../api/get_regiones.php')
+        .then(response => response.json())
+        .then(data => {
+          window.datosChile = data;
+        })
+        .catch(error => console.error('Error al cargar regiones:', error));
+    });
 
-        if (!label || !select) return;
-
-        if (deportesRestringidos.includes(deporte)) {
-            // Mostrar Mini Modal de Bloqueo
-            const modal = document.getElementById('modalBloqueoDeporte');
-            if (modal) {
-                document.getElementById('textoBloqueo').innerHTML = `Para registrarte en <strong>${deporte.toUpperCase()}</strong> debes crear un Club de amigos o unirte a uno existente ⚽.`;
-                modal.classList.remove('hidden');
-            }
-            // Resetear select visualmente
-            select.value = ""; 
-        } else if (deporte === 'padel') {
-            // Cambiar a Niveles de Pádel
-            label.textContent = "Nivel";
-            select.innerHTML = `
-                <option value="">Seleccionar Nivel</option>
-                <option value="Sexta">Sexta Categoría</option>
-                <option value="Quinta">Quinta Categoría</option>
-                <option value="Cuarta">Cuarta Categoría</option>
-                <option value="Tercera">Tercera Categoría</option>
-                <option value="Segunda">Segunda Categoría</option>
-                <option value="Primera">Primera Categoría</option>
-            `;
-        } else {
-            // Volver a Puestos normales
-            label.textContent = "Puesto";
-            select.innerHTML = `
-                <option value="">Indistinto</option>
-                <option value="Arquero">Arquero</option>
-                <option value="Defensa">Defensa</option>
-                <option value="Mediocampo">Mediocampo</option>
-                <option value="Delantero">Delantero</option>
-                <option value="Volante">Volante</option>
-            `;
-        }
+    function actualizarCiudades() {
+      const region = document.getElementById('region').value;
+      const ciudadSelect = document.getElementById('ciudad');
+      const comunaSelect = document.getElementById('comuna');
+      
+      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      ciudadSelect.disabled = !region;
+      comunaSelect.disabled = true;
+      
+      if (region && window.datosChile?.[region]) {
+        Object.entries(window.datosChile[region].ciudades).forEach(([codigo, nombre]) => {
+          const option = document.createElement('option');
+          option.value = codigo;
+          option.textContent = nombre;
+          ciudadSelect.appendChild(option);
+        });
+        ciudadSelect.disabled = false;
+      }
     }
 
-    // === FUNCIÓN 3: Cerrar Modal Bloqueo ===
-    function cerrarModalBloqueo() {
-        const modal = document.getElementById('modalBloqueoDeporte');
-        if (modal) modal.classList.add('hidden');
-        const deporteSelect = document.getElementById('deporte');
-        if (deporteSelect) deporteSelect.value = ""; 
-    }
-
-    // === FUNCIÓN 4: Abrir Registro Club ===
-    function abrirRegistroClub() {
-        cerrarModalBloqueo();
-        const nombre = document.getElementById('nombre') ? encodeURIComponent(document.getElementById('nombre').value) : '';
-        const email = document.getElementById('email') ? encodeURIComponent(document.getElementById('email').value) : '';
-        window.location.href = 'registro_club.php?prefill_nombre=' + nombre + '&prefill_email=' + email;
-    }
-
-    // === FUNCIÓN 5: Mostrar Lista Clubes ===
-    async function mostrarListaClubes() {
-        cerrarModalBloqueo();
-        const modalLista = document.getElementById('modalListaClubes');
-        const container = document.getElementById('listaClubesContainer');
-        
-        if (!modalLista || !container) return;
-
-        modalLista.classList.remove('hidden');
-        container.innerHTML = '<div style="text-align:center; padding:10px; color:#64748b;">Cargando clubes...</div>';
-
-        try {
-            const response = await fetch('../api/listar_clubes_publicos.php');
-            if (!response.ok) throw new Error('Error red');
-            const clubes = await response.json();
-            
-            if (!clubes || clubes.length === 0) {
-                container.innerHTML = '<div style="padding:10px; text-align:center;">No hay clubes registrados aún.</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            clubes.forEach(club => {
-                const div = document.createElement('div');
-                div.className = 'club-item';
-                div.innerHTML = `
-                    <span class="club-name">${club.nombre}</span>
-                    <button class="club-btn" onclick="solicitarUnion(${club.id_club}, '${club.email_responsable}')">Solicitar</button>
-                `;
-                container.appendChild(div);
-            });
-
-        } catch (error) {
-            console.error(error);
-            container.innerHTML = '<div style="padding:10px; color:red;">Error al cargar clubes.</div>';
-        }
-    }
-
-    // === FUNCIÓN 6: Solicitar Unión ===
-    async function solicitarUnion(id_club, email_responsable) {
-        const nombreInput = document.getElementById('nombre');
-        const emailInput = document.getElementById('email');
-        const celularInput = document.getElementById('celular');
-        const deporteInput = document.getElementById('deporte');
-
-        if (!nombreInput || !emailInput) {
-            showToast("️ Completa Nombre y Correo primero.");
-            return;
-        }
-
-        const nombre = nombreInput.value;
-        const email = emailInput.value;
-        const celular = celularInput ? celularInput.value : '';
-        const deporte = deporteInput ? deporteInput.value : '';
-
-        if (!nombre || !email) {
-            showToast("⚠️ Completa Nombre y Correo primero.");
-            return;
-        }
-
-        const btn = event.target;
-        btn.textContent = "Enviando...";
-        btn.disabled = true;
-
-        try {
-            const formData = new FormData();
-            formData.append('id_club', id_club);
-            formData.append('email_responsable', email_responsable);
-            formData.append('nombre_socio', nombre);
-            formData.append('email_socio', email);
-            formData.append('celular_socio', celular);
-            formData.append('deporte', deporte);
-
-            const res = await fetch('../api/solicitar_union_club.php', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                showToast("✅ Solicitud enviada al responsable del club.");
-                document.getElementById('modalListaClubes').classList.add('hidden');
-            } else {
-                showToast(" Error: " + data.message);
-                btn.textContent = "Solicitar";
-                btn.disabled = false;
-            }
-        } catch (error) {
-            console.error(error);
-            showToast("❌ Error de conexión");
-            btn.textContent = "Solicitar";
-            btn.disabled = false;
-        }
-    }
-
-    // === FUNCIÓN 7: Enviar Código (Registro Principal) ===
-    async function enviarCodigo(e) {
-        e.preventDefault(); // Evita recarga
-        
-        const deporteSelect = document.getElementById('deporte');
-        const deporte = deporteSelect ? deporteSelect.value : '';
-        
-        if (!deporte) { 
-            showToast("Selecciona un deporte"); 
-            return; 
-        }
-        
-        // Validación específica para deportes restringidos
-        if (['futbol', 'futbolito', 'voleyball'].includes(deporte)) {
-            showToast("⚠️ Debes crear o unirte a un club para este deporte.");
-            actualizarCampoDeporte(); // Reabre modal
-            return;
-        }
-
-        const passInput = document.getElementById('password');
-        const passConfInput = document.getElementById('password_confirm');
-        
-        if (!passInput || !passConfInput) {
-            showToast("Error en el formulario");
-            return;
-        }
-
-        const password = passInput.value;
-        const passConfirm = passConfInput.value;
-
-        if (!passConfirm) {
-            showToast("⚠️ Por favor confirma tu contraseña");
-            return;
-        }
-
-        if (password !== passConfirm) {
-            showToast("❌ Las contraseñas no coinciden");
-            return;
-        }
-        
-        if (password.length < 6) {
-            showToast("❌ La contraseña debe tener al menos 6 caracteres");
-            return;
-        }
-
-        const btn = document.getElementById('btnEnviar');
-        if (btn) {
-            btn.innerHTML = 'Enviando...';
-            btn.disabled = true;
-        }
-
-        const formData = new FormData();
-        formData.append('nombre', document.getElementById('nombre').value);
-        formData.append('alias', document.getElementById('nombre').value.split(' ')[0]); 
-        formData.append('genero', document.getElementById('genero').value);
-        formData.append('celular', document.getElementById('celular').value);
-        formData.append('email', document.getElementById('email').value);
-        formData.append('deporte', deporte);
-        formData.append('puesto', document.getElementById('puesto_nivel').value); 
-        formData.append('password', password);
-        formData.append('password_confirm', passConfirm); // Asegurado
-        formData.append('rol', 'Jugador');
-        formData.append('fecha_nac', '2000-01-01');
-        formData.append('region', 'Metropolitana');
-        formData.append('ciudad', 'Santiago');
-        formData.append('comuna', 'Comuna');
-        formData.append('direccion', 'Pendiente');
-        formData.append('habilidad', 'Intermedia');
-        formData.append('club_slug', document.getElementById('club_slug').value);
-
-        try {
-            const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-            const data = await response.json();
-
-            if (data.success) {
-                emailTemp = document.getElementById('email').value;
-                const verifyDisplay = document.getElementById('verify-email-display');
-                if (verifyDisplay) verifyDisplay.textContent = emailTemp;
-
-                const formCard = document.getElementById('formRegistro').closest('.card');
-                const verifyModal = document.getElementById('verify-modal');
-                
-                if (formCard) formCard.classList.add('hidden');
-                if (verifyModal) verifyModal.classList.remove('hidden');
-                
-                showToast("✅ Código enviado");
-            } else {
-                showToast("❌ " + data.message);
-                if (btn) {
-                    btn.innerHTML = '🚀 Enviar Código de Verificación';
-                    btn.disabled = false;
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            showToast("❌ Error de conexión");
-            if (btn) {
-                btn.innerHTML = '🚀 Enviar Código de Verificación';
-                btn.disabled = false;
-            }
-        }
-    }
-
-    // === FUNCIÓN 8: Validar y Registrar Final ===
-    async function validarYRegistrar() {
-        const codigoInput = document.getElementById('codigo_verificacion');
-        if (!codigoInput) return;
-        
-        const codigo = codigoInput.value;
-        if (codigo.length !== 6) { 
-            showToast("Ingresa el código de 6 dígitos"); 
-            return; 
-        }
-
-        const btn = document.querySelector('#verify-modal .btn');
-        if (btn) {
-            btn.innerHTML = 'Activando...';
-            btn.disabled = true;
-        }
-
-        const formData = new FormData();
-        formData.append('email', document.getElementById('verify-email-display').textContent);
-        formData.append('codigo', codigo);
-        formData.append('nombre', document.getElementById('nombre').value);
-        formData.append('alias', document.getElementById('nombre').value.split(' ')[0]);
-        formData.append('genero', document.getElementById('genero').value);
-        formData.append('celular', document.getElementById('celular').value);
-        formData.append('deporte', document.getElementById('deporte').value);
-        formData.append('puesto', document.getElementById('puesto_nivel').value);
-        formData.append('password', document.getElementById('password').value);
-        formData.append('password_confirm', document.getElementById('password_confirm').value);
-        formData.append('rol', 'Jugador');
-        formData.append('fecha_nac', '2000-01-01');
-        formData.append('region', 'Metropolitana');
-        formData.append('ciudad', 'Santiago');
-        formData.append('comuna', 'Comuna');
-        formData.append('direccion', 'Pendiente');
-        formData.append('habilidad', 'Intermedia');
-        formData.append('club_slug', document.getElementById('club_slug').value);
-
-        try {
-            const response = await fetch('../api/verificar_y_registrar_socio.php', { method: 'POST', body: formData });
-            const data = await response.json();
-            if (data.success) {
-                showToast("¡Bienvenido a CanchaSport!");
-                setTimeout(() => window.location.href = '../index.php', 2000);
-            } else {
-                showToast("❌ " + data.message);
-                if (btn) {
-                    btn.innerHTML = '✅ Activar Cuenta';
-                    btn.disabled = false;
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            showToast("❌ Error al verificar");
-            if (btn) {
-                btn.innerHTML = '✅ Activar Cuenta';
-                btn.disabled = false;
-            }
-        }
-    }
-
-    function volverAlRegistro() {
-        const verifyModal = document.getElementById('verify-modal');
-        const formCard = document.getElementById('formRegistro').closest('.card');
-        if (verifyModal) verifyModal.classList.add('hidden');
-        if (formCard) formCard.classList.remove('hidden');
-    }
-
-    function showToast(msg) {
-        const t = document.getElementById("toast");
-        if (!t) return;
-        t.textContent = msg;
-        t.className = "show";
-        setTimeout(() => t.className = t.className.replace("show", ""), 3000);
-    }
-</script>
+    document.getElementById('ciudad')?.addEventListener('change', function() {
+      const region = document.getElementById('region').value;
+      const ciudad = this.value;
+      const comunaSelect = document.getElementById('comuna');
+      
+      comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+      comunaSelect.disabled = !(region && ciudad && window.datosChile?.[region]?.comunas?.[ciudad]);
+      
+      if (region && ciudad && window.datosChile?.[region]?.comunas?.[ciudad]) {
+        window.datosChile[region].comunas[ciudad].forEach(comuna => {
+          const option = document.createElement('option');
+          option.value = comuna.toLowerCase().replace(/\s+/g, '_');
+          option.textContent = comuna;
+          comunaSelect.appendChild(option);
+        });
+        comunaSelect.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>

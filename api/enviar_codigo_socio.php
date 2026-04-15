@@ -20,12 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     // Validar campos comunes
     $required_common = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
-
     foreach ($required_common as $field) {
-        // Verificar si existe y no está vacío (trim para quitar espacios)
-        if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
-            // Log para depuración si falla en producción
-            error_log("Falta campo obligatorio: $field"); 
+        if (empty($_POST[$field])) {
             throw new Exception("El campo '$field' es obligatorio");
         }
     }
@@ -77,19 +73,6 @@ try {
         throw new Exception('Correo electrónico inválido');
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new Exception('Correo electrónico inválido');
-    }
-
-    // === NUEVA VALIDACIÓN: VERIFICAR SI EL CORREO YA EXISTE ===
-    $stmt_check_email = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-    $stmt_check_email->execute([$email]);
-    
-    if ($stmt_check_email->fetch()) {
-        // El correo ya existe
-        throw new Exception('Este correo electrónico ya está registrado. Por favor inicia sesión o recupera tu contraseña.');
-    }
-
     // Lógica de club (solo si no es modo individual)
     $id_club = null;
     if (!$modo_individual) {
@@ -109,13 +92,8 @@ try {
         }
         if (!$id_club) throw new Exception('Club no encontrado');
 
-        // Verificar duplicados en socio_club
-        $stmt = $pdo->prepare("
-            SELECT sc.id_socio 
-            FROM socio_club sc
-            JOIN socios s ON sc.id_socio = s.id_socio
-            WHERE s.email = ? AND sc.id_club = ?
-        ");
+        // Verificar duplicados
+        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? AND id_club = ?");
         $stmt->execute([$email, $id_club]);
         if ($stmt->fetch()) throw new Exception('Ya estás inscrito en este club');
     }
@@ -181,55 +159,15 @@ try {
 
     // Insertar socio
     $stmt = $pdo->prepare("
-    INSERT INTO socios (
-            nombre,
-            alias,
-            fecha_nac,
-            celular,
-            email,
-            direccion,
-            pais,
-            region,
-            ciudad,
-            comuna,
-            rol,
-            foto_url,
-            genero,
-            deporte,
-            id_puesto,
-            habilidad,
-            activo,
-            email_verified,
-            verification_code,
-            es_responsable,
-            datos_completos,
-            password_hash
-        ) VALUES (
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            0,
-            ?,
-            0,
-            1,
-            ?
-        )
+        INSERT INTO socios (
+            id_club, nombre, alias, fecha_nac, celular, email, direccion, 
+            pais, region, ciudad, comuna,
+            rol, foto_url, genero, deporte, id_puesto, habilidad,
+            activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
+        $id_club,
         $nombre,
         $alias,
         !empty($fecha_nac) ? $fecha_nac : null,
@@ -237,7 +175,7 @@ try {
         $email,
         !empty($direccion) ? $direccion : null,
         $pais,
-        $region,
+        $region, 
         $ciudad,
         $comuna,
         $rol,
@@ -247,23 +185,14 @@ try {
         $id_puesto ?: null,
         $habilidad ?: 'Básica',
         'Si',
+        0,
         $verification_code,
+        0,
+        1,
         $password_hash
     ]);
 
     $id_socio = $pdo->lastInsertId();
-    
-    if (!empty($_POST['torneo_slug'])) {
-        $_SESSION['torneo_slug_post_registro'] = $_POST['torneo_slug'];
-    }
-
-    // === CREAR RELACIÓN EN SOCIO_CLUB (si aplica) ===
-if (!$modo_individual && $id_club) {
-    $pdo->prepare("
-        INSERT INTO socio_club (id_socio, id_club, estado)
-        VALUES (?, ?, 'activo')
-    ")->execute([$id_socio, $id_club]);
-}
 
     // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
     error_log("Iniciando envío de correo a: " . $email);
@@ -324,11 +253,6 @@ if (!$modo_individual && $id_club) {
     ];
     // Limpiar cualquier output accidental
     ob_end_clean();
-    // Si es modo reemplazo, guardar en sesión
-    if (!empty($_POST['torneo_reemplazo'])) {
-        $_SESSION['torneo_reemplazo_post_registro'] = $_POST['torneo_reemplazo'];
-        $_SESSION['id_pareja_reemplazo_post_registro'] = $_SESSION['id_pareja_reemplazo'] ?? null;
-    }
     echo json_encode($response_data);
     exit;
 
@@ -337,4 +261,4 @@ if (!$modo_individual && $id_club) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-?> 
+?>
