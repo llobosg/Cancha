@@ -605,10 +605,19 @@ $club_slug = $_GET['club'] ?? '';
                 if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
             }
 
-        } catch (error) {
-            console.error("💥 Error:", error);
-            showToast("❌ Error de conexión");
-            if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
+       catch (error) {
+        console.error("💥 Error:", error);
+        
+        // Intentar leer la respuesta cruda si existe
+        if (error.response) {
+            error.response.text().then(text => {
+                console.log("📝 Respuesta CRUDA del servidor (NO JSON):", text);
+                // Esto te dirá si es un warning de PHP como: Warning: ... in ...
+            });
+        }
+        
+        showToast("❌ Error de conexión. Revisa consola.");
+        if (btn) { btn.innerHTML = ' Enviar Código'; btn.disabled = false; }
         }
     }
 
@@ -675,13 +684,18 @@ $club_slug = $_GET['club'] ?? '';
                     btn.disabled = false;
                 }
             }
-        } catch (error) {
-            console.error("💥 Error en validación:", error);
-            showToast("❌ Error de conexión al verificar");
-            if (btn) {
-                btn.innerHTML = '✅ Activar Cuenta';
-                btn.disabled = false;
+        catch (error) {
+            console.error("💥 Error:", error);
+        
+            // Intentar leer la respuesta cruda si existe
+            if (error.response) {
+                error.response.text().then(text => {
+                    console.log("📝 Respuesta CRUDA del servidor (NO JSON):", text);
+                    // Esto te dirá si es un warning de PHP como: Warning: ... in ...
+                });
             }
+            
+            showToast("❌ Error de conexión. Revisa consola.");
         }
     }
 
