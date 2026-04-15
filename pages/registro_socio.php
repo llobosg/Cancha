@@ -474,7 +474,7 @@ $club_slug = $_GET['club'] ?? '';
             const res = await fetch('../api/solicitar_union_club.php', { method: 'POST', body: formData });
             const data = await res.json();
 
-            if (datasu.success) {
+            if (data.success) {
                 showToast("✅ Solicitud enviada.");
                 document.getElementById('modalListaClubes').classList.add('hidden');
             } else {

@@ -76,9 +76,38 @@ try {
     $hash = password_hash($pass, PASSWORD_DEFAULT);
     $code = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
     
-    $stmt = $pdo->prepare("INSERT INTO socios (nombre, alias, email, genero, rol, deporte, password_hash, verification_code, activo, email_verified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, NOW())");
+    $stmt = $pdo->prepare("
+    INSERT INTO socios (
+        nombre, alias, email, genero, rol, deporte,
+        password_hash, verification_code,
+        fecha_nac, celular, direccion, pais, region, ciudad, comuna,
+        habilidad, id_puesto,
+        activo, email_verified, created_at
+    ) VALUES (
+        ?, ?, ?, ?, ?, ?,
+        ?, ?,
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?,
+        'Si', 0, NOW()
+    )");
     $stmt->execute([
-        $_POST['nombre'], $_POST['alias'], $email, $_POST['genero'], $_POST['rol'], $_POST['deporte'], $hash, $code
+        $nombre,
+        $alias,
+        $email,
+        $genero,
+        $rol,
+        $deporte,
+        $hash,
+        $code,
+        $fecha_nac,
+        $celular,
+        $direccion,
+        $pais,
+        $region,
+        $ciudad,
+        $comuna,
+        $habilidad,
+        $id_puesto
     ]);
     
     $id = $pdo->lastInsertId();
