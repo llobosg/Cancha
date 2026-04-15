@@ -412,7 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="input-group">
                     <label>Celular</label>
-                    <input type="tel" name="telefono" placeholder="+56 9..." value="<?= htmlspecialchars($prefill_telefono) ?>">
+                    <input type="tel" name="telefono" placeholder="+56 9..." required value="<?= htmlspecialchars($prefill_telefono) ?>">
                 </div>
 
                 <!-- Fila 4: Logo -->
