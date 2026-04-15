@@ -404,7 +404,8 @@ $club_slug = $_GET['club'] ?? '';
         cerrarModalBloqueo();
         const nombre = document.getElementById('nombre') ? encodeURIComponent(document.getElementById('nombre').value) : '';
         const email = document.getElementById('email') ? encodeURIComponent(document.getElementById('email').value) : '';
-        window.location.href = 'registro_club.php?prefill_nombre=' + nombre + '&prefill_email=' + email;
+        const celular = document.getElementById('celular_input') ? encodeURIComponent(document.getElementById('celular_input').value) : '';
+        window.location.href = 'registro_club.php?prefill_nombre=' + nombre + '&prefill_email=' + email + '&prefill_telefono=' + celular;
     }
 
     // === FUNCIÓN 5: Mostrar Lista Clubes ===

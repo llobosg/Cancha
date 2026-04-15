@@ -373,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Fila 1: Nombre Club (con búsqueda) | Deporte -->
                 <div class="input-group">
                     <label>Nombre Club *</label>
-                    <input type="text" id="nombre_club_input" name="nombre" placeholder="Ej: Los Tigres" required value="<?= htmlspecialchars($prefill_nombre) ?>" autocomplete="off">
+                    <input type="text" id="nombre_club_input" name="nombre" placeholder="Ej: Los Tigres" required>
                     <!-- Contenedor de resultados -->
                     <div id="search-results"></div>
                 </div>
@@ -402,7 +402,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="input-group">
                     <label>Responsable *</label>
-                    <input type="text" name="responsable" placeholder="Tu nombre" required>
+                    <input type="text" name="responsable" placeholder="Tu nombre" required value="<?= htmlspecialchars($prefill_nombre) ?>">
                 </div>
 
                 <!-- Fila 3: Correo | Celular -->
@@ -412,7 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="input-group">
                     <label>Celular</label>
-                    <input type="tel" name="telefono" placeholder="+56 9..." autocomplete="tel">
+                    <input type="tel" name="telefono" placeholder="+56 9..." value="<?= htmlspecialchars($prefill_telefono) ?>">
                 </div>
 
                 <!-- Fila 4: Logo -->
