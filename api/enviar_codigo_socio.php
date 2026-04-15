@@ -157,42 +157,22 @@ try {
     // Generar código de verificación
     $verification_code = rand(1000, 9999);
 
-    // Insertar socio
-    $stmt = $pdo->prepare("
+    // 6. INSERTAR EN BD
+    $stmt_insert = $pdo->prepare("
         INSERT INTO socios (
-            id_club, nombre, alias, fecha_nac, celular, email, direccion, 
-            pais, region, ciudad, comuna,
-            rol, foto_url, genero, deporte, id_puesto, habilidad,
-            activo, email_verified, verification_code, es_responsable, datos_completos, password_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            nombre, alias, fecha_nac, celular, email, direccion, pais, region, ciudad, comuna,
+            rol, genero, deporte, id_puesto, habilidad, activo, email_verified, verification_code,
+            es_responsable, datos_completos, password_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Si', 0, ?, 0, 1, ?)
     ");
-    $stmt->execute([
-        $id_club,
-        $nombre,
-        $alias,
-        !empty($fecha_nac) ? $fecha_nac : null,
-        !empty($celular) ? $celular : null,
-        $email,
-        !empty($direccion) ? $direccion : null,
-        $pais,
-        $region, 
-        $ciudad,
-        $comuna,
-        $rol,
-        $foto_url,
-        $genero,
-        $deporte,
-        $id_puesto ?: null,
-        $habilidad ?: 'Básica',
-        'Si',
-        0,
-        $verification_code,
-        0,
-        1,
-        $password_hash
+    
+    $stmt_insert->execute([
+        $nombre, $alias, $fecha_nac, $celular, $email, $direccion, $pais, $region, $ciudad, $comuna,
+        $rol, $genero, $deporte, $id_puesto, $habilidad, $verification_code, $password_hash
     ]);
 
     $id_socio = $pdo->lastInsertId();
+    error_log("✅ Socio insertado ID: $id_socio");
 
     // === ENVIAR CORREO SIEMPRE (modo individual + club) ===
     error_log("Iniciando envío de correo a: " . $email);
