@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     // Validar campos comunes
-    $required_common = ['nombre', 'alias', 'email', 'genero', 'rol', 'password', 'password_confirm', 'deporte'];
+    $required_common = ['nombre', 'alias', 'email', 'genero', 'password', 'password_confirm', 'deporte'];
     foreach ($required_common as $field) {
         if (empty($_POST[$field])) {
             throw new Exception("El campo '$field' es obligatorio");
