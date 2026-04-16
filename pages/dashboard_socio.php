@@ -397,9 +397,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
 $pareja_activa = $pareja_activa ?? null;
 
-if ($club_id !== null) {
-    $stmt_deudas->execute([...]);
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
