@@ -703,6 +703,17 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
             vertical-align: middle;
             text-align: center;
             }
+            /* DEBUG VISUAL TEMPORAL */
+            .fichas-dashboard {
+                border: 2px dashed yellow !important; /* Para ver si el contenedor existe */
+                min-height: 100px !important;
+            }
+            .stat-card {
+                border: 3px solid #00ff00 !important; /* Borde verde si la ficha se renderiza */
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: flex !important; /* Forzar display flex */
+            }
         </style>
         <script>
             // Desactivar Service Worker en desarrollo
