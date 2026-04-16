@@ -280,53 +280,43 @@ error_log("🔍 [DEBUG] Iniciando búsqueda de próximo evento");
 error_log("🔍 [DEBUG] modo_individual: " . ($modo_individual ? 'true' : 'false'));
 error_log("🔍 [DEBUG] club_id en sesión: " . ($_SESSION['club_id'] ?? 'null'));
 
-if (!$modo_individual && isset($_SESSION['club_id'])) {
-    $club_id = (int)$_SESSION['club_id'];
-    error_log("🔍 [DEBUG] Ejecutando consulta para club_id: $club_id");
-    
-    try {
-        $stmt_evento = $pdo->prepare("
-            SELECT
-                r.id_reserva,
-                r.fecha,
-                r.hora_inicio,
-                r.monto_total,
-                r.monto_recaudacion,
-                r.jugadores_esperados,
-                c.id_deporte,  -- ← AGREGAR ESTO
-                COUNT(i.id_inscrito) AS inscritos_actuales
-            FROM reservas r
-            LEFT JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
-            LEFT JOIN canchas c ON r.id_cancha = c.id_cancha  -- ← ASEGURAR JOIN
-            WHERE
-                r.id_club = ?
-                AND r.fecha >= CURDATE()
-                AND r.estado = 'confirmada'
-            GROUP BY
-                r.id_reserva,
-                r.fecha,
-                r.hora_inicio,
-                r.monto_total,
-                r.monto_recaudacion,
-                r.jugadores_esperados,
-                c.id_deporte
-            ORDER BY r.fecha ASC, r.hora_inicio ASC
-            LIMIT 1
-        ");
-        $stmt_evento->execute([$club_id]);
-        $proximo_evento = $stmt_evento->fetch();
+$id_socio = $_SESSION['id_socio'];
+$club_id = $_SESSION['club_id'] ?? null;
+
+// === CONSULTA UNIFICADA PARA PRÓXIMO EVENTO (CLUB O INDIVIDUAL) ===
+$sql_proximo = "
+    SELECT 
+        r.id_reserva, 
+        r.fecha, 
+        r.hora_inicio, 
+        r.monto_total, 
+        r.jugadores_esperados,
+        r.estado,
+        c.nombre as nombre_cancha,
+        d.deporte as id_deporte, -- Asegúrate que 'deporte' sea el nombre correcto de la columna en tu tabla deportes o canchas
+        (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
+    FROM reservas r
+    JOIN canchas c ON r.id_cancha = c.id_cancha
+    LEFT JOIN deportes d ON c.id_deporte = d.deporte -- Ajusta este JOIN según tu estructura real
+    WHERE r.estado = 'confirmada' 
+      AND r.fecha >= CURDATE()
+      AND (
+          -- Caso 1: Reservas de Club (si el usuario tiene club)
+          (r.id_club IS NOT NULL AND r.id_club = ?)
+          OR
+          -- Caso 2: Reservas Individuales (hechas por este socio y sin club)
+          (r.id_club IS NULL AND r.id_socio = ?)
+      )
+    ORDER BY r.fecha ASC, r.hora_inicio ASC
+    LIMIT 1
+";
+
+$stmt_prox = $pdo->prepare($sql_proximo);
+// Pasamos club_id primero y luego id_socio
+$stmt_prox->execute([$club_id, $id_socio]); 
+$proximo_evento = $stmt_prox->fetch();
         
-        error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));
-        
-        if (!$proximo_evento) {
-            error_log("⚠️ [DEBUG] No se encontraron reservas futuras para el club $club_id");
-        }
-    } catch (Exception $e) {
-        error_log("❌ [DEBUG] Error en consulta: " . $e->getMessage());
-    }
-} else {
-    error_log("⚠️ [DEBUG] No se ejecutó la consulta: modo_individual=" . ($modo_individual ? 'true' : 'false') . ", club_id=" . ($_SESSION['club_id'] ?? 'null'));
-}
+error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));  
 
 // === DEUDAS PENDIENTES (solo del club activo) ===
 $stmt_deudas = $pdo->prepare("
@@ -350,11 +340,10 @@ $stmt_deudas = $pdo->prepare("
     WHERE 
         c.id_socio = ? 
         AND c.estado = 'pendiente'
-        AND sc.id_club = ?
         AND (
-            (c.tipo_actividad = 'reserva' AND r.id_club = ?)
+            (c.tipo_actividad = 'reserva')
             OR
-            (c.tipo_actividad = 'evento' AND e.id_club = ?)
+            (c.tipo_actividad = 'evento')
             OR
             (c.tipo_actividad NOT IN ('reserva', 'evento'))
         )
@@ -736,7 +725,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <?php endif; ?>
                 </div>
                 <div class="club-info">
-                <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h2>
+                <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?>  <?= htmlspecialchars($club_nombre) ?></h2>
                 <p>Tu Cancha está lista</p>
             </div>
         </div>
