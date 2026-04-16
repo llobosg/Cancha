@@ -26,6 +26,7 @@ error_log("SESSION después de start: " . print_r($_SESSION, true));
 // === DETECTAR MODO INDIVIDUAL O CLUB ===
 $club_slug_from_url = $_GET['id_club'] ?? null;
 $modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
+$pareja_activa = null;
 
 if (!$modo_individual) {
     if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
@@ -330,52 +331,70 @@ if (!isset($proximo_evento)) {
     error_log("⚠️ [VARIABLE] Forzado a NULL");
 }
 
-// === DEUDAS PENDIENTES (solo del club activo) ===
-$stmt_deudas = $pdo->prepare("
-    SELECT
-        c.id_cuota,
-        c.monto,
-        c.fecha_vencimiento,
-        CASE
-            WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-            WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-            ELSE 'Sin detalle'
-        END as detalle_origen,
-        COALESCE(r.fecha, e.fecha) as fecha_evento
-    FROM cuotas c
-    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-    INNER JOIN socio_club sc ON c.id_socio = sc.id_socio AND sc.estado = 'activo'
-    WHERE 
-        c.id_socio = ? 
-        AND c.estado = 'pendiente'
-        AND sc.id_club = ?
-        AND (
-            (c.tipo_actividad = 'reserva' AND r.id_club = ?)
-            OR
-            (c.tipo_actividad = 'evento' AND e.id_club = ?)
-            OR
-            (c.tipo_actividad NOT IN ('reserva', 'evento'))
-        )
-    ORDER BY c.fecha_vencimiento ASC
-    LIMIT 1
-");
+// === DEUDAS PENDIENTES ===
+$deuda_mas_vigente = null;
+$total_deudas = 0;
 
-// ✅ Solo UNA llamada con 4 parámetros
-$stmt_deudas->execute([
-    $_SESSION['id_socio'],
-    $club_id,
-    $club_id,
-    $club_id
-]);
-$deuda_mas_vigente = $stmt_deudas->fetch();
+if (!$modo_individual && !empty($club_id)) {
 
-$stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
-$stmt_count->execute([$_SESSION['id_socio']]);
-$total_deudas = (int)$stmt_count->fetchColumn();
+    try {
+        $stmt_deudas = $pdo->prepare("
+            SELECT
+                c.id_cuota,
+                c.monto,
+                c.fecha_vencimiento,
+                CASE
+                    WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                    WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+                    ELSE 'Sin detalle'
+                END as detalle_origen,
+                COALESCE(r.fecha, e.fecha) as fecha_evento
+            FROM cuotas c
+            LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+            LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+            LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+            LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+            LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+            INNER JOIN socio_club sc ON c.id_socio = sc.id_socio AND sc.estado = 'activo'
+            WHERE 
+                c.id_socio = ? 
+                AND c.estado = 'pendiente'
+                AND sc.id_club = ?
+                AND (
+                    (c.tipo_actividad = 'reserva' AND r.id_club = ?)
+                    OR
+                    (c.tipo_actividad = 'evento' AND e.id_club = ?)
+                    OR
+                    (c.tipo_actividad NOT IN ('reserva', 'evento'))
+                )
+            ORDER BY c.fecha_vencimiento ASC
+            LIMIT 1
+        ");
+
+        $stmt_deudas->execute([
+            $_SESSION['id_socio'],
+            $club_id,
+            $club_id,
+            $club_id
+        ]);
+
+        $deuda_mas_vigente = $stmt_deudas->fetch();
+
+        $stmt_count = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM cuotas 
+            WHERE id_socio = ? AND estado = 'pendiente'
+        ");
+        $stmt_count->execute([$_SESSION['id_socio']]);
+        $total_deudas = (int)$stmt_count->fetchColumn();
+
+    } catch (Exception $e) {
+        error_log("❌ Error en deudas: " . $e->getMessage());
+    }
+
+} else {
+    error_log("ℹ️ Saltando bloque de deudas (modo individual)");
+}
 
 // === ÚLTIMO PARTIDO (solo para club) ===
 $ultimo_partido = null;
