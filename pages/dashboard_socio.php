@@ -1,413 +1,412 @@
 <?php
-// 1. Cargar configuración
-require_once __DIR__ . '/../includes/config.php';
+    // 1. Cargar configuración
+    require_once __DIR__ . '/../includes/config.php';
 
-// 2. Restaurar sesión desde cookie si existe
-if (isset($_COOKIE['cancha_session_id'])) {
-    session_id($_COOKIE['cancha_session_id']);
-}
+    // 2. Restaurar sesión desde cookie si existe
+    if (isset($_COOKIE['cancha_session_id'])) {
+        session_id($_COOKIE['cancha_session_id']);
+    }
 
-// 3. Configurar y arrancar sesión
-session_name('CANCHASPORT_SESSION');
-if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 86400,
+    // 3. Configurar y arrancar sesión
+    session_name('CANCHASPORT_SESSION');
+    if (session_status() === PHP_SESSION_NONE) {
+        session_set_cookie_params([
+            'lifetime' => 86400,
+            'path' => '/',
+            'domain' => '',
+            'secure' => isset($_SERVER['HTTPS']),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        session_start();
+    }
+
+    error_log("SESSION después de start: " . print_r($_SESSION, true));
+
+    // === DETECTAR MODO INDIVIDUAL O CLUB ===
+    $club_slug_from_url = $_GET['id_club'] ?? null;
+    $modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
+    $pareja_activa = null;
+
+    if (!$modo_individual) {
+        if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
+            error_log("❌ Slug inválido, redirigiendo a index.php");
+            header('Location: ../index.php');
+            exit;
+        }
+
+        // Buscar club
+        $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
+        $stmt_club->execute();
+        $clubs = $stmt_club->fetchAll();
+
+        $club_id = null;
+        $club_nombre = '';
+        $club_logo = '';
+        $club_slug = null;
+
+        foreach ($clubs as $c) {
+            $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+            if ($generated_slug === $club_slug_from_url) {
+                $club_id = (int)$c['id_club'];
+                $club_nombre = $c['nombre'];
+                $club_logo = $c['logo'] ?? '';
+                $club_slug = $generated_slug;
+                break;
+            }
+        }
+
+        if (!$club_id) {
+            error_log("❌ Club no encontrado, redirigiendo a index.php");
+            header('Location: ../index.php');
+            exit;
+        }
+        error_log("✅ Club cargado: " . $club_nombre);
+    } else {
+        error_log("✅ Modo individual detectado");
+        $club_id = null;
+        $club_nombre = '';
+        $club_logo = null;
+        $club_slug = null;
+    }
+
+    // === OBTENCIÓN DE ID_SOCIO (CORREGIDO) ===
+    $id_socio = null;
+    $socio_actual = null;
+
+    if (isset($_SESSION['id_socio'])) {
+        $id_socio = $_SESSION['id_socio'];
+        
+        if ($modo_individual) {
+            $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
+            $stmt_validate->execute([$id_socio]);
+        } else {
+            $stmt_validate = $pdo->prepare("
+                SELECT s.*
+                FROM socios s
+                JOIN socio_club sc ON s.id_socio = sc.id_socio
+                WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+            ");
+            $stmt_validate->execute([$id_socio, $club_id]);
+        }
+        
+        $socio_actual = $stmt_validate->fetch();
+        if (!$socio_actual) {
+            $id_socio = null;
+            unset($_SESSION['id_socio']);
+        }
+    }
+
+    if (!$id_socio) {
+        $user_email = null;
+        if (isset($_SESSION['google_email'])) {
+            $user_email = $_SESSION['google_email'];
+        } elseif (isset($_SESSION['user_email'])) {
+            $user_email = $_SESSION['user_email'];
+        }
+        
+        if ($user_email) {
+            if ($modo_individual) {
+                $stmt_socio = $pdo->prepare("
+                    SELECT s.id_socio 
+                    FROM socios s
+                    LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+                    WHERE s.email = ? AND sc.id_socio IS NULL
+                ");
+                $stmt_socio->execute([$user_email]);
+            } else {
+                $stmt_socio = $pdo->prepare("
+                    SELECT s.id_socio
+                    FROM socios s
+                    JOIN socio_club sc ON s.id_socio = sc.id_socio
+                    WHERE s.email = ? AND sc.id_club = ? AND sc.estado = 'activo'
+                ");
+                $stmt_socio->execute([$user_email, $club_id]);
+            }
+            
+            $socio_data = $stmt_socio->fetch();
+            if ($socio_data) {
+                $id_socio = $socio_data['id_socio'];
+                $_SESSION['id_socio'] = $id_socio;
+            } else {
+                // Redirigir a completar perfil
+                if ($modo_individual) {
+                    header('Location: completar_perfil.php?modo=individual');
+                } else {
+                    header('Location: completar_perfil.php?id=' . $club_slug);
+                }
+                exit;
+            }
+        } else {
+            header('Location: ../index.php');
+            exit;
+        }
+    } else {
+        $_SESSION['id_socio'] = $id_socio;
+    }
+
+    // 3. Si aún no hay id_socio, redirigir a completar perfil
+    if (!$id_socio) {
+        if ($modo_individual) {
+            header('Location: completar_perfil.php?modo=individual');
+        } else {
+            header('Location: completar_perfil.php?id=' . $club_slug);
+        }
+        exit;
+    }
+
+    // 4. Asegurar en sesión para uso posterior
+    $_SESSION['id_socio'] = $id_socio;
+
+    // Guardar en cookie para compatibilidad con Railway/FrankenPHP
+    setcookie('cancha_id_socio', $_SESSION['id_socio'], [
+        'expires' => time() + 86400,
         'path' => '/',
-        'domain' => '',
         'secure' => isset($_SERVER['HTTPS']),
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
-    session_start();
-}
 
-error_log("SESSION después de start: " . print_r($_SESSION, true));
-
-// === DETECTAR MODO INDIVIDUAL O CLUB ===
-$club_slug_from_url = $_GET['id_club'] ?? null;
-$modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
-$pareja_activa = null;
-
-if (!$modo_individual) {
-    if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-        error_log("❌ Slug inválido, redirigiendo a index.php");
-        header('Location: ../index.php');
-        exit;
-    }
-
-    // Buscar club
-    $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
-    $stmt_club->execute();
-    $clubs = $stmt_club->fetchAll();
-
-    $club_id = null;
-    $club_nombre = '';
-    $club_logo = '';
-    $club_slug = null;
-
-    foreach ($clubs as $c) {
-        $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-        if ($generated_slug === $club_slug_from_url) {
-            $club_id = (int)$c['id_club'];
-            $club_nombre = $c['nombre'];
-            $club_logo = $c['logo'] ?? '';
-            $club_slug = $generated_slug;
-            break;
-        }
-    }
-
-    if (!$club_id) {
-        error_log("❌ Club no encontrado, redirigiendo a index.php");
-        header('Location: ../index.php');
-        exit;
-    }
-    error_log("✅ Club cargado: " . $club_nombre);
-} else {
-    error_log("✅ Modo individual detectado");
-    $club_id = null;
-    $club_nombre = '';
-    $club_logo = null;
-    $club_slug = null;
-}
-
-// === OBTENCIÓN DE ID_SOCIO (CORREGIDO) ===
-$id_socio = null;
-$socio_actual = null;
-
-if (isset($_SESSION['id_socio'])) {
-    $id_socio = $_SESSION['id_socio'];
-    
-    if ($modo_individual) {
-        $stmt_validate = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
-        $stmt_validate->execute([$id_socio]);
-    } else {
-        $stmt_validate = $pdo->prepare("
-            SELECT s.*
-            FROM socios s
-            JOIN socio_club sc ON s.id_socio = sc.id_socio
-            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
-        ");
-        $stmt_validate->execute([$id_socio, $club_id]);
-    }
-    
-    $socio_actual = $stmt_validate->fetch();
+    // Asegurar socio_actual
     if (!$socio_actual) {
-        $id_socio = null;
-        unset($_SESSION['id_socio']);
-    }
-}
-
-if (!$id_socio) {
-    $user_email = null;
-    if (isset($_SESSION['google_email'])) {
-        $user_email = $_SESSION['google_email'];
-    } elseif (isset($_SESSION['user_email'])) {
-        $user_email = $_SESSION['user_email'];
-    }
-    
-    if ($user_email) {
         if ($modo_individual) {
-            $stmt_socio = $pdo->prepare("
-                SELECT s.id_socio 
+            $stmt_fallback = $pdo->prepare("
+                SELECT s.*
                 FROM socios s
                 LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-                WHERE s.email = ? AND sc.id_socio IS NULL
+                WHERE s.id_socio = ? AND sc.id_socio IS NULL
+                LIMIT 1
             ");
-            $stmt_socio->execute([$user_email]);
+            $stmt_fallback->execute([$_SESSION['id_socio']]);
         } else {
-            $stmt_socio = $pdo->prepare("
-                SELECT s.id_socio
+            $stmt_fallback = $pdo->prepare("
+                SELECT s.*
                 FROM socios s
                 JOIN socio_club sc ON s.id_socio = sc.id_socio
-                WHERE s.email = ? AND sc.id_club = ? AND sc.estado = 'activo'
+                WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+                LIMIT 1
             ");
-            $stmt_socio->execute([$user_email, $club_id]);
+            $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
+        }
+        $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
+    }
+
+    $es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1;
+
+    // === OBTENER TODOS LOS CLUBES DEL SOCIO ===
+    $clubes_del_socio = [];
+    if (isset($_SESSION['id_socio'])) {
+        $stmt_clubes = $pdo->prepare("
+            SELECT 
+                c.id_club,
+                c.nombre AS club_nombre,
+                c.email_responsable
+            FROM socio_club sc
+            JOIN clubs c ON sc.id_club = c.id_club
+            WHERE sc.id_socio = ? AND sc.estado = 'activo'
+            ORDER BY c.nombre ASC
+        ");
+        $stmt_clubes->execute([$_SESSION['id_socio']]);
+        $clubes_del_socio = $stmt_clubes->fetchAll();
+    }
+
+    // === VALIDAR Y USAR EL CLUB DE LA URL ===
+    if (!$modo_individual) {
+        // Ya tenemos $club_id y $club_slug desde la URL
+        // Verificar que el socio pertenezca a ese club
+        $socio_en_club = false;
+        foreach ($clubes_del_socio as $c) {
+            if ((int)$c['id_club'] === $club_id) {
+                $socio_en_club = true;
+                break;
+            }
         }
         
-        $socio_data = $stmt_socio->fetch();
-        if ($socio_data) {
-            $id_socio = $socio_data['id_socio'];
-            $_SESSION['id_socio'] = $id_socio;
-        } else {
-            // Redirigir a completar perfil
-            if ($modo_individual) {
-                header('Location: completar_perfil.php?modo=individual');
+        if (!$socio_en_club) {
+            // Si no pertenece, redirigir al primer club
+            if (!empty($clubes_del_socio)) {
+                $c = $clubes_del_socio[0];
+                $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                header("Location: dashboard_socio.php?id_club=$redirect_slug");
+                exit;
             } else {
-                header('Location: completar_perfil.php?id=' . $club_slug);
+                // No pertenece a ningún club → modo individual
+                $modo_individual = true;
             }
-            exit;
         }
-    } else {
-        header('Location: ../index.php');
+        // Asegurar que $club_id sea un entero válido
+        $club_id = (int)$club_id;
+        $_SESSION['club_id'] = $club_id;
+    }
+
+    // Si es modo individual PERO tiene clubs, redirigir
+    if ($modo_individual && !empty($clubes_del_socio)) {
+        $c = $clubes_del_socio[0];
+        $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+        header("Location: dashboard_socio.php?id_club=$redirect_slug");
         exit;
     }
-} else {
-    $_SESSION['id_socio'] = $id_socio;
-}
 
-// 3. Si aún no hay id_socio, redirigir a completar perfil
-if (!$id_socio) {
-    if ($modo_individual) {
-        header('Location: completar_perfil.php?modo=individual');
-    } else {
-        header('Location: completar_perfil.php?id=' . $club_slug);
+    // Guardar en sesión
+    if (!$modo_individual) {
+        $_SESSION['club_id'] = $club_id;
+        $_SESSION['current_club'] = $club_slug;
     }
-    exit;
-}
 
-// 4. Asegurar en sesión para uso posterior
-$_SESSION['id_socio'] = $id_socio;
-
-// Guardar en cookie para compatibilidad con Railway/FrankenPHP
-setcookie('cancha_id_socio', $_SESSION['id_socio'], [
-    'expires' => time() + 86400,
-    'path' => '/',
-    'secure' => isset($_SERVER['HTTPS']),
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-
-// Asegurar socio_actual
-if (!$socio_actual) {
-    if ($modo_individual) {
-        $stmt_fallback = $pdo->prepare("
-            SELECT s.*
-            FROM socios s
-            LEFT JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-            WHERE s.id_socio = ? AND sc.id_socio IS NULL
-            LIMIT 1
-        ");
-        $stmt_fallback->execute([$_SESSION['id_socio']]);
-    } else {
-        $stmt_fallback = $pdo->prepare("
-            SELECT s.*
-            FROM socios s
-            JOIN socio_club sc ON s.id_socio = sc.id_socio
-            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
-            LIMIT 1
-        ");
-        $stmt_fallback->execute([$_SESSION['id_socio'], $club_id]);
-    }
-    $socio_actual = $stmt_fallback->fetch() ?: ['datos_completos' => 0, 'nombre' => 'Usuario', 'es_responsable' => 0];
-}
-
-$es_responsable = !empty($socio_actual) && isset($socio_actual['es_responsable']) && $socio_actual['es_responsable'] == 1;
-
-// === OBTENER TODOS LOS CLUBES DEL SOCIO ===
-$clubes_del_socio = [];
-if (isset($_SESSION['id_socio'])) {
-    $stmt_clubes = $pdo->prepare("
+    // === DETECTAR TORNEOS AMERICANOS ===
+    error_log("🔍 Buscando torneos para socio ID: " . ($_SESSION['id_socio'] ?? 'NULL'));
+    $torneos_americanos = [];
+    $stmt_torneos = $pdo->prepare("
         SELECT 
-            c.id_club,
-            c.nombre AS club_nombre,
-            c.email_responsable
-        FROM socio_club sc
-        JOIN clubs c ON sc.id_club = c.id_club
-        WHERE sc.id_socio = ? AND sc.estado = 'activo'
-        ORDER BY c.nombre ASC
-    ");
-    $stmt_clubes->execute([$_SESSION['id_socio']]);
-    $clubes_del_socio = $stmt_clubes->fetchAll();
-}
-
-// === VALIDAR Y USAR EL CLUB DE LA URL ===
-if (!$modo_individual) {
-    // Ya tenemos $club_id y $club_slug desde la URL
-    // Verificar que el socio pertenezca a ese club
-    $socio_en_club = false;
-    foreach ($clubes_del_socio as $c) {
-        if ((int)$c['id_club'] === $club_id) {
-            $socio_en_club = true;
-            break;
-        }
-    }
-    
-    if (!$socio_en_club) {
-        // Si no pertenece, redirigir al primer club
-        if (!empty($clubes_del_socio)) {
-            $c = $clubes_del_socio[0];
-            $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-            header("Location: dashboard_socio.php?id_club=$redirect_slug");
-            exit;
-        } else {
-            // No pertenece a ningún club → modo individual
-            $modo_individual = true;
-        }
-    }
-    // Asegurar que $club_id sea un entero válido
-    $club_id = (int)$club_id;
-    $_SESSION['club_id'] = $club_id;
-}
-
-// Si es modo individual PERO tiene clubs, redirigir
-if ($modo_individual && !empty($clubes_del_socio)) {
-    $c = $clubes_del_socio[0];
-    $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    header("Location: dashboard_socio.php?id_club=$redirect_slug");
-    exit;
-}
-
-// Guardar en sesión
-if (!$modo_individual) {
-    $_SESSION['club_id'] = $club_id;
-    $_SESSION['current_club'] = $club_slug;
-}
-
-// === DETECTAR TORNEOS AMERICANOS ===
-error_log("🔍 Buscando torneos para socio ID: " . ($_SESSION['id_socio'] ?? 'NULL'));
-$torneos_americanos = [];
-$stmt_torneos = $pdo->prepare("
-    SELECT 
-        t.id_torneo,
-        t.nombre AS torneo_nombre,
-        t.fecha_inicio,
-        pt.id_pareja
-    FROM parejas_torneo pt
-    JOIN torneos t ON pt.id_torneo = t.id_torneo
-    WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
-      AND t.estado IN ('abierto', 'en_progreso', 'finalizado')
-      AND t.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    ORDER BY t.fecha_inicio DESC
-    LIMIT 1
-");
-$stmt_torneos->execute([$_SESSION['id_socio'], $_SESSION['id_socio']]);
-$torneos_americanos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
-$tiene_torneo = !empty($torneos_americanos);
-$torneo_actual = $torneos_americanos[0] ?? null;
-
-            // === BLOQUE PRÓXIMO EVENTO - FIX DEFINITIVO ===
-            error_log("🚀 [INICIO] Bloque Próximo Evento");
-
-            $id_socio = $_SESSION['id_socio'] ?? 0;
-
-            // NO sobrescribir club_id innecesariamente
-            $club_id_actual = $modo_individual ? null : ($_SESSION['club_id'] ?? null);
-
-            // Construcción de query CORRECTA
-            $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
-            $params = [];
-
-            // 🔥 FIX: no forzar IS NULL
-            if ($club_id_actual !== null) {
-                $where_parts[] = "r.id_club = ?";
-                $params[] = $club_id_actual;
-            }
-
-            // Siempre filtrar por socio
-            $where_parts[] = "r.id_socio = ?";
-            $params[] = $id_socio;
-
-            $sql = "
-                SELECT 
-                    r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, 
-                    r.jugadores_esperados, r.estado, r.monto_recaudacion,
-                    c.nombre_cancha, c.id_deporte,
-                    (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
-                FROM reservas r
-                JOIN canchas c ON r.id_cancha = c.id_cancha
-                WHERE " . implode(" AND ", $where_parts) . "
-                ORDER BY r.fecha ASC, r.hora_inicio ASC
-                LIMIT 1
-            ";
-
-            error_log("🔍 [DEBUG] SQL REAL: " . $sql);
-            error_log("🔍 [DEBUG] PARAMS: " . print_r($params, true));
-
-            try {
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute($params);
-                $proximo_evento = $stmt->fetch();
-                error_log("✅ [QUERY] Resultado: " . ($proximo_evento ? 'ENCONTRADO ID:' . $proximo_evento['id_reserva'] : 'VACÍO'));
-            } catch (Exception $e) {
-                error_log("❌ [QUERY] Error: " . $e->getMessage());
-                $proximo_evento = null;
-            }
-
-            // Asegurar variable
-            $proximo_evento = $proximo_evento ?: null;
-
-// === DEUDAS PENDIENTES ===
-$deuda_mas_vigente = null;
-$total_deudas = 0;
-
-if (!$modo_individual && !empty($club_id)) {
-
-    try {
-        $stmt_deudas = $pdo->prepare("
-            SELECT
-                c.id_cuota,
-                c.monto,
-                c.fecha_vencimiento,
-                CASE
-                    WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
-                    WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
-                    ELSE 'Sin detalle'
-                END as detalle_origen,
-                COALESCE(r.fecha, e.fecha) as fecha_evento
-            FROM cuotas c
-            LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-            LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-            LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-            LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-            LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-            INNER JOIN socio_club sc ON c.id_socio = sc.id_socio AND sc.estado = 'activo'
-            WHERE 
-                c.id_socio = ? 
-                AND c.estado = 'pendiente'
-                AND sc.id_club = ?
-                AND (
-                    (c.tipo_actividad = 'reserva' AND r.id_club = ?)
-                    OR
-                    (c.tipo_actividad = 'evento' AND e.id_club = ?)
-                    OR
-                    (c.tipo_actividad NOT IN ('reserva', 'evento'))
-                )
-            ORDER BY c.fecha_vencimiento ASC
-            LIMIT 1
-        ");
-
-        $stmt_deudas->execute([
-            $_SESSION['id_socio'],
-            $club_id,
-            $club_id,
-            $club_id
-        ]);
-
-        $deuda_mas_vigente = $stmt_deudas->fetch();
-
-        $stmt_count = $pdo->prepare("
-            SELECT COUNT(*) 
-            FROM cuotas 
-            WHERE id_socio = ? AND estado = 'pendiente'
-        ");
-        $stmt_count->execute([$_SESSION['id_socio']]);
-        $total_deudas = (int)$stmt_count->fetchColumn();
-
-    } catch (Exception $e) {
-        error_log("❌ Error en deudas: " . $e->getMessage());
-    }
-
-} else {
-    error_log("ℹ️ Saltando bloque de deudas (modo individual)");
-}
-
-// === ÚLTIMO PARTIDO (solo para club) ===
-$ultimo_partido = null;
-if (!$modo_individual && isset($_SESSION['club_id'])) {
-    $stmt_last = $pdo->prepare("
-        SELECT
-            r.id_reserva,
-            r.fecha,
-            r.hora_inicio,
-            r.resultado_grabado
-        FROM reservas r
-        WHERE r.id_club = ? AND r.fecha < CURDATE()
-        ORDER BY r.fecha DESC, r.hora_inicio DESC
+            t.id_torneo,
+            t.nombre AS torneo_nombre,
+            t.fecha_inicio,
+            pt.id_pareja
+        FROM parejas_torneo pt
+        JOIN torneos t ON pt.id_torneo = t.id_torneo
+        WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
+        AND t.estado IN ('abierto', 'en_progreso', 'finalizado')
+        AND t.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        ORDER BY t.fecha_inicio DESC
         LIMIT 1
     ");
-    $stmt_last->execute([$_SESSION['club_id']]);
-    $ultimo_partido = $stmt_last->fetch();
-}
+    $stmt_torneos->execute([$_SESSION['id_socio'], $_SESSION['id_socio']]);
+    $torneos_americanos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
+    $tiene_torneo = !empty($torneos_americanos);
+    $torneo_actual = $torneos_americanos[0] ?? null;
+
+    // === BLOQUE PRÓXIMO EVENTO - FIX DEFINITIVO ===
+    error_log("🚀 [INICIO] Bloque Próximo Evento");
+    $id_socio = $_SESSION['id_socio'] ?? 0;
+
+    // NO sobrescribir club_id innecesariamente
+    $club_id_actual = $modo_individual ? null : ($_SESSION['club_id'] ?? null);
+
+    // Construcción de query CORRECTA
+    $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
+    $params = [];
+    // 🔥 FIX: no forzar IS NULL
+    if ($club_id_actual !== null) {
+        $where_parts[] = "r.id_club = ?";
+        $params[] = $club_id_actual;
+    }
+
+    // Siempre filtrar por socio
+    $where_parts[] = "r.id_socio = ?";
+    $params[] = $id_socio;
+
+    $sql = "
+         SELECT 
+            r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, 
+            r.jugadores_esperados, r.estado, r.monto_recaudacion,
+            c.nombre_cancha, c.id_deporte,
+            (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
+        FROM reservas r
+        JOIN canchas c ON r.id_cancha = c.id_cancha
+        WHERE " . implode(" AND ", $where_parts) . "
+        ORDER BY r.fecha ASC, r.hora_inicio ASC
+        LIMIT 1
+    ";
+
+    error_log("🔍 [DEBUG] SQL REAL: " . $sql);
+    error_log("🔍 [DEBUG] PARAMS: " . print_r($params, true));
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $proximo_evento = $stmt->fetch();
+        error_log("✅ [QUERY] Resultado: " . ($proximo_evento ? 'ENCONTRADO ID:' . $proximo_evento['id_reserva'] : 'VACÍO'));
+    } catch (Exception $e) {
+        error_log("❌ [QUERY] Error: " . $e->getMessage());
+        $proximo_evento = null;
+    }
+
+    // Asegurar variable
+    $proximo_evento = $proximo_evento ?: null;
+                
+
+    // === DEUDAS PENDIENTES ===
+    $deuda_mas_vigente = null;
+    $total_deudas = 0;
+
+    if (!$modo_individual && !empty($club_id)) {
+
+        try {
+            $stmt_deudas = $pdo->prepare("
+                SELECT
+                    c.id_cuota,
+                    c.monto,
+                    c.fecha_vencimiento,
+                    CASE
+                        WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                        WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+                        ELSE 'Sin detalle'
+                    END as detalle_origen,
+                    COALESCE(r.fecha, e.fecha) as fecha_evento
+                FROM cuotas c
+                LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+                LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+                LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+                INNER JOIN socio_club sc ON c.id_socio = sc.id_socio AND sc.estado = 'activo'
+                WHERE 
+                    c.id_socio = ? 
+                    AND c.estado = 'pendiente'
+                    AND sc.id_club = ?
+                    AND (
+                        (c.tipo_actividad = 'reserva' AND r.id_club = ?)
+                        OR
+                        (c.tipo_actividad = 'evento' AND e.id_club = ?)
+                        OR
+                        (c.tipo_actividad NOT IN ('reserva', 'evento'))
+                    )
+                ORDER BY c.fecha_vencimiento ASC
+                LIMIT 1
+            ");
+
+            $stmt_deudas->execute([
+                $_SESSION['id_socio'],
+                $club_id,
+                $club_id,
+                $club_id
+            ]);
+
+            $deuda_mas_vigente = $stmt_deudas->fetch();
+
+            $stmt_count = $pdo->prepare("
+                SELECT COUNT(*) 
+                FROM cuotas 
+                WHERE id_socio = ? AND estado = 'pendiente'
+            ");
+            $stmt_count->execute([$_SESSION['id_socio']]);
+            $total_deudas = (int)$stmt_count->fetchColumn();
+
+        } catch (Exception $e) {
+            error_log("❌ Error en deudas: " . $e->getMessage());
+        }
+
+    } else {
+        error_log("ℹ️ Saltando bloque de deudas (modo individual)");
+    }
+
+    // === ÚLTIMO PARTIDO (solo para club) ===
+    $ultimo_partido = null;
+    if (!$modo_individual && isset($_SESSION['club_id'])) {
+        $stmt_last = $pdo->prepare("
+            SELECT
+                r.id_reserva,
+                r.fecha,
+                r.hora_inicio,
+                r.resultado_grabado
+            FROM reservas r
+            WHERE r.id_club = ? AND r.fecha < CURDATE()
+            ORDER BY r.fecha DESC, r.hora_inicio DESC
+            LIMIT 1
+        ");
+        $stmt_last->execute([$_SESSION['club_id']]);
+        $ultimo_partido = $stmt_last->fetch();
+    }
 ?>
 <!DOCTYPE html>
 <html lang="es">
