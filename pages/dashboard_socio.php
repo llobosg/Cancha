@@ -752,6 +752,15 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
 
                 <!-- SE QUITÓ EL <?php if (!$modo_individual): ?> PARA QUE SIRVA A TODOS -->
                 <div class="fichas-dashboard">
+                    <?php
+                        // === TEST DE DIAGNÓSTICO INFALIBLE ===
+                        error_log("🧪 [TEST] ¿Existe \$proximo_evento? " . (isset($proximo_evento) ? 'SÍ' : 'NO'));
+                        if (isset($proximo_evento) && $proximo_evento) {
+                            error_log("🧪 [TEST] Contenido: " . print_r($proximo_evento, true));
+                        } else {
+                            error_log("🧪 [TEST] \$proximo_evento es NULL o FALSE");
+                        }
+                    ?>
 
                     <!-- === PRÓXIMO PARTIDO (CON DEBUG) === -->
                     <?php 
