@@ -420,8 +420,8 @@
         <style>
             body {
             background:
-            linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-            url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+                linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+                url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
             background-blend-mode: multiply;
             margin: 0;
             padding: 0;
@@ -636,88 +636,51 @@
             background: #050d6b;
             }
             @media (max-width: 768px) {
-                .dashboard-upper {
+            .dashboard-upper {
                 flex-direction: column;
                 height: auto;
                 margin-bottom: 1rem;
-                }
             }
             .upper-left {
-            flex: 1;
-            grid-template-columns: repeat(2, 1fr);
-            height: auto;
-            margin-left: 0;
+                flex: 1;
+                grid-template-columns: repeat(2, 1fr);
+                height: auto;
+                margin-left: 0;
             }
             .upper-right {
-            flex: 1;
-            flex-direction: row;
-            flex-wrap: wrap;
-            height: auto;
-            margin-right: 0;
+                flex: 1;
+                flex-direction: row;
+                flex-wrap: wrap;
+                height: auto;
+                margin-right: 0;
             }
             .dashboard-lower {
-            height: auto;
-            margin-top: 1rem;
+                height: auto;
+                margin-top: 1rem;
             }
             .filters {
-            justify-content: center;
+                justify-content: center;
             }
-            /* === LAYOUT DE FICHAS - RESPONSIVE === */
-            .fichas-dashboard {
-                display: grid;
-                gap: 1.2rem;
-                width: 100%;
-                /* Móvil: 1 columna (vertical) */
-                grid-template-columns: 1fr;
             }
-
-            /* Tablet: 2 columnas */
-            @media (min-width: 768px) and (max-width: 1023px) {
-                .fichas-dashboard {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-
-            /* Desktop / Notebook: 3 columnas (horizontal) */
-            @media (min-width: 1024px) {
-                .fichas-dashboard {
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 1.4rem;
-                }
-            }
-
-            /* Ajuste de altura fija para que todas las fichas se alineen */
+            /* ALTURA FIJA PARA FICHAS */
             .stat-card {
-                height: auto;
-                min-height: 280px;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .stat-card-content {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-            }
-
-            /* Ajuste de botones para que no se desborden en horizontal */
-            .stat-card .btn-action {
-                width: 100%;
-                font-size: 0.75rem;
-                padding: 0.35rem 0.5rem;
-                margin-top: 0.3rem;
-            }
-
-            /* Evitar que el texto largo rompa el layout */
-            .stat-card p, 
-            .stat-card strong {
-                word-wrap: break-word;
-                overflow-wrap: break-word;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            height: 310px; /* Altura fija para todas las fichas */
+            display: flex;
+            flex-direction: column;
             }
             .stat-card h3 {
             margin-bottom: 0.5rem;
             opacity: 0.9;
+            }
+            .stat-card-content {
+            flex: 1;
+            overflow-y: auto;
             }
             .ficha-buttons {
             display: grid;
@@ -733,9 +696,9 @@
             box-sizing: border-box;
             }
             @media (max-width: 768px) {
-                .ficha-buttons {
+            .ficha-buttons {
                 grid-template-columns: 1fr;
-                }
+            }
             }
             .btn-share {
             background: rgba(255,255,255,0.2);
@@ -846,58 +809,64 @@
                         ?>
 
                         <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                            <h3 style="color: white; margin-bottom: 0.2rem;">Próximo Partido</h3>
-                            <p style="margin: 0 0 0.8rem 0; font-weight: bold; font-size: 1.1rem; text-align: center; opacity: 0.95;">
-                                <?= htmlspecialchars($nombre_deporte) ?>
-                            </p>
+                            <h3 style="color: white;">Próximo Partido</h3>
                             <div class="stat-card-content">
+                                <p style="margin: 0 0 0.8rem 0; font-weight: bold; font-size: 1.1rem; text-align: center; opacity: 0.95;">
+                                    <?= htmlspecialchars($nombre_deporte) ?>
+                                </p>
                                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                                    <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
-                                    <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
-                                    <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                                        <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?><br>
-                                        <strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>
-                                    </div>
-                                    <?php endif; ?>
+                                <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?>
+                                <?php if ($proximo_evento['monto_recaudacion']): ?>
+                                <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
+                                    <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?>
+                                    <br><strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?></div>
+                                </div>
+                                <?php endif; ?>
                                 </div>
 
-                                <?php if ($despues_del_lunes_09): ?>
-                                    <?php if ($ya_inscrito): ?>
-                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;width:100%;" 
-                                            onclick="bajarseEvento(<?= (int)$id_reserva ?>)">
-                                        Bajarse
+                                <?php if ($despues_del_lunes_09): ?> 
+                                <!-- Botones de inscripción (activos desde lunes 09:00)  -->
+                                <?php if ($ya_inscrito): ?>
+                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                                    onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
+                                    Bajarse
                                     </button>
-                                    <?php else: ?>
+                                <?php else: ?>
                                     <?php if ($cupos_llenos): ?>
-                                        <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
+                                    <!-- Cupos llenos -->
+                                    <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">
+                                        ❌ No se aceptan más inscripciones hasta que uno de los anotados decida "Bajarse".
+                                    </p>
                                     <?php else: ?>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                                                onclick="anotarseEvento(<?= $id_reserva ?>, 'reserva', '<?= $deporte ?>', <?= $players ?>, <?= $monto_total ?>)">
                                             Anotarse
                                         </button>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                                onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
-                                            Anotarse + llevo 🍺🍺
+                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;"
+                                                onclick="anotarseConCerveza(true)">
+                                            Anotarse + llevo 🍺🍺  
                                         </button>
                                     <?php endif; ?>
-                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                            onclick="pasoEvento(<?= (int)$id_reserva ?>)">
-                                        Paso
+                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;"
+                                    onclick="pasoEvento(<?= $id_reserva ?>)">
+                                    <?= $ya_inscrito ? 'Paso' : 'Paso' ?>
                                     </button>
-                                    <?php endif; ?>
+                                <?php endif; ?>
 
-                                    <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                            onclick="armarEquiposIA(<?= (int)$id_reserva ?>)">
-                                        🤖 Armar Equipos IA
+                                <!-- Botón IA si aplica -->
+                                <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
+                                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;"
+                                            onclick="armarEquiposIA(<?= $id_reserva ?>)">
+                                    🤖 Armar Equipos IA
                                     </button>
-                                    <?php endif; ?>
+                                <?php endif; ?>
+                                
 
                                 <?php else: ?>
-                                    <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
-                                    ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
-                                    </p>
+                                <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
+                                    ⏰ Los botones de inscripción se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
+                                </p>
                                 <?php endif; ?>
                             </div>
                         </div>
