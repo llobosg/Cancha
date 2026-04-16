@@ -270,33 +270,30 @@ $torneo_actual = $torneos_americanos[0] ?? null;
 error_log("🔍 [DEBUG] --- INICIO CONSULTA PRÓXIMO EVENTO ---");
 error_log("🔍 [DEBUG] ID Socio: " . $id_socio);
 error_log(" [DEBUG] Club ID (puede ser null): " . ($club_id ?? 'NULL'));
+$sql = "..."; // La consulta se construye más abajo, pero la dejamos aquí para el log
 error_log("🔍 [DEBUG] SQL Query: " . $sql);
 
-// === BLOQUE PRÓXIMO EVENTO - VERSIÓN BLINDADA ===
+// === BLOQUE PRÓXIMO EVENTO - FIX DEFINITIVO ===
 error_log("🚀 [INICIO] Bloque Próximo Evento");
 
 $id_socio = $_SESSION['id_socio'] ?? 0;
 
-// 🔥 FIX CRÍTICO: respetar modo individual
-if ($modo_individual) {
-    $club_id = null;
-    unset($_SESSION['club_id']); // evitar contaminación futura
-} else {
-    $club_id = $_SESSION['club_id'] ?? null;
-}
+// NO sobrescribir club_id innecesariamente
+$club_id_actual = $modo_individual ? null : ($_SESSION['club_id'] ?? null);
 
-// 1. Consulta unificada (Club o Individual)
+// Construcción de query CORRECTA
 $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
 $params = [];
 
-if (!empty($club_id)) {
+// 🔥 FIX: no forzar IS NULL
+if ($club_id_actual !== null) {
     $where_parts[] = "r.id_club = ?";
-    $params[] = $club_id;
-} else {
-    $where_parts[] = "r.id_club IS NULL";
-    $where_parts[] = "r.id_socio = ?";
-    $params[] = $id_socio;
+    $params[] = $club_id_actual;
 }
+
+// Siempre filtrar por socio
+$where_parts[] = "r.id_socio = ?";
+$params[] = $id_socio;
 
 $sql = "
     SELECT 
@@ -311,6 +308,9 @@ $sql = "
     LIMIT 1
 ";
 
+error_log("🔍 [DEBUG] SQL REAL: " . $sql);
+error_log("🔍 [DEBUG] PARAMS: " . print_r($params, true));
+
 try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -320,6 +320,9 @@ try {
     error_log("❌ [QUERY] Error: " . $e->getMessage());
     $proximo_evento = null;
 }
+
+// Asegurar variable
+$proximo_evento = $proximo_evento ?: null;
 
 // 2. FORZAR que la variable exista para el HTML
 if (!isset($proximo_evento)) {
@@ -390,6 +393,12 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
     ");
     $stmt_last->execute([$_SESSION['club_id']]);
     $ultimo_partido = $stmt_last->fetch();
+}
+
+$pareja_activa = $pareja_activa ?? null;
+
+if ($club_id !== null) {
+    $stmt_deudas->execute([...]);
 }
 ?>
 <!DOCTYPE html>
@@ -772,50 +781,50 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     ?>
 
                     <?php 
-// Este log DEBE aparecer en Railway
-error_log("🎨 [HTML] Entrando al bloque de visualización. proximo_evento = " . (empty($proximo_evento) ? 'EMPTY' : 'SET'));
-?>
+                    // Este log DEBE aparecer en Railway
+                    error_log("🎨 [HTML] Entrando al bloque de visualización. proximo_evento = " . (empty($proximo_evento) ? 'EMPTY' : 'SET'));
+                    ?>
 
-<?php if (!empty($proximo_evento)): ?>
-    <!-- FICHA CON DATOS REALES -->
-    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px; border: 3px solid #00ff00;">
-        <h3 style="color: white; margin-bottom: 0.5rem;">✅ Próximo Partido</h3>
-        
-        <?php
-        // Datos seguros
-        $fecha_evt = $proximo_evento['fecha'] ?? '';
-        $hora_evt = $proximo_evento['hora_inicio'] ?? '';
-        $deporte_raw = strtolower(trim($proximo_evento['id_deporte'] ?? 'otro'));
-        $monto = (float)($proximo_evento['monto_total'] ?? 0);
-        
-        // Mapeo de deportes
-        $deportes_map = ['futbol'=>'Fútbol','futbolito'=>'Futbolito','padel'=>'Pádel','tenis'=>'Tenis','voleyball'=>'Vóley','otro'=>'Otro'];
-        $nombre_deporte = $deportes_map[$deporte_raw] ?? ucfirst($deporte_raw);
-        ?>
-        
-        <p style="font-size:1.1rem; font-weight:bold; text-align:center; margin:0.5rem 0;">
-            <?= htmlspecialchars($nombre_deporte) ?>
-        </p>
-        <p style="text-align:center;"><strong>📅 <?= htmlspecialchars($fecha_evt) ?> a las <?= htmlspecialchars($hora_evt) ?></strong></p>
-        <p style="text-align:center; font-size:0.9rem;">💰 $<?= number_format($monto, 0, ',', '.') ?></p>
-        
-        <!-- Botón simple de prueba -->
-        <button class="btn-action" style="margin-top:1rem; width:100%; background:#4ECDC4; color:#071289; padding:0.5rem; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="alert('Reserva ID: <?= $proximo_evento['id_reserva'] ?>')">
-            Ver Detalles
-        </button>
-    </div>
+                    <?php if (!empty($proximo_evento)): ?>
+                        <!-- FICHA CON DATOS REALES -->
+                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px; border: 3px solid #00ff00;">
+                            <h3 style="color: white; margin-bottom: 0.5rem;">✅ Próximo Partido</h3>
+                            
+                            <?php
+                            // Datos seguros
+                            $fecha_evt = $proximo_evento['fecha'] ?? '';
+                            $hora_evt = $proximo_evento['hora_inicio'] ?? '';
+                            $deporte_raw = strtolower(trim($proximo_evento['id_deporte'] ?? 'otro'));
+                            $monto = (float)($proximo_evento['monto_total'] ?? 0);
+                            
+                            // Mapeo de deportes
+                            $deportes_map = ['futbol'=>'Fútbol','futbolito'=>'Futbolito','padel'=>'Pádel','tenis'=>'Tenis','voleyball'=>'Vóley','otro'=>'Otro'];
+                            $nombre_deporte = $deportes_map[$deporte_raw] ?? ucfirst($deporte_raw);
+                            ?>
+                            
+                            <p style="font-size:1.1rem; font-weight:bold; text-align:center; margin:0.5rem 0;">
+                                <?= htmlspecialchars($nombre_deporte) ?>
+                            </p>
+                            <p style="text-align:center;"><strong>📅 <?= htmlspecialchars($fecha_evt) ?> a las <?= htmlspecialchars($hora_evt) ?></strong></p>
+                            <p style="text-align:center; font-size:0.9rem;">💰 $<?= number_format($monto, 0, ',', '.') ?></p>
+                            
+                            <!-- Botón simple de prueba -->
+                            <button class="btn-action" style="margin-top:1rem; width:100%; background:#4ECDC4; color:#071289; padding:0.5rem; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="alert('Reserva ID: <?= $proximo_evento['id_reserva'] ?>')">
+                                Ver Detalles
+                            </button>
+                        </div>
 
-<?php else: ?>
-    <!-- FICHA VACÍA (FALLBACK) -->
-    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px; border: 3px solid #ff6b6b;">
-        <h3 style="color: white;">📭 Sin Partidos Próximos</h3>
-        <p style="font-size:0.85rem; opacity:0.9; text-align:center;">
-            (Debug: evento=<?= empty($proximo_evento) ? 'NULL' : 'OK' ?>)
-        </p>
-    </div>
-<?php endif; ?>
+                    <?php else: ?>
+                        <!-- FICHA VACÍA (FALLBACK) -->
+                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px; border: 3px solid #ff6b6b;">
+                            <h3 style="color: white;">📭 Sin Partidos Próximos</h3>
+                            <p style="font-size:0.85rem; opacity:0.9; text-align:center;">
+                                (Debug: evento=<?= empty($proximo_evento) ? 'NULL' : 'OK' ?>)
+                            </p>
+                        </div>
+                    <?php endif; ?>
 
-<?php error_log("🏁 [FIN] Bloque Próximo Evento ejecutado"); ?>
+                    <?php error_log("🏁 [FIN] Bloque Próximo Evento ejecutado"); ?>
 
                     <!-- === DEUDAS PENDIENTES === -->
                     <?php if ($deuda_mas_vigente): ?>
