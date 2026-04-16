@@ -10,9 +10,12 @@ try {
     }
     
     $id_socio = $_SESSION['id_socio'];
-    $id_club = $_POST['club_id'] ?? ($_SESSION['club_id'] ?? null); // ← Prioridad al POST
     
-    $id_cancha = (int)($_POST['id_cancha'] ?? 0);
+    // CORRECCIÓN AQUÍ: Forzar null si está vacío para evitar error de tipo entero
+    $raw_club_id = $_POST['club_id'] ?? ($_SESSION['club_id'] ?? '');
+    $id_club = !empty($raw_club_id) ? (int)$raw_club_id : null;
+    
+    $id_cancha = !empty($_POST['id_cancha']) ? (int)$_POST['id_cancha'] : 0;
     $fecha_base = $_POST['fecha_base'] ?? '';
     $hora_inicio = $_POST['hora_inicio'] ?? '';
     $hora_fin = $_POST['hora_fin'] ?? '';
@@ -66,9 +69,7 @@ try {
     
     // Crear todas las reservas
     $reservas_creadas = crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $cancha, 
-                                          $fechas_reservar, $hora_inicio, $hora_fin, 
-                                          $tipo_reserva, $tipo_arriendo,
-                                          $monto_recaudacion, $jugadores_esperados);
+        $fechas_reservar, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,$monto_recaudacion, $jugadores_esperados);
     
     echo json_encode([
         'success' => true,
@@ -166,10 +167,11 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
+        // Aquí $id_club ya es NULL o un Entero, PDO lo manejará bien
         $stmt->execute([
             $codigo_reserva,
             $id_cancha,
-            $id_club,
+            $id_club, // Si es null, se guarda NULL en la BD
             $id_socio,
             $socio['nombre'],
             $socio['email'],
