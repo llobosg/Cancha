@@ -970,11 +970,11 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <!-- Filtros -->
                 <button class="filter-btn" data-filter="inscritos">Inscritos Próximo Evento</button>
                 <button class="filter-btn" data-filter="torneos">Americanos</button>
+                <button class="filter-btn" data-filter="reservas">Reservas</button>
                 <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
-                    <button class="filter-btn" data-filter="equipos">Equipos IA</button>
+                    <!--<button class="filter-btn" data-filter="equipos">Equipos IA</button> --->
                 <?php endif; ?>
                     <?php if (!$modo_individual): ?>
-                        <button class="filter-btn" data-filter="reservas">Reservas</button>
                         <button class="filter-btn" data-filter="cuotas">Cuotas</button>
                         <button class="filter-btn" data-filter="eventos">Eventos</button>
                         <button class="filter-btn" data-filter="socios">Socios</button>
