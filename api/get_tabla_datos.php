@@ -13,29 +13,32 @@ if (!isset($_SESSION['id_socio'])) {
 }
 
 $filtro = $_GET['filtro'] ?? 'inscritos';
+$id_socio = $_SESSION['id_socio'];
 $club_id = $_SESSION['club_id'] ?? null;
 
-// Validar club si es necesario
-if (in_array($filtro, ['inscritos', 'reservas', 'eventos', 'cuotas', 'socios']) && !$club_id) {
-    // Intentar recuperar club desde socio_club
+// Intentar recuperar club desde socio_club si no está en sesión (opcional, pero útil)
+if (!$club_id) {
     $stmt = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo' LIMIT 1");
-    $stmt->execute([$_SESSION['id_socio']]);
+    $stmt->execute([$id_socio]);
     $row = $stmt->fetch();
     if ($row) {
         $club_id = (int)$row['id_club'];
         $_SESSION['club_id'] = $club_id;
-    } else {
-        echo json_encode([]);
-        exit;
     }
 }
+
+// CORRECCIÓN: No salir si no hay club para filtros que pueden ser individuales (como reservas)
+// Solo salimos si es un filtro estrictamente de club y no tenemos club ni socio individual válido para ese contexto
+// Pero para 'reservas', siempre queremos mostrar algo si hay id_socio.
 
 try {
     $result = [];
 
     switch ($filtro) {
         case 'inscritos':
-            // Obtener próximo evento
+            // Si no hay club, no hay inscritos de club
+            if (!$club_id) { echo json_encode([]); exit; }
+            
             $stmt_next = $pdo->prepare("
                 SELECT id_reserva FROM reservas 
                 WHERE id_club = ? AND fecha >= CURDATE() AND estado = 'confirmada'
@@ -47,19 +50,10 @@ try {
 
             $stmt = $pdo->prepare("
                 SELECT
-                    r.fecha,
-                    r.hora_inicio,
-                    te.tipoevento AS id_tipoevento,
-                    COALESCE(ca.nombre_cancha, 'Cancha') AS origen,
-                    r.monto_total AS costo_evento,
-                    s.alias AS nombre,
-                    p.puesto AS posicion_jugador,
-                    c.monto AS cuota_monto,
-                    c.monto AS monto, -- mismo que cuota_monto
-                    c.comentario,
-                    c.estado,
-                    c.fecha_pago,
-                    i.id_inscrito
+                    r.fecha, r.hora_inicio, te.tipoevento AS id_tipoevento,
+                    COALESCE(ca.nombre_cancha, 'Cancha') AS origen, r.monto_total AS costo_evento,
+                    s.alias AS nombre, p.puesto AS posicion_jugador,
+                    c.monto AS cuota_monto, c.monto AS monto, c.comentario, c.estado, c.fecha_pago, i.id_inscrito
                 FROM reservas r
                 JOIN inscritos i ON r.id_reserva = i.id_evento AND i.tipo_actividad = 'reserva'
                 JOIN socios s ON i.id_socio = s.id_socio
@@ -75,21 +69,18 @@ try {
             break;
 
         case 'cuotas':
+            // Si no hay club, mostramos cuotas personales si existieran (ajustar lógica según necesidad)
+            // Por ahora, si no hay club, asumimos que las cuotas son de club o eventos de club
+            if (!$club_id) { echo json_encode([]); exit; }
+
             $stmt = $pdo->prepare("
                 SELECT
-                    COALESCE(r.fecha, e.fecha) AS fecha,
-                    r.hora_inicio,
+                    COALESCE(r.fecha, e.fecha) AS fecha, r.hora_inicio,
                     COALESCE(te.tipoevento, ete.tipoevento) AS id_tipoevento,
                     COALESCE(rd.nombre, cl.nombre, 'Evento') AS origen,
                     COALESCE(r.monto_total, e.valor_cuota, 0) AS costo_evento,
-                    s.alias AS nombre,
-                    p.puesto AS posicion_jugador,
-                    c.monto AS cuota_monto,
-                    c.monto AS monto,
-                    c.comentario,
-                    c.estado,
-                    c.fecha_pago,
-                    c.id_cuota AS id_inscrito
+                    s.alias AS nombre, p.puesto AS posicion_jugador,
+                    c.monto AS cuota_monto, c.monto AS monto, c.comentario, c.estado, c.fecha_pago, c.id_cuota AS id_inscrito
                 FROM cuotas c
                 JOIN socios s ON c.id_socio = s.id_socio
                 LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
@@ -103,11 +94,14 @@ try {
                 WHERE c.id_socio = ? AND COALESCE(r.id_club, e.id_club) = ?
                 ORDER BY c.fecha_vencimiento DESC
             ");
-            $stmt->execute([$_SESSION['id_socio'], $club_id]);
+            $stmt->execute([$id_socio, $club_id]);
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
             break;
 
         case 'reservas':
+            // CORRECCIÓN PRINCIPAL AQUÍ:
+            // Buscar reservas por id_socio, independientemente de si tienen id_club o no.
+            // Esto muestra reservas individuales (id_club NULL) y de club.
             $stmt = $pdo->prepare("
                 SELECT
                     r.fecha,
@@ -126,30 +120,23 @@ try {
                 FROM reservas r
                 JOIN canchas ca ON r.id_cancha = ca.id_cancha
                 JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                WHERE r.id_club = ? AND r.fecha >= CURDATE()
+                WHERE r.id_socio = ? AND r.fecha >= CURDATE()
                 ORDER BY r.fecha DESC
                 LIMIT 50
             ");
-            $stmt->execute([$club_id]);
+            $stmt->execute([$id_socio]);
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
             break;
 
         case 'eventos':
+            if (!$club_id) { echo json_encode([]); exit; }
             $stmt = $pdo->prepare("
                 SELECT
-                    e.fecha,
-                    e.hora AS hora_inicio,
-                    te.tipoevento AS id_tipoevento,
-                    COALESCE(e.lugar, 'Evento') AS origen,
-                    e.valor_cuota AS costo_evento,
-                    '' AS nombre,
-                    '' AS posicion_jugador,
-                    NULL AS cuota_monto,
-                    NULL AS monto,
-                    e.comentario,
-                    '' AS estado,
-                    NULL AS fecha_pago,
-                    e.id_evento AS id_inscrito
+                    e.fecha, e.hora AS hora_inicio, te.tipoevento AS id_tipoevento,
+                    COALESCE(e.lugar, 'Evento') AS origen, e.valor_cuota AS costo_evento,
+                    '' AS nombre, '' AS posicion_jugador,
+                    NULL AS cuota_monto, NULL AS monto, e.comentario, '' AS estado,
+                    NULL AS fecha_pago, e.id_evento AS id_inscrito
                 FROM eventos e
                 JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
                 WHERE e.id_club = ? AND e.fecha >= CURDATE()
@@ -161,21 +148,13 @@ try {
             break;
 
         case 'socios':
+            if (!$club_id) { echo json_encode([]); exit; }
             $stmt = $pdo->prepare("
                 SELECT
-                    NULL AS fecha,
-                    NULL AS hora_inicio,
-                    'Socio' AS id_tipoevento,
-                    'Club' AS origen,
-                    0 AS costo_evento,
-                    s.alias AS nombre,
-                    p.puesto AS posicion_jugador,
-                    NULL AS cuota_monto,
-                    NULL AS monto,
-                    s.email AS comentario,
-                    '' AS estado,
-                    s.created_at AS fecha_pago,
-                    s.id_socio AS id_inscrito
+                    NULL AS fecha, NULL AS hora_inicio, 'Socio' AS id_tipoevento, 'Club' AS origen, 0 AS costo_evento,
+                    s.alias AS nombre, p.puesto AS posicion_jugador,
+                    NULL AS cuota_monto, NULL AS monto, s.email AS comentario, '' AS estado,
+                    s.created_at AS fecha_pago, s.id_socio AS id_inscrito
                 FROM socios s
                 LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
                 JOIN socio_club sc ON s.id_socio = sc.id_socio
@@ -191,7 +170,7 @@ try {
             exit;
     }
 
-    // Normalizar salida: agregar comentario_completo
+    // Normalizar salida
     $output = [];
     foreach ($result as $row) {
         $comentario_completo = implode(' - ', array_filter([
