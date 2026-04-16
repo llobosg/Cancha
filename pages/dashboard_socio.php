@@ -278,13 +278,20 @@ $torneo_actual = $torneos_americanos[0] ?? null;
 error_log("🔍 [DEBUG] --- INICIO CONSULTA PRÓXIMO EVENTO ---");
 error_log("🔍 [DEBUG] ID Socio: " . $id_socio);
 error_log(" [DEBUG] Club ID (puede ser null): " . ($club_id ?? 'NULL'));
-error_log("🔍 [DEBUG] SQL Query: " . $sql_proximo);
+error_log("🔍 [DEBUG] SQL Query: " . $sql);
 
 // === BLOQUE PRÓXIMO EVENTO - VERSIÓN BLINDADA ===
 error_log("🚀 [INICIO] Bloque Próximo Evento");
 
 $id_socio = $_SESSION['id_socio'] ?? 0;
-$club_id = $_SESSION['club_id'] ?? null;
+
+// 🔥 FIX CRÍTICO: respetar modo individual
+if ($modo_individual) {
+    $club_id = null;
+    unset($_SESSION['club_id']); // evitar contaminación futura
+} else {
+    $club_id = $_SESSION['club_id'] ?? null;
+}
 
 // 1. Consulta unificada (Club o Individual)
 $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
