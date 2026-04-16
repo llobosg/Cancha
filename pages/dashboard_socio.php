@@ -753,45 +753,61 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                 <!-- SE QUITÓ EL <?php if (!$modo_individual): ?> PARA QUE SIRVA A TODOS -->
                 <div class="fichas-dashboard">
 
-                    <!-- === PRÓXIMO PARTIDO === -->
-                    <?php if ($proximo_evento): ?>
+                    <!-- === PRÓXIMO PARTIDO (CON DEBUG) === -->
+                    <?php 
+                    error_log("🎨 [HTML] Evaluando bloque Próximo Partido. proximo_evento es: " . ($proximo_evento ? 'TRUE' : 'FALSE'));
+                    if ($proximo_evento): 
+                        error_log("🎨 [HTML] Entrando al bloque TRUE");
+                    ?>
                         <?php
-                            // Definir variables (Asegúrate que $proximo_evento venga con datos individuales si aplica)
-                            $id_reserva = $proximo_evento['id_reserva'];
-                            $monto_total = (float)$proximo_evento['monto_total'];
-                            $deporte = $proximo_evento['id_deporte'] ?? 'futbolito'; // O el campo que tengas
-                            $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
-                            
-                            // Manejo seguro de fecha
-                            $fecha_str = $proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio'];
-                            $fecha_evento = DateTime::createFromFormat('Y-m-d H:i:s', $fecha_str) ?: new DateTime();
-                            
-                            $ahora = new DateTime();
-                            $lunes_semana_evento = clone $fecha_evento;
-                            $lunes_semana_evento->modify('this week monday');
-                            $lunes_semana_evento->setTime(9, 0, 0);
-                            $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
-                            
-                            $cupos_llenos = ((int)($proximo_evento['inscritos_actuales'] ?? 0) >= (int)$players);
-                            $fecha_formateada = $fecha_evento->format('d-m');
-                            $hora_formateada = $fecha_evento->format('H:i');
+                        // Definir variables con seguridad
+                        $id_reserva = $proximo_evento['id_reserva'];
+                        $monto_total = (float)($proximo_evento['monto_total'] ?? 0);
+                        $deporte_raw = $proximo_evento['id_deporte'] ?? 'otro';
+                        $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
+                        
+                        error_log("🎨 [HTML] Deporte Raw: $deporte_raw | Jugadores: $players");
 
-                            $nombres_deportes = [
-                                'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
-                                'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro'
-                            ];
-                            $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
+                        // Manejo seguro de fecha
+                        $fecha_str = ($proximo_evento['fecha'] ?? '') . ' ' . ($proximo_evento['hora_inicio'] ?? '00:00:00');
+                        try {
+                            $fecha_evento = DateTime::createFromFormat('Y-m-d H:i:s', $fecha_str);
+                            if (!$fecha_evento) $fecha_evento = new DateTime(); // Fallback
+                        } catch (Exception $e) {
+                            $fecha_evento = new DateTime();
+                        }
+                        
+                        $ahora = new DateTime();
+                        $lunes_semana_evento = clone $fecha_evento;
+                        $lunes_semana_evento->modify('this week monday');
+                        $lunes_semana_evento->setTime(9, 0, 0);
+                        $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+                        
+                        $cupos_llenos = ((int)($proximo_evento['inscritos_actuales'] ?? 0) >= (int)$players);
+                        $fecha_formateada = $fecha_evento->format('d-m');
+                        $hora_formateada = $fecha_evento->format('H:i');
 
-                            // Verificar inscripción
-                            $ya_inscrito = false;
-                            if (isset($_SESSION['id_socio'])) {
-                                $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
-                                $stmt_check->execute([$id_reserva, $_SESSION['id_socio']]);
-                                $ya_inscrito = (bool)$stmt_check->fetch();
-                            }
+                        $nombres_deportes = [
+                            'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
+                            'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro'
+                        ];
+                        
+                        // Normalizar clave de deporte (minúsculas)
+                        $deporte_key = strtolower(trim($deporte_raw));
+                        $nombre_deporte = $nombres_deportes[$deporte_key] ?? ucfirst($deporte_raw);
+                        
+                        error_log("🎨 [HTML] Nombre Deporte Final: $nombre_deporte");
+
+                        // Verificar inscripción
+                        $ya_inscrito = false;
+                        if (isset($_SESSION['id_socio'])) {
+                            $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
+                            $stmt_check->execute([$id_reserva, $_SESSION['id_socio']]);
+                            $ya_inscrito = (bool)$stmt_check->fetch();
+                        }
                         ?>
 
-                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px;">
                             <h3 style="color: white; margin-bottom: 0.2rem;">Próximo Partido</h3>
                             <p style="margin: 0 0 0.8rem 0; font-weight: bold; font-size: 1.1rem; text-align: center; opacity: 0.95;">
                                 <?= htmlspecialchars($nombre_deporte) ?>
@@ -815,16 +831,9 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                                         <?php if ($cupos_llenos): ?>
                                             <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
                                         <?php else: ?>
-                                            <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">Anotarse</button>
-                                            <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">Anotarse + llevo 🍺</button>
+                                            <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte_key) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">Anotarse</button>
                                         <?php endif; ?>
-                                        <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" onclick="pasoEvento(<?= (int)$id_reserva ?>)">Paso</button>
                                     <?php endif; ?>
-
-                                    <?php if (!empty($es_responsable) && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                                        <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" onclick="armarEquiposIA(<?= (int)$id_reserva ?>)"> Armar Equipos IA</button>
-                                    <?php endif; ?>
-
                                 <?php else: ?>
                                     <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
                                         ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
@@ -834,7 +843,8 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                         </div>
 
                     <?php else: ?>
-                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <!-- BLOQUE VACÍO (DEBERÍA MOSTRARSE SI NO HAY EVENTO) -->
+                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px;">
                             <h3 style="color: white;">Próximo Partido</h3>
                             <p style="margin-top:1rem;">📭 No hay partidos programados próximamente</p>
                         </div>
