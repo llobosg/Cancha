@@ -275,41 +275,139 @@ $torneos_americanos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
 $tiene_torneo = !empty($torneos_americanos);
 $torneo_actual = $torneos_americanos[0] ?? null;
 
-// Consulta unificada: trae reservas del club (si hay club) O personales (si es individual)
-$where = ["r.estado='confirmada'", "r.fecha>=CURDATE()"];
-$params = [];
+            // === BLOQUE PRÓXIMO EVENTO - FIX DEFINITIVO ===
+            error_log("🚀 [INICIO] Bloque Próximo Evento");
 
-if (!empty($club_id)) {
-    $where[] = "r.id_club=?";
-    $params[] = $club_id;
-} else {
-    $where[] = "r.id_club IS NULL AND r.id_socio=?";
-    $params[] = $id_socio;
-}
+            $id_socio = $_SESSION['id_socio'] ?? 0;
 
-$sql = "SELECT r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, r.jugadores_esperados, r.estado, r.monto_recaudacion, c.nombre_cancha, c.id_deporte, (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento=r.id_reserva AND i.tipo_actividad='reserva') as inscritos_actuales FROM reservas r JOIN canchas c ON r.id_cancha=c.id_cancha WHERE ".implode(' AND ',$where)." ORDER BY r.fecha ASC, r.hora_inicio ASC LIMIT 1";
+            // NO sobrescribir club_id innecesariamente
+            $club_id_actual = $modo_individual ? null : ($_SESSION['club_id'] ?? null);
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$proximo_evento = $stmt->fetch();
+            // Construcción de query CORRECTA
+            $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
+            $params = [];
+
+            // 🔥 FIX: no forzar IS NULL
+            if ($club_id_actual !== null) {
+                $where_parts[] = "r.id_club = ?";
+                $params[] = $club_id_actual;
+            }
+
+            // Siempre filtrar por socio
+            $where_parts[] = "r.id_socio = ?";
+            $params[] = $id_socio;
+
+            $sql = "
+                SELECT 
+                    r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, 
+                    r.jugadores_esperados, r.estado, r.monto_recaudacion,
+                    c.nombre_cancha, c.id_deporte,
+                    (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
+                FROM reservas r
+                JOIN canchas c ON r.id_cancha = c.id_cancha
+                WHERE " . implode(" AND ", $where_parts) . "
+                ORDER BY r.fecha ASC, r.hora_inicio ASC
+                LIMIT 1
+            ";
+
+            error_log("🔍 [DEBUG] SQL REAL: " . $sql);
+            error_log("🔍 [DEBUG] PARAMS: " . print_r($params, true));
+
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $proximo_evento = $stmt->fetch();
+                error_log("✅ [QUERY] Resultado: " . ($proximo_evento ? 'ENCONTRADO ID:' . $proximo_evento['id_reserva'] : 'VACÍO'));
+            } catch (Exception $e) {
+                error_log("❌ [QUERY] Error: " . $e->getMessage());
+                $proximo_evento = null;
+            }
+
+            // Asegurar variable
+            $proximo_evento = $proximo_evento ?: null;
 
 // === DEUDAS PENDIENTES ===
-// Simplificar: buscar deudas del socio, sin depender estrictamente del club
-$sql_deuda = "SELECT c.id_cuota, c.monto, c.fecha_vencimiento, COALESCE(r.fecha,e.fecha) as fecha_evento, CONCAT('Cuota ',COALESCE(r.codigo_reserva,e.nombre)) as detalle_origen FROM cuotas c LEFT JOIN reservas r ON c.id_evento=r.id_reserva AND c.tipo_actividad='reserva' LEFT JOIN eventos e ON c.id_evento=e.id_evento AND c.tipo_actividad='evento' WHERE c.id_socio=? AND c.estado='pendiente' ORDER BY c.fecha_vencimiento ASC LIMIT 1";
-$stmt_deudas = $pdo->prepare($sql_deuda);
-$stmt_deudas->execute([$id_socio]);
-$deuda_mas_vigente = $stmt_deudas->fetch();
+$deuda_mas_vigente = null;
+$total_deudas = 0;
+
+if (!$modo_individual && !empty($club_id)) {
+
+    try {
+        $stmt_deudas = $pdo->prepare("
+            SELECT
+                c.id_cuota,
+                c.monto,
+                c.fecha_vencimiento,
+                CASE
+                    WHEN c.tipo_actividad = 'reserva' THEN rd.nombre
+                    WHEN c.tipo_actividad = 'evento' THEN te.tipoevento
+                    ELSE 'Sin detalle'
+                END as detalle_origen,
+                COALESCE(r.fecha, e.fecha) as fecha_evento
+            FROM cuotas c
+            LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+            LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+            LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+            LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+            LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
+            INNER JOIN socio_club sc ON c.id_socio = sc.id_socio AND sc.estado = 'activo'
+            WHERE 
+                c.id_socio = ? 
+                AND c.estado = 'pendiente'
+                AND sc.id_club = ?
+                AND (
+                    (c.tipo_actividad = 'reserva' AND r.id_club = ?)
+                    OR
+                    (c.tipo_actividad = 'evento' AND e.id_club = ?)
+                    OR
+                    (c.tipo_actividad NOT IN ('reserva', 'evento'))
+                )
+            ORDER BY c.fecha_vencimiento ASC
+            LIMIT 1
+        ");
+
+        $stmt_deudas->execute([
+            $_SESSION['id_socio'],
+            $club_id,
+            $club_id,
+            $club_id
+        ]);
+
+        $deuda_mas_vigente = $stmt_deudas->fetch();
+
+        $stmt_count = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM cuotas 
+            WHERE id_socio = ? AND estado = 'pendiente'
+        ");
+        $stmt_count->execute([$_SESSION['id_socio']]);
+        $total_deudas = (int)$stmt_count->fetchColumn();
+
+    } catch (Exception $e) {
+        error_log("❌ Error en deudas: " . $e->getMessage());
+    }
+
+} else {
+    error_log("ℹ️ Saltando bloque de deudas (modo individual)");
+}
 
 // === ÚLTIMO PARTIDO (solo para club) ===
-// Traer último partido del club (si hay club) O personal (si es individual)
-if (!empty($club_id)) {
-    $stmt_last = $pdo->prepare("SELECT id_reserva,fecha,hora_inicio,resultado_grabado FROM reservas WHERE id_club=? AND fecha<CURDATE() ORDER BY fecha DESC, hora_inicio DESC LIMIT 1");
-    $stmt_last->execute([$club_id]);
-} else {
-    $stmt_last = $pdo->prepare("SELECT id_reserva,fecha,hora_inicio,resultado_grabado FROM reservas WHERE id_socio=? AND id_club IS NULL AND fecha<CURDATE() ORDER BY fecha DESC, hora_inicio DESC LIMIT 1");
-    $stmt_last->execute([$id_socio]);
+$ultimo_partido = null;
+if (!$modo_individual && isset($_SESSION['club_id'])) {
+    $stmt_last = $pdo->prepare("
+        SELECT
+            r.id_reserva,
+            r.fecha,
+            r.hora_inicio,
+            r.resultado_grabado
+        FROM reservas r
+        WHERE r.id_club = ? AND r.fecha < CURDATE()
+        ORDER BY r.fecha DESC, r.hora_inicio DESC
+        LIMIT 1
+    ");
+    $stmt_last->execute([$_SESSION['club_id']]);
+    $ultimo_partido = $stmt_last->fetch();
 }
-$ultimo_partido = $stmt_last->fetch();
 ?>
 <!DOCTYPE html>
 <html lang="es">
