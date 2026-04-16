@@ -274,7 +274,31 @@ $torneos_americanos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
 $tiene_torneo = !empty($torneos_americanos);
 $torneo_actual = $torneos_americanos[0] ?? null;
 
+
+error_log("🔍 [DEBUG] --- INICIO CONSULTA PRÓXIMO EVENTO ---");
+error_log("🔍 [DEBUG] ID Socio: " . $id_socio);
+error_log(" [DEBUG] Club ID (puede ser null): " . ($club_id ?? 'NULL'));
+error_log("🔍 [DEBUG] SQL Query: " . $sql_proximo);
+
 // === CONSULTA UNIFICADA PARA PRÓXIMO EVENTO (CLUB O INDIVIDUAL) ===
+
+// Construir la condición WHERE dinámicamente según si hay club o no
+$where_conditions = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
+$params = [];
+
+if (!empty($club_id)) {
+    // MODO CLUB: Buscar reservas del club
+    $where_conditions[] = "r.id_club = ?";
+    $params[] = $club_id;
+} else {
+    // MODO INDIVIDUAL: Buscar reservas personales (donde id_club es NULL)
+    $where_conditions[] = "r.id_club IS NULL";
+    $where_conditions[] = "r.id_socio = ?";
+    $params[] = $id_socio;
+}
+
+$sql_where = implode(" AND ", $where_conditions);
+
 $sql_proximo = "
     SELECT 
         r.id_reserva, 
@@ -283,31 +307,27 @@ $sql_proximo = "
         r.monto_total, 
         r.jugadores_esperados,
         r.estado,
-        c.nombre_cancha as nombre_cancha,  -- CORREGIDO: Usar 'nombre_cancha' en lugar de 'c.nombre'
-        c.id_deporte as id_deporte,        -- CORREGIDO: Obtener directamente de canchas si no hay tabla deportes o el join falla
+        c.nombre_cancha as nombre_cancha,
+        c.id_deporte as id_deporte,
         (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
     FROM reservas r
     JOIN canchas c ON r.id_cancha = c.id_cancha
-    -- LEFT JOIN deportes d ON c.id_deporte = d.deporte -- Comentado temporalmente para evitar errores si la tabla/columna no coincide
-    WHERE r.estado = 'confirmada' 
-      AND r.fecha >= CURDATE()
-      AND (
-          -- Caso 1: Reservas de Club (si el usuario tiene club)
-          (r.id_club IS NOT NULL AND r.id_club = ?)
-          OR
-          -- Caso 2: Reservas Individuales (hechas por este socio y sin club)
-          (r.id_club IS NULL AND r.id_socio = ?)
-      )
+    WHERE $sql_where
     ORDER BY r.fecha ASC, r.hora_inicio ASC
     LIMIT 1
 ";
 
+error_log(" [DEBUG] SQL Generado: $sql_proximo");
+error_log("🔍 [DEBUG] Parámetros: " . print_r($params, true));
+
 $stmt_prox = $pdo->prepare($sql_proximo);
-// Pasamos club_id primero y luego id_socio
-$stmt_prox->execute([$club_id, $id_socio]); 
+$stmt_prox->execute($params); 
 $proximo_evento = $stmt_prox->fetch();
 
-error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));
+error_log("🔍 [DEBUG] Resultado Final: " . ($proximo_evento ? 'ENCONTRADO' : 'NO ENCONTRADO'));
+if ($proximo_evento) {
+    error_log("📅 [DEBUG] Fecha Reserva: " . $proximo_evento['fecha']);
+}
 
 // === DEUDAS PENDIENTES (solo del club activo) ===
 $stmt_deudas = $pdo->prepare("
@@ -736,39 +756,39 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <!-- === PRÓXIMO PARTIDO === -->
                     <?php if ($proximo_evento): ?>
                         <?php
-                        // Definir variables (Asegúrate que $proximo_evento venga con datos individuales si aplica)
-                        $id_reserva = $proximo_evento['id_reserva'];
-                        $monto_total = (float)$proximo_evento['monto_total'];
-                        $deporte = $proximo_evento['id_deporte'] ?? 'futbolito'; // O el campo que tengas
-                        $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
-                        
-                        // Manejo seguro de fecha
-                        $fecha_str = $proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio'];
-                        $fecha_evento = DateTime::createFromFormat('Y-m-d H:i:s', $fecha_str) ?: new DateTime();
-                        
-                        $ahora = new DateTime();
-                        $lunes_semana_evento = clone $fecha_evento;
-                        $lunes_semana_evento->modify('this week monday');
-                        $lunes_semana_evento->setTime(9, 0, 0);
-                        $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
-                        
-                        $cupos_llenos = ((int)($proximo_evento['inscritos_actuales'] ?? 0) >= (int)$players);
-                        $fecha_formateada = $fecha_evento->format('d-m');
-                        $hora_formateada = $fecha_evento->format('H:i');
+                            // Definir variables (Asegúrate que $proximo_evento venga con datos individuales si aplica)
+                            $id_reserva = $proximo_evento['id_reserva'];
+                            $monto_total = (float)$proximo_evento['monto_total'];
+                            $deporte = $proximo_evento['id_deporte'] ?? 'futbolito'; // O el campo que tengas
+                            $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
+                            
+                            // Manejo seguro de fecha
+                            $fecha_str = $proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio'];
+                            $fecha_evento = DateTime::createFromFormat('Y-m-d H:i:s', $fecha_str) ?: new DateTime();
+                            
+                            $ahora = new DateTime();
+                            $lunes_semana_evento = clone $fecha_evento;
+                            $lunes_semana_evento->modify('this week monday');
+                            $lunes_semana_evento->setTime(9, 0, 0);
+                            $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+                            
+                            $cupos_llenos = ((int)($proximo_evento['inscritos_actuales'] ?? 0) >= (int)$players);
+                            $fecha_formateada = $fecha_evento->format('d-m');
+                            $hora_formateada = $fecha_evento->format('H:i');
 
-                        $nombres_deportes = [
-                            'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
-                            'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro'
-                        ];
-                        $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
+                            $nombres_deportes = [
+                                'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
+                                'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro'
+                            ];
+                            $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
 
-                        // Verificar inscripción
-                        $ya_inscrito = false;
-                        if (isset($_SESSION['id_socio'])) {
-                            $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
-                            $stmt_check->execute([$id_reserva, $_SESSION['id_socio']]);
-                            $ya_inscrito = (bool)$stmt_check->fetch();
-                        }
+                            // Verificar inscripción
+                            $ya_inscrito = false;
+                            if (isset($_SESSION['id_socio'])) {
+                                $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
+                                $stmt_check->execute([$id_reserva, $_SESSION['id_socio']]);
+                                $ya_inscrito = (bool)$stmt_check->fetch();
+                            }
                         ?>
 
                         <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
