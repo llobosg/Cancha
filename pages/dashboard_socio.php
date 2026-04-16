@@ -316,7 +316,8 @@ $stmt_prox = $pdo->prepare($sql_proximo);
 $stmt_prox->execute([$club_id, $id_socio]); 
 $proximo_evento = $stmt_prox->fetch();
         
-error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));  
+error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));
+  
 
 // === DEUDAS PENDIENTES (solo del club activo) ===
 $stmt_deudas = $pdo->prepare("
@@ -340,10 +341,11 @@ $stmt_deudas = $pdo->prepare("
     WHERE 
         c.id_socio = ? 
         AND c.estado = 'pendiente'
+        AND sc.id_club = ?
         AND (
-            (c.tipo_actividad = 'reserva')
+            (c.tipo_actividad = 'reserva' AND r.id_club = ?)
             OR
-            (c.tipo_actividad = 'evento')
+            (c.tipo_actividad = 'evento' AND e.id_club = ?)
             OR
             (c.tipo_actividad NOT IN ('reserva', 'evento'))
         )
