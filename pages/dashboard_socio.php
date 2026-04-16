@@ -636,10 +636,11 @@
             background: #050d6b;
             }
             @media (max-width: 768px) {
-            .dashboard-upper {
-            flex-direction: column;
-            height: auto;
-            margin-bottom: 1rem;
+                .dashboard-upper {
+                flex-direction: column;
+                height: auto;
+                margin-bottom: 1rem;
+                }
             }
             .upper-left {
             flex: 1;
@@ -661,26 +662,62 @@
             .filters {
             justify-content: center;
             }
+            /* === LAYOUT DE FICHAS - RESPONSIVE === */
+            .fichas-dashboard {
+                display: grid;
+                gap: 1.2rem;
+                width: 100%;
+                /* Móvil: 1 columna (vertical) */
+                grid-template-columns: 1fr;
             }
-            /* ALTURA FIJA PARA FICHAS */
+
+            /* Tablet: 2 columnas */
+            @media (min-width: 768px) and (max-width: 1023px) {
+                .fichas-dashboard {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            /* Desktop / Notebook: 3 columnas (horizontal) */
+            @media (min-width: 1024px) {
+                .fichas-dashboard {
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 1.4rem;
+                }
+            }
+
+            /* Ajuste de altura fija para que todas las fichas se alineen */
             .stat-card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            padding: 1rem;
-            border-radius: 14px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            height: 310px; /* Altura fija para todas las fichas */
-            display: flex;
-            flex-direction: column;
+                height: auto;
+                min-height: 280px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .stat-card-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            /* Ajuste de botones para que no se desborden en horizontal */
+            .stat-card .btn-action {
+                width: 100%;
+                font-size: 0.75rem;
+                padding: 0.35rem 0.5rem;
+                margin-top: 0.3rem;
+            }
+
+            /* Evitar que el texto largo rompa el layout */
+            .stat-card p, 
+            .stat-card strong {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
             .stat-card h3 {
             margin-bottom: 0.5rem;
             opacity: 0.9;
-            }
-            .stat-card-content {
-            flex: 1;
-            overflow-y: auto;
             }
             .ficha-buttons {
             display: grid;
@@ -696,9 +733,9 @@
             box-sizing: border-box;
             }
             @media (max-width: 768px) {
-            .ficha-buttons {
-            grid-template-columns: 1fr;
-            }
+                .ficha-buttons {
+                grid-template-columns: 1fr;
+                }
             }
             .btn-share {
             background: rgba(255,255,255,0.2);
@@ -865,16 +902,16 @@
                             </div>
                         </div>
 
-                        <?php else: ?>
-                            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <h3 style="color: white;">Próximo Partido</h3>
-                                <p style="margin-top:1rem;">📭 No hay partidos programados próximamente</p>
-                            </div>
-                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <h3 style="color: white;">Próximo Partido</h3>
+                            <p style="margin-top:1rem;">📭 No hay partidos programados próximamente</p>
+                        </div>
+                    <?php endif; ?>
 
 
-                        <!-- === DEUDAS PENDIENTES === -->
-                        <?php if ($deuda_mas_vigente): ?>
+                    <!-- === DEUDAS PENDIENTES === -->
+                    <?php if ($deuda_mas_vigente): ?>
                             <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: #071289;">
                                 <h3>💰 Deuda Pendiente</h3>
                                 <div style="margin:0.8rem 0;padding:0.6rem;background:rgba(255,255,255,0.7);border-radius:8px;font-size:0.85rem;">
@@ -888,66 +925,65 @@
                                 <p style="font-size:0.8rem; margin-top:0.8rem; opacity:0.8;">⚠️ Existen más cuotas pendientes...</p>
                                 <?php endif; ?>
                             </div>
-                        <?php endif; ?>
+                     <?php endif; ?>
 
 
-                        <!-- === ÚLTIMO PARTIDO === -->
-                        <div class="stat-card">
+                    <!-- === ÚLTIMO PARTIDO === -->
+                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                         <h3>📊 Último Partido</h3>
                         <div class="stat-card-content">
                             <?php if ($ultimo_partido): ?>
-                            <p><strong>Fecha:</strong> <?= htmlspecialchars($ultimo_partido['fecha']) ?></p>
-                            <?php if (!is_null($ultimo_partido['resultado_grabado']) && $ultimo_partido['resultado_grabado']): ?>
-                                <p style="margin-top:1rem;">✅ Resultado ya registrado</p>
-                            <?php elseif ($es_responsable): ?>
-                                <form id="postPartidoForm" style="margin-top:1rem;">
-                                <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
-                                <div style="display:flex;gap:1rem;margin:0.5rem 0;">
-                                    <div style="flex:1;"><label style="font-weight:bold;">Rojos:</label>
-                                    <input type="number" name="goles_rojos" placeholder="0" min="0" value="0" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;"></div>
-                                    <div style="flex:1;"><label style="font-weight:bold;">Blancos:</label>
-                                    <input type="number" name="goles_blancos" placeholder="0" min="0" value="0" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;"></div>
-                                </div>
-                                <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">Grabar Resultado</button>
-                                </form>
+                                <p><strong>Fecha:</strong> <?= htmlspecialchars($ultimo_partido['fecha']) ?></p>
+                                <?php if (!is_null($ultimo_partido['resultado_grabado']) && $ultimo_partido['resultado_grabado']): ?>
+                                    <p style="margin-top:1rem;">✅ Resultado ya registrado</p>
+                                <?php elseif ($es_responsable): ?>
+                                    <form id="postPartidoForm" style="margin-top:1rem;">
+                                        <input type="hidden" name="id_reserva" value="<?= $ultimo_partido['id_reserva'] ?>">
+                                        <div style="display:flex;gap:1rem;margin:0.5rem 0;">
+                                            <div style="flex:1;"><label style="font-weight:bold;">Rojos:</label>
+                                            <input type="number" name="goles_rojos" placeholder="0" min="0" value="0" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;"></div>
+                                            <div style="flex:1;"><label style="font-weight:bold;">Blancos:</label>
+                                            <input type="number" name="goles_blancos" placeholder="0" min="0" value="0" style="width:100%;padding:0.4rem;border-radius:4px;border:1px solid #ccc;"></div>
+                                        </div>
+                                        <button type="submit" class="btn-action" style="margin-top:0.5rem;background:#2ECC71;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;width:100%;">Grabar Resultado</button>
+                                    </form>
+                                <?php else: ?>
+                                        <p style="margin-top:1rem;">Resultado aún no registrado</p>
+                                <?php endif; ?>
                             <?php else: ?>
-                                <p style="margin-top:1rem;">Resultado aún no registrado</p>
-                            <?php endif; ?>
-                            <?php else: ?>
-                            <p style="margin-top:2rem;">Sin partidos anteriores</p>
+                                    <p style="margin-top:2rem;">Sin partidos anteriores</p>
                             <?php endif; ?>
                         </div>
                     </div>
-
                 </div> <!-- .fichas-dashboard -->
             </div> <!-- .upper-left -->
 
             <!-- Sub sección derecha -->
             <div class="upper-right">
                 <?php if (!empty($clubes_del_socio) && count($clubes_del_socio) > 1): ?>
-                <div><strong>🏆 Mis Clubes</strong></div>
-                <?php foreach ($clubes_del_socio as $c): ?>
-                    <?php
-                    $slug_actual = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-                    if (!$modo_individual && $club_id == $c['id_club']) continue;
-                    ?>
-                    <button class="btn-action" onclick="cambiarClub('<?= $slug_actual ?>')"><?= htmlspecialchars($c['club_nombre']) ?></button>
-                <?php endforeach; ?>
+                    <div><strong>🏆 Mis Clubes</strong></div>
+                    <?php foreach ($clubes_del_socio as $c): ?>
+                        <?php
+                            $slug_actual = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                            if (!$modo_individual && $club_id == $c['id_club']) continue;
+                        ?>
+                        <button class="btn-action" onclick="cambiarClub('<?= $slug_actual ?>')"><?= htmlspecialchars($c['club_nombre']) ?></button>
+                    <?php endforeach; ?>
                 <?php endif; ?>
 
                 <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
-                <?php if ($es_responsable): ?>
+                    <?php if ($es_responsable): ?>
+                        <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
+                        <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
+                    <?php endif; ?>
                     <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-                    <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
-                <?php endif; ?>
-                <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Eventos</button>
-                <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
-                <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
-                <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
+                    <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Crear partido Pádel</button>
+                    <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
+                    <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
                 
-                <?php if ($pareja_activa): ?>
-                    <button class="btn-action" style="background:#FF9800;" onclick="reemplazarCompanero(<?= $pareja_activa['id_pareja'] ?>)">➕ Reemplazar compañero</button>
-                <?php endif; ?>
+                    <?php if ($pareja_activa): ?>
+                        <button class="btn-action" style="background:#FF9800;" onclick="reemplazarCompanero(<?= $pareja_activa['id_pareja'] ?>)">➕ Reemplazar compañero</button>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div> <!-- .upper-right -->
         </div> <!-- .dashboard-upper -->
