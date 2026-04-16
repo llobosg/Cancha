@@ -274,15 +274,6 @@ $torneos_americanos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
 $tiene_torneo = !empty($torneos_americanos);
 $torneo_actual = $torneos_americanos[0] ?? null;
 
-// === PRÓXIMO EVENTO (solo para club) ===
-$proximo_evento = null;
-error_log("🔍 [DEBUG] Iniciando búsqueda de próximo evento");
-error_log("🔍 [DEBUG] modo_individual: " . ($modo_individual ? 'true' : 'false'));
-error_log("🔍 [DEBUG] club_id en sesión: " . ($_SESSION['club_id'] ?? 'null'));
-
-$id_socio = $_SESSION['id_socio'];
-$club_id = $_SESSION['club_id'] ?? null;
-
 // === CONSULTA UNIFICADA PARA PRÓXIMO EVENTO (CLUB O INDIVIDUAL) ===
 $sql_proximo = "
     SELECT 
@@ -292,12 +283,12 @@ $sql_proximo = "
         r.monto_total, 
         r.jugadores_esperados,
         r.estado,
-        c.nombre as nombre_cancha,
-        d.deporte as id_deporte, -- Asegúrate que 'deporte' sea el nombre correcto de la columna en tu tabla deportes o canchas
+        c.nombre_cancha as nombre_cancha,  -- CORREGIDO: Usar 'nombre_cancha' en lugar de 'c.nombre'
+        c.id_deporte as id_deporte,        -- CORREGIDO: Obtener directamente de canchas si no hay tabla deportes o el join falla
         (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
     FROM reservas r
     JOIN canchas c ON r.id_cancha = c.id_cancha
-    LEFT JOIN deportes d ON c.id_deporte = d.deporte -- Ajusta este JOIN según tu estructura real
+    -- LEFT JOIN deportes d ON c.id_deporte = d.deporte -- Comentado temporalmente para evitar errores si la tabla/columna no coincide
     WHERE r.estado = 'confirmada' 
       AND r.fecha >= CURDATE()
       AND (
@@ -315,9 +306,8 @@ $stmt_prox = $pdo->prepare($sql_proximo);
 // Pasamos club_id primero y luego id_socio
 $stmt_prox->execute([$club_id, $id_socio]); 
 $proximo_evento = $stmt_prox->fetch();
-        
+
 error_log("🔍 [DEBUG] Resultado de la consulta: " . print_r($proximo_evento, true));
-  
 
 // === DEUDAS PENDIENTES (solo del club activo) ===
 $stmt_deudas = $pdo->prepare("
@@ -727,7 +717,7 @@ if (!$modo_individual && isset($_SESSION['club_id'])) {
                     <?php endif; ?>
                 </div>
                 <div class="club-info">
-                <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?>  <?= htmlspecialchars($club_nombre) ?></h2>
+                <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?> <?= htmlspecialchars($club_nombre) ?></h2>
                 <p>Tu Cancha está lista</p>
             </div>
         </div>
