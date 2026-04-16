@@ -238,14 +238,6 @@ if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
 }
 
-// Si es modo individual PERO tiene clubs, redirigir
-if ($modo_individual && !empty($clubes_del_socio)) {
-    $c = $clubes_del_socio[0];
-    $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    header("Location: dashboard_socio.php?id_club=$redirect_slug");
-    exit;
-}
-
 // Guardar en sesión
 if (!$modo_individual) {
     $_SESSION['club_id'] = $club_id;
