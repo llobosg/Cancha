@@ -444,62 +444,111 @@ $recinto = $stmt->fetch();
         color: #071289;
     }
 
-    /* === MEDIA QUERIES PARA MÓVIL / PWA === */
+    /* === AJUSTES ESPECÍFICOS PARA MÓVIL / PWA === */
     @media (max-width: 768px) {
-        /* Ajuste de la barra de filtros en móvil */
+        
+        /* 1. Contenedor Principal: Que ocupe todo el ancho disponible */
+        .dashboard-container {
+            width: 100%;
+            max-width: 100%;
+            padding: 0; /* Quitamos padding lateral para aprovechar pantalla */
+            grid-template-columns: 1fr !important; /* Forzar una sola columna */
+            gap: 0;
+        }
+
+        /* 2. Barra de Filtros: Scroll horizontal suave y compacta */
         .controls-section {
-            top: 60px; /* Ajuste según altura de tu header móvil */
+            width: 100%;
+            overflow-x: auto; /* Permite scroll horizontal si no caben */
+            white-space: nowrap; /* Evita que bajen de línea */
+            flex-wrap: nowrap;
             padding: 0.5rem;
             gap: 0.5rem;
-            flex-direction: row; /* Mantener en fila pero compacto */
-            flex-wrap: nowrap; /* Evitar que se rompan filas si es posible */
-            overflow-x: auto; /* Scroll horizontal si son muchos filtros */
-            white-space: nowrap;
+            -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+            scrollbar-width: thin; /* Firefox */
         }
         
+        /* Estilo de la barra de scroll en filtros (opcional, para que se vea fina) */
+        .controls-section::-webkit-scrollbar {
+            height: 4px;
+        }
+        .controls-section::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
         .control-select {
-            min-width: 100px; /* Más compactos */
+            flex: 0 0 auto; /* No crecer ni encoger demasiado */
+            width: auto;
+            min-width: 130px; /* Ancho mínimo cómodo para leer */
             font-size: 0.85rem;
             padding: 0.5rem;
         }
 
-        /* Ajuste del Submodal en Móvil */
+        /* 3. Submodal Detalle: Ajuste de tamaño y fuente para móvil */
         .submodal-content {
-            width: 95%;
-            max-height: 90vh; /* Casi toda la pantalla */
-            padding: 1.5rem;
-            margin: 0 auto;
+            width: 92% !important; /* Casi todo el ancho */
+            max-width: 92% !important;
+            padding: 1.2rem !important; /* Menos padding interno */
+            margin: 1rem auto;
+            font-size: 0.85rem !important; /* Texto base más pequeño */
+            max-height: 90vh; /* Altura máxima */
+            overflow-y: auto;
+        }
+
+        /* Títulos más pequeños en móvil */
+        .submodal-content h3 {
+            font-size: 1.2rem !important;
+            margin-bottom: 1rem !important;
+            padding-right: 30px; /* Espacio para la X */
+        }
+
+        /* Botón X más grande y accesible en móvil */
+        .close-modal {
+            font-size: 32px !important;
+            top: 10px !important;
+            right: 10px !important;
+            line-height: 1;
+            padding: 5px;
+            z-index: 100;
+        }
+
+        /* Grids internos del detalle: Una columna en móvil */
+        .submodal-content div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important; /* Forzar 1 columna */
+            gap: 0.8rem !important;
+        }
+
+        /* Inputs y Selects más grandes para tocar fácil */
+        select, input[type="text"], input[type="number"] {
+            font-size: 16px !important; /* Evita zoom automático en iOS */
+            padding: 0.7rem !important;
+        }
+
+        /* Botones de acciones dentro del modal */
+        #btnAccionesModal {
+            font-size: 0.9rem;
+            padding: 0.7rem;
         }
         
-        /* Asegurar que el detalle ocupe todo el espacio disponible */
-        .detail-section {
-            max-height: none; /* Quitar límite fijo */
-            height: auto;
-        }
-        
-        /* Header del detalle en móvil */
-        .detail-header-container {
-            flex-direction: row;
-            gap: 10px;
-        }
-        
-        #btnToggleActions {
-            font-size: 0.8rem;
-            padding: 0.4rem 0.6rem;
+        .dropdown-item {
+            font-size: 0.95rem;
+            padding: 1rem; /* Más área de toque */
         }
     }
 
-    /* Ajuste específico para pantallas muy pequeñas (iPhone SE, etc.) */
-    @media (max-width: 380px) {
-        .controls-section {
-            flex-wrap: wrap; /* Permitir salto de línea si es necesario */
-            justify-content: center;
-        }
+    /* Ajuste extra para pantallas muy pequeñas (< 360px) */
+    @media (max-width: 360px) {
         .control-select {
-            width: 48%; /* Dos por fila */
-            min-width: auto;
+            min-width: 110px;
+            font-size: 0.8rem;
+        }
+        .submodal-content {
+            width: 95% !important;
+            padding: 1rem !important;
         }
     }
+
     @keyframes slideDown {
         from {transform: translateY(-50px); opacity: 0;}
         to {transform: translateY(0); opacity: 1;}
@@ -564,7 +613,27 @@ $recinto = $stmt->fetch();
             <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
             
             <!-- Aquí se inyectará el contenido dinámico -->
-            <div id="contenidoDetalle" style="color:#333;"></div>
+            <div id="contenidoDetalle" style="color:#333; width: 100%; box-sizing: border-box;">
+                <!-- Ejemplo de contenido dinámico -->
+                <div style="margin-bottom:1rem;">
+                    <strong>Cancha:</strong> Cancha 1 - Fútbol 5
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Fecha y Hora:</strong> 25 de Junio, 18:00 - 19:00
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Cliente:</strong> Juan Pérez
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Estado:</strong> Reservada
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Precio:</strong> $15.000
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Observaciones:</strong> Traer balón propio
+                </div>
+            </div>
             
             <!-- Botón de Acciones dentro del modal (Opcional, o usar el menú desplegable si prefieres) -->
             <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
@@ -824,7 +893,18 @@ $recinto = $stmt->fetch();
     }
 
     function cerrarModalPago() {
+        // Ocultar modal de pago
         document.getElementById('modalPago').style.display = 'none';
+        
+        // Si hay una reserva seleccionada, volver a mostrar el modal de detalle
+        if (reservaActualSeleccionada) {
+            document.getElementById('modalDetalleReserva').style.display = 'flex';
+            // Opcional: Volver a renderizar por si hubo cambios
+            // renderizarContenidoDetalle(reservaActualSeleccionada); 
+        } else {
+            // Si no hay reserva, cerrar todo y volver al calendario
+            document.getElementById('modalDetalleReserva').style.display = 'none';
+        }
     }
 
     // === MENÚ DE ACCIONES DENTRO DEL MODAL ===
