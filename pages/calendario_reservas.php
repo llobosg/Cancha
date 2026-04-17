@@ -318,6 +318,96 @@ $recinto = $stmt->fetch();
     .toast.info {
     background: linear-gradient(135deg, #2196F3, #1565C0);
     }
+    /* === ESTILOS PARA MENÚ DESPLEGABLE DE ACCIONES === */
+    .action-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        min-width: 180px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        z-index: 1000;
+        overflow: hidden;
+        border: 1px solid #eee;
+        margin-top: 5px;
+    }
+
+    .dropdown-item {
+        width: 100%;
+        padding: 10px 15px;
+        text-align: left;
+        background: none;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #333;
+        transition: background 0.2s;
+        display: block;
+    }
+
+    .dropdown-item:hover {
+        background: #f8f9fa;
+        color: #071289;
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Estilo especial para el botón de pagar */
+    .btn-pay-action {
+        background: #e8f5e9 !important;
+        color: #2e7d32 !important;
+        font-weight: bold;
+    }
+    .btn-pay-action:hover {
+        background: #c8e6c9 !important;
+    }
+
+    /* === RESPONSIVE MÓVIL / PWA === */
+    @media (max-width: 768px) {
+        .detail-panel {
+            position: fixed; /* Ocupa toda la pantalla en móvil si es necesario, o se ajusta */
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            z-index: 900;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .detail-header-container {
+            flex-shrink: 0;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .detail-section {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ajuste del Dropdown en móvil */
+        .action-dropdown-menu {
+            position: fixed;
+            top: 60px; /* Debajo del header si existe, o ajustar según necesites */
+            right: 10px;
+            left: 10px;
+            width: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .dropdown-item {
+            padding: 15px; /* Más grande para dedos */
+            font-size: 1rem;
+        }
+    }
 </style>
 </head>
 <body>
@@ -370,56 +460,78 @@ $recinto = $stmt->fetch();
     </div>
     
     <div class="detail-panel">
-        <div class="detail-section" id="detalleReserva">
-            <h3 class="detail-title">📋 Detalle de Reserva</h3>
-            <div id="detalleContent">
-            <p>Selecciona una reserva para ver detalles</p>
-            </div>
-        </div>
-        
-        <div class="actions-section">
-            <h3 class="detail-title">⚙️ Acciones</h3>
-            <div class="actions-grid">
-                <button class="action-btn btn-anular" onclick="anularReserva()">🗑️ Anular</button>
-                <button class="action-btn btn-cancelar" onclick="cancelarReserva()">❌ Cancelar Reserva</button>
-                <button class="action-btn btn-cambiar" onclick="cambiarCancha()">🔄 Cambiar de Cancha</button>
-                <button class="action-btn btn-mensaje" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
-                <button class="action-btn btn-campeonato" onclick="crearCampeonato()">🏆 Crear Campeonato</button>
-                
-                <!-- BOTÓN PAGAR (Nuevo) -->
-                <button id="btnPagar" class="action-btn" style="background:#4CAF50; color:white; display:none;" onclick="abrirModalPago()">
-                    💳 Pagar Reserva
+        <!-- Encabezado con Botón de Acciones -->
+        <div class="detail-header-container" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 class="detail-title" style="margin:0;">📋 Detalle</h3>
+            <!-- Botón Desplegable de Acciones -->
+            <div style="position:relative;">
+                <button id="btnToggleActions" onclick="toggleActionMenu()" style="background:#071289; color:white; border:none; padding:0.5rem 0.8rem; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:0.5rem;">
+                    ⚙️ Acciones
                 </button>
+                
+                <!-- Submenú Desplegable (Oculto por defecto) -->
+                <div id="actionDropdown" class="action-dropdown-menu" style="display:none;">
+                    <button class="dropdown-item" onclick="anularReserva()">️ Anular Reserva</button>
+                    <button class="dropdown-item" onclick="cancelarReserva()">❌ Cancelar</button>
+                    <button class="dropdown-item" onclick="cambiarCancha()">🔄 Cambiar Cancha</button>
+                    <button class="dropdown-item" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
+                    <!-- Botón Pagar integrado aquí -->
+                    <button id="btnPagarDropdown" class="dropdown-item btn-pay-action" style="display:none;" onclick="abrirModalPago()">
+                        💳 Pagar Reserva
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Modal de Pago (Nuevo) -->
-        <div id="modalPago" class="submodal" style="display:none;">
-            <div class="submodal-content">
-                <span class="close-modal" onclick="cerrarModalPago()">&times;</span>
-                <h3 style="color:#071289; margin-bottom:1rem;">💳 Pagar Reserva</h3>
-                <div id="infoPago" style="margin-bottom:1rem; font-size:0.9rem; color:#333;"></div>
-                
-                <form id="formPago">
-                    <div class="form-group" style="margin-bottom:1rem;">
-                        <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Método de Pago</label>
-                        <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
-                            <option value="">Seleccionar...</option>
-                            <option value="transferencia">Transferencia Bancaria</option>
-                            <option value="webpay">Webpay / Tarjeta</option>
-                            <option value="efectivo">Efectivo en Recinto</option>
-                            <option value="convenio">Convenio Club</option>
-                        </select>
-                    </div>
-                    
-                    <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
-                        <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">ID Transacción / Comprobante</label>
-                        <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
-                    </div>
-                    
-                    <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50;">Confirmar Pago</button>
-                </form>
+        <!-- Contenido del Detalle (Se llena con JS) -->
+        <div class="detail-section" id="detalleReserva" style="flex:1; overflow-y:auto;">
+            <div id="detalleContent">
+                <p style="color:#666; text-align:center; margin-top:2rem;">Selecciona una reserva para ver detalles</p>
             </div>
+        </div>
+    </div>
+
+    <!-- === SUBMODAL DE ACCIONES (Para Móvil/PWA - Opcional si prefieres solo dropdown) === -->
+    <!-- Usaremos el dropdown simple arriba, pero si quieres un modal completo para móvil, descomenta esto: -->
+    <!-- 
+    <div id="modalAcciones" class="submodal">
+        <div class="submodal-content">
+            <span class="close-modal" onclick="cerrarModalAcciones()">&times;</span>
+            <h3>Opciones de Gestión</h3>
+            <div class="actions-grid-mobile">
+                <button class="action-btn-full" onclick="anularReserva()">🗑️ Anular</button>
+                ...
+            </div>
+        </div>
+    </div> 
+    -->
+
+    <!-- Modal de Pago (Ya existente, aseguramos que esté visible) -->
+    <div id="modalPago" class="submodal" style="display:none;">
+        <div class="submodal-content">
+            <span class="close-modal" onclick="cerrarModalPago()">&times;</span>
+            <h3 style="color:#071289; margin-bottom:1rem;">💳 Pagar Reserva</h3>
+            <div id="infoPago" style="margin-bottom:1rem; font-size:0.9rem; color:#333; background:#f8f9fa; padding:10px; border-radius:6px;"></div>
+            
+            <form id="formPago">
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
+                        <option value="">Seleccionar...</option>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="webpay">Webpay / Tarjeta</option>
+                        <option value="efectivo">Efectivo en Recinto</option>
+                        <option value="convenio">Convenio Club</option>
+                    </select>
+                </div>
+                
+                <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">ID Transacción / Comprobante</label>
+                    <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
+                </div>
+                
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:6px; font-weight:bold; cursor:pointer;">Confirmar Pago</button>
+            </form>
         </div>
     </div>
 
@@ -1104,6 +1216,165 @@ $recinto = $stmt->fetch();
     document.getElementById('modalPago')?.addEventListener('click', function(e) {
         if (e.target === this) {
             cerrarModalPago();
+        }
+    });
+
+    // === FUNCIONES PARA EL MENÚ DESPLEGABLE ===
+    function toggleActionMenu() {
+        const menu = document.getElementById('actionDropdown');
+        if (menu.style.display === 'block') {
+            menu.style.display = 'none';
+        } else {
+            // Cerrar otros menús abiertos si hubiera
+            document.querySelectorAll('.action-dropdown-menu').forEach(m => m.style.display = 'none');
+            menu.style.display = 'block';
+        }
+    }
+
+    // Cerrar menú al hacer click fuera
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('actionDropdown');
+        const btn = document.getElementById('btnToggleActions');
+        
+        if (menu && menu.style.display === 'block') {
+            if (!btn.contains(event.target) && !menu.contains(event.target)) {
+                menu.style.display = 'none';
+            }
+        }
+    });
+
+    // === ACTUALIZAR mostrarDetalleReserva PARA MOSTRAR BOTÓN PAGAR ===
+
+    // Reemplaza tu función mostrarDetalleReserva actual por esta versión que activa el botón
+    function mostrarDetalleReserva(detalle) {
+        console.log("🎨 Renderizando detalle...", detalle);
+
+        const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
+        const money = (v) => '$' + parseInt(v || 0).toLocaleString();
+        
+        // Lógica para mostrar/ocultar botón de pagar
+        const btnPagar = document.getElementById('btnPagarDropdown');
+        if (btnPagar) {
+            // Mostrar solo si hay monto > 0 y estado de pago es pendiente
+            if ((parseFloat(detalle.monto_total) > 0) && detalle.estado_pago === 'pendiente') {
+                btnPagar.style.display = 'block';
+                // Guardar datos en el botón para usarlos luego
+                btnPagar.dataset.monto = detalle.monto_total;
+                btnPagar.dataset.idReserva = detalle.id_reserva;
+            } else {
+                btnPagar.style.display = 'none';
+            }
+        }
+
+        // Construcción del HTML (igual que antes pero simplificado para el ejemplo)
+        const html = `
+            <div style="font-size: 0.9rem; line-height: 1.6; color: #333333;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                    <div><strong style="color:#071289;">📅 Fecha:</strong> <span>${val(detalle.fecha)}</span></div>
+                    <div><strong style="color:#071289;">⏰ Hora:</strong> <span>${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</span></div>
+                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> <span>${val(detalle.nombre_cancha)}</span></div>
+                    <div><strong style="color:#071289;"> Deporte:</strong> <span>${val(detalle.id_deporte).toUpperCase()}</span></div>
+                </div>
+                <div style="margin-bottom: 1rem; background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
+                    <div style="margin-bottom: 0.5rem;"><strong style="color:#071289;">👤 Cliente:</strong> <span>${val(detalle.nombre_responsable || detalle.email_cliente)}</span></div>
+                    <div><strong style="color:#071289;"> Teléfono:</strong> <span>${val(detalle.telefono_cliente)}</span></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO</div>
+                        <div style="font-size: 1.4rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
+                    </div>
+                    <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
+                        <div style="font-size: 1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const container = document.getElementById('detalleContent');
+        if (container) {
+            container.style.backgroundColor = '#ffffff'; 
+            container.style.color = '#333333';
+            container.innerHTML = html;
+        }
+    }
+
+    // === FUNCIÓN PARA ABRIR MODAL DE PAGO (Actualizada) ===
+    function abrirModalPago() {
+        // Ocultar menú desplegable primero
+        document.getElementById('actionDropdown').style.display = 'none';
+
+        const btnPagar = document.getElementById('btnPagarDropdown');
+        if (!btnPagar || !btnPagar.dataset.idReserva) {
+            alert("⚠️ No hay datos de pago disponibles.");
+            return;
+        }
+
+        const idReserva = btnPagar.dataset.idReserva;
+        const monto = btnPagar.dataset.monto;
+
+        // Llenar info del modal
+        document.getElementById('infoPago').innerHTML = `
+            <strong>Reserva ID:</strong> ${idReserva}<br>
+            <strong>Monto a Pagar:</strong> <span style="color:#2e7d32; font-weight:bold; font-size:1.1rem;">$${parseInt(monto).toLocaleString()}</span>
+        `;
+
+        // Resetear form
+        document.getElementById('formPago').dataset.idReserva = idReserva;
+        document.getElementById('formPago').reset();
+        document.getElementById('campoTransaccion').style.display = 'none';
+
+        // Mostrar modal
+        document.getElementById('modalPago').style.display = 'flex';
+    }
+
+    // Función auxiliar para cerrar modal de pago
+    function cerrarModalPago() {
+        document.getElementById('modalPago').style.display = 'none';
+    }
+
+    // Listener para el select de método de pago (mostrar campo transacción)
+    document.getElementById('metodoPago')?.addEventListener('change', function() {
+        const campo = document.getElementById('campoTransaccion');
+        const input = document.getElementById('transaccionId');
+        if (['transferencia', 'webpay'].includes(this.value)) {
+            campo.style.display = 'block';
+            input.required = true;
+        } else {
+            campo.style.display = 'none';
+            input.required = false;
+        }
+    });
+
+    // Listener submit del formulario de pago
+    document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const idReserva = this.dataset.idReserva;
+        const metodo = document.getElementById('metodoPago').value;
+        const transaccion = document.getElementById('transaccionId').value;
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'procesar_pago');
+            formData.append('id_reserva', idReserva);
+            formData.append('metodo_pago', metodo);
+            formData.append('transaccion_id', transaccion || '');
+
+            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.success) {
+                alert("✅ Pago registrado correctamente");
+                cerrarModalPago();
+                // Recargar datos o actualizar vista
+                location.reload(); 
+            } else {
+                alert("❌ Error: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error de conexión al procesar pago");
         }
     });
   </script>
