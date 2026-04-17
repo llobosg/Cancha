@@ -893,10 +893,7 @@
                                     <?php endif; ?>
                                 </div><!--- class="stat-card-content" --->
                         <?php else: ?>
-                            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <h3 style="color: white;">Próximo Partido</h3>
                                 <p style="margin-top:1rem;">📭 No hay partidos programados próximamente</p>
-                            </div>
                         <?php endif; ?>
                     </div><!--- class="stat-card" --->
 
