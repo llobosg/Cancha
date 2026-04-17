@@ -19,7 +19,7 @@ $recinto = $stmt->fetch();
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <title>CanchaBoard - <?= htmlspecialchars($recinto['nombre']) ?> | Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
@@ -33,12 +33,27 @@ $recinto = $stmt->fetch();
         min-height: 100vh;
         color: white;
     }
+
+    /* Blindaje contra desbordamiento horizontal */
+    body, html {
+        overflow-x: hidden; /* Oculta cualquier scroll horizontal no deseado */
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Asegurar que ningún hijo sea más ancho que la pantalla */
+    * {
+        box-sizing: border-box;
+        max-width: 100%;
+    }
     
     .dashboard-container {
         display: grid;
         grid-template-columns: 4fr 1fr;
         gap: 1rem;
-        max-width: 1400px;
+        width: 100%;
+        overflow-x: hidden;
         margin: 0 auto;
         padding: 1rem;
         /* Eliminamos height fija para permitir alineación natural */
