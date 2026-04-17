@@ -384,9 +384,41 @@ $recinto = $stmt->fetch();
                 <button class="action-btn btn-cancelar" onclick="cancelarReserva()">❌ Cancelar Reserva</button>
                 <button class="action-btn btn-cambiar" onclick="cambiarCancha()">🔄 Cambiar de Cancha</button>
                 <button class="action-btn btn-mensaje" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
-                <button class="action-btn btn-campeonato" onclick="crearCampeonato()">
-                    🏆 Crear Campeonato
+                <button class="action-btn btn-campeonato" onclick="crearCampeonato()">🏆 Crear Campeonato</button>
+                
+                <!-- BOTÓN PAGAR (Nuevo) -->
+                <button id="btnPagar" class="action-btn" style="background:#4CAF50; color:white; display:none;" onclick="abrirModalPago()">
+                    💳 Pagar Reserva
                 </button>
+            </div>
+        </div>
+
+        <!-- Modal de Pago (Nuevo) -->
+        <div id="modalPago" class="submodal" style="display:none;">
+            <div class="submodal-content">
+                <span class="close-modal" onclick="cerrarModalPago()">&times;</span>
+                <h3 style="color:#071289; margin-bottom:1rem;">💳 Pagar Reserva</h3>
+                <div id="infoPago" style="margin-bottom:1rem; font-size:0.9rem; color:#333;"></div>
+                
+                <form id="formPago">
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Método de Pago</label>
+                        <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
+                            <option value="">Seleccionar...</option>
+                            <option value="transferencia">Transferencia Bancaria</option>
+                            <option value="webpay">Webpay / Tarjeta</option>
+                            <option value="efectivo">Efectivo en Recinto</option>
+                            <option value="convenio">Convenio Club</option>
+                        </select>
+                    </div>
+                    
+                    <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
+                        <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">ID Transacción / Comprobante</label>
+                        <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50;">Confirmar Pago</button>
+                </form>
             </div>
         </div>
     </div>
@@ -512,25 +544,28 @@ $recinto = $stmt->fetch();
         });
         
         // Seleccionar nueva
-        event.currentTarget.classList.add('selected');
+        if (event?.currentTarget) {
+            event.currentTarget.classList.add('selected');
+        }
         reservaSeleccionada = id;
         
-        // Buscar la reserva completa en los datos
-        const selectedReserva = reservasData.find(r => 
-            (r.id_disponibilidad && r.id_disponibilidad.toString() === id.toString()) || 
-            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString())
-        );
+        // Buscar la reserva completa en los datos cargados
+        const selectedReserva = reservasData.find(r => {
+            // Caso 1: Tiene id_disponibilidad numérico válido
+            if (r.id_disponibilidad && r.id_disponibilidad !== 'null' && r.id_disponibilidad !== null) {
+                return r.id_disponibilidad.toString() === id.toString();
+            }
+            // Caso 2: Usamos clave compuesta como fallback
+            return `${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString();
+        });
         
         if (selectedReserva) {
-            // Verificar si es una reserva real o solo disponibilidad
-            if (selectedReserva.id_disponibilidad && 
-                selectedReserva.id_disponibilidad !== 'null' && 
-                selectedReserva.id_disponibilidad !== null && 
-                selectedReserva.id_disponibilidad !== 'undefined') {
-                // Es una reserva real
-                cargarDetalleReserva(selectedReserva.id_disponibilidad);
+            // Verificar si es una reserva REAL (tiene id_reserva)
+            if (selectedReserva.id_reserva && selectedReserva.id_reserva !== 'null') {
+                // Es una reserva real → cargar detalle completo
+                cargarDetalleReserva(selectedReserva.id_disponibilidad, selectedReserva.id_reserva);
             } else {
-                // Es solo disponibilidad
+                // Es solo disponibilidad → mostrar info básica
                 mostrarDetalleDisponibilidad(selectedReserva);
             }
         } else {
@@ -538,10 +573,11 @@ $recinto = $stmt->fetch();
         }
     }
 
-    async function cargarDetalleReserva(id) {
+    async function cargarDetalleReserva(id_disponibilidad, id_reserva) {
         try {
             const formData = new FormData();
-            formData.append('id_disponibilidad', id);
+            formData.append('id_disponibilidad', id_disponibilidad);
+            formData.append('id_reserva', id_reserva); // Agregamos ID de reserva para mayor precisión
             
             const response = await fetch('../api/canchaboard.php?action=get_detalle_reserva', {
                 method: 'POST',
@@ -558,7 +594,7 @@ $recinto = $stmt->fetch();
             
         } catch (error) {
             console.error('Error al cargar detalle:', error);
-            document.getElementById('detalleContent').innerHTML = '<p>Error al cargar el detalle</p>';
+            document.getElementById('detalleContent').innerHTML = '<p style="color:#F44336;">Error al cargar el detalle</p>';
         }
     }
 
@@ -655,6 +691,15 @@ $recinto = $stmt->fetch();
                 <span>${tipoReservaTexto[detalle.tipo_reserva] || detalle.tipo_reserva || 'Spot'}</span>
             </div>
         `;
+        // Mostrar/Ocultar botón Pagar según estado
+        const btnPagar = document.getElementById('btnPagar');
+        if (btnPagar) {
+            if (detalle.estado_pago === 'pendiente' && detalle.monto_total > 0) {
+                btnPagar.style.display = 'block';
+            } else {
+                btnPagar.style.display = 'none';
+            }
+        }
         
         // Agregar ID Convenio si existe
         if (detalle.id_convenio && detalle.id_convenio !== 'null' && detalle.id_convenio !== 0) {
@@ -911,6 +956,127 @@ $recinto = $stmt->fetch();
         }
         return true;
     }
+    // === FUNCIONES PARA MODAL DE PAGO ===
+    function abrirModalPago() {
+        if (!reservaSeleccionada) {
+            showToast('⚠️ Selecciona una reserva primero', 'warning');
+            return;
+        }
+        
+        // Buscar reserva en datos cargados
+        const reserva = reservasData.find(r => 
+            r.id_disponibilidad == reservaSeleccionada || 
+            `${r.id_cancha}_${r.fecha}_${r.hora_inicio}` == reservaSeleccionada
+        );
+        
+        if (!reserva || !reserva.id_reserva) {
+            showToast('⚠️ Esta ficha no corresponde a una reserva pagable', 'warning');
+            return;
+        }
+        
+        if (reserva.estado_pago === 'pagado') {
+            showToast('✅ Esta reserva ya está pagada', 'info');
+            return;
+        }
+        
+        // Mostrar info de pago
+        const infoPago = document.getElementById('infoPago');
+        infoPago.innerHTML = `
+            <strong>Cancha:</strong> ${reserva.nro_cancha || 'N/A'}<br>
+            <strong>Fecha:</strong> ${formatDateDisplay(reserva.fecha)} ${formatTimeDisplay(reserva.hora_inicio)}<br>
+            <strong>Monto:</strong> $${parseInt(reserva.monto_total || 0).toLocaleString()}<br>
+            <strong>Estado:</strong> <span style="color:#FF9800;">Pendiente</span>
+        `;
+        
+        // Mostrar/ocultar campo de transacción según método
+        document.getElementById('metodoPago').onchange = function() {
+            const campoTrans = document.getElementById('campoTransaccion');
+            if (['transferencia', 'webpay'].includes(this.value)) {
+                campoTrans.style.display = 'block';
+                document.getElementById('transaccionId').required = true;
+            } else {
+                campoTrans.style.display = 'none';
+                document.getElementById('transaccionId').required = false;
+            }
+        };
+        
+        // Guardar ID de reserva en el form
+        document.getElementById('formPago').dataset.idReserva = reserva.id_reserva;
+        
+        // Mostrar modal
+        document.getElementById('modalPago').style.display = 'flex';
+    }
+
+    function cerrarModalPago() {
+        document.getElementById('modalPago').style.display = 'none';
+        document.getElementById('formPago').reset();
+        document.getElementById('campoTransaccion').style.display = 'none';
+        document.getElementById('transaccionId').required = false;
+    }
+
+    // Manejar submit del form de pago
+    document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const idReserva = this.dataset.idReserva;
+        const metodoPago = document.getElementById('metodoPago').value;
+        const transaccionId = document.getElementById('transaccionId').value;
+        
+        if (!idReserva || !metodoPago) {
+            showToast('⚠️ Completa todos los campos requeridos', 'warning');
+            return;
+        }
+        
+        try {
+            const formData = new FormData();
+            formData.append('action', 'procesar_pago');
+            formData.append('id_reserva', idReserva);
+            formData.append('metodo_pago', metodoPago);
+            formData.append('transaccion_id', transaccionId || null);
+            
+            const response = await fetch('../api/gestion_reservas.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('✅ Pago registrado correctamente', 'success');
+                cerrarModalPago();
+                // Recargar reservas para actualizar estado
+                cargarReservasConRango(0);
+                // Actualizar detalle si está visible
+                if (reservaSeleccionada) {
+                    const reservaActualizada = reservasData.find(r => r.id_reserva == idReserva);
+                    if (reservaActualizada) {
+                        mostrarDetalleReserva(reservaActualizada);
+                    }
+                }
+            } else {
+                throw new Error(result.message || 'Error al procesar pago');
+            }
+            
+        } catch (error) {
+            console.error('Error al procesar pago:', error);
+            showToast(`❌ ${error.message}`, 'error');
+        }
+    });
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarModalPago();
+            closeMensajeModal();
+        }
+    });
+
+    // Cerrar modal al hacer click fuera
+    document.getElementById('modalPago')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            cerrarModalPago();
+        }
+    });
   </script>
 </body>
 </html>

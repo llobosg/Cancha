@@ -751,7 +751,7 @@
                     <?php endif; ?>
                 </div>
                 <div class="club-info">
-                <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?> - <?= htmlspecialchars($club_nombre) ?></h2>
+                <h2><?= htmlspecialchars($socio_actual['alias'] ?? $socio_actual['nombre'] ?? 'Usuario') ?> <?= htmlspecialchars($club_nombre) ?></h2>
                 <p>Tu Cancha está lista</p>
             </div>
         </div>
@@ -780,9 +780,17 @@
                             $lunes_semana_evento->modify('this week monday');
                             $lunes_semana_evento->setTime(9, 0, 0);
                             $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
-                            $cupos_llenos = ((int)$proximo_evento['inscritos_actuales'] >= (int)$proximo_evento['jugadores_esperados']);
                             $fecha_formateada = $fecha_evento->format('d-m');
                             $hora_formateada = $fecha_evento->format('H:i');
+  
+                            // === LÓGICA DE CUPOS - ROBUSTA PARA CLUB E INDIVIDUAL ===
+                            $inscritos_actuales = (int)($proximo_evento['inscritos_actuales'] ?? 0);
+                            $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 0);
+                            // Solo considerar "lleno" si hay un límite definido (>0) Y se alcanzó
+                            // Para reservas individuales, jugadores_esperados suele ser 0 → nunca se marca como lleno
+                            $cupos_llenos = ($jugadores_esperados > 0 && $inscritos_actuales >= $jugadores_esperados);
+                            // Debug opcional (puedes quitarlo después)
+                            // error_log("🔍 Cupos: actuales=$inscritos_actuales / esperados=$jugadores_esperados / llenos=" . ($cupos_llenos ? 'SÍ' : 'NO'));
 
                             // Mapeo de deportes a nombres legibles
                             $nombres_deportes = [
@@ -819,8 +827,8 @@
                                     <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
                                     <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
                                     <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                                        <strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?><br>
-                                        <strong>👥 Cupos:</strong> <?= (int)$proximo_evento['jugadores_esperados'] ?> • <strong>👥 Anotados</strong> <?= (int)$proximo_evento['inscritos_actuales'] ?>
+                                        <strong>💰 Cuota:</strong> $<?= number_format((int)($proximo_evento['monto_recaudacion'] ?? 0), 0, ',', '.') ?><br>
+                                        <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
                                     </div>
                                     <?php endif; ?>
                                 </div>
