@@ -646,86 +646,82 @@ $recinto = $stmt->fetch();
     }
 
     function mostrarDetalleReserva(detalle) {
-        console.log(" Renderizando detalle con datos:", detalle);
+        console.log("🎨 Renderizando detalle con datos:", detalle);
 
-        // Función auxiliar para evitar errores con valores nulos
+        // Función auxiliar segura
         const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
         const money = (v) => '$' + parseInt(v || 0).toLocaleString();
         
-        // Mapeo de estados para colores
-        const estadoPagoColor = {
-            'pagado': '#4CAF50', 'pendiente': '#FF9800', 
-            'reembolsado': '#2196F3', 'fallido': '#F44336'
-        };
-        const estadoReservaColor = {
-            'confirmada': '#4CAF50', 'pendiente': '#FF9800', 
-            'cancelada': '#F44336', 'completada': '#9E9E9E'
-        };
-
-        // Construcción del HTML seguro
+        // HTML con estilos inline forzados para contraste (Texto oscuro #333 sobre fondo claro/blanco)
         const html = `
-            <div style="font-size: 0.9rem; line-height: 1.6;">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
-                    <div><strong> Fecha:</strong> ${val(detalle.fecha)}</div>
-                    <div><strong>⏰ Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
-                    <div><strong>🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)} (Nro ${val(detalle.nro_cancha)})</div>
-                    <div><strong>🎾 Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
+            <div style="font-size: 0.9rem; line-height: 1.6; color: #333333;">
+                
+                <!-- Encabezado -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                    <div><strong style="color:#071289;">📅 Fecha:</strong> <span style="color:#333;">${val(detalle.fecha)}</span></div>
+                    <div><strong style="color:#071289;"> Hora:</strong> <span style="color:#333;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</span></div>
+                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> <span style="color:#333;">${val(detalle.nombre_cancha)} (Nro ${val(detalle.nro_cancha)})</span></div>
+                    <div><strong style="color:#071289;">🎾 Deporte:</strong> <span style="color:#333;">${val(detalle.id_deporte).toUpperCase()}</span></div>
                 </div>
 
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 1rem 0;">
-
-                <div style="margin-bottom: 1rem;">
-                    <div><strong>👤 Cliente:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</div>
-                    <div><strong>📞 Teléfono:</strong> ${val(detalle.telefono_cliente)}</div>
-                    <div><strong> Email:</strong> ${val(detalle.email_cliente)}</div>
-                    ${detalle.nombre_club ? `<div><strong> Club:</strong> ${val(detalle.nombre_club)}</div>` : ''}
+                <!-- Información Cliente -->
+                <div style="margin-bottom: 1rem; background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
+                    <div style="margin-bottom: 0.5rem;"><strong style="color:#071289;">👤 Cliente:</strong> <span style="color:#333;">${val(detalle.nombre_responsable || detalle.email_cliente)}</span></div>
+                    <div style="margin-bottom: 0.5rem;"><strong style="color:#071289;">📞 Teléfono:</strong> <span style="color:#333;">${val(detalle.telefono_cliente)}</span></div>
+                    <div><strong style="color:#071289;">📧 Email:</strong> <span style="color:#333;">${val(detalle.email_cliente)}</span></div>
+                    ${detalle.nombre_club ? `<div style="margin-top:0.5rem;"><strong style="color:#071289;">🏢 Club:</strong> <span style="color:#333;">${val(detalle.nombre_club)}</span></div>` : ''}
                 </div>
 
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 1rem 0;">
+                <!-- Información Económica y Estado -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <!-- Columna Izquierda: Monto -->
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO TOTAL</div>
+                        <div style="font-size: 1.4rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
+                    </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    <div>
-                        <strong>💰 Monto Total:</strong><br>
-                        <span style="font-size: 1.1rem; color: #071289; font-weight: bold;">${money(detalle.monto_total)}</span>
-                    </div>
-                    <div>
-                        <strong>📝 Tipo Reserva:</strong><br>
-                        ${val(detalle.tipo_reserva).toUpperCase()}
-                    </div>
-                </div>
-
-                <div style="margin-top: 0.8rem; display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    <div>
-                        <strong>🟢 Estado Reserva:</strong><br>
-                        <span style="color: ${estadoReservaColor[detalle.estado_reserva] || '#333'}; font-weight: bold;">
-                            ${val(detalle.estado_reserva).toUpperCase()}
-                        </span>
-                    </div>
-                    <div>
-                        <strong>💳 Estado Pago:</strong><br>
-                        <span style="color: ${estadoPagoColor[detalle.estado_pago] || '#333'}; font-weight: bold;">
-                            ${val(detalle.estado_pago).toUpperCase()}
-                        </span>
+                    <!-- Columna Derecha: Estados -->
+                    <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
+                            <div style="font-size: 1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
+                        </div>
+                        <div style="border-top: 1px dashed #ffcc80; margin: 0.5rem 0;"></div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
+                            <div style="font-size: 1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Notas -->
                 ${detalle.notas ? `
-                <div style="margin-top: 1rem; background: #fff3cd; padding: 0.5rem; border-radius: 4px; border-left: 4px solid #ffc107;">
-                    <strong> Notas:</strong> ${val(detalle.notas)}
+                <div style="margin-top: 1rem; background: #fffde7; padding: 0.8rem; border-radius: 8px; border-left: 4px solid #fbc02d; color: #333;">
+                    <strong style="color:#f57f17;">📝 Notas:</strong> ${val(detalle.notas)}
                 </div>` : ''}
                 
                 ${detalle.id_convenio ? `
-                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #666;">
-                    ID Convenio: ${detalle.id_convenio}
+                <div style="margin-top: 0.8rem; font-size: 0.8rem; color: #555; text-align: right;">
+                    ID Convenio: <strong>${detalle.id_convenio}</strong>
                 </div>` : ''}
+                
+                <!-- Tipo Reserva -->
+                <div style="margin-top: 0.8rem; text-align: center; font-size: 0.85rem; color: #666; font-style: italic;">
+                    Tipo de Arriendo: <strong>${val(detalle.tipo_reserva).toUpperCase()}</strong>
+                </div>
             </div>
         `;
 
         // Inyectar HTML
         const container = document.getElementById('detalleContent');
         if (container) {
+            // Asegurar que el contenedor tenga fondo blanco para que el texto oscuro se vea
+            container.style.backgroundColor = '#ffffff'; 
+            container.style.color = '#333333';
+            container.style.padding = '1rem';
+            container.style.borderRadius = '12px';
             container.innerHTML = html;
-            console.log("✅ Detalle renderizado correctamente");
+            console.log("✅ Detalle renderizado con contraste corregido");
         } else {
             console.error("❌ No se encontró el contenedor #detalleContent");
         }
