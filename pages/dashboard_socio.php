@@ -719,25 +719,6 @@
             vertical-align: middle;
             text-align: center;
             }
-            @media (min-width: 1024px) {
-                .dashboard-upper { display: flex; gap: 1.8rem; margin-top: 1.2rem; }
-                .upper-left { flex: 4; max-width: none; margin-left: 20px; }
-                .upper-right { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-right: 20px; }
-            }
-            .fichas-dashboard {
-                display: grid;
-                gap: 1.4rem;
-                width: 100%;
-                grid-template-columns: 1fr;
-            }
-            @media (min-width: 768px) and (max-width: 1023px) {
-                .fichas-dashboard { grid-template-columns: repeat(2, 1fr); }
-            }
-            @media (min-width: 1024px) {
-                .fichas-dashboard { grid-template-columns: repeat(4, 1fr); }
-            }
-            .fichas-dashboard > .stat-card { width: 100%; min-width: 0; }
-            .upper-left { display: block; }
         </style>
         <script>
             // Desactivar Service Worker en desarrollo
@@ -1057,6 +1038,29 @@
                 <?php endif; ?>
             </div> <!-- .upper-right -->
         </div> <!-- .dashboard-upper -->
+
+        <!-- CSS RESPONSIVE -->
+        <style>
+                @media (min-width: 1024px) {
+                .dashboard-upper { display: flex; gap: 1.8rem; margin-top: 1.2rem; }
+                .upper-left { flex: 4; max-width: none; margin-left: 20px; }
+                .upper-right { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-right: 20px; }
+                }
+                .fichas-dashboard {
+                display: grid;
+                gap: 1.4rem;
+                width: 100%;
+                grid-template-columns: 1fr;
+                }
+                @media (min-width: 768px) and (max-width: 1023px) {
+                .fichas-dashboard { grid-template-columns: repeat(2, 1fr); }
+                }
+                @media (min-width: 1024px) {
+                .fichas-dashboard { grid-template-columns: repeat(4, 1fr); }
+                }
+                .fichas-dashboard > .stat-card { width: 100%; min-width: 0; }
+                .upper-left { display: block; }
+        </style>
 
         <!-- MITAD INFERIOR -->
         <div class="dashboard-lower" style="margin-top: 8rem;">
