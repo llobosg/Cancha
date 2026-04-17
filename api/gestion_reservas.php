@@ -23,12 +23,13 @@ try {
             break;
             
         default:
-            throw new Exception('Acción no válida');
+            throw new Exception('Acción no válida: ' . $action);
     }
     
 } catch (Exception $e) {
     http_response_code($e->getCode() ?: 400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    exit;
 }
 
 function procesarPagoReserva($pdo, $data) {
@@ -69,8 +70,8 @@ function procesarPagoReserva($pdo, $data) {
     ");
     $stmt_update->execute([$metodo_pago, $transaccion_id ?: null, $id_reserva]);
     
-    // Opcional: Enviar email de confirmación de pago
-    // enviarEmailConfirmacionPago($reserva, $metodo_pago);
+    //Opcional: Enviar email de confirmación de pago
+    enviarEmailConfirmacionPago($reserva, $metodo_pago);
     
     return [
         'success' => true,
@@ -78,19 +79,6 @@ function procesarPagoReserva($pdo, $data) {
         'id_reserva' => $id_reserva
     ];
 }
-
-// En api/gestion_reservas.php
-
-case 'procesar_pago_parcial':
-    try {
-        echo json_encode(procesarPagoParcial($pdo, $_POST));
-    } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-    break;
-
-// ... resto del switch ...
 
 function procesarPagoParcial($pdo, $data) {
     $id_reserva = (int)($data['id_reserva'] ?? 0);
@@ -113,9 +101,8 @@ function procesarPagoParcial($pdo, $data) {
         throw new Exception('Reserva no encontrada');
     }
     
-    // Si ya está pagado completamente, lanzar error (evita doble pago accidental)
+    // Si ya está pagado completamente, lanzar error
     if ($reserva['estado_pago'] === 'pagado') {
-        // Opcional: Permitir pagos extra si es necesario, pero por ahora bloqueamos
         throw new Exception('Esta reserva ya está marcada como PAGADA.');
     }
     
@@ -125,7 +112,7 @@ function procesarPagoParcial($pdo, $data) {
         $nuevo_estado_pago = 'pagado';
     }
     
-    // 3. Construir el texto de notas en PHP (Más seguro que CONCAT en SQL)
+    // 3. Construir el texto de notas en PHP (Más seguro)
     $fecha_hoy = date('d/m/Y H:i');
     $nota_nueva = "\n[PAGO {$fecha_hoy}]: $" . number_format($monto_pagado, 0, ',', '.') . " vía {$metodo_pago}";
     
@@ -151,7 +138,7 @@ function procesarPagoParcial($pdo, $data) {
         $nuevo_estado_pago,
         $metodo_pago,
         $transaccion_id,
-        $notas_finales, // Pasamos el string completo construido en PHP
+        $notas_finales,
         $id_reserva
     ]);
     
