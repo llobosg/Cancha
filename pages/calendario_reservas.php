@@ -443,41 +443,108 @@ $recinto = $stmt->fetch();
         background: white;
         color: #071289;
     }
-    /* CSS Optimizado para Móvil con Clases */
+    /* === AJUSTES ESPECÍFICOS MÓVIL PARA SUBMODAL DETALLE === */
     @media (max-width: 768px) {
-        /* Forzar 2 columnas en Datos Principales */
-        .info-grid-2col {
-            grid-template-columns: 1fr 1fr !important;
-            gap: 0.5rem !important;
-            padding: 0.6rem !important;
+        
+        /* Forzar que los contenedores internos usen Grid de 2 columnas */
+        #contenidoDetalle > div > div[style*="grid-template-columns"],
+        #contenidoDetalle > div > div:nth-child(1), 
+        #contenidoDetalle > div > div:nth-child(2) {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important; /* 2 Columnas exactas */
+            gap: 0.8rem !important;
+            margin-bottom: 1rem !important;
+        }
+
+        /* Ajuste específico para la sección de "Información del Cliente" */
+        /* Buscamos el div que contiene el h4 "Información del Cliente" y sus siguientes p */
+        #contenidoDetalle h4 + div, 
+        #contenidoDetalle h4 ~ p {
+            /* Si están dentro de un contenedor padre, aplicamos grid al padre */
+            display: block; /* Reset por si acaso */
         }
         
-        /* Forzar 2 columnas en Cliente */
-        .client-grid-2col {
+        /* Truco CSS: Convertir los párrafos del cliente en una grilla de 2 columnas */
+        #contenidoDetalle h4 {
+            grid-column: 1 / -1 !important; /* Título ocupa todo el ancho */
+            margin-top: 1rem !important;
+            border-bottom: 2px solid #e0e0e0 !important;
+            padding-bottom: 0.5rem !important;
+            font-size: 1rem !important;
+            color: #071289 !important;
+        }
+
+        /* Seleccionamos los párrafos dentro de la sección de cliente para ponerlos en 2 columnas */
+        #contenidoDetalle h4 ~ p {
+            margin: 0.2rem 0 !important;
+            font-size: 0.9rem !important;
+            line-height: 1.4 !important;
+        }
+        
+        /* Creamos un contenedor wrapper invisible vía JS o CSS Grid directo en los hijos */
+        /* Como el HTML es generado dinámicamente, usaremos una regla general para los primeros bloques */
+        
+        /* REDEFINICIÓN DIRECTA DEL CONTENIDO GENERADO POR JS PARA MÓVIL */
+        /* Esto sobrescribe los estilos inline del JS solo en móvil */
+        
+        /* 1. Bloque superior (Fecha/Hora/Cancha/Deporte) */
+        #contenidoDetalle > div > div:first-child {
             display: grid !important;
             grid-template-columns: 1fr 1fr !important;
-            gap: 0.4rem !important;
+            gap: 0.6rem !important;
+            background: #f0f4f8 !important;
+            padding: 0.8rem !important;
+            border-radius: 8px !important;
+            margin-bottom: 1rem !important;
         }
         
-        /* Asegurar que el título del cliente ocupe todo el ancho */
-        .client-grid-2col h4 {
+        /* Asegurar que cada hijo ocupe una celda */
+        #contenidoDetalle > div > div:first-child > div {
+            width: 100% !important;
+        }
+
+        /* 2. Bloque Cliente (Nombre/Teléfono/Email/Club) */
+        /* El JS genera un div contenedor para el cliente. Lo forzamos a grid */
+        #contenidoDetalle > div > div:nth-child(2) {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important; /* 2 Columnas */
+            gap: 0.6rem !important;
+            margin-bottom: 1rem !important;
+            background: transparent !important; /* Sin fondo extra si no se desea */
+            padding: 0 !important;
+        }
+        
+        /* El título del cliente debe ocupar las 2 columnas */
+        #contenidoDetalle > div > div:nth-child(2) h4 {
             grid-column: 1 / -1 !important;
-            font-size: 0.9rem !important;
             margin-bottom: 0.5rem !important;
+            font-size: 0.95rem !important;
         }
         
-        /* Ajustar párrafos del cliente para que no se rompan feo */
-        .client-grid-2col p {
-            margin: 0 !important;
+        /* Los párrafos del cliente */
+        #contenidoDetalle > div > div:nth-child(2) p {
+            margin: 0.1rem 0 !important;
             font-size: 0.85rem !important;
-            word-wrap: break-word;
+        }
+
+        /* 3. Bloque Monto y Estados (Mantener layout original pero centrado) */
+        /* Este bloque suele ser el 3ro o 4to hijo dependiendo de notas */
+        #contenidoDetalle > div > div[style*="grid-template-columns: 1fr 1fr"] {
+            /* Ya viene en 2 columnas desde el JS, solo aseguramos que se vea bien */
+            gap: 0.8rem !important;
+            margin-top: 1rem !important;
         }
         
-        /* Mantener Monto y Estados tal cual (ya vienen bien estructurados) */
-        .status-blocks > div {
+        /* Ajuste interno para que Monto y Estados se vean apilados verticalmente dentro de su celda */
+        #contenidoDetalle > div > div[style*="grid-template-columns: 1fr 1fr"] > div {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
             padding: 0.8rem !important;
         }
-    }    
+    }
 </style>
 </head>
 <body>
