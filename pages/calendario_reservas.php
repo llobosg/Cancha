@@ -443,116 +443,41 @@ $recinto = $stmt->fetch();
         background: white;
         color: #071289;
     }
-
-    /* === AJUSTES ESPECÍFICOS PARA MÓVIL / PWA === */
+    /* CSS Optimizado para Móvil con Clases */
     @media (max-width: 768px) {
-        
-        /* 1. Contenedor Principal: Que ocupe todo el ancho disponible */
-        .dashboard-container {
-            width: 100%;
-            max-width: 100%;
-            padding: 0; /* Quitamos padding lateral para aprovechar pantalla */
-            grid-template-columns: 1fr !important; /* Forzar una sola columna */
-            gap: 0;
-        }
-
-        /* 2. Barra de Filtros: Scroll horizontal suave y compacta */
-        .controls-section {
-            width: 100%;
-            overflow-x: auto; /* Permite scroll horizontal si no caben */
-            white-space: nowrap; /* Evita que bajen de línea */
-            flex-wrap: nowrap;
-            padding: 0.5rem;
-            gap: 0.5rem;
-            -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
-            scrollbar-width: thin; /* Firefox */
+        /* Forzar 2 columnas en Datos Principales */
+        .info-grid-2col {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.5rem !important;
+            padding: 0.6rem !important;
         }
         
-        /* Estilo de la barra de scroll en filtros (opcional, para que se vea fina) */
-        .controls-section::-webkit-scrollbar {
-            height: 4px;
-        }
-        .controls-section::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 4px;
-        }
-
-        .control-select {
-            flex: 0 0 auto; /* No crecer ni encoger demasiado */
-            width: auto;
-            min-width: 130px; /* Ancho mínimo cómodo para leer */
-            font-size: 0.85rem;
-            padding: 0.5rem;
-        }
-
-        /* 3. Submodal Detalle: Ajuste de tamaño y fuente para móvil */
-        .submodal-content {
-            width: 92% !important; /* Casi todo el ancho */
-            max-width: 92% !important;
-            padding: 1.2rem !important; /* Menos padding interno */
-            margin: 1rem auto;
-            font-size: 0.85rem !important; /* Texto base más pequeño */
-            max-height: 90vh; /* Altura máxima */
-            overflow-y: auto;
-        }
-
-        /* Títulos más pequeños en móvil */
-        .submodal-content h3 {
-            font-size: 1.2rem !important;
-            margin-bottom: 1rem !important;
-            padding-right: 30px; /* Espacio para la X */
-        }
-
-        /* Botón X más grande y accesible en móvil */
-        .close-modal {
-            font-size: 32px !important;
-            top: 10px !important;
-            right: 10px !important;
-            line-height: 1;
-            padding: 5px;
-            z-index: 100;
-        }
-
-        /* Grids internos del detalle: Una columna en móvil */
-        .submodal-content div[style*="grid-template-columns"] {
-            grid-template-columns: 1fr !important; /* Forzar 1 columna */
-            gap: 0.8rem !important;
-        }
-
-        /* Inputs y Selects más grandes para tocar fácil */
-        select, input[type="text"], input[type="number"] {
-            font-size: 16px !important; /* Evita zoom automático en iOS */
-            padding: 0.7rem !important;
-        }
-
-        /* Botones de acciones dentro del modal */
-        #btnAccionesModal {
-            font-size: 0.9rem;
-            padding: 0.7rem;
+        /* Forzar 2 columnas en Cliente */
+        .client-grid-2col {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.4rem !important;
         }
         
-        .dropdown-item {
-            font-size: 0.95rem;
-            padding: 1rem; /* Más área de toque */
+        /* Asegurar que el título del cliente ocupe todo el ancho */
+        .client-grid-2col h4 {
+            grid-column: 1 / -1 !important;
+            font-size: 0.9rem !important;
+            margin-bottom: 0.5rem !important;
         }
-    }
-
-    /* Ajuste extra para pantallas muy pequeñas (< 360px) */
-    @media (max-width: 360px) {
-        .control-select {
-            min-width: 110px;
-            font-size: 0.8rem;
+        
+        /* Ajustar párrafos del cliente para que no se rompan feo */
+        .client-grid-2col p {
+            margin: 0 !important;
+            font-size: 0.85rem !important;
+            word-wrap: break-word;
         }
-        .submodal-content {
-            width: 95% !important;
-            padding: 1rem !important;
+        
+        /* Mantener Monto y Estados tal cual (ya vienen bien estructurados) */
+        .status-blocks > div {
+            padding: 0.8rem !important;
         }
-    }
-
-    @keyframes slideDown {
-        from {transform: translateY(-50px); opacity: 0;}
-        to {transform: translateY(0); opacity: 1;}
-    }
+    }    
 </style>
 </head>
 <body>
@@ -840,38 +765,41 @@ $recinto = $stmt->fetch();
             }
         }
 
+        // Dentro de renderizarContenidoDetalle, cambia el HTML generado así:
+
         const html = `
             <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
-                <!-- Datos Principales -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: #f0f4f8; padding: 1rem; border-radius: 10px;">
+                
+                <!-- BLOQUE 1: DATOS PRINCIPALES (Clase: .info-grid-2col) -->
+                <div class="info-grid-2col" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; background: #f0f4f8; padding: 0.8rem; border-radius: 8px;">
                     <div><strong style="color:#071289;">📅 Fecha:</strong> ${val(detalle.fecha)}</div>
-                    <div><strong style="color:#071289;">⏰ Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    <div><strong style="color:#071289;"> Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
                     <div><strong style="color:#071289;">🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
                     <div><strong style="color:#071289;"> Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
                 </div>
 
-                <!-- Cliente -->
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color:#071289; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:1rem;">👤 Información del Cliente</h4>
-                    <p style="margin:0.3rem 0;"><strong>Nombre:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</p>
-                    <p style="margin:0.3rem 0;"><strong>Teléfono:</strong> ${val(detalle.telefono_cliente)}</p>
-                    <p style="margin:0.3rem 0;"><strong>Email:</strong> ${val(detalle.email_cliente)}</p>
-                    ${detalle.nombre_club ? `<p style="margin:0.3rem 0;"><strong>Club:</strong> ${val(detalle.nombre_club)}</p>` : ''}
+                <!-- BLOQUE 2: CLIENTE (Clase: .client-grid-2col) -->
+                <div class="client-grid-2col" style="margin-bottom: 1rem;">
+                    <h4 style="color:#071289; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:0.8rem; grid-column: 1/-1;">👤 Información del Cliente</h4>
+                    <p style="margin:0.2rem 0;"><strong>Nombre:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</p>
+                    <p style="margin:0.2rem 0;"><strong>Teléfono:</strong> ${val(detalle.telefono_cliente)}</p>
+                    <p style="margin:0.2rem 0;"><strong>Email:</strong> ${val(detalle.email_cliente)}</p>
+                    ${detalle.nombre_club ? `<p style="margin:0.2rem 0;"><strong>Club:</strong> ${val(detalle.nombre_club)}</p>` : ''}
                 </div>
 
-                <!-- Monto y Estados -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 10px; text-align: center; border: 1px solid #bbdefb;">
+                <!-- BLOQUE 3: MONTO Y ESTADOS (Clase: .status-blocks) -->
+                <div class="status-blocks" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 10px; text-align: center; border: 1px solid #bbdefb; display:flex; flex-direction:column; justify-content:center;">
                         <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO TOTAL</div>
                         <div style="font-size: 1.5rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
                     </div>
                     
-                    <div style="background: #fff3e0; padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #ffe0b2;">
-                        <div style="margin-bottom: 0.5rem;">
+                    <div style="background: #fff3e0; padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #ffe0b2; gap: 0.5rem;">
+                        <div>
                             <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
                             <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
                         </div>
-                        <div style="border-top: 1px dashed #ffcc80; margin: 0.5rem 0;"></div>
+                        <div style="border-top: 1px dashed #ffcc80; margin: 0.3rem 0;"></div>
                         <div>
                             <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
                             <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
