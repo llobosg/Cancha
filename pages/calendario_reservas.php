@@ -19,7 +19,7 @@ $recinto = $stmt->fetch();
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=0.7, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CanchaBoard - <?= htmlspecialchars($recinto['nombre']) ?> | Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
@@ -764,16 +764,30 @@ $recinto = $stmt->fetch();
         </div>
     </div>
 
-    <!-- === SUBMODAL DE PAGO (Ya existente, solo aseguramos la X) === -->
+    <!-- === SUBMODAL DE PAGO (ACTUALIZADO) === -->
     <div id="modalPago" class="submodal" style="display:none;">
         <div class="submodal-content" style="max-width: 500px;">
             <!-- Botón Cerrar X -->
             <span class="close-modal" onclick="cerrarModalPago()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
             
-            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Pagar Reserva</h3>
-            <div id="infoPago" style="margin-bottom:1rem; font-size:0.9rem; color:#333; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;"></div>
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
+            
+            <!-- Información Base (Solo lectura) -->
+            <div style="margin-bottom:1rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
+                <strong>Reserva ID:</strong> <span id="infoIdReserva"></span><br>
+                <strong>Monto Total Arriendo:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;"></span>
+            </div>
             
             <form id="formPago">
+                <!-- CAMPO MONTO EDITABLE -->
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">💰 Monto a Abonar ($)</label>
+                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
+                        style="width:100%; padding:0.8rem; border-radius:6px; border:2px solid #4CAF50; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                    <small style="color:#666; font-size:0.8rem;">* Puedes ingresar un pago parcial (ej: $7.500)</small>
+                </div>
+
+                <!-- MÉTODO DE PAGO -->
                 <div class="form-group" style="margin-bottom:1rem;">
                     <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Método de Pago</label>
                     <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; background:white; color:#333;">
@@ -785,12 +799,22 @@ $recinto = $stmt->fetch();
                     </select>
                 </div>
                 
+                <!-- ID TRANSACCIÓN (Opcional según método) -->
                 <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">ID Transacción / Comprobante</label>
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Comprobante / ID Transacción</label>
                     <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
                 </div>
+
+                <!-- CAMPO NOTAS (NUEVO) -->
+                <div class="form-group" style="margin-bottom:1.5rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;"> Notas del Pago</label>
+                    <textarea name="notas_pago" id="notasPago" rows="3" placeholder="Ej: Pago parcial de Juan Pérez (1/4). Faltan 3 socios." 
+                            style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; resize:vertical; font-family:sans-serif;"></textarea>
+                </div>
                 
-                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem;">Confirmar Pago</button>
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem;">
+                    Confirmar Registro de Pago
+                </button>
             </form>
         </div>
     </div>
@@ -1027,29 +1051,100 @@ $recinto = $stmt->fetch();
         menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
     }
 
-    // === ABRIR MODAL DE PAGO DESDE EL DETALLE ===
+    // === ABRIR MODAL DE PAGO DESDE EL DETALLE (ACTUALIZADO) ===
     function abrirModalPagoDesdeDetalle() {
         if (!reservaActualSeleccionada) return;
         
         // Ocultar menú de acciones
         document.getElementById('actionMenuModal').style.display = 'none';
         
-        const monto = reservaActualSeleccionada.monto_total;
         const idReserva = reservaActualSeleccionada.id_reserva;
+        const montoTotal = parseFloat(reservaActualSeleccionada.monto_total);
         
-        document.getElementById('infoPago').innerHTML = `
-            <strong>Reserva ID:</strong> ${idReserva}<br>
-            <strong>Monto a Pagar:</strong> <span style="color:#2e7d32; font-weight:bold; font-size:1.2rem;">$${parseInt(monto).toLocaleString()}</span>
-        `;
+        // Llenar información base
+        document.getElementById('infoIdReserva').textContent = idReserva;
+        document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
         
+        // PRE-LLENAR EL MONTO CON EL TOTAL (pero editable)
+        const inputMonto = document.getElementById('montoPagar');
+        inputMonto.value = montoTotal; 
+        
+        // Resetear otros campos
         document.getElementById('formPago').dataset.idReserva = idReserva;
+        document.getElementById('formPago').dataset.montoOriginal = montoTotal; // Guardamos el original para comparar
         document.getElementById('formPago').reset();
+        document.getElementById('montoPagar').value = montoTotal; // Restaurar valor tras el reset
         document.getElementById('campoTransaccion').style.display = 'none';
         
         // Cerrar modal detalle y abrir pago
         cerrarModalDetalle();
         document.getElementById('modalPago').style.display = 'flex';
     }
+
+    // === LISTENER PARA MÉTODO DE PAGO (Igual que antes) ===
+    document.getElementById('metodoPago')?.addEventListener('change', function() {
+        const campo = document.getElementById('campoTransaccion');
+        const input = document.getElementById('transaccionId');
+        if (['transferencia', 'webpay'].includes(this.value)) {
+            campo.style.display = 'block';
+            input.required = true;
+        } else {
+            campo.style.display = 'none';
+            input.required = false;
+        }
+    });
+
+    // === SUBMIT DEL FORMULARIO DE PAGO (LÓGICA MEJORADA) ===
+    document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const idReserva = this.dataset.idReserva;
+        const montoOriginal = parseFloat(this.dataset.montoOriginal);
+        const montoPagado = parseFloat(document.getElementById('montoPagar').value);
+        const metodo = document.getElementById('metodoPago').value;
+        const transaccion = document.getElementById('transaccionId').value;
+        const notas = document.getElementById('notasPago').value;
+
+        // Validación básica
+        if (montoPagado <= 0) {
+            alert("⚠️ El monto a pagar debe ser mayor a 0.");
+            return;
+        }
+        if (montoPagado > montoOriginal) {
+            if(!confirm("⚠️ El monto ingresado ($" + montoPagado + ") es mayor al total del arriendo ($" + montoOriginal + "). ¿Deseas continuar?")) {
+                return;
+            }
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'procesar_pago_parcial'); // Nueva acción para diferenciar
+            formData.append('id_reserva', idReserva);
+            formData.append('monto_pagado', montoPagado);
+            formData.append('monto_total_original', montoOriginal);
+            formData.append('metodo_pago', metodo);
+            formData.append('transaccion_id', transaccion || '');
+            formData.append('notas_pago', notas);
+
+            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.success) {
+                let msg = "✅ Pago registrado correctamente.";
+                if (montoPagado < montoOriginal) {
+                    msg += " La reserva queda con saldo pendiente.";
+                }
+                alert(msg);
+                cerrarModalPago();
+                location.reload(); // Recargar para ver cambios
+            } else {
+                alert("❌ Error: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error de conexión al procesar pago");
+        }
+    });
 
     // === CERRAR AL HACER CLICK FUERA ===
     window.onclick = function(event) {
