@@ -890,39 +890,44 @@ $recinto = $stmt->fetch();
 
     // Función que llama a la API de filtrado con POST
     async function aplicarFiltrosConAPI() {
-        const deporte = document.getElementById('filtroDeporte').value;
-        const estado = document.getElementById('filtroEstado').value;
-        const fecha = document.getElementById('filtroFecha').value;
-        
-        try {
-            const formData = new FormData();
-            formData.append('action', 'filtrar_reservas');
-            formData.append('deporte', deporte);
-            formData.append('estado', estado);
-            formData.append('fecha', fecha);
-            
-            const response = await fetch('../api/canchaboard.php', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            reservasData = data;
-            renderizarReservas(reservasData);
+    const deporte = document.getElementById('filtroDeporte').value;
+    const estado = document.getElementById('filtroEstado').value;
+    const fecha = document.getElementById('filtroFecha').value;
+    
+    console.log('🔍 Filtros enviados:', { deporte, estado, fecha });
 
-            console.log('🔍 Filtros enviados:', { deporte, estado, fecha });
-            console.log('📡 Respuesta API:', data);
-            
-        } catch (error) {
-            console.error('Error al aplicar filtros:', error);
-            showToast('❌ Error al filtrar reservas', 'error');
+    try {
+        const formData = new FormData();
+        formData.append('action', 'filtrar_reservas');
+        formData.append('deporte', deporte);
+        formData.append('estado', estado);
+        formData.append('fecha', fecha);
+        
+        // Log de lo que se envía
+        for (let pair of formData.entries()) {
+            console.log(pair[0]+ ', ' + pair[1]); 
         }
+
+        const response = await fetch('../api/canchaboard.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        console.log('📡 Respuesta API (Total items):', data.length);
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        reservasData = data;
+        renderizarReservas(reservasData);
+        
+    } catch (error) {
+        console.error('Error al aplicar filtros:', error);
+        showToast('❌ Error al filtrar reservas', 'error');
     }
+}
 
     // Cargar datos iniciales con "Hoy" por defecto
     document.addEventListener('DOMContentLoaded', function() {

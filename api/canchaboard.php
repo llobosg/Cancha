@@ -16,6 +16,7 @@ try {
     switch ($action) {
         case 'get_reservas':
             $rango_dias = (int)($_GET['rango_dias'] ?? 30);
+            error_log("📥 [API] Datos GET recibidos: " . print_r($_GET, true));
             echo json_encode(getReservasDataOptimizada($pdo, $id_recinto, $rango_dias));
             break;
             
@@ -24,6 +25,7 @@ try {
             if (!$id_disponibilidad) {
                 throw new Exception('ID de disponibilidad requerido');
             }
+            error_log("📥 [API] Datos POST recibidos: " . print_r($_POST, true));
             echo json_encode(getDetalleReserva($pdo, $id_disponibilidad, $id_recinto));
             break;
             
@@ -34,6 +36,7 @@ try {
                 'fecha' => $_POST['fecha'] ?? null,
                 'rango_dias' => (int)($_POST['rango_dias'] ?? 30)
             ];
+            error_log("📥 [API] Datos POST recibidos: " . print_r($_POST, true));
             echo json_encode(getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros));
             break;
             
@@ -113,9 +116,12 @@ function getReservasDataOptimizada($pdo, $id_recinto, $rango_dias = 0) {
 }
 
 function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
-    // Calcular rango de fechas según filtro
+    // LOGS DE DEPURACIÓN
+    error_log("🔍 [API FILTROS] Filtros recibidos: " . print_r($filtros, true));
+    
+    // Calcular rango de fechas
     $fecha_hoy = date('Y-m-d');
-    $rango_dias = 30; // default
+    $rango_dias = 30; 
     
     if ($filtros['fecha'] === 'hoy') {
         $rango_dias = 0;
@@ -127,52 +133,78 @@ function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
         $rango_dias = 30;
     }
     
-    $fecha_inicio = $fecha_hoy;
-    $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
+    error_log("📅 [API FILTROS] Rango días calculado: $rango_dias");
     
     // Obtener todos los datos base
     $todos_datos = getReservasDataOptimizada($pdo, $id_recinto, $rango_dias);
+    error_log("📊 [API FILTROS] Total datos antes de filtrar: " . count($todos_datos));
     
     // Aplicar filtros
     $datos_filtrados = [];
+    $contador_saltados = 0;
+    
     foreach ($todos_datos as $dato) {
-        // Filtro por deporte
+        $saltar = false;
+        
+        // 1. Filtro por deporte
         if (!empty($filtros['deporte']) && $dato['id_deporte'] !== $filtros['deporte']) {
-            continue;
+            $saltar = true;
         }
         
-        // Filtro por estado - LÓGICA CORREGIDA
-        if (!empty($filtros['estado'])) {
+        // 2. Filtro por estado (Lógica robusta)
+        if (!$saltar && !empty($filtros['estado'])) {
             $esReservaReal = !empty($dato['id_reserva']) && $dato['id_reserva'] !== 'null';
             $estadoReserva = $dato['estado_reserva'] ?? null;
             $estadoDisp = $dato['estado_disponibilidad'] ?? 'disponible';
             
-            $pasaFiltro = false;
+            $pasaEstado = false;
             
             switch($filtros['estado']) {
                 case 'disponible':
-                    $pasaFiltro = (!$esReservaReal && ($estadoDisp === 'disponible' || empty($estadoDisp)));
+                    $pasaEstado = (!$esReservaReal && ($estadoDisp === 'disponible' || empty($estadoDisp)));
                     break;
                 case 'reservada':
-                    $pasaFiltro = ($esReservaReal && $estadoReserva === 'confirmada') || $estadoDisp === 'reservada';
+                    $pasaEstado = ($esReservaReal && $estadoReserva === 'confirmada') || $estadoDisp === 'reservada';
                     break;
                 case 'ocupada':
-                    $pasaFiltro = ($esReservaReal && $estadoReserva === 'completada') || $estadoDisp === 'ocupada';
+                    $pasaEstado = ($esReservaReal && $estadoReserva === 'completada') || $estadoDisp === 'ocupada';
                     break;
                 case 'cancelada':
-                    $pasaFiltro = ($esReservaReal && $estadoReserva === 'cancelada') || $estadoDisp === 'cancelada';
+                    $pasaEstado = ($esReservaReal && $estadoReserva === 'cancelada') || $estadoDisp === 'cancelada';
                     break;
             }
             
-            if (!$pasaFiltro) continue;
+            if (!$pasaEstado) {
+                $saltar = true;
+            }
         }
         
-        // Filtro por fecha específica (además del rango)
-        if ($filtros['fecha'] === 'hoy' && $dato['fecha'] !== $fecha_hoy) continue;
-        if ($filtros['fecha'] === 'mañana' && $dato['fecha'] !== date('Y-m-d', strtotime('+1 day'))) continue;
+        // 3. Filtro por fecha específica
+        if (!$saltar && !empty($filtros['fecha'])) {
+            $fecha_dato = $dato['fecha'];
+            
+            if ($filtros['fecha'] === 'hoy' && $fecha_dato !== $fecha_hoy) {
+                $saltar = true;
+            } elseif ($filtros['fecha'] === 'mañana' && $fecha_dato !== date('Y-m-d', strtotime('+1 day'))) {
+                $saltar = true;
+            } elseif ($filtros['fecha'] === 'semana') {
+                $fin_semana = date('Y-m-d', strtotime('+7 days'));
+                if ($fecha_dato < $fecha_hoy || $fecha_dato > $fin_semana) {
+                    $saltar = true;
+                }
+            }
+            // Para 'mes' ya usamos el rango_dias=30 al obtener datos, así que no necesitamos filtrar aquí extra
+        }
+        
+        if ($saltar) {
+            $contador_saltados++;
+            continue;
+        }
         
         $datos_filtrados[] = $dato;
     }
+    
+    error_log("✅ [API FILTROS] Total datos después de filtrar: " . count($datos_filtrados) . " (Saltados: $contador_saltados)");
     
     return $datos_filtrados;
 }
