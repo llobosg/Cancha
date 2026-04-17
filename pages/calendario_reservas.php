@@ -23,267 +23,318 @@ $recinto = $stmt->fetch();
   <title>CanchaBoard - <?= htmlspecialchars($recinto['nombre']) ?> | Cancha</title>
   <link rel="stylesheet" href="../styles.css">
   <style>
-  body {
-    background: linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-               url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-    background-blend-mode: multiply;
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
-    color: white;
-  }
-  
-  .dashboard-container {
-    display: grid;
-    grid-template-columns: 4fr 1fr;
-    gap: 1rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 1rem;
-    /* Eliminamos height fija para permitir alineación natural */
-  }
-  
-  .header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 60px;
-    background: rgba(0, 51, 102, 0.95);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 1.5rem;
-    z-index: 1000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  }
-  
-  .main-title-section {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .logo-corporativo {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    background: #FFD700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
-  
-  .main-title {
-    color: #FFD700;
-    font-size: 1.5rem;
-    margin: 0;
-  }
-  
-  .controls-section {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    background: rgba(255,255,255,0.1);
-    border-radius: 8px;
-    position: sticky;
-    top: 70px;
-    z-index: 999;
-  }
-  
-  .control-select {
-    background: white;
-    padding: 0.3rem;
-    border-radius: 4px;
-    color: #071289;
-    border: none;
-  }
-  
-  .reservas-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
-    overflow-y: auto;
-    padding-right: 0.5rem;
-  }
-  
-  .reserva-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1rem;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .reserva-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-  }
-  
-  .reserva-card.selected {
-    border: 3px solid #071289;
-  }
-  
-  .deporte-icon {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .cancha-nombre {
-    font-weight: bold;
-    color: #071289;
-    margin-bottom: 0.3rem;
-  }
-  
-  .fecha-hora {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 0.5rem;
-  }
-  
-  .estado-indicator {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
-  
-  .estado-disponible { background: #FFD700; } /* Amarillo */
-  .estado-reservada { background: #9C27B0; }  /* Morado */
-  .estado-ocupada { background: #4CAF50; }    /* Verde */
-  .estado-cancelada { background: #F44336; }  /* Rojo */
-  .estado-mantencion { background: #FF9800; } /* Naranja */
-  
-  /* Panel lateral - CORREGIDO */
-    .detail-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    position: sticky;
-    top: 120px;
-    align-self: flex-start;
-    height: fit-content;
-    max-height: calc(100vh - 140px);
-    overflow: visible;
+    body {
+        background: linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
+                url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+        background-blend-mode: multiply;
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh;
+        color: white;
     }
-
-    .detail-section {
-    background: white;
-    padding: 1rem;
-    border-radius: 12px;
-    width: 100%;
-    overflow-y: auto;
-    max-height: 350px; /* Aumentado para más espacio */
-    }
-
-    .actions-section {
-    background: white;
-    padding: 1rem;
-    border-radius: 12px;
-    width: 100%;
-    overflow-y: auto;
-    max-height: 320px; /* Aumentado para que quepan todas las opciones */
-    }
-  
-  .detail-title {
-    color: #071289;
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-  }
-  
-  .detail-item {
-    margin-bottom: 0.5rem;
-  }
-  
-  .detail-label {
-    font-weight: bold;
-    color: #333;
-  }
-  
-  .actions-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-    color: black;
-  }
-  
-  .action-btn {
-    padding: 0.5rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.2s;
-    color: #333; /* Texto negro por defecto */
-    }
-
-    .action-btn:hover {
-    background: rgba(255,255,255,0.2);
-    color: #000; /* Texto negro en hover */
-    }
-  
-  .btn-anular { background: #F44336; color: white; }
-  .btn-cancelar { background: #FF9800; color: white; }
-  .btn-cambiar { background: #2196F3; color: white; }
-  .btn-mensaje { background: #4CAF50; color: white; }
-  .btn-campeonato { background: #00cc66; color: white; }
-  
-  /* Submodal */
-  .submodal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    justify-content: center;
-    align-items: center;
-    z-index: 1001;
-  }
-  
-  .submodal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 16px;
-    max-width: 500px;
-    position: relative;
-  }
-  
-  .close-modal {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 28px;
-    cursor: pointer;
-  }
-  
-  /* Responsive móvil */
-  @media (max-width: 768px) {
+    
     .dashboard-container {
-      grid-template-columns: 1fr;
-      padding-top: 80px;
+        display: grid;
+        grid-template-columns: 4fr 1fr;
+        gap: 1rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1rem;
+        /* Eliminamos height fija para permitir alineación natural */
+    }
+    
+    .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: rgba(0, 51, 102, 0.95);
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 1.5rem;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    .main-title-section {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .logo-corporativo {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: #FFD700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    
+    .main-title {
+        color: #FFD700;
+        font-size: 1.5rem;
+        margin: 0;
+    }
+    
+    .controls-section {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        position: sticky;
+        top: 70px;
+        z-index: 999;
+    }
+    
+    .control-select {
+        background: white;
+        padding: 0.3rem;
+        border-radius: 4px;
+        color: #071289;
+        border: none;
     }
     
     .reservas-grid {
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
     }
     
-    .detail-panel {
-      position: static;
-      top: auto;
-      align-self: auto;
+    .reserva-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
     }
-  }
+    
+    .reserva-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    
+    .reserva-card.selected {
+        border: 3px solid #071289;
+    }
+    
+    .deporte-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .cancha-nombre {
+        font-weight: bold;
+        color: #071289;
+        margin-bottom: 0.3rem;
+    }
+    
+    .fecha-hora {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+    
+    .estado-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    
+    .estado-disponible { background: #FFD700; } /* Amarillo */
+    .estado-reservada { background: #9C27B0; }  /* Morado */
+    .estado-ocupada { background: #4CAF50; }    /* Verde */
+    .estado-cancelada { background: #F44336; }  /* Rojo */
+    .estado-mantencion { background: #FF9800; } /* Naranja */
+  
+    /* Panel lateral - CORREGIDO */
+        .detail-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        position: sticky;
+        top: 120px;
+        align-self: flex-start;
+        height: fit-content;
+        max-height: calc(100vh - 140px);
+        overflow: visible;
+        }
+
+        .detail-section {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        width: 100%;
+        overflow-y: auto;
+        max-height: 350px; /* Aumentado para más espacio */
+        }
+
+        .actions-section {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        width: 100%;
+        overflow-y: auto;
+        max-height: 320px; /* Aumentado para que quepan todas las opciones */
+        }
+    
+    .detail-title {
+        color: #071289;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .detail-item {
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-label {
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .actions-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        color: black;
+    }
+    
+    .action-btn {
+        padding: 0.5rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.2s;
+        color: #333; /* Texto negro por defecto */
+        }
+
+        .action-btn:hover {
+        background: rgba(255,255,255,0.2);
+        color: #000; /* Texto negro en hover */
+        }
+  
+    .btn-anular { background: #F44336; color: white; }
+    .btn-cancelar { background: #FF9800; color: white; }
+    .btn-cambiar { background: #2196F3; color: white; }
+    .btn-mensaje { background: #4CAF50; color: white; }
+    .btn-campeonato { background: #00cc66; color: white; }
+  
+    /* Estilos base del Submodal */
+    .submodal {
+        display: none;
+        position: fixed;
+        z-index: 3000; /* Muy alto para estar encima de todo */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.7); /* Fondo oscuro semitransparente */
+        backdrop-filter: blur(5px); /* Efecto vidrio */
+        justify-content: center;
+        align-items: center;
+    }
+
+    .submodal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 600px; /* Ancho máximo cómodo */
+        border-radius: 16px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        position: relative;
+        animation: slideDown 0.3s ease-out;
+    }
+  
+    /* Botón X de cierre */
+    .close-modal {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    
+    /* Menú desplegable dentro del modal */
+    .action-dropdown-menu {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
+
+    .dropdown-item {
+        width: 100%;
+        padding: 12px;
+        text-align: left;
+        background: none;
+        border: none;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f1f1f1;
+        color: #071289;
+    }
+
+    .btn-pay-action {
+        background-color: #e8f5e9 !important;
+        color: #2e7d32 !important;
+        font-weight: bold;
+    }
+    /* Responsive Móvil */
+    @media (max-width: 600px) {
+        .submodal-content {
+            width: 95%;
+            padding: 15px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }      
+        .close-modal {
+            font-size: 24px;
+            top: 10px;
+            right: 10px;
+        }
+        .reservas-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        } 
+        .detail-panel {
+            position: static;
+            top: auto;
+            align-self: auto;
+        }
+    }
     /* Toast Notifications */
     .toast {
     position: fixed;
@@ -449,6 +500,10 @@ $recinto = $stmt->fetch();
             min-width: auto;
         }
     }
+    @keyframes slideDown {
+        from {transform: translateY(-50px); opacity: 0;}
+        to {transform: translateY(0); opacity: 1;}
+    }
 </style>
 </head>
 <body>
@@ -500,65 +555,48 @@ $recinto = $stmt->fetch();
       </div>
     </div>
     
-    <div class="detail-panel">
-        <!-- Encabezado con Botón de Acciones -->
-        <div class="detail-header-container">
-        <h3 class="detail-title">📋 Detalle</h3>
-        
-        <div style="position:relative;">
-            <button id="btnToggleActions" onclick="toggleActionMenu()" 
-                style="background:#071289; color:white; border:none; padding:0.5rem 0.8rem; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.9rem;">
-                ⚙️ Acciones
-            </button>
+    <!-- === SUBMODAL CENTRAL DE DETALLE DE RESERVA === -->
+    <div id="modalDetalleReserva" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 600px; padding: 2rem;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999; z-index:10;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
+            
+            <!-- Aquí se inyectará el contenido dinámico -->
+            <div id="contenidoDetalle" style="color:#333;"></div>
+            
+            <!-- Botón de Acciones dentro del modal (Opcional, o usar el menú desplegable si prefieres) -->
+            <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
+                <button id="btnAccionesModal" onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">
+                    ⚙️ Opciones de Gestión
+                </button>
                 
-                <!-- Submenú Desplegable (Oculto por defecto) -->
-                <div id="actionDropdown" class="action-dropdown-menu" style="display:none;">
-                    <button class="dropdown-item" onclick="anularReserva()">️ Anular Reserva</button>
-                    <button class="dropdown-item" onclick="cancelarReserva()">❌ Cancelar</button>
+                <!-- Menú de acciones dentro del modal -->
+                <div id="actionMenuModal" class="action-dropdown-menu" style="display:none; position:relative; top:5px; left:0; right:0; margin:0 auto; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <button class="dropdown-item" onclick="anularReserva()">🗑️ Anular Reserva</button>
+                    <button class="dropdown-item" onclick="cancelarReserva()"> Cancelar</button>
                     <button class="dropdown-item" onclick="cambiarCancha()">🔄 Cambiar Cancha</button>
                     <button class="dropdown-item" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
-                    <!-- Botón Pagar integrado aquí -->
-                    <button id="btnPagarDropdown" class="dropdown-item btn-pay-action" style="display:none;" onclick="abrirModalPago()">
-                        💳 Pagar Reserva
-                    </button>
+                    <button id="btnPagarModal" class="dropdown-item btn-pay-action" style="display:none;" onclick="abrirModalPagoDesdeDetalle()">💳 Pagar Reserva</button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Contenido del Detalle (Se llena con JS) -->
-        <div class="detail-section" id="detalleReserva" style="flex:1; overflow-y:auto;">
-            <div id="detalleContent">
-                <p style="color:#666; text-align:center; margin-top:2rem;">Selecciona una reserva para ver detalles</p>
             </div>
         </div>
     </div>
 
-    <!-- === SUBMODAL DE ACCIONES (Para Móvil/PWA - Opcional si prefieres solo dropdown) === -->
-    <!-- Usaremos el dropdown simple arriba, pero si quieres un modal completo para móvil, descomenta esto: -->
- 
-    <div id="modalAcciones" class="submodal">
-        <div class="submodal-content">
-            <span class="close-modal" onclick="cerrarModalAcciones()">&times;</span>
-            <h3>Opciones de Gestión</h3>
-            <div class="actions-grid-mobile">
-                <button class="action-btn-full" onclick="anularReserva()">🗑️ Anular</button>
-                ...
-            </div>
-        </div>
-    </div> 
-
-
-    <!-- Modal de Pago (Ya existente, aseguramos que esté visible) -->
+    <!-- === SUBMODAL DE PAGO (Ya existente, solo aseguramos la X) === -->
     <div id="modalPago" class="submodal" style="display:none;">
-        <div class="submodal-content">
-            <span class="close-modal" onclick="cerrarModalPago()">&times;</span>
-            <h3 style="color:#071289; margin-bottom:1rem;">💳 Pagar Reserva</h3>
-            <div id="infoPago" style="margin-bottom:1rem; font-size:0.9rem; color:#333; background:#f8f9fa; padding:10px; border-radius:6px;"></div>
+        <div class="submodal-content" style="max-width: 500px;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalPago()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Pagar Reserva</h3>
+            <div id="infoPago" style="margin-bottom:1rem; font-size:0.9rem; color:#333; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;"></div>
             
             <form id="formPago">
                 <div class="form-group" style="margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Método de Pago</label>
-                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; background:white; color:#333;">
                         <option value="">Seleccionar...</option>
                         <option value="transferencia">Transferencia Bancaria</option>
                         <option value="webpay">Webpay / Tarjeta</option>
@@ -568,14 +606,17 @@ $recinto = $stmt->fetch();
                 </div>
                 
                 <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">ID Transacción / Comprobante</label>
-                    <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.5rem; border-radius:4px; border:1px solid #ccc;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">ID Transacción / Comprobante</label>
+                    <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
                 </div>
                 
-                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:6px; font-weight:bold; cursor:pointer;">Confirmar Pago</button>
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem;">Confirmar Pago</button>
             </form>
         </div>
     </div>
+
+    <!-- NOTA: El panel lateral derecho (.detail-panel) ya NO es necesario. Puedes eliminarlo o dejarlo oculto. -->
+    <!-- Si lo eliminas, recuerda ajustar el grid principal para que ocupe todo el ancho o centrar la grilla. -->
 
     <!-- Submodal para mensaje - CORREGIDO -->
     <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
@@ -691,49 +732,138 @@ $recinto = $stmt->fetch();
         }
     }
 
-    function selectReserva(id) {
-        // Quitar selección anterior
-        document.querySelectorAll('.reserva-card').forEach(card => card.classList.remove('selected'));
-        
-        // Seleccionar nueva (si existe el evento)
-        if (event?.currentTarget) {
-            event.currentTarget.classList.add('selected');
-        }
-        
-        reservaSeleccionada = id;
-        console.log("🖱️ Ficha seleccionada ID:", id);
+    // === VARIABLES GLOBALES ===
+    let reservaActualSeleccionada = null; // Guardamos el objeto completo de la reserva seleccionada
 
-        // Buscar la reserva completa en los datos cargados
-        const selectedReserva = reservasData.find(r => {
-            // Caso A: Coincidencia por id_disponibilidad (numérico)
-            if (r.id_disponibilidad && r.id_disponibilidad !== 'null' && r.id_disponibilidad !== null) {
-                return r.id_disponibilidad.toString() === id.toString();
-            }
-            // Caso B: Coincidencia por clave compuesta (fallback)
-            return `${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString();
-        });
+    // === FUNCIÓN PARA ABRIR EL MODAL DE DETALLE ===
+    function selectReserva(id) {
+        // Buscar datos en el array cargado
+        const selectedReserva = reservasData.find(r => 
+            (r.id_disponibilidad && r.id_disponibilidad.toString() === id.toString()) || 
+            (`${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString())
+        );
         
-        if (selectedReserva) {
-            console.log("📄 Datos encontrados:", selectedReserva);
-            
-            // Verificar si es una reserva REAL (tiene id_reserva y estado confirmado/reservado)
-            // O si tiene un id_disponibilidad válido de la tabla disponibilidad_canchas
-            const tieneIdDisponibilidad = selectedReserva.id_disponibilidad && selectedReserva.id_disponibilidad !== 'null';
-            const tieneReservaReal = selectedReserva.id_reserva && selectedReserva.id_reserva !== 'null';
-            
-            if (tieneIdDisponibilidad) {
-                // Tiene ID de disponibilidad → Cargar detalle desde BD
-                cargarDetalleReserva(selectedReserva.id_disponibilidad, selectedReserva.id_reserva || null);
-            } else if (tieneReservaReal) {
-                // Tiene reserva pero falta ID disponibilidad (raro, pero posible)
-                // Intentamos cargar igual, aunque podría fallar si la tabla disponibilidad es clave
-                alert("⚠️ Error de datos: Reserva encontrada pero falta ID de disponibilidad.");
+        if (!selectedReserva) return;
+        
+        reservaActualSeleccionada = selectedReserva;
+        
+        // Renderizar contenido
+        renderizarContenidoDetalle(selectedReserva);
+        
+        // Mostrar Modal
+        document.getElementById('modalDetalleReserva').style.display = 'flex';
+    }
+
+    // === RENDERIZAR CONTENIDO DENTRO DEL MODAL ===
+    function renderizarContenidoDetalle(detalle) {
+        const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
+        const money = (v) => '$' + parseInt(v || 0).toLocaleString();
+        
+        // Controlar visibilidad del botón Pagar en el modal
+        const btnPagarModal = document.getElementById('btnPagarModal');
+        if (btnPagarModal) {
+            if ((parseFloat(detalle.monto_total) > 0) && detalle.estado_pago === 'pendiente') {
+                btnPagarModal.style.display = 'block';
+                btnPagarModal.dataset.monto = detalle.monto_total;
+                btnPagarModal.dataset.idReserva = detalle.id_reserva;
             } else {
-                // Es solo un bloque de disponibilidad generado (sin reserva ni ID en BD)
-                mostrarDetalleDisponibilidad(selectedReserva);
+                btnPagarModal.style.display = 'none';
             }
-        } else {
-            document.getElementById('detalleContent').innerHTML = '<p style="color:#F44336;">Reserva no encontrada en datos locales.</p>';
+        }
+
+        const html = `
+            <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
+                <!-- Datos Principales -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: #f0f4f8; padding: 1rem; border-radius: 10px;">
+                    <div><strong style="color:#071289;">📅 Fecha:</strong> ${val(detalle.fecha)}</div>
+                    <div><strong style="color:#071289;">⏰ Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
+                    <div><strong style="color:#071289;"> Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
+                </div>
+
+                <!-- Cliente -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color:#071289; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:1rem;">👤 Información del Cliente</h4>
+                    <p style="margin:0.3rem 0;"><strong>Nombre:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</p>
+                    <p style="margin:0.3rem 0;"><strong>Teléfono:</strong> ${val(detalle.telefono_cliente)}</p>
+                    <p style="margin:0.3rem 0;"><strong>Email:</strong> ${val(detalle.email_cliente)}</p>
+                    ${detalle.nombre_club ? `<p style="margin:0.3rem 0;"><strong>Club:</strong> ${val(detalle.nombre_club)}</p>` : ''}
+                </div>
+
+                <!-- Monto y Estados -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 10px; text-align: center; border: 1px solid #bbdefb;">
+                        <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO TOTAL</div>
+                        <div style="font-size: 1.5rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
+                    </div>
+                    
+                    <div style="background: #fff3e0; padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #ffe0b2;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
+                        </div>
+                        <div style="border-top: 1px dashed #ffcc80; margin: 0.5rem 0;"></div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${detalle.notas ? `<div style="margin-top:1rem; background:#fffde7; padding:1rem; border-radius:8px; border-left:4px solid #fbc02d; color:#333;"><strong>📝 Notas:</strong> ${val(detalle.notas)}</div>` : ''}
+            </div>
+        `;
+        
+        document.getElementById('contenidoDetalle').innerHTML = html;
+    }
+
+    // === CERRAR MODALES ===
+    function cerrarModalDetalle() {
+        document.getElementById('modalDetalleReserva').style.display = 'none';
+        document.getElementById('actionMenuModal').style.display = 'none'; // Ocultar menú si estaba abierto
+    }
+
+    function cerrarModalPago() {
+        document.getElementById('modalPago').style.display = 'none';
+    }
+
+    // === MENÚ DE ACCIONES DENTRO DEL MODAL ===
+    function toggleActionMenuModal() {
+        const menu = document.getElementById('actionMenuModal');
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // === ABRIR MODAL DE PAGO DESDE EL DETALLE ===
+    function abrirModalPagoDesdeDetalle() {
+        if (!reservaActualSeleccionada) return;
+        
+        // Ocultar menú de acciones
+        document.getElementById('actionMenuModal').style.display = 'none';
+        
+        const monto = reservaActualSeleccionada.monto_total;
+        const idReserva = reservaActualSeleccionada.id_reserva;
+        
+        document.getElementById('infoPago').innerHTML = `
+            <strong>Reserva ID:</strong> ${idReserva}<br>
+            <strong>Monto a Pagar:</strong> <span style="color:#2e7d32; font-weight:bold; font-size:1.2rem;">$${parseInt(monto).toLocaleString()}</span>
+        `;
+        
+        document.getElementById('formPago').dataset.idReserva = idReserva;
+        document.getElementById('formPago').reset();
+        document.getElementById('campoTransaccion').style.display = 'none';
+        
+        // Cerrar modal detalle y abrir pago
+        cerrarModalDetalle();
+        document.getElementById('modalPago').style.display = 'flex';
+    }
+
+    // === CERRAR AL HACER CLICK FUERA ===
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('modalDetalleReserva')) {
+            cerrarModalDetalle();
+        }
+        if (event.target == document.getElementById('modalPago')) {
+            cerrarModalPago();
         }
     }
 
@@ -1201,13 +1331,6 @@ $recinto = $stmt->fetch();
             }
     }
 
-    function cerrarModalPago() {
-        document.getElementById('modalPago').style.display = 'none';
-        document.getElementById('formPago').reset();
-        document.getElementById('campoTransaccion').style.display = 'none';
-        document.getElementById('transaccionId').required = false;
-    }
-
     // Manejar submit del form de pago
     document.getElementById('formPago')?.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -1380,11 +1503,6 @@ $recinto = $stmt->fetch();
 
         // Mostrar modal
         document.getElementById('modalPago').style.display = 'flex';
-    }
-
-    // Función auxiliar para cerrar modal de pago
-    function cerrarModalPago() {
-        document.getElementById('modalPago').style.display = 'none';
     }
 
     // Listener para el select de método de pago (mostrar campo transacción)
