@@ -79,6 +79,19 @@ function procesarPagoReserva($pdo, $data) {
     ];
 }
 
+// En api/gestion_reservas.php
+
+case 'procesar_pago_parcial':
+    try {
+        echo json_encode(procesarPagoParcial($pdo, $_POST));
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    break;
+
+// ... resto del switch ...
+
 function procesarPagoParcial($pdo, $data) {
     $id_reserva = (int)($data['id_reserva'] ?? 0);
     $monto_pagado = (float)($data['monto_pagado'] ?? 0);
@@ -91,53 +104,60 @@ function procesarPagoParcial($pdo, $data) {
         throw new Exception('Datos incompletos o inválidos');
     }
     
-    // Verificar reserva
-    $stmt_check = $pdo->prepare("SELECT id_reserva, estado_pago, monto_total FROM reservas WHERE id_reserva = ?");
+    // 1. Verificar reserva y obtener notas actuales
+    $stmt_check = $pdo->prepare("SELECT id_reserva, estado_pago, monto_total, notas FROM reservas WHERE id_reserva = ?");
     $stmt_check->execute([$id_reserva]);
-    $reserva = $stmt_check->fetch();
+    $reserva = $stmt_check->fetch(PDO::FETCH_ASSOC);
     
     if (!$reserva) {
         throw new Exception('Reserva no encontrada');
     }
     
-    // Determinar nuevo estado de pago
-    $nuevo_estado_pago = 'pendiente'; // Por defecto
+    // Si ya está pagado completamente, lanzar error (evita doble pago accidental)
+    if ($reserva['estado_pago'] === 'pagado') {
+        // Opcional: Permitir pagos extra si es necesario, pero por ahora bloqueamos
+        throw new Exception('Esta reserva ya está marcada como PAGADA.');
+    }
     
-    // Si el monto pagado cubre el total (o más), marcamos como pagado
+    // 2. Determinar nuevo estado
+    $nuevo_estado_pago = 'pendiente';
     if ($monto_pagado >= $monto_total_original) {
         $nuevo_estado_pago = 'pagado';
-    } 
-    // Opcional: Si tu tabla tiene estado 'parcial', úsalo aquí
-    // elseif ($monto_pagado > 0 && $monto_pagado < $monto_total_original) {
-    //     $nuevo_estado_pago = 'parcial'; 
-    // }
-
-    // Actualizar la reserva
-    // NOTA: Aquí sumamos el monto pagado a un campo acumulado si tuvieras uno, 
-    // o simplemente actualizamos el estado y guardamos las notas en el campo 'notas' de la reserva.
-    // Si necesitas un historial de pagos, deberías insertar en una tabla 'historial_pagos'.
-    // Por ahora, actualizaremos la reserva principal.
+    }
     
+    // 3. Construir el texto de notas en PHP (Más seguro que CONCAT en SQL)
+    $fecha_hoy = date('d/m/Y H:i');
+    $nota_nueva = "\n[PAGO {$fecha_hoy}]: $" . number_format($monto_pagado, 0, ',', '.') . " vía {$metodo_pago}";
+    
+    if (!empty($notas_pago)) {
+        $nota_nueva .= " - Obs: {$notas_pago}";
+    }
+    
+    // Combinar con notas existentes si las hay
+    $notas_finales = !empty($reserva['notas']) ? $reserva['notas'] . $nota_nueva : ltrim($nota_nueva);
+    
+    // 4. Actualizar la reserva
     $stmt_update = $pdo->prepare("
         UPDATE reservas 
         SET estado_pago = ?,
             metodo_pago = ?,
             transaccion_id = ?,
-            notas = CONCAT(IFNULL(notas, ''), '\n[PAGO REGISTRADO]: ' . ?), -- Agregamos notas al final
+            notas = ?,
             updated_at = NOW()
         WHERE id_reserva = ?
     ");
     
-    $nota_formateada = "Pago de $" . number_format($monto_pagado, 0) . " vía " . $metodo_pago . ". Detalle: " . $notas_pago;
-    
-    $stmt_update->execute([$nuevo_estado_pago, $metodo_pago, $transaccion_id, $nota_formateada, $id_reserva]);
-    
-    // Opcional: Aquí podrías insertar un registro en una tabla 'movimientos_caja' o 'historial_pagos'
-    // para llevar el control de quién pagó qué parte exactamente.
+    $stmt_update->execute([
+        $nuevo_estado_pago,
+        $metodo_pago,
+        $transaccion_id,
+        $notas_finales, // Pasamos el string completo construido en PHP
+        $id_reserva
+    ]);
     
     return [
         'success' => true,
-        'message' => 'Pago registrado. Estado actualizado a: ' . $nuevo_estado_pago,
+        'message' => 'Pago registrado correctamente. Estado: ' . $nuevo_estado_pago,
         'estado_nuevo' => $nuevo_estado_pago
     ];
 }
