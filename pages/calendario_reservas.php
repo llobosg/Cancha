@@ -539,45 +539,62 @@ $recinto = $stmt->fetch();
 
     function selectReserva(id) {
         // Quitar selección anterior
-        document.querySelectorAll('.reserva-card').forEach(card => {
-            card.classList.remove('selected');
-        });
+        document.querySelectorAll('.reserva-card').forEach(card => card.classList.remove('selected'));
         
-        // Seleccionar nueva
+        // Seleccionar nueva (si existe el evento)
         if (event?.currentTarget) {
             event.currentTarget.classList.add('selected');
         }
-        reservaSeleccionada = id;
         
+        reservaSeleccionada = id;
+        console.log("🖱️ Ficha seleccionada ID:", id);
+
         // Buscar la reserva completa en los datos cargados
         const selectedReserva = reservasData.find(r => {
-            // Caso 1: Tiene id_disponibilidad numérico válido
+            // Caso A: Coincidencia por id_disponibilidad (numérico)
             if (r.id_disponibilidad && r.id_disponibilidad !== 'null' && r.id_disponibilidad !== null) {
                 return r.id_disponibilidad.toString() === id.toString();
             }
-            // Caso 2: Usamos clave compuesta como fallback
+            // Caso B: Coincidencia por clave compuesta (fallback)
             return `${r.id_cancha}_${r.fecha}_${r.hora_inicio}` === id.toString();
         });
         
         if (selectedReserva) {
-            // Verificar si es una reserva REAL (tiene id_reserva)
-            if (selectedReserva.id_reserva && selectedReserva.id_reserva !== 'null') {
-                // Es una reserva real → cargar detalle completo
-                cargarDetalleReserva(selectedReserva.id_disponibilidad, selectedReserva.id_reserva);
+            console.log("📄 Datos encontrados:", selectedReserva);
+            
+            // Verificar si es una reserva REAL (tiene id_reserva y estado confirmado/reservado)
+            // O si tiene un id_disponibilidad válido de la tabla disponibilidad_canchas
+            const tieneIdDisponibilidad = selectedReserva.id_disponibilidad && selectedReserva.id_disponibilidad !== 'null';
+            const tieneReservaReal = selectedReserva.id_reserva && selectedReserva.id_reserva !== 'null';
+            
+            if (tieneIdDisponibilidad) {
+                // Tiene ID de disponibilidad → Cargar detalle desde BD
+                cargarDetalleReserva(selectedReserva.id_disponibilidad, selectedReserva.id_reserva || null);
+            } else if (tieneReservaReal) {
+                // Tiene reserva pero falta ID disponibilidad (raro, pero posible)
+                // Intentamos cargar igual, aunque podría fallar si la tabla disponibilidad es clave
+                alert("⚠️ Error de datos: Reserva encontrada pero falta ID de disponibilidad.");
             } else {
-                // Es solo disponibilidad → mostrar info básica
+                // Es solo un bloque de disponibilidad generado (sin reserva ni ID en BD)
                 mostrarDetalleDisponibilidad(selectedReserva);
             }
         } else {
-            document.getElementById('detalleContent').innerHTML = '<p>Reserva no encontrada</p>';
+            document.getElementById('detalleContent').innerHTML = '<p style="color:#F44336;">Reserva no encontrada en datos locales.</p>';
         }
     }
 
     async function cargarDetalleReserva(id_disponibilidad, id_reserva) {
+        if (!id_disponibilidad) {
+            document.getElementById('detalleContent').innerHTML = '<p style="color:#FF9800;">⚠️ No hay detalles disponibles para este bloque (es solo disponibilidad).</p>';
+            return;
+        }
+
+        console.log("📡 Solicitando detalle para ID Disponibilidad:", id_disponibilidad);
+
         try {
             const formData = new FormData();
             formData.append('id_disponibilidad', id_disponibilidad);
-            formData.append('id_reserva', id_reserva); // Agregamos ID de reserva para mayor precisión
+            if (id_reserva) formData.append('id_reserva', id_reserva);
             
             const response = await fetch('../api/canchaboard.php?action=get_detalle_reserva', {
                 method: 'POST',
@@ -590,11 +607,12 @@ $recinto = $stmt->fetch();
                 throw new Error(detalle.error);
             }
             
+            console.log("✅ Detalle recibido:", detalle);
             mostrarDetalleReserva(detalle);
             
         } catch (error) {
-            console.error('Error al cargar detalle:', error);
-            document.getElementById('detalleContent').innerHTML = '<p style="color:#F44336;">Error al cargar el detalle</p>';
+            console.error(' Error al cargar detalle:', error);
+            document.getElementById('detalleContent').innerHTML = `<p style="color:#F44336;">Error: ${error.message}</p>`;
         }
     }
 
