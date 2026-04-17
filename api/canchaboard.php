@@ -47,101 +47,134 @@ try {
 }
 
 function getReservasDataOptimizada($pdo, $id_recinto, $rango_dias = 0) {
-    // Por defecto mostrar HOY (rango_dias = 0)
-    if ($rango_dias === 30) {
-        $rango_dias = 0; // Cambiar a "Hoy" por defecto
-    }
-    
+    // Calcular fechas según el rango solicitado (sin conversión forzada)
     $fecha_inicio = date('Y-m-d');
     $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
     
     // Obtener canchas activas del recinto
     $stmt_canchas = $pdo->prepare("
-        SELECT 
-            id_cancha, nro_cancha, nombre_cancha, id_deporte,
-            dias_disponibles, hora_inicio, hora_fin, duracion_bloque
-        FROM canchas 
-        WHERE id_recinto = ? AND activa = 1
+        SELECT id_cancha, nro_cancha, nombre_cancha, id_deporte,
+               dias_disponibles, hora_inicio, hora_fin, duracion_bloque
+        FROM canchas WHERE id_recinto = ? AND activa = 1
     ");
     $stmt_canchas->execute([$id_recinto]);
     $canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
     
-    if (empty($canchas)) {
-        return [];
-    }
+    if (empty($canchas)) return [];
     
-    // Generar disponibilidad dinámica para todas las canchas
+    // Generar disponibilidad dinámica
     $todas_disponibilidades = [];
     foreach ($canchas as $cancha) {
         $disponibilidades = generarDisponibilidadCancha($cancha, $fecha_inicio, $fecha_fin);
         $todas_disponibilidades = array_merge($todas_disponibilidades, $disponibilidades);
     }
     
-    // Obtener reservas reales en el período (solo las que existen en la tabla)
+    // Obtener reservas reales en el período
     $stmt_reservas = $pdo->prepare("
-        SELECT 
-            dc.id_disponibilidad,
-            dc.id_cancha,
-            dc.fecha,
-            dc.hora_inicio,
-            dc.hora_fin,
-            dc.estado as estado_disponibilidad,
-            r.id_reserva,
-            r.estado as estado_reserva,
-            r.estado_pago,
-            r.monto_total,
-            r.tipo_reserva,
-            r.id_convenio,
-            r.notas,
-            cl.nombre as nombre_club,
-            s.alias as nombre_responsable,
-            r.telefono_cliente,
-            r.email_cliente
+        SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin,
+               dc.estado as estado_disponibilidad,
+               r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
+               r.tipo_reserva, r.id_convenio, r.notas,
+               cl.nombre as nombre_club, s.alias as nombre_responsable,
+               r.telefono_cliente, r.email_cliente
         FROM disponibilidad_canchas dc
         LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
         LEFT JOIN clubs cl ON r.id_club = cl.id_club
         LEFT JOIN socios s ON r.id_socio = s.id_socio
         WHERE dc.fecha BETWEEN ? AND ? 
-        AND dc.id_cancha IN (
-            SELECT id_cancha FROM canchas WHERE id_recinto = ?
-        )
+        AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
     ");
     $stmt_reservas->execute([$fecha_inicio, $fecha_fin, $id_recinto]);
     $reservas_reales = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
     
-    // Crear mapa de reservas reales para fusión rápida
+    // Fusionar datos
     $reservas_map = [];
     foreach ($reservas_reales as $reserva) {
-        $key = $reserva['id_cancha'] . '_' . $reserva['fecha'] . '_' . $reserva['hora_inicio'];
+        $key = $reserva['id_cancha'].'_'.$reserva['fecha'].'_'.$reserva['hora_inicio'];
         $reservas_map[$key] = $reserva;
     }
     
-    // Fusionar disponibilidad dinámica con reservas reales
     $resultado_final = [];
     foreach ($todas_disponibilidades as $disp) {
-        $key = $disp['id_cancha'] . '_' . $disp['fecha'] . '_' . $disp['hora_inicio'];
-        
-        if (isset($reservas_map[$key])) {
-            // Existe una reserva real, usar sus datos
-            $resultado_final[] = array_merge($disp, $reservas_map[$key]);
-        } else {
-            // Disponibilidad normal
-            $resultado_final[] = $disp;
-        }
+        $key = $disp['id_cancha'].'_'.$disp['fecha'].'_'.$disp['hora_inicio'];
+        $resultado_final[] = isset($reservas_map[$key]) 
+            ? array_merge($disp, $reservas_map[$key]) 
+            : $disp;
     }
     
-    // Ordenar por deporte, fecha y hora
+    // Ordenar resultados
     usort($resultado_final, function($a, $b) {
-        if ($a['id_deporte'] != $b['id_deporte']) {
-            return strcmp($a['id_deporte'], $b['id_deporte']);
-        }
-        if ($a['fecha'] != $b['fecha']) {
-            return strcmp($a['fecha'], $b['fecha']);
-        }
+        if ($a['id_deporte'] != $b['id_deporte']) return strcmp($a['id_deporte'], $b['id_deporte']);
+        if ($a['fecha'] != $b['fecha']) return strcmp($a['fecha'], $b['fecha']);
         return strcmp($a['hora_inicio'], $b['hora_inicio']);
     });
     
     return $resultado_final;
+}
+
+function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
+    // Calcular rango de fechas según filtro
+    $fecha_hoy = date('Y-m-d');
+    $rango_dias = 30; // default
+    
+    if ($filtros['fecha'] === 'hoy') {
+        $rango_dias = 0;
+    } elseif ($filtros['fecha'] === 'mañana') {
+        $rango_dias = 1;
+    } elseif ($filtros['fecha'] === 'semana') {
+        $rango_dias = 7;
+    } elseif ($filtros['fecha'] === 'mes') {
+        $rango_dias = 30;
+    }
+    
+    $fecha_inicio = $fecha_hoy;
+    $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
+    
+    // Obtener todos los datos base
+    $todos_datos = getReservasDataOptimizada($pdo, $id_recinto, $rango_dias);
+    
+    // Aplicar filtros
+    $datos_filtrados = [];
+    foreach ($todos_datos as $dato) {
+        // Filtro por deporte
+        if (!empty($filtros['deporte']) && $dato['id_deporte'] !== $filtros['deporte']) {
+            continue;
+        }
+        
+        // Filtro por estado - LÓGICA CORREGIDA
+        if (!empty($filtros['estado'])) {
+            $esReservaReal = !empty($dato['id_reserva']) && $dato['id_reserva'] !== 'null';
+            $estadoReserva = $dato['estado_reserva'] ?? null;
+            $estadoDisp = $dato['estado_disponibilidad'] ?? 'disponible';
+            
+            $pasaFiltro = false;
+            
+            switch($filtros['estado']) {
+                case 'disponible':
+                    $pasaFiltro = (!$esReservaReal && ($estadoDisp === 'disponible' || empty($estadoDisp)));
+                    break;
+                case 'reservada':
+                    $pasaFiltro = ($esReservaReal && $estadoReserva === 'confirmada') || $estadoDisp === 'reservada';
+                    break;
+                case 'ocupada':
+                    $pasaFiltro = ($esReservaReal && $estadoReserva === 'completada') || $estadoDisp === 'ocupada';
+                    break;
+                case 'cancelada':
+                    $pasaFiltro = ($esReservaReal && $estadoReserva === 'cancelada') || $estadoDisp === 'cancelada';
+                    break;
+            }
+            
+            if (!$pasaFiltro) continue;
+        }
+        
+        // Filtro por fecha específica (además del rango)
+        if ($filtros['fecha'] === 'hoy' && $dato['fecha'] !== $fecha_hoy) continue;
+        if ($filtros['fecha'] === 'mañana' && $dato['fecha'] !== date('Y-m-d', strtotime('+1 day'))) continue;
+        
+        $datos_filtrados[] = $dato;
+    }
+    
+    return $datos_filtrados;
 }
 
 function generarDisponibilidadCancha($cancha, $fecha_inicio, $fecha_fin) {
@@ -232,52 +265,6 @@ function generarDisponibilidadCancha($cancha, $fecha_inicio, $fecha_fin) {
     }
     
     return $disponibilidades;
-}
-
-function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
-    // Primero obtener todos los datos
-    $rango_dias = 30;
-    if ($filtros['fecha'] === 'hoy') {
-        $rango_dias = 0;
-    } elseif ($filtros['fecha'] === 'mañana') {
-        $rango_dias = 1;
-    } elseif ($filtros['fecha'] === 'semana') {
-        $rango_dias = 7;
-    }
-    
-    $todos_datos = getReservasDataOptimizada($pdo, $id_recinto, $rango_dias);
-    
-    // Aplicar filtros en PHP (más eficiente que en SQL con generación dinámica)
-    $datos_filtrados = [];
-    foreach ($todos_datos as $dato) {
-        // Filtro por deporte
-        if ($filtros['deporte'] && $dato['id_deporte'] !== $filtros['deporte']) {
-            continue;
-        }
-        
-        // Filtro por estado
-        if ($filtros['estado']) {
-            $estado_actual = $dato['estado_disponibilidad'] ?? 'disponible';
-            if ($estado_actual !== $filtros['estado']) {
-                continue;
-            }
-        }
-        
-        // Filtro por fecha específica
-        if ($filtros['fecha'] === 'hoy') {
-            if ($dato['fecha'] !== date('Y-m-d')) {
-                continue;
-            }
-        } elseif ($filtros['fecha'] === 'mañana') {
-            if ($dato['fecha'] !== date('Y-m-d', strtotime('+1 day'))) {
-                continue;
-            }
-        }
-        
-        $datos_filtrados[] = $dato;
-    }
-    
-    return $datos_filtrados;
 }
 
 function getDetalleReserva($pdo, $id_disponibilidad, $id_recinto) {

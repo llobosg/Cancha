@@ -877,25 +877,63 @@ $recinto = $stmt->fetch();
         }
     }
 
-    // Cargar datos iniciales con filtro HOY por defecto
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarReservasConRango(0); // 0 = Hoy
+    // Filtro por fecha: llama a la acción correcta con POST
+    document.getElementById('filtroFecha').addEventListener('change', function() {
+        aplicarFiltrosConAPI();
     });
 
-    // Actualizar el select para mostrar "Hoy" como seleccionado por defecto
-    document.getElementById('filtroFecha').value = 'hoy';
-    document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+    // Filtro por deporte
+    document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltrosConAPI);
 
-        const valor = this.value;
-        let rangoDias = 30;
+    // Filtro por estado
+    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltrosConAPI);
+
+    // Función que llama a la API de filtrado con POST
+    async function aplicarFiltrosConAPI() {
+        const deporte = document.getElementById('filtroDeporte').value;
+        const estado = document.getElementById('filtroEstado').value;
+        const fecha = document.getElementById('filtroFecha').value;
         
-        if (valor === 'hoy') rangoDias = 0;
-        else if (valor === 'mañana') rangoDias = 1;
-        else if (valor === 'semana') rangoDias = 7;
-        else if (valor === 'mes') rangoDias = 30;
+        try {
+            const formData = new FormData();
+            formData.append('action', 'filtrar_reservas');
+            formData.append('deporte', deporte);
+            formData.append('estado', estado);
+            formData.append('fecha', fecha);
+            
+            const response = await fetch('../api/canchaboard.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            reservasData = data;
+            renderizarReservas(reservasData);
+
+            console.log('🔍 Filtros enviados:', { deporte, estado, fecha });
+            console.log('📡 Respuesta API:', data);
+            
+        } catch (error) {
+            console.error('Error al aplicar filtros:', error);
+            showToast('❌ Error al filtrar reservas', 'error');
+        }
+    }
+
+    // Cargar datos iniciales con "Hoy" por defecto
+    document.addEventListener('DOMContentLoaded', function() {
+        // Establecer valores por defecto en los selects
+        document.getElementById('filtroFecha').value = 'hoy';
+        document.getElementById('filtroDeporte').value = '';
+        document.getElementById('filtroEstado').value = '';
         
-        cargarReservasConRango(rangoDias);
+        // Cargar reservas de hoy
+        cargarReservasConRango(0);
+    });
 
     document.getElementById('mensajeForm').addEventListener('submit', function(e) {
         e.preventDefault();
