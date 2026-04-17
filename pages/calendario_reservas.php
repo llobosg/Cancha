@@ -545,6 +545,110 @@ $recinto = $stmt->fetch();
             padding: 0.8rem !important;
         }
     }
+    /* === AJUSTES ESPECÍFICOS PARA MÓVIL / PWA === */
+    @media (max-width: 768px) {
+        
+        /* 1. Contenedor Principal: Que ocupe todo el ancho disponible */
+        .dashboard-container {
+            width: 100%;
+            max-width: 100%;
+            padding: 0; /* Quitamos padding lateral para aprovechar pantalla */
+            grid-template-columns: 1fr !important; /* Forzar una sola columna */
+            gap: 0;
+        }
+
+        /* 2. Barra de Filtros: Scroll horizontal suave y compacta */
+        .controls-section {
+            width: 100%;
+            overflow-x: auto; /* Permite scroll horizontal si no caben */
+            white-space: nowrap; /* Evita que bajen de línea */
+            flex-wrap: nowrap;
+            padding: 0.5rem;
+            gap: 0.5rem;
+            -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+            scrollbar-width: thin; /* Firefox */
+        }
+        
+        /* Estilo de la barra de scroll en filtros (opcional, para que se vea fina) */
+        .controls-section::-webkit-scrollbar {
+            height: 4px;
+        }
+        .controls-section::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .control-select {
+            flex: 0 0 auto; /* No crecer ni encoger demasiado */
+            width: auto;
+            min-width: 130px; /* Ancho mínimo cómodo para leer */
+            font-size: 0.85rem;
+            padding: 0.5rem;
+        }
+
+        /* 3. Submodal Detalle: Ajuste de tamaño y fuente para móvil */
+        .submodal-content {
+            width: 92% !important; /* Casi todo el ancho */
+            max-width: 92% !important;
+            padding: 1.2rem !important; /* Menos padding interno */
+            margin: 1rem auto;
+            font-size: 0.85rem !important; /* Texto base más pequeño */
+            max-height: 90vh; /* Altura máxima */
+            overflow-y: auto;
+        }
+
+        /* Títulos más pequeños en móvil */
+        .submodal-content h3 {
+            font-size: 1.2rem !important;
+            margin-bottom: 1rem !important;
+            padding-right: 30px; /* Espacio para la X */
+        }
+
+        /* Botón X más grande y accesible en móvil */
+        .close-modal {
+            font-size: 32px !important;
+            top: 10px !important;
+            right: 10px !important;
+            line-height: 1;
+            padding: 5px;
+            z-index: 100;
+        }
+
+        /* Grids internos del detalle: Una columna en móvil */
+        .submodal-content div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important; /* Forzar 1 columna */
+            gap: 0.8rem !important;
+        }
+
+        /* Inputs y Selects más grandes para tocar fácil */
+        select, input[type="text"], input[type="number"] {
+            font-size: 16px !important; /* Evita zoom automático en iOS */
+            padding: 0.7rem !important;
+        }
+
+        /* Botones de acciones dentro del modal */
+        #btnAccionesModal {
+            font-size: 0.9rem;
+            padding: 0.7rem;
+        }
+        
+        .dropdown-item {
+            font-size: 0.95rem;
+            padding: 1rem; /* Más área de toque */
+        }
+    }
+
+    /* Ajuste extra para pantallas muy pequeñas (< 360px) */
+    @media (max-width: 360px) {
+        .control-select {
+            min-width: 110px;
+            font-size: 0.8rem;
+        }
+        .submodal-content {
+            width: 95% !important;
+            padding: 1rem !important;
+        }
+    }
 </style>
 </head>
 <body>
