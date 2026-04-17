@@ -318,94 +318,135 @@ $recinto = $stmt->fetch();
     .toast.info {
     background: linear-gradient(135deg, #2196F3, #1565C0);
     }
-    /* === ESTILOS PARA MENÚ DESPLEGABLE DE ACCIONES === */
-    .action-dropdown-menu {
-        position: absolute;
-        top: 100%;
-        right: 0;
+    /* === AJUSTES SUBMODAL DETALLE Y ACCIONES === */
+
+    /* Submodal: Altura dinámica y centrado vertical */
+    .submodal {
+        display: none; /* Se controla con JS */
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+        justify-content: center;
+        align-items: center; /* Centrado vertical perfecto */
+        z-index: 2000;
+    }
+
+    .submodal-content {
         background: white;
-        min-width: 180px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-radius: 8px;
-        z-index: 1000;
-        overflow: hidden;
-        border: 1px solid #eee;
-        margin-top: 5px;
+        padding: 2rem;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 550px; /* Un poco más ancho para mejor lectura */
+        max-height: 85vh; /* Altura máxima: 85% de la pantalla */
+        overflow-y: auto; /* Scroll interno si el contenido es muy largo */
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        animation: fadeIn 0.3s ease-out;
     }
 
-    .dropdown-item {
-        width: 100%;
-        padding: 10px 15px;
-        text-align: left;
-        background: none;
-        border: none;
-        border-bottom: 1px solid #f0f0f0;
-        cursor: pointer;
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Alineación de Títulos y Botón Acciones */
+    .detail-header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center; /* Alineación vertical perfecta */
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detail-title {
+        font-size: 1.3rem;
+        color: #071289;
+        margin: 0;
+        font-weight: bold;
+    }
+
+    /* === BARRA DE FILTROS RESPONSIVE (MÓVIL/PWA) === */
+    .controls-section {
+        display: flex;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        background: rgba(255,255,255,0.95);
+        border-radius: 10px;
+        position: sticky;
+        top: 70px; /* Justo debajo del header fijo */
+        z-index: 999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        flex-wrap: wrap; /* Permite que bajen si no caben */
+        align-items: center;
+    }
+
+    .control-select {
+        flex: 1; /* Ocupan espacio equitativo */
+        min-width: 120px; /* Ancho mínimo para que se lean */
+        padding: 0.6rem;
+        border-radius: 6px;
+        border: 1px solid #ccc;
         font-size: 0.9rem;
-        color: #333;
-        transition: background 0.2s;
-        display: block;
-    }
-
-    .dropdown-item:hover {
-        background: #f8f9fa;
+        background: white;
         color: #071289;
     }
 
-    .dropdown-item:last-child {
-        border-bottom: none;
-    }
-
-    /* Estilo especial para el botón de pagar */
-    .btn-pay-action {
-        background: #e8f5e9 !important;
-        color: #2e7d32 !important;
-        font-weight: bold;
-    }
-    .btn-pay-action:hover {
-        background: #c8e6c9 !important;
-    }
-
-    /* === RESPONSIVE MÓVIL / PWA === */
+    /* === MEDIA QUERIES PARA MÓVIL / PWA === */
     @media (max-width: 768px) {
-        .detail-panel {
-            position: fixed; /* Ocupa toda la pantalla en móvil si es necesario, o se ajusta */
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: white;
-            z-index: 900;
-            display: flex;
-            flex-direction: column;
-            padding: 1rem;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        .detail-header-container {
-            flex-shrink: 0;
-            margin-bottom: 1rem;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 0.5rem;
-        }
-
-        .detail-section {
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Ajuste del Dropdown en móvil */
-        .action-dropdown-menu {
-            position: fixed;
-            top: 60px; /* Debajo del header si existe, o ajustar según necesites */
-            right: 10px;
-            left: 10px;
-            width: auto;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        /* Ajuste de la barra de filtros en móvil */
+        .controls-section {
+            top: 60px; /* Ajuste según altura de tu header móvil */
+            padding: 0.5rem;
+            gap: 0.5rem;
+            flex-direction: row; /* Mantener en fila pero compacto */
+            flex-wrap: nowrap; /* Evitar que se rompan filas si es posible */
+            overflow-x: auto; /* Scroll horizontal si son muchos filtros */
+            white-space: nowrap;
         }
         
-        .dropdown-item {
-            padding: 15px; /* Más grande para dedos */
-            font-size: 1rem;
+        .control-select {
+            min-width: 100px; /* Más compactos */
+            font-size: 0.85rem;
+            padding: 0.5rem;
+        }
+
+        /* Ajuste del Submodal en Móvil */
+        .submodal-content {
+            width: 95%;
+            max-height: 90vh; /* Casi toda la pantalla */
+            padding: 1.5rem;
+            margin: 0 auto;
+        }
+        
+        /* Asegurar que el detalle ocupe todo el espacio disponible */
+        .detail-section {
+            max-height: none; /* Quitar límite fijo */
+            height: auto;
+        }
+        
+        /* Header del detalle en móvil */
+        .detail-header-container {
+            flex-direction: row;
+            gap: 10px;
+        }
+        
+        #btnToggleActions {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
+        }
+    }
+
+    /* Ajuste específico para pantallas muy pequeñas (iPhone SE, etc.) */
+    @media (max-width: 380px) {
+        .controls-section {
+            flex-wrap: wrap; /* Permitir salto de línea si es necesario */
+            justify-content: center;
+        }
+        .control-select {
+            width: 48%; /* Dos por fila */
+            min-width: auto;
         }
     }
 </style>
@@ -461,13 +502,14 @@ $recinto = $stmt->fetch();
     
     <div class="detail-panel">
         <!-- Encabezado con Botón de Acciones -->
-        <div class="detail-header-container" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3 class="detail-title" style="margin:0;">📋 Detalle</h3>
-            <!-- Botón Desplegable de Acciones -->
-            <div style="position:relative;">
-                <button id="btnToggleActions" onclick="toggleActionMenu()" style="background:#071289; color:white; border:none; padding:0.5rem 0.8rem; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:0.5rem;">
-                    ⚙️ Acciones
-                </button>
+        <div class="detail-header-container">
+        <h3 class="detail-title">📋 Detalle</h3>
+        
+        <div style="position:relative;">
+            <button id="btnToggleActions" onclick="toggleActionMenu()" 
+                style="background:#071289; color:white; border:none; padding:0.5rem 0.8rem; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.9rem;">
+                ⚙️ Acciones
+            </button>
                 
                 <!-- Submenú Desplegable (Oculto por defecto) -->
                 <div id="actionDropdown" class="action-dropdown-menu" style="display:none;">
@@ -493,7 +535,7 @@ $recinto = $stmt->fetch();
 
     <!-- === SUBMODAL DE ACCIONES (Para Móvil/PWA - Opcional si prefieres solo dropdown) === -->
     <!-- Usaremos el dropdown simple arriba, pero si quieres un modal completo para móvil, descomenta esto: -->
-    <!-- 
+ 
     <div id="modalAcciones" class="submodal">
         <div class="submodal-content">
             <span class="close-modal" onclick="cerrarModalAcciones()">&times;</span>
@@ -504,7 +546,7 @@ $recinto = $stmt->fetch();
             </div>
         </div>
     </div> 
-    -->
+
 
     <!-- Modal de Pago (Ya existente, aseguramos que esté visible) -->
     <div id="modalPago" class="submodal" style="display:none;">
@@ -1146,6 +1188,17 @@ $recinto = $stmt->fetch();
         
         // Mostrar modal
         document.getElementById('modalPago').style.display = 'flex';
+
+         const modal = document.getElementById('modalPago');
+            if(modal) {
+                modal.style.display = 'flex';
+                // Forzar estilos si es necesario vía JS (opcional, el CSS ya lo hace)
+                const content = modal.querySelector('.submodal-content');
+                if(content) {
+                    content.style.maxHeight = '85vh'; 
+                    content.style.overflowY = 'auto';
+                }
+            }
     }
 
     function cerrarModalPago() {
