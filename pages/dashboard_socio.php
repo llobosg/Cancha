@@ -939,12 +939,11 @@
                     <?php if ($es_responsable): ?>
                         <button class="btn-action" onclick="window.location.href='perfil_club.php'">Actualizar perfil club</button>
                         <button class="btn-action" onclick="abrirModalCompartir()">Compartir club</button>
+                        <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
                     <?php endif; ?>
-                    <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
-                    <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Crear partido Pádel</button>
-                    <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
-                    <button class="btn-action" style="background:#4CAF50;" onclick="agregarOtroClub()">➕ Otro Club</button>
-                
+                        <button class="btn-action" onclick="window.location.href='reservar_cancha.php'">Reservar Cancha</button>
+                        <button class="btn-action" onclick="window.location.href='eventos.php?id=<?= htmlspecialchars($club_slug) ?>'">Crear partido Pádel</button>
+                        <button class="btn-action" onclick="window.location.href='mantenedor_socios.php'">Actualizar perfil socio</button>
                     <?php if ($pareja_activa): ?>
                         <button class="btn-action" style="background:#FF9800;" onclick="reemplazarCompanero(<?= $pareja_activa['id_pareja'] ?>)">➕ Reemplazar compañero</button>
                     <?php endif; ?>
@@ -981,14 +980,13 @@
                 <!-- Filtros -->
                 <button class="filter-btn" data-filter="inscritos">Inscritos Próximo Evento</button>
                 <button class="filter-btn" data-filter="torneos">Americanos</button>
-                <button class="filter-btn" data-filter="reservas">Reservas</button>
-                <button class="filter-btn" data-filter="cuotas">Cuotas</button>
+                <button class="filter-btn" data-filter="reservas">Reservas</button>               
                 <button class="filter-btn" data-filter="eventos">Eventos</button>
                 <?php if (!($modo_individual && !empty($torneos_americanos))): ?>
                     <button class="filter-btn" data-filter="equipos">Equipos IA</button>
                 <?php endif; ?>
                     <?php if (!$modo_individual): ?>
-
+                        <button class="filter-btn" data-filter="cuotas">Cuotas</button>
                         <button class="filter-btn" data-filter="socios">Socios</button>
                 <?php endif; ?>
 
