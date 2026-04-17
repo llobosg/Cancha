@@ -10,9 +10,14 @@ try {
         throw new Exception('Acceso no autorizado', 401);
     }
     
-    $id_recinto = $_SESSION['id_recinto'];
-    $action = $_GET['action'] ?? 'get_reservas';
-    
+    // En api/canchaboard.php, justo después de session_start() y validaciones:
+
+    // CORRECCIÓN CRÍTICA: Leer action desde POST si existe, sino desde GET
+    $action = $_POST['action'] ?? $_GET['action'] ?? 'get_reservas';
+
+    // Log para confirmar qué acción se detectó
+    error_log("🎯 [API] Acción detectada: $action | Método: " . $_SERVER['REQUEST_METHOD']);
+
     switch ($action) {
         case 'get_reservas':
             $rango_dias = (int)($_GET['rango_dias'] ?? 30);
