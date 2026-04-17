@@ -646,117 +646,89 @@ $recinto = $stmt->fetch();
     }
 
     function mostrarDetalleReserva(detalle) {
-        const pagoColor = {
-            'pagado': '#4CAF50',
-            'pendiente': '#FF9800',
-            'reembolsado': '#2196F3',
-            'fallido': '#F44336'
+        console.log(" Renderizando detalle con datos:", detalle);
+
+        // Función auxiliar para evitar errores con valores nulos
+        const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
+        const money = (v) => '$' + parseInt(v || 0).toLocaleString();
+        
+        // Mapeo de estados para colores
+        const estadoPagoColor = {
+            'pagado': '#4CAF50', 'pendiente': '#FF9800', 
+            'reembolsado': '#2196F3', 'fallido': '#F44336'
         };
-        
-        const pagoTexto = {
-            'pagado': 'Pagado',
-            'pendiente': 'Pendiente',
-            'reembolsado': 'Reembolsado',
-            'fallido': 'Fallido'
+        const estadoReservaColor = {
+            'confirmada': '#4CAF50', 'pendiente': '#FF9800', 
+            'cancelada': '#F44336', 'completada': '#9E9E9E'
         };
-        
-        const tipoReservaTexto = {
-            'spot': 'Spot',
-            'semanal': 'Semanal',
-            'mensual': 'Mensual',
-            'campeonato': 'Campeonato',
-            'evento': 'Evento'
-        };
-        
-        const estadoReservaTexto = {
-            'pendiente': 'Pendiente',
-            'confirmada': 'Confirmada',
-            'cancelada': 'Cancelada',
-            'completada': 'Completada'
-        };
-        
-        // Formatear fecha y hora
-        const fechaHora = formatDateDisplay(detalle.fecha) + ' ' + formatTimeDisplay(detalle.hora_inicio);
-        
-        // Construir contenido del detalle
-        let contenido = `
-            <div class="detail-item">
-                <span class="detail-label">Cancha:</span> 
-                <span>${detalle.nro_cancha || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Deporte:</span> 
-                <span>${detalle.id_deporte || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Fecha/Hora:</span> 
-                <span>${fechaHora}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Club:</span> 
-                <span>${detalle.nombre_club || 'Particular'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Responsable Club:</span> 
-                <span>${detalle.nombre_responsable || detalle.email_cliente || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Teléfono:</span> 
-                <span>${detalle.telefono_cliente || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Tipo Reserva:</span> 
-                <span>${tipoReservaTexto[detalle.tipo_reserva] || detalle.tipo_reserva || 'Spot'}</span>
+
+        // Construcción del HTML seguro
+        const html = `
+            <div style="font-size: 0.9rem; line-height: 1.6;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+                    <div><strong> Fecha:</strong> ${val(detalle.fecha)}</div>
+                    <div><strong>⏰ Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    <div><strong>🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)} (Nro ${val(detalle.nro_cancha)})</div>
+                    <div><strong>🎾 Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 1rem 0;">
+
+                <div style="margin-bottom: 1rem;">
+                    <div><strong>👤 Cliente:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</div>
+                    <div><strong>📞 Teléfono:</strong> ${val(detalle.telefono_cliente)}</div>
+                    <div><strong> Email:</strong> ${val(detalle.email_cliente)}</div>
+                    ${detalle.nombre_club ? `<div><strong> Club:</strong> ${val(detalle.nombre_club)}</div>` : ''}
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 1rem 0;">
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div>
+                        <strong>💰 Monto Total:</strong><br>
+                        <span style="font-size: 1.1rem; color: #071289; font-weight: bold;">${money(detalle.monto_total)}</span>
+                    </div>
+                    <div>
+                        <strong>📝 Tipo Reserva:</strong><br>
+                        ${val(detalle.tipo_reserva).toUpperCase()}
+                    </div>
+                </div>
+
+                <div style="margin-top: 0.8rem; display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div>
+                        <strong>🟢 Estado Reserva:</strong><br>
+                        <span style="color: ${estadoReservaColor[detalle.estado_reserva] || '#333'}; font-weight: bold;">
+                            ${val(detalle.estado_reserva).toUpperCase()}
+                        </span>
+                    </div>
+                    <div>
+                        <strong>💳 Estado Pago:</strong><br>
+                        <span style="color: ${estadoPagoColor[detalle.estado_pago] || '#333'}; font-weight: bold;">
+                            ${val(detalle.estado_pago).toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+
+                ${detalle.notas ? `
+                <div style="margin-top: 1rem; background: #fff3cd; padding: 0.5rem; border-radius: 4px; border-left: 4px solid #ffc107;">
+                    <strong> Notas:</strong> ${val(detalle.notas)}
+                </div>` : ''}
+                
+                ${detalle.id_convenio ? `
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #666;">
+                    ID Convenio: ${detalle.id_convenio}
+                </div>` : ''}
             </div>
         `;
-        // Mostrar/Ocultar botón Pagar según estado
-        const btnPagar = document.getElementById('btnPagar');
-        if (btnPagar) {
-            if (detalle.estado_pago === 'pendiente' && detalle.monto_total > 0) {
-                btnPagar.style.display = 'block';
-            } else {
-                btnPagar.style.display = 'none';
-            }
+
+        // Inyectar HTML
+        const container = document.getElementById('detalleContent');
+        if (container) {
+            container.innerHTML = html;
+            console.log("✅ Detalle renderizado correctamente");
+        } else {
+            console.error("❌ No se encontró el contenedor #detalleContent");
         }
-        
-        // Agregar ID Convenio si existe
-        if (detalle.id_convenio && detalle.id_convenio !== 'null' && detalle.id_convenio !== 0) {
-            contenido += `
-            <div class="detail-item">
-                <span class="detail-label">ID Convenio:</span> 
-                <span>${detalle.id_convenio}</span>
-            </div>
-            `;
-        }
-        
-        contenido += `
-            <div class="detail-item">
-                <span class="detail-label">Monto Total:</span> 
-                <span>$${detalle.monto_total || '0'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Estado Reserva:</span> 
-                <span>${estadoReservaTexto[detalle.estado_reserva] || detalle.estado_reserva || 'Pendiente'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Estado Pago:</span> 
-                <span style="color: ${pagoColor[detalle.estado_pago] || '#666'};">
-                    ${pagoTexto[detalle.estado_pago] || detalle.estado_pago || 'Pendiente'}
-                </span>
-            </div>
-        `;
-        
-        // Agregar notas si existen
-        if (detalle.notas && detalle.notas.trim() !== '') {
-            contenido += `
-            <div class="detail-item">
-                <span class="detail-label">Notas:</span> 
-                <span>${detalle.notas}</span>
-            </div>
-            `;
-        }
-        
-        document.getElementById('detalleContent').innerHTML = contenido;
     }
 
     async function anularReserva() {
