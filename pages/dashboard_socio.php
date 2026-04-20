@@ -796,6 +796,7 @@
                             // Definir variables
                             $id_reserva = $proximo_evento['id_reserva'];
                             $monto_total = (float)$proximo_evento['monto_total'];
+                            $valor_mes = (float)($proximo_evento['valor_mes'] ?? 0);
                             $deporte = $proximo_evento['id_deporte'] ?? 'futbolito';
                             $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
                             $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
@@ -848,44 +849,53 @@
                             <div class="stat-card-content">
                                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                                    <!-- Línea 1: Arriendo Total -->
-                                    <div style="margin:0.3rem 0;"><strong>💰 Arriendo Total</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
-                                    
-                                    <?php if (!empty($proximo_evento['monto_recaudacion']) || !empty($proximo_evento['valor_mes'])): ?>
-                                        <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-                                            
-                                            <!-- Columna Izquierda: Información de Pago (Semana/Mes) -->
-                                            <div style="flex:1; min-width: 140px;">
-                                                <?php 
-                                                    $monto_recaudado = (float)($proximo_evento['monto_recaudacion'] ?? 0);
-                                                    $valor_mes = (float)($proximo_evento['valor_mes'] ?? 0);
-                                                    
-                                                    // Lógica de visualización inteligente
-                                                    if ($valor_mes > 0) {
-                                                        // Si hay valor de mes definido, lo mostramos como referencia principal
-                                                        echo '<strong>📅 Mes:</strong> $' . number_format($valor_mes, 0, ',', '.');
-                                                        if ($monto_recaudado > 0) {
-                                                            echo '<br><span style="font-size:0.75rem; opacity:0.9;">(Recaudado: $' . number_format($monto_recaudado, 0, ',', '.') . ')</span>';
-                                                        }
-                                                    } else {
-                                                        // Si no hay valor mes, mostramos lo recaudado como "Semana" o acumulado
-                                                        echo '<strong>💰 Semana:</strong> $' . number_format($monto_recaudado, 0, ',', '.');
-                                                    }
-                                                ?>
-                                            </div>
-
-                                            <!-- Columna Derecha: Cupos y Anotados (Alineado a la derecha) -->
-                                            <div style="text-align:right; margin-top:0.2rem;">
-                                                <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
-                                            </div>
-                                        </div>
-                                    <?php else: ?>
-                                        <!-- Si no hay datos de pago, solo mostramos cupos alineados a la derecha -->
-                                        <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700; text-align:right;">
-                                            <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
-                                        </div>
+                                    <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
+                                    <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
+                                    <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
+                                        <strong>💰 Cuota:</strong> $<?= number_format((int)($proximo_evento['monto_recaudacion'] ?? 0), 0, ',', '.') ?> • <strong>📅 Mes:</strong> $<?= number_format($valor_mes, 0, ',', '.') ?><br>
+                                        <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
+                                    </div>
                                     <?php endif; ?>
                                 </div>
+
+                                <?php if ($despues_del_lunes_09): ?>
+                                    <?php if ($ya_inscrito): ?>
+                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;width:100%;" 
+                                            onclick="bajarseEvento(<?= (int)$id_reserva ?>)">
+                                        Bajarse
+                                    </button>
+                                    <?php else: ?>
+                                    <?php if ($cupos_llenos): ?>
+                                        <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
+                                    <?php else: ?>
+                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
+                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                            Anotarse
+                                        </button>
+                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
+                                                onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                            Anotarse + llevo 🍺🍺
+                                        </button>
+                                    <?php endif; ?>
+                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
+                                            onclick="pasoEvento(<?= (int)$id_reserva ?>)">
+                                        Paso
+                                    </button>
+                                    <?php endif; ?>
+
+                                    <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
+                                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
+                                            onclick="armarEquiposIA(<?= (int)$id_reserva ?>)">
+                                        🤖 Armar Equipos IA
+                                    </button>
+                                    <?php endif; ?>
+
+                                <?php else: ?>
+                                    <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
+                                    ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
+                                    </p>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <?php else: ?>
