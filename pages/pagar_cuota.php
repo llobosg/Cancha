@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE cuotas 
                     SET estado = 'en_revision', 
                         fecha_pago = ?, 
-                        comentario = CONCAT(IFNULL(comentario, ''), '\n[Usuario]: ', ?),
+                        comentario = ?,
                         adjunto = ?,
                         monto = ? 
                     WHERE id_cuota = ?
@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="modal-container">
     <div class="modal-header">
         <!-- Título Dinámico: Pagar Cuota [Detalle] -->
-        <h2>💳 Pagar Cuota: <?= htmlspecialchars($cuota['detalle_origen']) ?></h2>
+        <h2 style="color: white;">💳 Pagar Cuota: <?= htmlspecialchars($cuota['detalle_origen']) ?></h2>
         <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-x">&times;</a>
     </div>
 
