@@ -671,6 +671,8 @@ $recinto = $stmt->fetch();
             padding: 1rem !important;
         }
     }
+
+    .estado-pagado { background: #607D8B !important; } /* Gris azulado para "Pagado" */
 </style>
 </head>
 <body>
@@ -700,11 +702,13 @@ $recinto = $stmt->fetch();
         
         <select class="control-select" id="filtroEstado">
             <option value="">Todos los estados</option>
-            <option value="disponible">Disponibles</option>
-            <option value="reservada">Reservadas</option> <!-- Esta mostrará pasadas y futuras -->
+            <option value="disponible">Disponible</option>
+            <option value="reservada">Reservadas (Futuras)</option> <!-- Texto aclaratorio -->
+            <option value="pagadas">Pagadas</option>
+            <option value="parcial">Pago Parcial</option>
             <option value="ocupada">Ocupadas</option>
             <option value="cancelada">Canceladas</option>
-            <option value="parcial">Pago Parcial</option>
+
         </select>
         
         <select class="control-select" id="filtroFecha">
@@ -929,7 +933,8 @@ $recinto = $stmt->fetch();
             'ocupada': 'Ocupada',
             'cancelada': 'Cancelada',
             'mantencion': 'Mantención',
-            'parcial': 'Pago Parcial' // ✅ NUEVO: Texto para pago parcial
+            'parcial': 'Pago Parcial',
+            'pagado': 'Pagada' // Nuevo texto
         };
         return estados[estado] || estado;
     }
@@ -940,7 +945,8 @@ $recinto = $stmt->fetch();
             case 'reservada': return 'estado-reservada';   // Azul
             case 'ocupada': return 'estado-ocupada';       // Morado
             case 'cancelada': return 'estado-cancelada';   // Rojo
-            case 'parcial': return 'estado-parcial';       // Amarillo (Nuevo)
+            case 'parcial': return 'estado-parcial';       // Amarillo
+            case 'pagado': return 'estado-pagado';         // Verde oscuro o Gris (nuevo)
             case 'mantencion': return 'estado-mantencion'; // Naranja
             default: return 'estado-disponible';
         }
