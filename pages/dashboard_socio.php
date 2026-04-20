@@ -1033,9 +1033,9 @@
                                 <th>Cancha</th>
                                 <th>Costo</th>
                                 <th>Nombre</th>
-                                <th>Pos</th>
+                                <th>Pago</th> 
                                 <th>Monto</th>
-                                <th>Pago</th>
+                                <th>Pago Realizado</th>
                                 <th>Comentario</th>
                                 <th>Acción</th>
                             </tr>
@@ -1758,75 +1758,84 @@
                             });
                         break;
 
-                        case 'cuotas':
-                            fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-                                .then(r => r.json())
-                                .then(data => {
-                                    if (data.error) {
-                                        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-                                        return;
+                    case 'cuotas':
+                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.error) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
+                                    return;
+                                }
+                                if (!Array.isArray(data) || data.length === 0) {
+                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
+                                    return;
+                                }
+                                
+                                let html = '';
+                                const esResponsable = <?= json_encode($es_responsable) ?>;
+                                
+                                data.forEach(row => {
+                                    let botonAccion = '-';
+                                    
+                                    // Determinar tipo de pago
+                                    let tipoPagoDisplay = row.tipo_pago ? row.tipo_pago.toUpperCase() : 'SEMANA';
+                                    
+                                    // Monto Esperado (Lo que debía pagar según el tipo)
+                                    let montoEsperado = 0;
+                                    if (row.tipo_pago === 'mes' && row.valor_mes) {
+                                        montoEsperado = parseFloat(row.valor_mes);
+                                    } else {
+                                        montoEsperado = parseFloat(row.cuota_monto || 0);
                                     }
-                                    if (!Array.isArray(data) || data.length === 0) {
-                                        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-                                        return;
+                                    
+                                    // ✅ CORRECCIÓN CRÍTICA: El pago realizado viene en 'row.monto'
+                                    // Asegúrate que tu API get_tabla_datos.php esté seleccionando c.monto como 'monto'
+                                    let pagoRealizado = parseFloat(row.monto || 0);
+
+                                    // Lógica de botones para responsable
+                                    if (esResponsable) {
+                                        if (row.estado === 'pendiente') {
+                                            botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_inscrito})">🔍 Revisar</button>`;
+                                        } else if (row.estado === 'en_revision') {
+                                            botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_inscrito})">✅ Validar</button>`;
+                                        }
                                     }
-                                    
-                                    let html = '';
-                                    const esResponsable = <?= json_encode($es_responsable) ?>;
-                                    
-                                    data.forEach(row => {
-                                        // ✅ CORRECCIÓN CRÍTICA: Declarar la variable AQUÍ, dentro del forEach, para cada fila.
-                                        // Esto evita el conflicto de "already declared".
-                                        let botonAccion = '-'; 
-                                        
-                                        // Determinar tipo de pago para mostrar
-                                        let tipoPagoDisplay = row.tipo_pago ? row.tipo_pago.toUpperCase() : 'SEMANA';
-                                        let montoDisplay = '$' + parseInt(row.cuota_monto || 0).toLocaleString(); // Valor esperado (semana por defecto)
-                                        let pagoDisplay = '$' + parseInt(row.monto || 0).toLocaleString(); // Lo pagado
 
-                                        // Si es pago mensual, ajustamos la columna "Monto" para mostrar el valor del mes
-                                        if (row.tipo_pago === 'mes') {
-                                            montoDisplay = '$' + parseInt(row.valor_mes || 0).toLocaleString();
-                                        }
-
-                                        // Lógica de botones para responsable
-                                        if (esResponsable) {
-                                            if (row.estado === 'pendiente') {
-                                                botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_inscrito})">🔍 Revisar</button>`;
-                                            } else if (row.estado === 'en_revision') {
-                                                botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_inscrito})">✅ Validar</button>`;
-                                            }
-                                        }
-
-                                        html += `
-                                            <tr>
-                                                <td>${formatDate(row.fecha)}</td>
-                                                <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                                <td>${row.id_tipoevento || '-'}</td>
-                                                <td>${row.origen || '-'}</td>
-                                                <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                                <td>${row.nombre || '-'}</td>
-                                                <!-- Columna Tipo Pago -->
-                                                <td style="text-align:center; font-weight:bold; color:${row.tipo_pago === 'mes' ? '#071289' : '#555'};">
-                                                    ${tipoPagoDisplay}
-                                                </td>
-                                                <!-- Columna Monto (Valor Esperado) -->
-                                                <td style="text-align:right;">${montoDisplay}</td>
-                                                <!-- Columna Pago (Realizado) -->
-                                                <td style="text-align:right; font-weight:bold; color:#28a745;">${pagoDisplay}</td>
-                                                <td>${row.comentario_completo || '-'}</td>
-                                                <td style="text-align:center;">${botonAccion}</td>
-                                            </tr>
-                                        `;
-                                    });
-                                    
-                                    tbody.innerHTML = html;
-                                })
-                                .catch(err => {
-                                    console.error('Error:', err);
-                                    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar las cuotas</td></tr>';
+                                    html += `
+                                        <tr>
+                                            <td>${formatDate(row.fecha)}</td>
+                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                                            <td>${row.id_tipoevento || '-'}</td>
+                                            <td>${row.origen || '-'}</td>
+                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
+                                            <td>${row.nombre || '-'}</td>
+                                            
+                                            <!-- Columna 1: Tipo Pago -->
+                                            <td style="text-align:center; font-weight:bold; color:${row.tipo_pago === 'mes' ? '#071289' : '#555'};">
+                                                ${tipoPagoDisplay}
+                                            </td>
+                                            
+                                            <!-- Columna 2: Monto Esperado -->
+                                            <td style="text-align:right;">$${montoEsperado.toLocaleString()}</td>
+                                            
+                                            <!-- Columna 3: Pago Realizado (CORREGIDO) -->
+                                            <td style="text-align:right; font-weight:bold; color:#28a745;">
+                                                $${pagoRealizado.toLocaleString()}
+                                            </td>
+                                            
+                                            <td>${row.comentario_completo || '-'}</td>
+                                            <td style="text-align:center;">${botonAccion}</td>
+                                        </tr>
+                                    `;
                                 });
-                            break;
+                                
+                                tbody.innerHTML = html;
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar las cuotas</td></tr>';
+                            });
+                        break;
 
                     case 'socios':
                         fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)

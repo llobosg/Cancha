@@ -97,7 +97,8 @@ try {
                         COALESCE(rd.nombre, cl.nombre, 'Evento') AS origen,
                         COALESCE(r.monto_total, e.valor_cuota, 0) AS costo_evento,
                         s.alias AS nombre, p.puesto AS posicion_jugador,
-                        c.monto AS cuota_monto, c.monto AS monto, c.comentario, c.estado, c.fecha_pago, c.id_cuota AS id_inscrito,
+                        c.monto AS monto,
+                        c.monto AS cuota_monto, c.comentario, c.estado, c.fecha_pago, c.id_cuota AS id_inscrito,
                         r.tipo_pago, 
                         r.valor_mes
                     FROM cuotas c

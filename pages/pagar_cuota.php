@@ -127,16 +127,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
 
-                // 1. Actualizar Cuota (CORREGIDO: Sin updated_at)
+                // 1. Actualizar Cuota (AGREGANDO monto = ?)
                 $stmt_upd = $pdo->prepare("
                     UPDATE cuotas 
                     SET estado = 'en_revision', 
                         fecha_pago = ?, 
                         comentario = CONCAT(IFNULL(comentario, ''), '\n[Usuario]: ', ?),
-                        adjunto = ?
+                        adjunto = ?,
+                        monto = ?  -- ✅ AGREGADO: Guardamos el monto que el usuario ingresó
                     WHERE id_cuota = ?
                 ");
-                $stmt_upd->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+                
+                // Agregamos $monto_ingresado a los parámetros
+                $stmt_upd->execute([$fecha_pago, $comentario, $adjunto, $monto_ingresado, $id_cuota]);
 
                 // 2. Si es reserva, actualizar monto_recaudacion
                 if ($cuota['tipo_actividad'] === 'reserva' && $cuota['id_evento']) {
