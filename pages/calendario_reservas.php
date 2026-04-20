@@ -1664,53 +1664,27 @@ $recinto = $stmt->fetch();
         const estado = document.getElementById('filtroEstado').value;
         const fecha = document.getElementById('filtroFecha').value;
         
-        // Detectar vista actual
         const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked').value;
         
-        console.log('🔍 Filtros enviados:', { deporte, estado, fecha, vista: vistaActual });
-
-        if (vistaActual === 'planilla') {
-            // Si estamos en vista Planilla, recargamos la planilla con los nuevos filtros
-            // Nota: La planilla usa principalmente el Deporte y la Fecha seleccionada en sus propios controles
-            // Pero si quieres que el filtro de Estado afecte a la planilla, tendrías que pasar ese parámetro a la API.
-            // Por ahora, asumimos que cambiar el deporte en los filtros generales debe refrescar la planilla.
-            
-            if (deporte) {
-                deporteSeleccionadoPlanilla = deporte; // Actualizar variable global de la planilla
-                cargarPlanillaReservas(); // Llamar a la función de la planilla
-            } else {
-                alert("Para ver la Planilla, debes seleccionar un Deporte específico.");
-                // Opcional: Forzar volver a fichas o limpiar selección
-            }
-            return; // Salimos aquí para no ejecutar la lógica de fichas
+        // Si estamos en Fichas, ejecutar lógica normal
+        if (vistaActual === 'fichas') {
+            // ... tu código existente de fetch para fichas ...
+            return;
         }
 
-        // === LÓGICA ORIGINAL PARA FICHAS ===
-        try {
-            const formData = new FormData();
-            formData.append('action', 'filtrar_reservas');
-            formData.append('deporte', deporte);
-            formData.append('estado', estado);
-            formData.append('fecha', fecha);
-            
-            const response = await fetch('../api/canchaboard.php', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            console.log(' Respuesta API (Total items):', data.length);
-            
-            if (data.error) {
-                throw new Error(data.error);
+        // Si estamos en Planilla
+        if (vistaActual === 'planilla') {
+            if (!deporte) {
+                alert("Para ver la Planilla, selecciona un Deporte.");
+                return;
             }
+            deporteSeleccionadoPlanilla = deporte;
             
-            reservasData = data;
-            renderizarReservas(reservasData);
-            
-        } catch (error) {
-            console.error('Error al aplicar filtros:', error);
-            showToast('❌ Error al filtrar reservas', 'error');
+            // Solo cargar si el contenedor de la planilla es visible
+            if (document.getElementById('vistaPlanilla').style.display !== 'none') {
+                cargarPlanillaReservas();
+            }
+            return;
         }
     }
 
@@ -2098,22 +2072,44 @@ $recinto = $stmt->fetch();
 
     // Cargar datos y renderizar
     async function cargarPlanillaReservas() {
-        if (!deporteSeleccionadoPlanilla) return;
+        if (!deporteSeleccionadoPlanilla) {
+            console.warn("No hay deporte seleccionado para la planilla");
+            return;
+        }
         
-        const titulo = document.getElementById('fechaPlanillaTitulo');
-        const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        titulo.textContent = new Date(fechaPlanillaActual).toLocaleDateString('es-ES', opcionesFecha);
+        // 1. Verificar si el elemento del título existe antes de usarlo
+        const tituloElement = document.getElementById('fechaPlanillaTitulo');
+        const inputElement = document.getElementById('fechaPlanillaInput');
         
+        // Si no estamos en la vista planilla o los elementos no existen, salimos o esperamos
+        if (!tituloElement || !inputElement) {
+            console.warn("⚠️ Elementos de la planilla no encontrados. ¿Está visible la vista?");
+            // Opcional: Forzar la carga solo si la vista es visible
+            if (document.getElementById('vistaPlanilla').style.display === 'none') {
+                return; 
+            }
+        }
+
         try {
             const response = await fetch(`../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${deporteSeleccionadoPlanilla}`);
             const data = await response.json();
             
             if (data.error) throw new Error(data.error);
             
+            // 2. Actualizar UI solo si los elementos existen
+            if (tituloElement) {
+                const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                tituloElement.textContent = new Date(fechaPlanillaActual).toLocaleDateString('es-ES', opcionesFecha);
+            }
+            
+            if (inputElement) {
+                inputElement.value = fechaPlanillaActual;
+            }
+            
             renderizarPlanilla(data);
         } catch (error) {
             console.error(error);
-            alert('Error al cargar la planilla');
+            alert('Error al cargar la planilla: ' + error.message);
         }
     }
 
