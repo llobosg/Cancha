@@ -1,7 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/config_mercadopago.php'; // Asegúrate de tener este archivo
-
 session_start();
 
 if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
@@ -12,372 +10,355 @@ if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
 $id_cuota = (int)$_GET['id_cuota'];
 $id_socio = $_SESSION['id_socio'];
 
-// === Paso 1: Obtener tipo_actividad ===
-$stmt_check = $pdo->prepare("SELECT tipo_actividad FROM cuotas WHERE id_cuota = ? AND id_socio = ?");
-$stmt_check->execute([$id_cuota, $id_socio]);
-$tipo_actividad = $stmt_check->fetchColumn();
-
-if (!$tipo_actividad) {
-    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
-}
-
-// === Paso 2: Ejecutar consulta específica ===
-if ($tipo_actividad === 'reserva') {
-    $stmt = $pdo->prepare("
-        SELECT 
-            c.id_cuota,
-            c.monto,
-            c.fecha_vencimiento,
-            c.estado,
-            c.tipo_actividad,
-            c.id_evento,
-            s.nombre AS socio_nombre,
-            s.email AS socio_email,
-            sc.id_club,
-            cl.nombre AS club_nombre,
-            cl.email_responsable,
-            rd.nombre AS detalle_origen,
-            r.fecha AS fecha_origen
-        FROM cuotas c
-        INNER JOIN socios s ON c.id_socio = s.id_socio
-        INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-        INNER JOIN clubs cl ON sc.id_club = cl.id_club
-        INNER JOIN reservas r ON c.id_evento = r.id_reserva
-        INNER JOIN canchas ca ON r.id_cancha = ca.id_cancha
-        INNER JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-        WHERE c.id_cuota = ? AND c.id_socio = ?
-        LIMIT 1
-    ");
-} else {
-    $stmt = $pdo->prepare("
-        SELECT 
-            c.id_cuota,
-            c.monto,
-            c.fecha_vencimiento,
-            c.estado,
-            c.tipo_actividad,
-            c.id_evento,
-            s.nombre AS socio_nombre,
-            s.email AS socio_email,
-            sc.id_club,
-            cl.nombre AS club_nombre,
-            cl.email_responsable,
-            te.tipoevento AS detalle_origen,
-            e.fecha AS fecha_origen
-        FROM cuotas c
-        INNER JOIN socios s ON c.id_socio = s.id_socio
-        INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
-        INNER JOIN clubs cl ON sc.id_club = cl.id_club
-        INNER JOIN eventos e ON c.id_evento = e.id_evento
-        INNER JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
-        WHERE c.id_cuota = ? AND c.id_socio = ?
-        LIMIT 1
-    ");
-}
-
+// === 1. Obtener datos de la cuota y reserva asociada ===
+$stmt = $pdo->prepare("
+    SELECT 
+        c.id_cuota, c.monto, c.fecha_vencimiento, c.estado, c.tipo_actividad, c.id_evento, c.comentario as comentario_previo,
+        s.nombre AS socio_nombre, s.email AS socio_email, s.alias,
+        sc.id_club, cl.nombre AS club_nombre, cl.email_responsable,
+        r.fecha AS fecha_origen, r.monto_total, r.monto_recaudacion, r.tipo_pago as tipo_pago_defecto, r.mes, r.valor_mes,
+        rd.nombre AS detalle_origen
+    FROM cuotas c
+    INNER JOIN socios s ON c.id_socio = s.id_socio
+    INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
+    INNER JOIN clubs cl ON sc.id_club = cl.id_club
+    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+    LEFT JOIN recintos_deportivos rd ON r.id_cancha = (SELECT id_cancha FROM canchas WHERE id_recinto = cl.id_recinto LIMIT 1) -- Ajuste genérico si no hay cancha directa
+    WHERE c.id_cuota = ? AND c.id_socio = ?
+    LIMIT 1
+");
 $stmt->execute([$id_cuota, $id_socio]);
 $cuota = $stmt->fetch();
 
 if (!$cuota) {
-    die('<h2 style="color:white;text-align:center;margin-top:50px;">Cuota no encontrada</h2>');
+    die('<div style="text-align:center;color:white;margin-top:50px;"><h2>❌ Cuota no encontrada o no pertenece a tu usuario</h2><a href="dashboard_socio.php" style="color:#FFD700;">Volver</a></div>');
 }
 
 $error = '';
-$success = '';
+$success = false;
 
+// === 2. Procesar Formulario ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_pago = $_POST['fecha_pago'] ?? '';
     $comentario = trim($_POST['comentario'] ?? '');
-    $adjunto = null;
-
+    $tipo_pago_seleccionado = $_POST['tipo_pago'] ?? 'semana'; // semana o mes
+    $monto_ingresado = (float)($_POST['monto_pagado'] ?? 0);
+    
+    // Validaciones básicas
     if (empty($fecha_pago)) {
-        $error = 'La fecha de pago es obligatoria';
+        $error = 'La fecha de pago es obligatoria.';
+    } elseif ($monto_ingresado <= 0) {
+        $error = 'El monto ingresado debe ser mayor a 0.';
     } else {
-        // Subir adjunto si existe
-        if (!empty($_FILES['adjunto']['name'])) {
+        // Validar monto según tipo de pago seleccionado
+        $monto_esperado = 0;
+        if ($tipo_pago_seleccionado === 'mes') {
+            $monto_esperado = (float)($cuota['valor_mes'] ?? 0);
+            if ($monto_esperado == 0) $monto_esperado = (float)$cuota['monto']; // Fallback
+            if (abs($monto_ingresado - $monto_esperado) > 1) { // Margen de error 1 peso
+                $error = "El monto para pago mensual debe ser aproximadamente $" . number_format($monto_esperado, 0, ',', '.');
+            }
+        } else {
+            // Semana
+            $monto_esperado = (float)$cuota['monto'];
+            if (abs($monto_ingresado - $monto_esperado) > 1) {
+                $error = "El monto para pago semanal debe ser $" . number_format($monto_esperado, 0, ',', '.');
+            }
+        }
+
+        // Manejo de archivo adjunto
+        $adjunto = null;
+        if (!$error && !empty($_FILES['adjunto']['name'])) {
             $target_dir = __DIR__ . '/../uploads/comprobantes/';
             if (!is_dir($target_dir)) mkdir($target_dir, 0755, true);
             
-            $file_name = 'comprobante_' . $id_cuota . '_' . time() . '_' . basename($_FILES['adjunto']['name']);
-            $target_file = $target_dir . $file_name;
-            
-            $allowed_types = ['jpg', 'jpeg', 'png', 'pdf'];
-            $ext = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowed_types)) {
-                $error = 'Solo se permiten JPG, PNG o PDF';
-            } elseif (!move_uploaded_file($_FILES['adjunto']['tmp_name'], $target_file)) {
-                $error = 'Error al subir el comprobante';
+            $ext = strtolower(pathinfo($_FILES['adjunto']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'pdf'])) {
+                $file_name = 'pago_' . $id_cuota . '_' . time() . '.' . $ext;
+                if (move_uploaded_file($_FILES['adjunto']['tmp_name'], $target_dir . $file_name)) {
+                    $adjunto = $file_name;
+                } else {
+                    $error = 'Error al subir el archivo.';
+                }
             } else {
-                $adjunto = $file_name;
+                $error = 'Solo se permiten imágenes (JPG, PNG) o PDF.';
             }
         }
 
         if (!$error) {
-            // ✅ ACTUALIZAR LA CUOTA A "en_revision" ANTES DE ENVIAR CORREOS
-            $pdo->prepare("
-                UPDATE cuotas 
-                SET estado = 'en_revision', 
-                    fecha_pago = ?, 
-                    comentario = ?, 
-                    adjunto = ?
-                WHERE id_cuota = ?
-            ")->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+            try {
+                $pdo->beginTransaction();
 
-            // Si es reserva recaudatoria, sumar fondos
-            if ($cuota['tipo_actividad'] === 'reserva') {
-                $stmt_check = $pdo->prepare("
-                    SELECT r.monto_recaudacion 
-                    FROM reservas r 
-                    WHERE r.id_reserva = ? AND r.monto_recaudacion IS NOT NULL
+                // 1. Actualizar Cuota
+                $stmt_upd = $pdo->prepare("
+                    UPDATE cuotas 
+                    SET estado = 'en_revision', 
+                        fecha_pago = ?, 
+                        comentario = CONCAT(IFNULL(comentario, ''), '\n[Usuario]: ' . ?),
+                        adjunto = ?,
+                        updated_at = NOW()
+                    WHERE id_cuota = ?
                 ");
-                $stmt_check->execute([$cuota['id_evento']]);
-                if ($stmt_check->fetch()) {
-                    $pdo->prepare("
-                        UPDATE clubs 
-                        SET fondos_acumulados = COALESCE(fondos_acumulados, 0) + ?
-                        WHERE id_club = ?
-                    ")->execute([$cuota['monto'], $cuota['id_club']]);
+                $stmt_upd->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
+
+                // 2. Si es reserva, actualizar monto_recaudacion ACUMULADO
+                if ($cuota['tipo_actividad'] === 'reserva' && $cuota['id_evento']) {
+                    // Obtener monto actual recaudado
+                    $stmt_curr = $pdo->prepare("SELECT monto_recaudacion FROM reservas WHERE id_reserva = ?");
+                    $stmt_curr->execute([$cuota['id_evento']]);
+                    $current_recaudado = (float)($stmt_curr->fetchColumn() ?: 0);
+                    
+                    $nuevo_total = $current_recaudado + $monto_ingresado;
+                    
+                    // Determinar estado de pago de la reserva
+                    $nuevo_estado_pago = 'pendiente';
+                    if ($nuevo_total >= (float)$cuota['monto_total']) {
+                        $nuevo_estado_pago = 'pagado';
+                        $nuevo_total = (float)$cuota['monto_total']; // Ajustar si se pasó
+                    } elseif ($nuevo_total > 0) {
+                        $nuevo_estado_pago = 'parcial';
+                    }
+
+                    $stmt_res = $pdo->prepare("
+                        UPDATE reservas 
+                        SET monto_recaudacion = ?,
+                            estado_pago = ?,
+                            updated_at = NOW()
+                        WHERE id_reserva = ?
+                    ");
+                    $stmt_res->execute([$nuevo_total, $nuevo_estado_pago, $cuota['id_evento']]);
                 }
+
+                $pdo->commit();
+                $success = true;
+
+                // TODO: Aquí podrías enviar correos de confirmación si deseas
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Error al procesar el pago: ' . $e->getMessage();
             }
-
-            // Enviar correo al socio
-            require_once __DIR__ . '/../includes/brevo_mailer.php';
-            $mail = new BrevoMailer();
-            $mail->setTo($cuota['socio_email'], $cuota['socio_nombre']);
-            $mail->setSubject('✅ Pago registrado - ' . $cuota['club_nombre']);
-            $mail->setHtmlBody("
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 12px;'>
-                    <div style='text-align: center; background: #2ECC71; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
-                        <h2>✅ Pago Registrado</h2>
-                    </div>
-                    <p>¡Hola {$cuota['socio_nombre']}!</p>
-                    <p>Tu pago ha sido registrado y está en revisión:</p>
-                    <p>
-                        <strong>Detalle:</strong> {$cuota['detalle_origen']}<br>
-                        <strong>Fecha:</strong> " . date('d/m/Y', strtotime($cuota['fecha_origen'])) . "<br>
-                        <strong>Monto:</strong> $" . number_format($cuota['monto'], 0, ',', '.') . "<br>
-                        <strong>Fecha de pago:</strong> " . date('d/m/Y', strtotime($fecha_pago)) . "
-                    </p>
-                    <p>El responsable del club revisará tu comprobante y confirmará el pago.</p>
-                </div>
-            ");
-            $mail->send();
-
-            // Enviar copia al responsable
-            if ($cuota['email_responsable']) {
-                $mail2 = new BrevoMailer();
-                $mail2->setTo($cuota['email_responsable'], 'Responsable ' . $cuota['club_nombre']);
-                $mail2->setSubject('📋 Nuevo pago en revisión - ' . $cuota['socio_nombre']);
-                $mail2->setHtmlBody("
-                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 12px;'>
-                        <div style='text-align: center; background: #3498DB; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
-                            <h2>📋 Pago en Revisión</h2>
-                        </div>
-                        <p><strong>{$cuota['socio_nombre']}</strong> ha registrado un pago:</p>
-                        <p>
-                            <strong>Club:</strong> {$cuota['club_nombre']}<br>
-                            <strong>Detalle:</strong> {$cuota['detalle_origen']}<br>
-                            <strong>Monto:</strong> $" . number_format($cuota['monto'], 0, ',', '.') . "<br>
-                            <strong>Fecha pago:</strong> " . date('d/m/Y', strtotime($fecha_pago)) . "
-                        </p>
-                        <p>Revisa el comprobante en el dashboard y confirma el pago.</p>
-                    </div>
-                ");
-                $mail2->send();
-            }
-
-            $success = true;
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
-  <link rel="stylesheet" href="../styles.css">
-  <link rel="icon" href="/assets/favicon.ico">
-  <style>
-    body {
-      background: 
-        linear-gradient(rgba(0, 20, 10, 0.65), rgba(0, 30, 15, 0.75)),
-        url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      background-blend-mode: multiply;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 20, 10, 0.7), rgba(0, 30, 15, 0.8)), url('../assets/img/cancha_pasto2.jpg') center/cover fixed;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+        .modal-container {
+            background: white;
+            width: 95%;
+            max-width: 700px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            overflow: hidden;
+            position: relative;
+            animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .modal-header {
+            background: #071289;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.4rem; }
+        .close-x { font-size: 1.8rem; cursor: pointer; color: #FFD700; text-decoration: none; font-weight: bold; }
+        .close-x:hover { color: white; }
 
-    .form-container {
-      width: 95%;
-      max-width: 500px;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 2rem;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    }
+        .modal-body { padding: 2rem; }
+        
+        /* Grid Layout 2 Columnas */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .full-width { grid-column: span 2; }
+        
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.4rem; color: #444; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input[readonly] { background: #f0f2f5; color: #666; cursor: not-allowed; }
+        
+        .radio-group { display: flex; gap: 1rem; margin-top: 0.5rem; }
+        .radio-option { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        
+        .btn-submit {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover { background: #218838; }
+        .btn-cancel {
+            display: block;
+            text-align: center;
+            margin-top: 1rem;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .alert { padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; }
+        .alert-error { background: #ffebee; color: #c62828; }
+        .alert-success { background: #e8f5e9; color: #2e7d32; }
 
-    .form-title {
-      color: #FFD700;
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-size: 1.5rem;
-    }
-
-    .divider {
-      text-align: center;
-      margin: 1rem 0;
-      color: #aaa;
-    }
-
-    .error { background: #ffebee; color: #c62828; padding: 0.7rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem; }
-    .success { background: #e8f5e9; color: #2e7d32; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; font-size: 0.9rem; }
-
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-weight: bold;
-      color: white;
-      margin-bottom: 0.5rem;
-      text-align: left;
-    }
-
-    .form-group input, .form-group textarea {
-      width: 100%;
-      padding: 0.9rem;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      color: #071289;
-      font-size: 1rem;
-      background: white;
-    }
-
-    .readonly {
-      background: #eee;
-      cursor: not-allowed;
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: 1rem;
-      background: #071289;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .close-btn {
-      display: block;
-      text-align: center;
-      margin-top: 1rem;
-      color: #FFD700;
-      text-decoration: underline;
-      font-size: 0.9rem;
-    }
-
-    #bricks_container {
-      margin-bottom: 1.5rem;
-    }
-  </style>
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .full-width { grid-column: span 1; }
+            .modal-body { padding: 1.5rem; }
+        }
+    </style>
 </head>
 <body>
-  <div class="form-container">
-    <h2 class="form-title">💳 Pagar Cuota</h2>
+
+<div class="modal-container">
+    <div class="modal-header">
+        <h2>💳 Pagar Cuota</h2>
+        <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-x">&times;</a>
+    </div>
+
+    <div class="modal-body">
+        <?php if ($success): ?>
+            <div class="alert alert-success">
+                <h3>✅ ¡Pago Registrado!</h3>
+                <p>Tu comprobante ha sido enviado a revisión.</p>
+                <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="btn-submit" style="text-decoration:none; display:inline-block; margin-top:1rem;">Volver al Dashboard</a>
+            </div>
+        <?php else: ?>
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-grid">
+                    <!-- Columna 1: Detalles -->
+                    <div class="form-group full-width">
+                        <label>Detalle del Pago</label>
+                        <input type="text" value="<?= htmlspecialchars($cuota['detalle_origen']) ?>" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Mes Correspondiente</label>
+                        <input type="text" value="<?= htmlspecialchars($cuota['mes'] ?? date('F Y')) ?>" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha Vencimiento</label>
+                        <input type="text" value="<?= date('d/m/Y', strtotime($cuota['fecha_vencimiento'])) ?>" readonly>
+                    </div>
+
+                    <!-- Columna 2: Montos -->
+                    <div class="form-group">
+                        <label>$ Valor Semana</label>
+                        <input type="text" value="$<?= number_format($cuota['monto'], 0, ',', '.') ?>" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>$ Valor Mes</label>
+                        <input type="text" value="$<?= number_format($cuota['valor_mes'] ?? $cuota['monto'], 0, ',', '.') ?>" readonly>
+                    </div>
+
+                    <!-- Selección Tipo Pago -->
+                    <div class="form-group full-width">
+                        <label>Tipo de Pago *</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="tipo_pago" value="semana" checked onchange="toggleMontoInput()"> Semana
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="tipo_pago" value="mes" onchange="toggleMontoInput()"> Mes Completo
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Monto a Pagar (Dinámico) -->
+                    <div class="form-group full-width">
+                        <label for="monto_pagado">$ Monto a Pagar *</label>
+                        <input type="number" id="monto_pagado" name="monto_pagado" step="100" required 
+                               value="<?= $cuota['monto'] ?>" 
+                               placeholder="Ingresa el monto exacto">
+                        <small style="color:#666; font-size:0.8rem;">* Debe coincidir con el valor seleccionado arriba.</small>
+                    </div>
+
+                    <!-- Fecha Pago -->
+                    <div class="form-group">
+                        <label for="fecha_pago">Fecha de Pago *</label>
+                        <input type="date" id="fecha_pago" name="fecha_pago" required value="<?= date('Y-m-d') ?>">
+                    </div>
+
+                    <!-- Adjunto -->
+                    <div class="form-group">
+                        <label for="adjunto">Comprobante (Opcional)</label>
+                        <input type="file" id="adjunto" name="adjunto" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+
+                    <!-- Comentario -->
+                    <div class="form-group full-width">
+                        <label for="comentario">Comentarios</label>
+                        <textarea id="comentario" name="comentario" rows="2" placeholder="Ej: Transferencia desde Banco Estado..."></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Registrar Pago</button>
+                <a href="javascript:history.back()" class="btn-cancel">Cancelar</a>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
+
+<script>
+    const valorSemana = <?= (float)$cuota['monto'] ?>;
+    const valorMes = <?= (float)($cuota['valor_mes'] ?? $cuota['monto']) ?>;
+    const inputMonto = document.getElementById('monto_pagado');
+
+    function toggleMontoInput() {
+        const tipo = document.querySelector('input[name="tipo_pago"]:checked').value;
+        if (tipo === 'mes') {
+            inputMonto.value = valorMes;
+            inputMonto.readOnly = true; // Forzamos que no editen para evitar errores
+            inputMonto.style.background = '#e8f5e9';
+        } else {
+            inputMonto.value = valorSemana;
+            inputMonto.readOnly = true;
+            inputMonto.style.background = '#e8f5e9';
+        }
+    }
     
-    <?php if ($success): ?>
-      <div class="success">
-        ¡Pago registrado! Se ha enviado una confirmación a tu correo.<br>
-        El responsable del club revisará tu comprobante.
-      </div>
-      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-btn">Volver al dashboard</a>
-    <?php else: ?>
-      <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
-        <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-btn">Volver al dashboard</a>
-      <?php endif; ?>
-
-      <!-- === PAGO MANUAL === -->
-      <form method="POST" enctype="multipart/form-data">
-        <!-- Datos no editables -->
-        <div class="form-group">
-          <label>Detalle</label>
-          <input type="text" value="<?= htmlspecialchars($cuota['detalle_origen']) ?>" class="readonly" readonly>
-        </div>
-        
-        <div class="form-group">
-          <label>Fecha</label>
-          <input type="text" value="<?= date('d/m/Y', strtotime($cuota['fecha_origen'])) ?>" class="readonly" readonly>
-        </div>
-        
-        <div class="form-group">
-          <label>Monto</label>
-          <input type="text" value="$<?= number_format($cuota['monto'], 0, ',', '.') ?>" class="readonly" readonly>
-        </div>
-
-        <!-- Campos editables -->
-        <div class="form-group">
-          <label for="fecha_pago">Fecha de pago *</label>
-          <input type="date" id="fecha_pago" name="fecha_pago" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="adjunto">Comprobante (opcional)</label>
-          <input type="file" id="adjunto" name="adjunto" accept=".jpg,.jpeg,.png,.pdf">
-        </div>
-        
-        <div class="form-group">
-          <label for="comentario">Comentario (opcional)</label>
-          <textarea id="comentario" name="comentario" rows="2"></textarea>
-        </div>
-        
-        <button type="submit" class="btn-submit">Registrar Pago Manual</button>
-      </form>
-      
-      <a href="javascript:history.back()" class="close-btn">Cancelar</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- Toast container -->
-  <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:1000;"></div>
-
-  <script>
-  // === TOAST ===
-  function mostrarToast(mensaje) {
-      let container = document.getElementById('toast-container');
-      if (!container) {
-          container = document.createElement('div');
-          container.id = 'toast-container';
-          container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;';
-          document.body.appendChild(container);
-      }
-      const toast = document.createElement('div');
-      toast.textContent = mensaje;
-      toast.style.cssText = `
-          background: #28a745; color: white; padding: 12px 16px;
-          border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          animation: fadeIn 0.3s;
-      `;
-      container.appendChild(toast);
-      setTimeout(() => {
-          if (toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 3000);
-  }
+    // Inicializar
+    toggleMontoInput();
 </script>
+
 </body>
 </html>

@@ -1782,6 +1782,31 @@
                                             botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅ Validar</button>`;
                                         }
                                     }
+
+                                    // Determinar tipo de pago para mostrar (si viene de la BD, sino inferir)
+                                    let tipoPagoDisplay = row.tipo_pago ? row.tipo_pago.toUpperCase() : 'SEMANA';
+                                    let montoDisplay = '-';
+                                    let pagoDisplay = '$' + parseInt(row.monto || 0).toLocaleString();
+
+                                    // Lógica de visualización según tipo de pago
+                                    if (row.tipo_pago === 'mes') {
+                                        // Si es pago mensual, mostramos el valor del mes en "Monto" y lo pagado en "Pago"
+                                        montoDisplay = '$' + parseInt(row.valor_mes || 0).toLocaleString(); 
+                                    } else {
+                                        // Semanal
+                                        montoDisplay = '$' + parseInt(row.cuota_monto || 0).toLocaleString();
+                                    }
+
+                                    // Botones de acción (solo para responsable)
+                                    let botonAccion = '-';
+                                    if (esResponsable) {
+                                        if (row.estado === 'pendiente') {
+                                            botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_inscrito})">🔍 Revisar</button>`;
+                                        } else if (row.estado === 'en_revision') {
+                                            botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_inscrito})">✅ Validar</button>`;
+                                        }
+                                    }
+
                                     html += `
                                         <tr>
                                             <td>${formatDate(row.fecha)}</td>
@@ -1790,11 +1815,16 @@
                                             <td>${row.origen || '-'}</td>
                                             <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
                                             <td>${row.nombre || '-'}</td>
-                                            <td>${row.posicion_jugador || '-'}</td>
-                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                            <td>${row.comentario_completo}</td>
-                                            <td>${botonAccion}</td>
+                                            <!-- CAMBIO: Posición -> Tipo Pago -->
+                                            <td style="text-align:center; font-weight:bold; color:${row.tipo_pago === 'mes' ? '#071289' : '#555'};">
+                                                ${tipoPagoDisplay}
+                                            </td>
+                                            <!-- CAMBIO: Monto (Valor esperado) -->
+                                            <td style="text-align:right;">${montoDisplay}</td>
+                                            <!-- CAMBIO: Pago (Lo realmente pagado) -->
+                                            <td style="text-align:right; font-weight:bold; color:#28a745;">${pagoDisplay}</td>
+                                            <td>${row.comentario_completo || '-'}</td>
+                                            <td style="text-align:center;">${botonAccion}</td>
                                         </tr>
                                     `;
                                 });
