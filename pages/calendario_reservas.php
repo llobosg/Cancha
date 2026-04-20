@@ -2140,38 +2140,53 @@ $recinto = $stmt->fetch();
                             </td>`;
                 
                 data.canchas.forEach(cancha => {
+                    // Dentro del bucle data.canchas.forEach(...) en renderizarPlanilla
+
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const reserva = data.reservas[key];
-                    
+
                     let cellContent = '';
-                    let cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; border:1px solid #fff;`;
+                    let bgClass = '#e0e0e0'; // Valor por defecto: Gris (Disponible)
+                    let cellStyle = ''; 
                     let colSpan = 1;
-                    
+
                     if (reserva) {
-                        // Está ocupado
-                        // Calcular duración en slots de 30min para hacer rowspan si es necesario
-                        // Simplificación: Pintamos solo la celda inicial y marcamos estilo
-                        
-                        let bgClass = '';
-                        if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7'; // Verde claro
-                        else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d'; // Amarillo claro
-                        else bgClass = '#ffcdd2'; // Rojo claro (Pendiente/Ocupado)
-                        
-                        cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; border:1px solid #fff;`;
+                        // === LÓGICA DE COLORES SEGÚN ESTADO DE PAGO ===
+                        if (reserva.estado_pago === 'pagado') {
+                            bgClass = '#a5d6a7'; // Verde claro
+                        } else if (reserva.estado_pago === 'parcial') {
+                            bgClass = '#fff59d'; // Amarillo claro
+                        } else if (reserva.estado_pago === 'pendiente' || reserva.estado_pago === 'en_revision') {
+                            bgClass = '#ffcdd2'; // Rojo claro
+                        } else {
+                            // Si tiene estado_pago pero no coincide con los anteriores, usamos rojo por defecto
+                            bgClass = '#ffcdd2'; 
+                        }
+
+                        // Estilo base para celda ocupada
+                        cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; border:1px solid #fff; padding:8px; height:40px; vertical-align:middle;`;
                         
                         // Contenido de la celda
                         const nombre = reserva.nombre_socio || reserva.nombre_cliente || 'Reserva';
-                        cellContent = `<div style="font-size:0.7rem;">${nombre}</div>
-                                    <div style="font-size:0.65rem; opacity:0.8;">${reserva.estado_pago || 'Ocupado'}</div>`;
-                                    
-                        // Evento click
-                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva}); event.stopPropagation();" `;
+                        const estadoTexto = reserva.estado_pago ? reserva.estado_pago.toUpperCase() : 'OCUPADO';
+                        
+                        cellContent = `
+                            <div style="font-size:0.7rem; line-height:1.1;">${nombre}</div>
+                            <div style="font-size:0.65rem; opacity:0.8; margin-top:2px;">${estadoTexto}</div>
+                        `;
+                        
+                        // Agregar evento click
+                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
+
                     } else {
-                        // Disponible: Celda vacía
-                        cellContent = '';
+                        // === CELDA DISPONIBLE ===
+                        bgClass = '#e0e0e0'; // Gris
+                        cellStyle = `background:${bgClass}; color:#999; text-align:center; font-size:0.75rem; padding:8px; height:40px; vertical-align:middle; border-right:1px solid #ddd;`;
+                        cellContent = ''; // Vacío
                     }
-                    
-                    html += `<td style="${cellStyle} padding:8px; height:40px; vertical-align:middle; border-right:1px solid #ddd;">${cellContent}</td>`;
+
+                    // Generar la etiqueta TD
+                    html += `<td style="${cellStyle}">${cellContent}</td>`;
                 });
                 html += '</tr>';
             }
