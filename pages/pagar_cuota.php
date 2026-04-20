@@ -97,11 +97,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE cuotas 
                     SET estado = 'en_revision', 
                         fecha_pago = ?, 
-                        comentario = CONCAT(IFNULL(comentario, ''), '\n[Usuario]: ' . ?),
+                        comentario = CONCAT(IFNULL(comentario, ''), '\n[Usuario]: ', ?),
                         adjunto = ?,
                         updated_at = NOW()
                     WHERE id_cuota = ?
                 ");
+                
+                // Ejecutar con los 4 parámetros en orden
                 $stmt_upd->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
 
                 // 2. Si es reserva, actualizar monto_recaudacion ACUMULADO
