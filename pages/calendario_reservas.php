@@ -704,101 +704,155 @@ $recinto = $stmt->fetch();
     .planilla-table tbody td:hover {
         filter: brightness(0.95);
     }
+
+    /* Estilos específicos para controles de fecha en planilla */
+    #fechaPlanillaInput::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        filter: invert(0.5); /* Hace el icono del calendario visible sobre fondo claro */
+    }
+
+    button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Asegurar que las celdas de la tabla tengan cursor pointer */
+    .planilla-table tbody td[style*="cursor:pointer"] {
+        transition: background 0.2s;
+    }
+    .planilla-table tbody td[style*="cursor:pointer"]:hover {
+        filter: brightness(0.9);
+        z-index: 2;
+        position: relative;
+    }
 </style>
 </head>
 <body>
-  <div class="header">
-    <div class="main-title-section">
-      <div class="logo-corporativo">⚽</div>
-      <h1 class="main-title">Cancha</h1>
+    <div class="header">
+        <div class="main-title-section">
+        <div class="logo-corporativo">⚽</div>
+        <h1 class="main-title">Cancha</h1>
+        </div>
+        <div>
+        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+        </div>
     </div>
-    <div>
-      <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
-    </div>
-  </div>
-  
-  <div class="dashboard-container" style="margin-top: 70px;">
-    <div>
-        <!-- Filtro de Vista: Planilla vs Fichas -->
-        <div style="display:flex; justify-content:center; margin-bottom:1rem; gap:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:8px; width:fit-content; margin-left:auto; margin-right:auto;">
-            <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold;">
-                <input type="radio" name="vistaCalendario" value="fichas" checked onchange="cambiarVistaCalendario('fichas')" style="margin-right:0.5rem;">
-                Fichas
-            </label>
-            <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold;">
-                <input type="radio" name="vistaCalendario" value="planilla" onchange="cambiarVistaCalendario('planilla')" style="margin-right:0.5rem;">
-                Planilla
-            </label>
-        </div>
+    
+    <div class="dashboard-container" style="margin-top: 70px;">
+        <div>
+            <!-- 1. FILTROS PRINCIPALES (Fichas/Planilla + Deporte/Estado/Fecha) -->
+            <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem;">
+                
+                <!-- Fila Superior: Selector de Vista + Filtros Clásicos -->
+                <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
+                    
+                    <!-- Selector Radial Grande -->
+                    <div style="background:rgba(255,255,255,0.1); padding:0.4rem; border-radius:8px; display:flex; gap:0.5rem;">
+                        <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold; padding:0.4rem 1rem; background:rgba(0,0,0,0.2); border-radius:6px; transition:0.3s;">
+                            <input type="radio" name="vistaCalendario" value="fichas" checked onchange="cambiarVistaCalendario('fichas')" style="display:none;">
+                            📋 Fichas
+                        </label>
+                        <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; transition:0.3s;" id="btnLabelPlanilla">
+                            <input type="radio" name="vistaCalendario" value="planilla" onchange="cambiarVistaCalendario('planilla')" style="display:none;">
+                            Planilla
+                        </label>
+                    </div>
 
-        <!-- Contenedores -->
-        <div id="vistaFichas">
-            <!-- Aquí va tu grid actual de fichas -->
-            <div id="reservasGrid" class="reservas-grid"></div>
-        </div>
-
-        <div id="vistaPlanilla" style="display:none;">
-            <!-- Nuevos controles de fecha para planilla -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; color:white;">
-                <button onclick="cambiarDiaPlanilla(-1)" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">&lt; Anterior</button>
-                <h3 id="fechaPlanillaTitulo" style="margin:0; text-transform:capitalize;"></h3>
-                <button onclick="cambiarDiaPlanilla(1)" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">Siguiente &gt;</button>
-            </div>
-            
-            <!-- Tabla Planilla -->
-            <div style="overflow-x:auto; background:white; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);">
-                <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                    <!-- Se llena con JS -->
-                </table>
-            </div>
-            
-            <!-- Leyenda -->
-            <div style="margin-top:1rem; display:flex; gap:1.5rem; color:white; justify-content:center; font-size:0.9rem;">
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <span style="width:12px; height:12px; background:#e0e0e0; border-radius:50%; display:inline-block;"></span> Disponible
+                    <!-- Filtros Clásicos -->
+                    <div class="controls-section" style="margin:0; flex:1; justify-content:flex-end; min-width:300px;">
+                        <select class="control-select" id="filtroDeporte" style="flex:1;">
+                            <option value="">Todos los deportes</option>
+                            <option value="futbol">Fútbol</option>
+                            <option value="futbolito">Futbolito</option>
+                            <option value="futsal">Futsal</option>
+                            <option value="tenis">Tenis</option>
+                            <option value="padel">Pádel</option>
+                            <option value="voleyball">Voleyball</option>
+                            <option value="otro">Quincho/Otro</option>
+                        </select>
+                        
+                        <select class="control-select" id="filtroEstado" style="flex:1;">
+                            <option value="">Todos los estados</option>
+                            <option value="disponible">Disponible</option>
+                            <option value="reservada">Reservadas</option>
+                            <option value="pagadas">Pagadas</option>
+                            <option value="parcial">Pago Parcial</option>
+                            <option value="ocupada">Ocupadas</option>
+                            <option value="cancelada">Canceladas</option>
+                        </select>
+                        
+                        <select class="control-select" id="filtroFecha" style="flex:1;">
+                            <option value="">Últimos 30 días</option>
+                            <option value="hoy">Hoy</option>
+                            <option value="mañana">Mañana</option>
+                            <option value="semana">Esta semana</option>
+                            <option value="mes">Este mes</option>
+                        </select>
+                    </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <span style="width:12px; height:12px; background:#ffcdd2; border-radius:50%; display:inline-block;"></span> Ocupado / Reservado
+            </div>
+
+            <!-- 2. CONTENEDOR VISTA: FICHAS -->
+            <div id="vistaFichas">
+                <div id="reservasGrid" class="reservas-grid">
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- 3. CONTENEDOR VISTA: PLANILLA (Con nuevo Header Azul) -->
+            <div id="vistaPlanilla" style="display:none;">
+                
+                <!-- Header Azul con Controles de Fecha -->
+                <div style="background: linear-gradient(90deg, #4FC3F7 0%, #29B6F6 100%); padding: 1rem; border-radius: 8px 8px 0 0; display:flex; justify-content:space-between; align-items:center; color:#01579B; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    
+                    <div style="font-weight:bold; font-size:1.1rem;">📅 Gestión de Horarios</div>
+                    
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <!-- Input Fecha Nativo -->
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span style="font-size:0.9rem; font-weight:600;">Fecha:</span>
+                            <input type="date" id="fechaPlanillaInput" value="<?= date('Y-m-d') ?>" 
+                                style="padding:0.4rem; border-radius:4px; border:none; outline:none; font-family:sans-serif; cursor:pointer;">
+                        </div>
+
+                        <!-- Botón Hoy -->
+                        <button onclick="irAHoyPlanilla()" style="background:white; color:#0288D1; border:none; padding:0.4rem 1.2rem; border-radius:20px; font-weight:bold; font-size:0.85rem; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); transition:0.2s;">
+                            Hoy
+                        </button>
+
+                        <!-- Botones < y > Circulares -->
+                        <div style="display:flex; gap:0.5rem;">
+                            <button onclick="cambiarDiaPlanilla(-1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.8); border:none; color:#0277BD; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
+                                &lt;
+                            </button>
+                            <button onclick="cambiarDiaPlanilla(1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.8); border:none; color:#0277BD; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
+                                &gt;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla Planilla -->
+                <div style="overflow-x:auto; background:white; border-radius:0 0 8px 8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                        <!-- Se llena con JS -->
+                    </table>
+                </div>
+                
+                <!-- Leyenda -->
+                <div style="margin-top:1rem; display:flex; gap:1.5rem; color:white; justify-content:center; font-size:0.9rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="width:12px; height:12px; background:#e0e0e0; border-radius:50%;"></span> Disponible
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="width:12px; height:12px; background:#ffcdd2; border-radius:50%;"></span> Ocupado
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="width:12px; height:12px; background:#a5d6a7; border-radius:50%;"></span> Pagado
+                    </div>
                 </div>
             </div>
         </div>
-      <div class="controls-section">
-        <select class="control-select" id="filtroDeporte">
-          <option value="">Todos los deportes</option>
-          <option value="futbol">Fútbol</option>
-          <option value="futbolito">Futbolito</option>
-          <option value="futsal">Futsal</option>
-          <option value="tenis">Tenis</option>
-          <option value="padel">Pádel</option>
-          <option value="voleyball">Voleyball</option>
-          <option value="otro">Quincho/Otro</option>
-        </select>
-        
-        <select class="control-select" id="filtroEstado">
-            <option value="">Todos los estados</option>
-            <option value="disponible">Disponible</option>
-            <option value="reservada">Reservadas (Futuras)</option> <!-- Texto aclaratorio -->
-            <option value="pagadas">Pagadas</option>
-            <option value="parcial">Pago Parcial</option>
-            <option value="ocupada">Ocupadas</option>
-            <option value="cancelada">Canceladas</option>
-
-        </select>
-        
-        <select class="control-select" id="filtroFecha">
-          <option value="">Últimos 30 días</option>
-          <option value="hoy">Hoy</option>
-          <option value="mañana">Mañana</option>
-          <option value="semana">Esta semana</option>
-          <option value="mes">Este mes</option>
-        </select>
-      </div>
-      
-      <div class="reservas-grid" id="reservasGrid">
-        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
-          Cargando disponibilidad...
-        </div>
-      </div>
     </div>
     
     <!-- === SUBMODAL CENTRAL DE DETALLE DE RESERVA === -->
@@ -2042,14 +2096,6 @@ $recinto = $stmt->fetch();
         }
     }
 
-    // Navegación de días
-    function cambiarDiaPlanilla(dias) {
-        const fecha = new Date(fechaPlanillaActual);
-        fecha.setDate(fecha.getDate() + dias);
-        fechaPlanillaActual = fecha.toISOString().split('T')[0];
-        cargarPlanillaReservas();
-    }
-
     // Cargar datos y renderizar
     async function cargarPlanillaReservas() {
         if (!deporteSeleccionadoPlanilla) return;
@@ -2102,7 +2148,7 @@ $recinto = $stmt->fetch();
                     const reserva = data.reservas[key];
                     
                     let cellContent = '';
-                    let cellStyle = 'background:#e0e0e0; color:#666; text-align:center; font-size:0.75rem;'; // Disponible (Gris)
+                    let cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; border:1px solid #fff;`;
                     let colSpan = 1;
                     
                     if (reserva) {
@@ -2123,7 +2169,7 @@ $recinto = $stmt->fetch();
                                     <div style="font-size:0.65rem; opacity:0.8;">${reserva.estado_pago || 'Ocupado'}</div>`;
                                     
                         // Evento click
-                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva})"`;
+                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva}); event.stopPropagation();" `;
                     } else {
                         // Disponible: Celda vacía
                         cellContent = '';
@@ -2139,28 +2185,78 @@ $recinto = $stmt->fetch();
         table.innerHTML = html;
     }
 
-    // Función auxiliar para abrir detalle desde la planilla
+    // === LÓGICA DE FECHA PLANILLA ===
+    const fechaPlanillaInput = document.getElementById('fechaPlanillaInput');
+
+    function irAHoyPlanilla() {
+        const hoy = new Date().toISOString().split('T')[0];
+        fechaPlanillaInput.value = hoy;
+        fechaPlanillaActual = hoy;
+        cargarPlanillaReservas();
+    }
+
+    function cambiarDiaPlanilla(dias) {
+        const fecha = new Date(fechaPlanillaActual);
+        fecha.setDate(fecha.getDate() + dias);
+        fechaPlanillaActual = fecha.toISOString().split('T')[0];
+        fechaPlanillaInput.value = fechaPlanillaActual; // Sincronizar input
+        cargarPlanillaReservas();
+    }
+
+    // Escuchar cambios en el input de fecha nativo
+    if (fechaPlanillaInput) {
+        fechaPlanillaInput.addEventListener('change', function() {
+            fechaPlanillaActual = this.value;
+            cargarPlanillaReservas();
+        });
+    }
+
+    // === FUNCIÓN PARA ABRIR DETALLE DESDE PLANILLA (CORREGIDA) ===
     function abrirDetalleDesdePlanilla(idReserva) {
-        // Buscamos la reserva en los datos cargados actuales o hacemos fetch directo
-        // Para simplificar, reutilizamos la lógica de selectReserva si tenemos los datos, 
-        // o llamamos directamente a la API de detalle.
+        console.log("️ Click en reserva ID:", idReserva);
         
-        // Opción rápida: Simular click en una ficha si existiera, o cargar detalle directo
-        // Aquí asumimos que quieres abrir el submodal que ya tienes.
-        // Necesitas adaptar tu función selectReserva o crear una nueva que acepte ID directo.
+        if (!idReserva) {
+            console.error("ID de reserva inválido");
+            return;
+        }
+
+        // Opción A: Si tienes los datos cargados en una variable global, úsalos
+        // Opción B (Recomendada): Hacer fetch directo al detalle
         
-        // Ejemplo simple:
-        fetch(`../api/canchaboard.php?action=get_detalle_reserva`, {
+        // Usamos la misma lógica que tu submodal actual pero forzando el ID
+        fetch('../api/canchaboard.php?action=get_detalle_reserva', {
             method: 'POST',
-            body: new URLSearchParams({ id_disponibilidad: 0, id_reserva: idReserva }) // Ajusta según tu API
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `id_disponibilidad=0&id_reserva=${idReserva}` 
+            // Nota: Tu API espera id_disponibilidad, pero si solo tenemos id_reserva, 
+            // asegúrate que tu backend pueda buscar solo por id_reserva o pasa un dummy.
+            // Si tu backend falla con 0, intenta buscar la disponibilidad primero o ajusta la API.
         })
-        .then(r => r.json())
-        .then(data => {
-            if(data.error) throw new Error(data.error);
-            mostrarDetalleReserva(data); // Tu función existente
-            document.getElementById('modalDetalleReserva').style.display = 'flex'; // Tu modal
+        .then(response => response.json())
+        .then(detalle => {
+            if (detalle.error) {
+                throw new Error(detalle.error);
+            }
+            console.log("✅ Detalle recibido:", detalle);
+            
+            // Llamar a tu función existente que renderiza el modal
+            if (typeof mostrarDetalleReserva === 'function') {
+                mostrarDetalleReserva(detalle);
+                // Asegurar que el modal se muestre
+                const modal = document.getElementById('modalDetalleReserva');
+                if (modal) {
+                    modal.style.display = 'flex';
+                } else {
+                    console.error("Modal no encontrado");
+                }
+            } else {
+                console.error("Función mostrarDetalleReserva no definida");
+            }
         })
-        .catch(err => alert('Error: ' + err.message));
+        .catch(err => {
+            console.error("Error al abrir detalle:", err);
+            alert("Error al cargar detalles: " + err.message);
+        });
     }
   </script>
 </body>
