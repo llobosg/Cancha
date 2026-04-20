@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE cuotas 
                     SET estado = 'en_revision', 
                         fecha_pago = ?, 
-                        comentario = CONCAT(IFNULL(comentario, ''), '\n[Usuario]: ', ?),
+                        comentario = CONCAT(IFNULL(comentario), ''), ' ', ?),
                         adjunto = ?,
                         monto = ?  -- ✅ AGREGADO: Guardamos el monto que el usuario ingresó
                     WHERE id_cuota = ?

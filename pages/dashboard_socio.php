@@ -1033,6 +1033,9 @@
                                 <th>Cancha</th>
                                 <th>Costo</th>
                                 <th>Nombre</th>
+                                <?php if($filtro == 'cuotas') { ?>
+                                    <th>Tipo</th>
+                                <?php } ?>
                                 <th>Puesto</th> 
                                 <th>Monto</th>
                                 <th>Pago Realizado</th>
