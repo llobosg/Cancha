@@ -862,7 +862,7 @@ $recinto = $stmt->fetch();
             return;
         }
         
-        // Agrupar por fecha para mejor visualización
+        // Agrupar por fecha
         const reservasPorFecha = {};
         reservas.forEach(reserva => {
             const fecha = reserva.fecha;
@@ -893,20 +893,88 @@ $recinto = $stmt->fetch();
                 
                 const iconos = {
                     'futbol': '⚽', 'futbolito': '⚽', 'futsal': '⚽',
-                    'tenis': '🎾', 'padel': '🎾', 'voleyball': '🏐',
+                    'tenis': '', 'padel': '🎾', 'voleyball': '',
                     'otro': '🏟️'
                 };
                 
-                const estadoClass = getEstadoClass(reserva.estado_disponibilidad || 'disponible');
+                // Estado base (Disponible, Reservada, etc.)
+                const estadoBase = reserva.estado_disponibilidad || (reserva.id_reserva ? 'reservada' : 'disponible');
+                const estadoClass = getEstadoClass(estadoBase);
+                const estadoTexto = getEstadoTexto(estadoBase);
                 
+                // === NUEVA LÓGICA: ESTADO DE PAGO Y ABONOS ===
+                let badgePagoHTML = '';
+                let abonoHTML = '';
+                
+                // Solo si es una reserva real y tiene estado de pago
+                if (reserva.id_reserva && reserva.estado_pago) {
+                    let colorBadge = '#6c757d'; // Gris
+                    let textoBadge = reserva.estado_pago.toUpperCase();
+                    let colorTextoBadge = '#fff';
+                    
+                    if (reserva.estado_pago === 'pagado') { 
+                        colorBadge = '#28a745'; // Verde
+                    } else if (reserva.estado_pago === 'parcial') { 
+                        colorBadge = '#ffc107'; // Amarillo
+                        colorTextoBadge = '#000'; // Texto negro para contraste
+                    } else if (reserva.estado_pago === 'pendiente') { 
+                        colorBadge = '#dc3545'; // Rojo
+                    }
+                    
+                    // Badge pequeño al lado del estado
+                    badgePagoHTML = `
+                        <span style="
+                            display: inline-block; 
+                            margin-left: 6px; 
+                            padding: 2px 6px; 
+                            border-radius: 4px; 
+                            background: ${colorBadge}; 
+                            color: ${colorTextoBadge}; 
+                            font-size: 0.7rem; 
+                            font-weight: bold;
+                            vertical-align: middle;
+                            border: 1px solid rgba(0,0,0,0.1);
+                        ">
+                            ${textoBadge}
+                        </span>
+                    `;
+
+                    // Fila de Abono si hay dinero
+                    if (reserva.monto_recaudacion && parseFloat(reserva.monto_recaudacion) > 0) {
+                        abonoHTML = `
+                            <div style="
+                                margin-top: 8px; 
+                                padding-top: 6px; 
+                                border-top: 1px dashed rgba(255,255,255,0.4); 
+                                font-size: 0.8rem; 
+                                display: flex; 
+                                justify-content: space-between; 
+                                align-items: center;
+                                color: #e0e0e0;
+                            ">
+                                <span>💰 Abono:</span>
+                                <span style="font-weight: bold; color: #4ECDC4;">
+                                    $${parseInt(reserva.monto_recaudacion).toLocaleString()}
+                                </span>
+                            </div>
+                        `;
+                    }
+                }
+                // ==========================================
+
                 card.innerHTML = `
-                    <div class="deporte-icon">${iconos[reserva.id_deporte] || '🏟️'}</div>
-                    <div class="cancha-nombre">${reserva.nro_cancha || 'Sin nombre'}</div>
-                    <div class="fecha-hora">
+                    <div class="deporte-icon" style="font-size: 1.5rem; margin-bottom: 0.5rem;">${iconos[reserva.id_deporte] || '️'}</div>
+                    <div class="cancha-nombre" style="font-weight:bold; font-size:1rem; margin-bottom:0.3rem; color:white;">${reserva.nro_cancha || 'Cancha'}</div>
+                    <div class="fecha-hora" style="font-size:0.9rem; opacity:0.9; margin-bottom:0.5rem;">
                         ${formatTimeDisplay(reserva.hora_inicio)}<br>
-                        ${getEstadoTexto(reserva.estado_disponibilidad || 'disponible')}
+                        <span style="display:flex; align-items:center;">
+                            ${estadoTexto}
+                            ${badgePagoHTML}
+                        </span>
                     </div>
-                    <div class="estado-indicator ${estadoClass}"></div>
+                    <div class="estado-indicator ${estadoClass}" style="width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px;"></div>
+                    ${reserva.nombre_responsable ? `<div style="font-size:0.8rem; color:#aaa; margin-top:4px;">👤 ${reserva.nombre_responsable}</div>` : ''}
+                    ${abonoHTML}
                 `;
                 
                 grid.appendChild(card);

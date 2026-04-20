@@ -378,7 +378,7 @@ function getDetalleReserva($pdo, $id_disponibilidad, $id_recinto) {
     $stmt = $pdo->prepare("
         SELECT dc.id_disponibilidad, c.nro_cancha, c.nombre_cancha, c.id_deporte,
                dc.fecha, dc.hora_inicio, dc.hora_fin, dc.estado as estado_disponibilidad,
-               r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
+               r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total, r.monto_recaudacion,
                r.tipo_reserva, r.id_convenio, r.notas,
                cl.nombre as nombre_club, cl.logo as logo_club,
                s.alias as nombre_responsable, s.email as email_responsable,
