@@ -17,13 +17,16 @@ $stmt = $pdo->prepare("
         s.nombre AS socio_nombre, s.email AS socio_email, s.alias,
         sc.id_club, cl.nombre AS club_nombre, cl.email_responsable,
         r.fecha AS fecha_origen, r.monto_total, r.monto_recaudacion, r.tipo_pago as tipo_pago_defecto, r.mes, r.valor_mes,
-        rd.nombre AS detalle_origen
+        -- Obtenemos el nombre de la cancha directamente si es reserva, o el tipo de evento si es evento
+        COALESCE(ca.nombre_cancha, te.tipoevento, 'Cuota General') AS detalle_origen
     FROM cuotas c
     INNER JOIN socios s ON c.id_socio = s.id_socio
     INNER JOIN socio_club sc ON s.id_socio = sc.id_socio AND sc.estado = 'activo'
     INNER JOIN clubs cl ON sc.id_club = cl.id_club
     LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-    LEFT JOIN recintos_deportivos rd ON r.id_cancha = (SELECT id_cancha FROM canchas WHERE id_recinto = cl.id_recinto LIMIT 1) -- Ajuste genérico si no hay cancha directa
+    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+    LEFT JOIN tipoeventos te ON e.id_tipoevento = te.id_tipoevento
     WHERE c.id_cuota = ? AND c.id_socio = ?
     LIMIT 1
 ");
