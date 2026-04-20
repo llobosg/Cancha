@@ -275,28 +275,47 @@
     $tiene_torneo = !empty($torneos_americanos);
     $torneo_actual = $torneos_americanos[0] ?? null;
 
-    // === BLOQUE PRÓXIMO EVENTO - FIX DEFINITIVO ===
-    error_log("🚀 [INICIO] Bloque Próximo Evento");
-    $id_socio = $_SESSION['id_socio'] ?? 0;
+    // === BLOQUE PRÓXIMO EVENTO - LÓGICA CORREGIDA PARA CLUB E INDIVIDUAL ===
+    error_log("🚀 [INICIO] Bloque Próximo Evento - Socio ID: " . ($id_socio ?? 'NULO'));
 
-    // NO sobrescribir club_id innecesariamente
+    $id_socio = $_SESSION['id_socio'] ?? 0;
     $club_id_actual = $modo_individual ? null : ($_SESSION['club_id'] ?? null);
 
-    // Construcción de query CORRECTA
     $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
     $params = [];
-    // 🔥 FIX: no forzar IS NULL
+
+    // LÓGICA DE FILTRADO INTELIGENTE
     if ($club_id_actual !== null) {
-        $where_parts[] = "r.id_club = ?";
+        // === MODO CLUB ===
+        // Buscar reservas que cumplan UNA de estas dos condiciones:
+        // A) Es una reserva personal del socio dentro del club (id_socio = X AND id_club = Y)
+        // B) Es una reserva grupal del club (id_club = Y), sin importar quién la creó, siempre que el socio pertenezca al club.
+        
+        // Usamos paréntesis para agrupar la lógica OR correctamente
+        $where_parts[] = "(
+            (r.id_club = ? AND r.id_socio = ?) 
+            OR 
+            (r.id_club = ?)
+        )";
+        
+        // Parámetros: [club_id, socio_id, club_id]
         $params[] = $club_id_actual;
+        $params[] = $id_socio;
+        $params[] = $club_id_actual;
+        
+        error_log(" [DEBUG] Modo Club: Buscando reservas del club $club_id_actual (personales o grupales)");
+
+    } else {
+        // === MODO INDIVIDUAL ===
+        // Buscar solo reservas personales donde NO haya club asociado
+        $where_parts[] = "r.id_club IS NULL AND r.id_socio = ?";
+        $params[] = $id_socio;
+        
+        error_log("🔍 [DEBUG] Modo Individual: Buscando reservas personales del socio $id_socio");
     }
 
-    // Siempre filtrar por socio
-    $where_parts[] = "r.id_socio = ?";
-    $params[] = $id_socio;
-
     $sql = "
-         SELECT 
+        SELECT 
             r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, 
             r.jugadores_esperados, r.estado, r.monto_recaudacion,
             c.nombre_cancha, c.id_deporte,
@@ -308,14 +327,19 @@
         LIMIT 1
     ";
 
-    error_log("🔍 [DEBUG] SQL REAL: " . $sql);
-    error_log("🔍 [DEBUG] PARAMS: " . print_r($params, true));
+    error_log(" [DEBUG] SQL REAL: " . $sql);
+    error_log(" [DEBUG] PARAMS: " . print_r($params, true));
 
     try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $proximo_evento = $stmt->fetch();
-        error_log("✅ [QUERY] Resultado: " . ($proximo_evento ? 'ENCONTRADO ID:' . $proximo_evento['id_reserva'] : 'VACÍO'));
+        
+        if ($proximo_evento) {
+            error_log("✅ [QUERY] Resultado: ENCONTRADO ID:" . $proximo_evento['id_reserva'] . " (Fecha: " . $proximo_evento['fecha'] . ")");
+        } else {
+            error_log("⚠️ [QUERY] Resultado: VACÍO (No hay reservas futuras para este criterio)");
+        }
     } catch (Exception $e) {
         error_log("❌ [QUERY] Error: " . $e->getMessage());
         $proximo_evento = null;
