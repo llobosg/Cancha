@@ -317,7 +317,7 @@
     $sql = "
         SELECT 
             r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, 
-            r.jugadores_esperados, r.estado, r.monto_recaudacion,
+            r.jugadores_esperados, r.estado, r.monto_recaudacion, r.valor_mes,
             c.nombre_cancha, c.id_deporte,
             (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
         FROM reservas r
