@@ -1033,7 +1033,7 @@
                                 <th>Cancha</th>
                                 <th>Costo</th>
                                 <th>Nombre</th>
-                                <th>Pago</th> 
+                                <th>Puesto</th> 
                                 <th>Monto</th>
                                 <th>Pago Realizado</th>
                                 <th>Comentario</th>
