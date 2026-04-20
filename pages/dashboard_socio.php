@@ -849,7 +849,7 @@
                             <div class="stat-card-content">
                                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                                    <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
+                                    <!-- <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div> --->
                                     <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
                                     <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
                                         <strong>💰 Cuota:</strong> $<?= number_format((int)($proximo_evento['monto_recaudacion'] ?? 0), 0, ',', '.') ?> • <strong>📅 Mes:</strong> $<?= number_format($valor_mes, 0, ',', '.') ?><br>
