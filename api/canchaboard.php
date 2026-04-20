@@ -44,6 +44,18 @@ try {
             error_log("🔍 [API] Filtrando con: " . print_r($filtros, true));
             echo json_encode(getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros));
             break;
+
+        case 'get_planilla_reservas':
+            $fecha = $_GET['fecha'] ?? date('Y-m-d');
+            $deporte = $_GET['deporte'] ?? ''; // Ej: 'padel'
+            
+            if (!$deporte) {
+                echo json_encode(['error' => 'Deporte requerido']);
+                exit;
+            }
+            
+            echo json_encode(getPlanillaReservas($pdo, $id_recinto, $fecha, $deporte));
+            break;
             
         default:
             throw new Exception('Acción no válida: ' . $action);
@@ -395,5 +407,91 @@ function getDetalleReserva($pdo, $id_disponibilidad, $id_recinto) {
     
     if (!$detalle) throw new Exception('Reserva no encontrada');
     return $detalle;
+}
+
+function getPlanillaReservas($pdo, $id_recinto, $fecha, $deporte) {
+    // 1. Obtener Canchas Activas y Operativas del Deporte seleccionado
+    $stmt_canchas = $pdo->prepare("
+        SELECT id_cancha, nro_cancha, nombre_cancha, hora_inicio, hora_fin, duracion_bloque
+        FROM canchas
+        WHERE id_recinto = ? 
+        AND id_deporte = ? 
+        AND activa = 1 
+        AND estado = 'Operativa'
+        ORDER BY nro_cancha ASC
+    ");
+    $stmt_canchas->execute([$id_recinto, $deporte]);
+    $canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (empty($canchas)) {
+        return ['canchas' => [], 'slots' => [], 'reservas' => []];
+    }
+    
+    // 2. Determinar rango horario global (mínimo inicio, máximo fin de todas las canchas)
+    $min_hora = null;
+    $max_hora = null;
+    
+    foreach ($canchas as $c) {
+        $inicio = strtotime("1970-01-01 {$c['hora_inicio']}");
+        $fin = strtotime("1970-01-01 {$c['hora_fin']}");
+        
+        if ($min_hora === null || $inicio < $min_hora) $min_hora = $inicio;
+        if ($max_hora === null || $fin > $max_hora) $max_hora = $fin;
+    }
+    
+    // Generar slots de 30 minutos
+    $slots = [];
+    $current_time = $min_hora;
+    while ($current_time < $max_hora) {
+        $next_time = $current_time + 1800; // +30 min
+        
+        // Formato para etiqueta: "07:00"
+        $label = date('H:i', $current_time);
+        
+        $slots[] = [
+            'start_ts' => $current_time,
+            'end_ts' => $next_time,
+            'label' => $label,
+            'is_label_row' => true // Esta fila muestra la hora
+        ];
+        
+        $current_time = $next_time;
+    }
+    
+    // 3. Obtener Reservas del día seleccionado para estas canchas
+    // Traemos todos los datos necesarios para pintar la celda
+    $cancha_ids = array_column($canchas, 'id_cancha');
+    $placeholders = implode(',', array_fill(0, count($cancha_ids), '?'));
+    
+    $stmt_reservas = $pdo->prepare("
+        SELECT r.id_reserva, r.id_cancha, r.hora_inicio, r.hora_fin, r.estado, r.estado_pago, 
+               r.monto_recaudacion, r.nombre_cliente, r.telefono_cliente, r.notas,
+               s.alias as nombre_socio, cl.nombre as nombre_club
+        FROM reservas r
+        LEFT JOIN socios s ON r.id_socio = s.id_socio
+        LEFT JOIN clubs cl ON r.id_club = cl.id_club
+        WHERE r.fecha = ? 
+        AND r.id_cancha IN ($placeholders)
+        AND r.estado != 'cancelada'
+        ORDER BY r.hora_inicio
+    ");
+    
+    $params = array_merge([$fecha], $cancha_ids);
+    $stmt_reservas->execute($params);
+    $reservas_raw = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Mapear reservas por cancha y hora para fácil acceso
+    $reservas_map = [];
+    foreach ($reservas_raw as $res) {
+        $key = $res['id_cancha'] . '_' . date('H:i', strtotime("1970-01-01 {$res['hora_inicio']}"));
+        $reservas_map[$key] = $res;
+    }
+    
+    return [
+        'canchas' => $canchas,
+        'slots' => $slots,
+        'reservas' => $reservas_map, // Mapa rápido: 'idCancha_Hora' => datos
+        'fecha' => $fecha
+    ];
 }
 ?>

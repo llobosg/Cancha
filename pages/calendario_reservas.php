@@ -673,6 +673,37 @@ $recinto = $stmt->fetch();
     }
 
     .estado-pagado { background: #607D8B !important; } /* Gris azulado para "Pagado" */
+
+    /* Estilos específicos para la Planilla */
+    .planilla-table th, .planilla-table td {
+        border: 1px solid #ddd;
+        text-align: center;
+        user-select: none;
+    }
+
+    .planilla-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .planilla-table td:first-child, .planilla-table th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 5; /* Mayor que las celdas normales, menor que el corner */
+        background: #f8f9fa;
+        border-right: 2px solid #ccc;
+    }
+
+    .planilla-table thead th:first-child {
+        z-index: 20; /* Esquina superior izquierda */
+        background: #071289;
+    }
+
+    /* Hover effect */
+    .planilla-table tbody td:hover {
+        filter: brightness(0.95);
+    }
 </style>
 </head>
 <body>
@@ -689,6 +720,49 @@ $recinto = $stmt->fetch();
   <div class="dashboard-container" style="margin-top: 70px;">
     <div>
       <div class="controls-section">
+        <!-- Filtro de Vista: Planilla vs Fichas -->
+        <div style="display:flex; justify-content:center; margin-bottom:1rem; gap:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:8px; width:fit-content; margin-left:auto; margin-right:auto;">
+            <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold;">
+                <input type="radio" name="vistaCalendario" value="fichas" checked onchange="cambiarVistaCalendario('fichas')" style="margin-right:0.5rem;">
+                Fichas
+            </label>
+            <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold;">
+                <input type="radio" name="vistaCalendario" value="planilla" onchange="cambiarVistaCalendario('planilla')" style="margin-right:0.5rem;">
+                Planilla
+            </label>
+        </div>
+
+        <!-- Contenedores -->
+        <div id="vistaFichas">
+            <!-- Aquí va tu grid actual de fichas -->
+            <div id="reservasGrid" class="reservas-grid"></div>
+        </div>
+
+        <div id="vistaPlanilla" style="display:none;">
+            <!-- Nuevos controles de fecha para planilla -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; color:white;">
+                <button onclick="cambiarDiaPlanilla(-1)" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">&lt; Anterior</button>
+                <h3 id="fechaPlanillaTitulo" style="margin:0; text-transform:capitalize;"></h3>
+                <button onclick="cambiarDiaPlanilla(1)" style="background:#071289; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">Siguiente &gt;</button>
+            </div>
+            
+            <!-- Tabla Planilla -->
+            <div style="overflow-x:auto; background:white; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+                <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                    <!-- Se llena con JS -->
+                </table>
+            </div>
+            
+            <!-- Leyenda -->
+            <div style="margin-top:1rem; display:flex; gap:1.5rem; color:white; justify-content:center; font-size:0.9rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="width:12px; height:12px; background:#e0e0e0; border-radius:50%; display:inline-block;"></span> Disponible
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="width:12px; height:12px; background:#ffcdd2; border-radius:50%; display:inline-block;"></span> Ocupado / Reservado
+                </div>
+            </div>
+        </div>
         <select class="control-select" id="filtroDeporte">
           <option value="">Todos los deportes</option>
           <option value="futbol">Fútbol</option>
@@ -1921,6 +1995,148 @@ $recinto = $stmt->fetch();
             alert("❌ Error de conexión al procesar pago");
         }
     });
+
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    let deporteSeleccionadoPlanilla = '';
+
+    // Cambiar entre vistas
+    function cambiarVistaCalendario(vista) {
+        document.getElementById('vistaFichas').style.display = vista === 'fichas' ? 'block' : 'none';
+        document.getElementById('vistaPlanilla').style.display = vista === 'planilla' ? 'block' : 'none';
+        
+        if (vista === 'planilla') {
+            // Obtener deporte actual del filtro
+            deporteSeleccionadoPlanilla = document.getElementById('filtroDeporte').value;
+            if (!deporteSeleccionadoPlanilla) {
+                alert('Por favor selecciona un deporte primero para ver la planilla.');
+                document.querySelector('input[value="fichas"]').checked = true;
+                cambiarVistaCalendario('fichas');
+                return;
+            }
+            cargarPlanillaReservas();
+        }
+    }
+
+    // Navegación de días
+    function cambiarDiaPlanilla(dias) {
+        const fecha = new Date(fechaPlanillaActual);
+        fecha.setDate(fecha.getDate() + dias);
+        fechaPlanillaActual = fecha.toISOString().split('T')[0];
+        cargarPlanillaReservas();
+    }
+
+    // Cargar datos y renderizar
+    async function cargarPlanillaReservas() {
+        if (!deporteSeleccionadoPlanilla) return;
+        
+        const titulo = document.getElementById('fechaPlanillaTitulo');
+        const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        titulo.textContent = new Date(fechaPlanillaActual).toLocaleDateString('es-ES', opcionesFecha);
+        
+        try {
+            const response = await fetch(`../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${deporteSeleccionadoPlanilla}`);
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            renderizarPlanilla(data);
+        } catch (error) {
+            console.error(error);
+            alert('Error al cargar la planilla');
+        }
+    }
+
+    function renderizarPlanilla(data) {
+        const table = document.getElementById('tablaPlanilla');
+        if (!data.canchas.length) {
+            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas para este deporte.</td></tr>';
+            return;
+        }
+        
+        let html = '<thead><tr><th style="background:#071289; color:white; padding:10px; position:sticky; left:0; z-index:2; min-width:80px;">Horario</th>';
+        
+        // Encabezados de Columnas (Canchas)
+        data.canchas.forEach(c => {
+            html += `<th style="background:#071289; color:white; padding:10px; border-left:1px solid #fff; min-width:120px;">
+                        ${c.nombre_cancha || 'Cancha ' + c.nro_cancha}
+                    </th>`;
+        });
+        html += '</tr></thead><tbody>';
+        
+        // Filas de Horarios
+        data.slots.forEach(slot => {
+            if (slot.is_label_row) {
+                // Fila de etiqueta de hora
+                html += `<tr>
+                            <td style="background:#f0f0f0; font-weight:bold; text-align:center; padding:5px; border-bottom:1px solid #ccc; position:sticky; left:0; z-index:1;">
+                                ${slot.label}
+                            </td>`;
+                
+                data.canchas.forEach(cancha => {
+                    const key = `${cancha.id_cancha}_${slot.label}`;
+                    const reserva = data.reservas[key];
+                    
+                    let cellContent = '';
+                    let cellStyle = 'background:#e0e0e0; color:#666; text-align:center; font-size:0.75rem;'; // Disponible (Gris)
+                    let colSpan = 1;
+                    
+                    if (reserva) {
+                        // Está ocupado
+                        // Calcular duración en slots de 30min para hacer rowspan si es necesario
+                        // Simplificación: Pintamos solo la celda inicial y marcamos estilo
+                        
+                        let bgClass = '';
+                        if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7'; // Verde claro
+                        else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d'; // Amarillo claro
+                        else bgClass = '#ffcdd2'; // Rojo claro (Pendiente/Ocupado)
+                        
+                        cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; border:1px solid #fff;`;
+                        
+                        // Contenido de la celda
+                        const nombre = reserva.nombre_socio || reserva.nombre_cliente || 'Reserva';
+                        cellContent = `<div style="font-size:0.7rem;">${nombre}</div>
+                                    <div style="font-size:0.65rem; opacity:0.8;">${reserva.estado_pago || 'Ocupado'}</div>`;
+                                    
+                        // Evento click
+                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva})"`;
+                    } else {
+                        // Disponible: Celda vacía
+                        cellContent = '';
+                    }
+                    
+                    html += `<td style="${cellStyle} padding:8px; height:40px; vertical-align:middle; border-right:1px solid #ddd;">${cellContent}</td>`;
+                });
+                html += '</tr>';
+            }
+        });
+        
+        html += '</tbody>';
+        table.innerHTML = html;
+    }
+
+    // Función auxiliar para abrir detalle desde la planilla
+    function abrirDetalleDesdePlanilla(idReserva) {
+        // Buscamos la reserva en los datos cargados actuales o hacemos fetch directo
+        // Para simplificar, reutilizamos la lógica de selectReserva si tenemos los datos, 
+        // o llamamos directamente a la API de detalle.
+        
+        // Opción rápida: Simular click en una ficha si existiera, o cargar detalle directo
+        // Aquí asumimos que quieres abrir el submodal que ya tienes.
+        // Necesitas adaptar tu función selectReserva o crear una nueva que acepte ID directo.
+        
+        // Ejemplo simple:
+        fetch(`../api/canchaboard.php?action=get_detalle_reserva`, {
+            method: 'POST',
+            body: new URLSearchParams({ id_disponibilidad: 0, id_reserva: idReserva }) // Ajusta según tu API
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.error) throw new Error(data.error);
+            mostrarDetalleReserva(data); // Tu función existente
+            document.getElementById('modalDetalleReserva').style.display = 'flex'; // Tu modal
+        })
+        .catch(err => alert('Error: ' + err.message));
+    }
   </script>
 </body>
 </html>
