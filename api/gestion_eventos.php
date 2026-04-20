@@ -25,19 +25,13 @@ try {
 
     // Determinar el socio objetivo
     if (isset($_POST['id_socio_objetivo'])) {
-        // Verificar que el responsable puede eliminar a otro socio
-        $stmt_check_responsable = $pdo->prepare("
-            SELECT es_responsable 
-            FROM socios 
-            WHERE id_socio = ? AND id_club = ?
-        ");
+        $stmt_check_responsable = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
         $stmt_check_responsable->execute([$_SESSION['id_socio'], $id_club]);
         $es_responsable = $stmt_check_responsable->fetch()['es_responsable'] ?? 0;
         
         if (!$es_responsable) {
             throw new Exception('Solo el responsable puede dar de baja a otros socios');
         }
-        
         $id_socio = (int)$_POST['id_socio_objetivo'];
     } else {
         $id_socio = $_SESSION['id_socio'];
@@ -48,7 +42,7 @@ try {
     }
 
     $id_actividad = (int)($_POST['id_actividad'] ?? 0);
-    $tipo_actividad = $_POST['tipo_actividad'] ?? 'reserva'; // 'reserva' o 'evento'
+    $tipo_actividad = $_POST['tipo_actividad'] ?? 'reserva';
     $deporte = $_POST['deporte'] ?? '';
     $players_max = (int)($_POST['players_max'] ?? 0);
     $monto_total = (float)($_POST['monto_total'] ?? 0);
@@ -59,8 +53,9 @@ try {
 
     // === VALIDAR ACTIVIDAD SEGÚN TIPO ===
     if ($tipo_actividad === 'reserva') {
+        // ✅ MODIFICADO: Traemos también valor_mes para la validación
         $stmt = $pdo->prepare("
-            SELECT r.id_reserva as id, r.fecha, r.hora_inicio, r.id_cancha, r.monto_total
+            SELECT r.id_reserva as id, r.fecha, r.hora_inicio, r.id_cancha, r.monto_total, r.valor_mes
             FROM reservas r 
             WHERE r.id_reserva = ? AND r.id_club = ? AND r.estado = 'confirmada'
         ");
@@ -68,6 +63,7 @@ try {
         $actividad = $stmt->fetch();
         $monto = $actividad['monto_total'] ?? 0;
         $fecha_evento = $actividad['fecha'] ?? null;
+        $valor_mes_reserva = (float)($actividad['valor_mes'] ?? 0); // Guardamos el valor mes
     } else {
         $stmt = $pdo->prepare("
             SELECT e.id_evento as id, e.fecha, e.hora, e.valor_cuota
@@ -78,6 +74,7 @@ try {
         $actividad = $stmt->fetch();
         $monto = $actividad['valor_cuota'] ?? 0;
         $fecha_evento = $actividad['fecha'] ?? null;
+        $valor_mes_reserva = 0; // Eventos no tienen valor_mes por ahora
     }
 
     if (!$actividad) {
@@ -90,17 +87,15 @@ try {
     $ya_inscrito = $stmt_check->fetch();
 
     if ($action === 'bajarse') {
-        // Dar de baja en inscritos
         $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
             ->execute([$id_actividad, $id_socio, $tipo_actividad]);
         
-        // Eliminar cuota asociada
         $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
             ->execute([$id_actividad, $id_socio, $tipo_actividad]);
         
         $mensaje = "✅ Te has dado de baja del evento";
     } else {
-        // === VALIDAR CUPO (solo deportes específicos) ===
+        // === VALIDAR CUPO ===
         if ($tipo_actividad === 'reserva' && in_array($deporte, ['futbolito', 'futsal', 'padel', 'tenis'])) {
             $stmt_count = $pdo->prepare("SELECT COUNT(*) as total FROM inscritos WHERE id_evento = ? AND tipo_actividad = ?");
             $stmt_count->execute([$id_actividad, $tipo_actividad]);
@@ -113,45 +108,92 @@ try {
         // === OBTENER POSICIÓN Y EQUIPO POR DEFECTO ===
         $posicion_default = null;
         $equipo_default = 'blanco';
-
-        // Determinar el monto de la cuota
         $monto_cuota = 0;
 
         if ($tipo_actividad === 'reserva') {
-            // Cargar datos completos de la reserva
-            $stmt_res = $pdo->prepare("
-                SELECT 
-                    monto_total, 
-                    monto_recaudacion, 
-                    jugadores_esperados 
-                FROM reservas 
-                WHERE id_reserva = ?
-            ");
+            $stmt_res = $pdo->prepare("SELECT monto_total, monto_recaudacion, jugadores_esperados FROM reservas WHERE id_reserva = ?");
             $stmt_res->execute([$id_actividad]);
             $reserva = $stmt_res->fetch();
 
             if ($reserva['monto_recaudacion'] !== null) {
-                // El campo "monto_recaudacion" YA ES la cuota por socio
                 $monto_cuota = (float)$reserva['monto_recaudacion'];
             } else {
                 $monto_cuota = (float)($reserva['monto_total'] ?? 0);
             }
         } elseif ($tipo_actividad === 'evento') {
-            // Para eventos sociales
             $stmt_evt = $pdo->prepare("SELECT valor_cuota FROM eventos WHERE id_evento = ?");
             $stmt_evt->execute([$id_actividad]);
             $evento = $stmt_evt->fetch();
             $monto_cuota = (float)($evento['valor_cuota'] ?? 0);
         }
 
-        $lleva_cerveza = $_POST['lleva_cerveza'] ?? '0';
+        // =================================================================
+        // === NUEVA LÓGICA: VALIDACIÓN DE PAGO MENSUAL ANTES DE GENERAR CUOTA ===
+        // =================================================================
+        $generar_cuota = true;
+        $mensaje_bloqueo = '';
 
+        if ($tipo_actividad === 'reserva' && $valor_mes_reserva > 0 && $fecha_evento) {
+            // 1. Obtener el mes de la reserva actual (ej: 2026-04)
+            $mes_actual = date('Y-m', strtotime($fecha_evento));
+            
+            // 2. Buscar si existe una cuota PAGADA o EN REVISIÓN para este socio, en este club, para este MES, con monto >= valor_mes
+            // Usamos una subconsulta para encontrar todas las reservas del mismo mes en el mismo club
+            $stmt_validar_pago = $pdo->prepare("
+                SELECT c.id_cuota, c.monto, c.estado
+                FROM cuotas c
+                JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                WHERE c.id_socio = ?
+                AND r.id_club = ?
+                AND DATE_FORMAT(r.fecha, '%Y-%m') = ?
+                AND c.estado IN ('en_revision', 'pagado')
+                AND c.monto >= ?
+                LIMIT 1
+            ");
+            
+            $stmt_validar_pago->execute([
+                $id_socio, 
+                $id_club, 
+                $mes_actual, 
+                $valor_mes_reserva
+            ]);
+            
+            $pago_mensual_existente = $stmt_validar_pago->fetch();
+            
+            if ($pago_mensual_existente) {
+                // ✅ BLOQUEAR: Ya pagó el mes
+                $generar_cuota = false;
+                $mensaje_bloqueo = 'NO_CUOTA_GENERADA';
+            }
+        }
+
+        // Si no hay bloqueo, proceder con la inscripción normal
+        if (!$generar_cuota) {
+            // Inscribir en el evento (inscritos) pero NO generar cuota
+            $lleva_cerveza = $_POST['lleva_cerveza'] ?? '0';
+            $pdo->prepare("
+                INSERT INTO inscritos (id_evento, id_socio, tipo_actividad, equipo, posicion_jugador, lleva_cerveza)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ")->execute([$id_actividad, $id_socio, $tipo_actividad, $equipo_default, $posicion_default, $lleva_cerveza]);
+            
+            // Retornar respuesta especial para el frontend
+            echo json_encode([
+                'success' => false, 
+                'message' => $mensaje_bloqueo, 
+                'detail' => 'Ya has pagado la cuota mensual para este periodo.'
+            ]);
+            ob_end_flush();
+            exit; // Detener ejecución aquí
+        }
+
+        // === GENERAR CUOTA SEMANAL NORMAL (Si no fue bloqueado) ===
+        $lleva_cerveza = $_POST['lleva_cerveza'] ?? '0';
+        
         $pdo->prepare("
             INSERT INTO inscritos (id_evento, id_socio, tipo_actividad, equipo, posicion_jugador, lleva_cerveza)
             VALUES (?, ?, ?, ?, ?, ?)
         ")->execute([$id_actividad, $id_socio, $tipo_actividad, $equipo_default, $posicion_default, $lleva_cerveza]);
 
-        // === GENERAR CUOTA SI HAY MONTO ===
         if ($monto_cuota > 0 && $fecha_evento) {
             $fecha_vencimiento = date('Y-m-d', strtotime($fecha_evento . ' +3 days'));
             $pdo->prepare("
@@ -163,9 +205,8 @@ try {
         $mensaje = "✅ ¡Inscripción confirmada!";
     }
 
-    // === NOTIFICACIONES PUSH (versión 100% segura) ===
-    if (!empty($club_slug)) {
-        // Verificar que las VAPID keys existan
+    // === NOTIFICACIONES PUSH ===
+    if (!empty($club_slug) && $action === 'anotarse') {
         $vapidPublic = defined('VAPID_PUBLIC_KEY') ? VAPID_PUBLIC_KEY : null;
         $vapidPrivate = defined('VAPID_PRIVATE_KEY') ? VAPID_PRIVATE_KEY : null;
         
@@ -179,11 +220,8 @@ try {
                     SELECT sp.endpoint, sp.p256dh AS publicKey, sp.auth AS authToken
                     FROM suscripciones_push sp
                     JOIN socios s ON sp.id_socio = s.id_socio
-                    WHERE s.id_club = ? 
-                    AND s.id_socio != ?
-                    AND sp.endpoint IS NOT NULL
-                    AND sp.p256dh IS NOT NULL
-                    AND sp.auth IS NOT NULL
+                    WHERE s.id_club = ? AND s.id_socio != ?
+                    AND sp.endpoint IS NOT NULL AND sp.p256dh IS NOT NULL AND sp.auth IS NOT NULL
                 ");
                 $stmt_subs->execute([$id_club, $id_socio]);
                 $suscripciones = $stmt_subs->fetchAll();
@@ -197,42 +235,27 @@ try {
                         ],
                     ]);
 
-                    $msg = ($action === 'bajarse')
-                        ? "{$nombre_inscrito} se ha dado de baja"
-                        : "{$nombre_inscrito} se ha anotado";
+                    $msg = "{$nombre_inscrito} se ha anotado";
 
                     foreach ($suscripciones as $sub) {
-                        // Validar datos
-                        if (empty($sub['endpoint']) || empty($sub['publicKey']) || empty($sub['authToken'])) {
-                            continue;
-                        }
+                        if (empty($sub['endpoint']) || empty($sub['publicKey']) || empty($sub['authToken'])) continue;
 
                         $subscription = \Minishlink\WebPush\Subscription::create([
                             'endpoint' => $sub['endpoint'],
-                            'keys' => [
-                                'p256dh' => $sub['publicKey'],
-                                'auth' => $sub['authToken']
-                            ]
+                            'keys' => ['p256dh' => $sub['publicKey'], 'auth' => $sub['authToken']]
                         ]);
 
-                        // ✅ Corrección clave: el tercer parámetro debe ser un array, no null
-                        $webPush->queueNotification(
-                            $subscription,
-                            json_encode([
-                                'title' => '⚽ CanchaSport',
-                                'body' => $msg,
-                                'icon' => '/assets/icons/logo2-icon-192x192.png',
-                                'badge' => '/assets/icons/logo2-icon-192x192.png',
-                                'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
-                            ]),
-                            [], // ← Aquí estaba el error: era null, ahora es []
-                            ['TTL' => 3600]
-                        );
+                        $webPush->queueNotification($subscription, json_encode([
+                            'title' => ' CanchaSport',
+                            'body' => $msg,
+                            'icon' => '/assets/icons/logo2-icon-192x192.png',
+                            'badge' => '/assets/icons/logo2-icon-192x192.png',
+                            'data' => ['url' => "/pages/dashboard_socio.php?id_club={$club_slug}"]
+                        ]), [], ['TTL' => 3600]);
                     }
                     $webPush->flush();
                 }
             } catch (Exception $e) {
-                // Registrar error pero NO detener la ejecución
                 error_log("Push notification error: " . $e->getMessage());
             }
         }
@@ -241,14 +264,10 @@ try {
     echo json_encode(['success' => true, 'message' => $mensaje]);
 
 } catch (Exception $e) {
-    // Registrar error
     error_log("Gestión eventos error: " . $e->getMessage());
-    
-    // Devolver error en formato JSON
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
-// Limpiar buffer de salida
 ob_end_flush();
 ?>

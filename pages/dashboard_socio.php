@@ -848,53 +848,44 @@
                             <div class="stat-card-content">
                                 <p><strong><?= $fecha_formateada ?> a las <?= $hora_formateada ?></strong></p>
                                 <div style="margin:0.5rem 0;font-size:0.85rem;text-align:left;">
-                                    <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
-                                    <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
-                                    <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                                        <strong>💰 Cuota:</strong> $<?= number_format((int)($proximo_evento['monto_recaudacion'] ?? 0), 0, ',', '.') ?><br>
-                                        <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
-                                    </div>
+                                    <!-- Línea 1: Arriendo Total -->
+                                    <div style="margin:0.3rem 0;"><strong>💰 Arriendo Total</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div>
+                                    
+                                    <?php if (!empty($proximo_evento['monto_recaudacion']) || !empty($proximo_evento['valor_mes'])): ?>
+                                        <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                                            
+                                            <!-- Columna Izquierda: Información de Pago (Semana/Mes) -->
+                                            <div style="flex:1; min-width: 140px;">
+                                                <?php 
+                                                    $monto_recaudado = (float)($proximo_evento['monto_recaudacion'] ?? 0);
+                                                    $valor_mes = (float)($proximo_evento['valor_mes'] ?? 0);
+                                                    
+                                                    // Lógica de visualización inteligente
+                                                    if ($valor_mes > 0) {
+                                                        // Si hay valor de mes definido, lo mostramos como referencia principal
+                                                        echo '<strong>📅 Mes:</strong> $' . number_format($valor_mes, 0, ',', '.');
+                                                        if ($monto_recaudado > 0) {
+                                                            echo '<br><span style="font-size:0.75rem; opacity:0.9;">(Recaudado: $' . number_format($monto_recaudado, 0, ',', '.') . ')</span>';
+                                                        }
+                                                    } else {
+                                                        // Si no hay valor mes, mostramos lo recaudado como "Semana" o acumulado
+                                                        echo '<strong>💰 Semana:</strong> $' . number_format($monto_recaudado, 0, ',', '.');
+                                                    }
+                                                ?>
+                                            </div>
+
+                                            <!-- Columna Derecha: Cupos y Anotados (Alineado a la derecha) -->
+                                            <div style="text-align:right; margin-top:0.2rem;">
+                                                <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <!-- Si no hay datos de pago, solo mostramos cupos alineados a la derecha -->
+                                        <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700; text-align:right;">
+                                            <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
-
-                                <?php if ($despues_del_lunes_09): ?>
-                                    <?php if ($ya_inscrito): ?>
-                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;width:100%;" 
-                                            onclick="bajarseEvento(<?= (int)$id_reserva ?>)">
-                                        Bajarse
-                                    </button>
-                                    <?php else: ?>
-                                    <?php if ($cupos_llenos): ?>
-                                        <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
-                                    <?php else: ?>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
-                                            Anotarse
-                                        </button>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                                onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
-                                            Anotarse + llevo 🍺🍺
-                                        </button>
-                                    <?php endif; ?>
-                                    <button class="btn-action" style="background:#FF6B6B;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                            onclick="pasoEvento(<?= (int)$id_reserva ?>)">
-                                        Paso
-                                    </button>
-                                    <?php endif; ?>
-
-                                    <?php if ($es_responsable && (int)($proximo_evento['inscritos_actuales'] ?? 0) >= 10): ?>
-                                    <button class="btn-action" style="background:#F1C40F;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                            onclick="armarEquiposIA(<?= (int)$id_reserva ?>)">
-                                        🤖 Armar Equipos IA
-                                    </button>
-                                    <?php endif; ?>
-
-                                <?php else: ?>
-                                    <p style="color:#FFD700;margin-top:1rem;font-size:0.85rem;">
-                                    ⏰ Los botones se activarán el lunes <?= htmlspecialchars($lunes_semana_evento->format('d/m')) ?> a las 09:00 hrs
-                                    </p>
-                                <?php endif; ?>
-                            </div>
                         </div>
 
                         <?php else: ?>
@@ -1239,27 +1230,28 @@
             // === REGIONES DINÁMICAS ===
             let datosChile = {};
             fetch('../api/get_regiones.php')
-            .then(response => response.json())
-            .then(data => { datosChile = data; })
-            .catch(error => console.error('Error al cargar regiones:', error));
+                .then(response => response.json())
+                .then(data => { datosChile = data; })
+                .catch(error => console.error('Error al cargar regiones:', error));
+
             function actualizarCiudades() {
-            const region = document.getElementById('region');
-            const ciudadSelect = document.getElementById('ciudad');
-            const comunaSelect = document.getElementById('comuna');
-            if (!region || !ciudadSelect || !comunaSelect) return;
-            ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
-            comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-            ciudadSelect.disabled = !region.value;
-            comunaSelect.disabled = true;
-            if (region.value && datosChile[region.value]) {
-            Object.entries(datosChile[region.value].ciudades).forEach(([codigo, nombre]) => {
-            const option = document.createElement('option');
-            option.value = codigo;
-            option.textContent = nombre;
-            ciudadSelect.appendChild(option);
-            });
-            ciudadSelect.disabled = false;
-            }
+                const region = document.getElementById('region');
+                const ciudadSelect = document.getElementById('ciudad');
+                const comunaSelect = document.getElementById('comuna');
+                if (!region || !ciudadSelect || !comunaSelect) return;
+                ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
+                comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
+                ciudadSelect.disabled = !region.value;
+                comunaSelect.disabled = true;
+                if (region.value && datosChile[region.value]) {
+                Object.entries(datosChile[region.value].ciudades).forEach(([codigo, nombre]) => {
+                const option = document.createElement('option');
+                option.value = codigo;
+                option.textContent = nombre;
+                ciudadSelect.appendChild(option);
+                });
+                ciudadSelect.disabled = false;
+                }
             }
             document.getElementById('region')?.addEventListener('change', actualizarCiudades);
             document.getElementById('ciudad')?.addEventListener('change', function() {
@@ -1282,163 +1274,170 @@
            
             // === PUSH NOTIFICATIONS ===
             function requestNotificationPermission() {
-            if (!('Notification' in window)) return;
-            if (Notification.permission === 'granted') {
-            subscribeToPush();
-            } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission().then(permission => {
-            if (permission === 'granted') subscribeToPush();
-            });
-            }
+                if (!('Notification' in window)) return;
+                if (Notification.permission === 'granted') {
+                subscribeToPush();
+                } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                if (permission === 'granted') subscribeToPush();
+                });
+                }
             }
             function subscribeToPush() {
-            const vapidKey = '<?= VAPID_PUBLIC_KEY ?>';
-            if (!vapidKey || vapidKey === 'VAPID_PUBLIC_KEY') {
-            console.warn('VAPID key not configured');
-            return;
-            }
-            navigator.serviceWorker.ready.then(registration => {
-            return registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidKey)
-            });
-            }).then(subscription => {
-            fetch('../api/guardar_suscripcion.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-            id_socio: <?= (int)($_SESSION['id_socio'] ?? 0) ?>,
-            subscription: subscription
-            })
-            });
-            });
+                const vapidKey = '<?= VAPID_PUBLIC_KEY ?>';
+                if (!vapidKey || vapidKey === 'VAPID_PUBLIC_KEY') {
+                console.warn('VAPID key not configured');
+                return;
+                }
+                navigator.serviceWorker.ready.then(registration => {
+                return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                });
+                }).then(subscription => {
+                fetch('../api/guardar_suscripcion.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                id_socio: <?= (int)($_SESSION['id_socio'] ?? 0) ?>,
+                subscription: subscription
+                })
+                });
+                });
             }
             function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            const rawData = atob(base64);
-            return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = atob(base64);
+                return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
             }
             // === LIMPIAR SESIÓN ===
             function limpiarSesion() {
-            localStorage.removeItem('cancha_session');
-            localStorage.removeItem('cancha_club');
+                localStorage.removeItem('cancha_session');
+                localStorage.removeItem('cancha_club');
             }
             // === MODAL COMPARTIR ===
             function abrirModalCompartir() {
-            const modal = document.getElementById('modalCompartir');
-            if (modal) modal.style.display = 'flex';
+                const modal = document.getElementById('modalCompartir');
+                if (modal) modal.style.display = 'flex';
             }
             function cerrarModalCompartir() {
-            const modal = document.getElementById('modalCompartir');
-            if (modal) modal.style.display = 'none';
+                const modal = document.getElementById('modalCompartir');
+                if (modal) modal.style.display = 'none';
             }
             function copiarEnlace() {
-            const url = '<?= json_encode("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>';
-            navigator.clipboard.writeText(url)
-            .then(() => alert('✅ Enlace copiado!'))
-            .catch(err => console.error('Error al copiar:', err));
+                const url = '<?= json_encode("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>';
+                navigator.clipboard.writeText(url)
+                .then(() => alert('✅ Enlace copiado!'))
+                .catch(err => console.error('Error al copiar:', err));
             }
             // === CERRAR MODAL AL HACER CLICK FUERA ===
             const modalCompartir = document.getElementById('modalCompartir');
-            if (modalCompartir) {
-            modalCompartir.addEventListener('click', function(e) {
-            if (e.target === this) cerrarModalCompartir();
-            });
+                if (modalCompartir) {
+                modalCompartir.addEventListener('click', function(e) {
+                if (e.target === this) cerrarModalCompartir();
+                });
             }
             // === ACCIONES DE EVENTOS ===
             function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
-            const formData = new FormData();
-            formData.append('action', 'anotarse');
-            formData.append('id_actividad', idActividad);
-            formData.append('tipo_actividad', tipoActividad);
-            formData.append('deporte', deporte);
-            formData.append('players_max', playersMax);
-            formData.append('monto_total', montoTotal);
-            fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-            if (data.success) {
-            mostrarToast(data.message);
-            setTimeout(() => location.reload(), 1500);
-            } else {
-            mostrarToast('❌ ' + data.message);
-            }
-            })
-            .catch(error => {
-            mostrarToast('❌ Error al procesar la inscripción');
-            console.error('Error:', error);
-            });
+                const formData = new FormData();
+                formData.append('action', 'anotarse');
+                formData.append('id_actividad', idActividad);
+                formData.append('tipo_actividad', tipoActividad);
+                formData.append('deporte', deporte);
+                formData.append('players_max', playersMax);
+                formData.append('monto_total', montoTotal);
+
+                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            mostrarToast(data.message);
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            // ✅ MANEJO DEL NUEVO CASO: Ya pagó el mes
+                            if (data.message === 'NO_CUOTA_GENERADA') {
+                                mostrarToast('✅ ' + data.detail, 'exito'); // Toast verde indicando que ya está cubierto
+                                // No recargamos, porque no se hizo ningún cambio, solo informamos
+                            } else {
+                                mostrarToast('❌ ' + data.message);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        mostrarToast('❌ Error al procesar la inscripción');
+                        console.error('Error:', error);
+                    });
             }
             function pasoEvento(idReserva) {
-            const card = event.target.closest('.stat-card');
-            if (card) {
-            const pasoBtn = event.target;
-            pasoBtn.textContent = 'Paso esta semana';
-            pasoBtn.disabled = true;
-            pasoBtn.style.opacity = '0.7';
-            }
+                const card = event.target.closest('.stat-card');
+                if (card) {
+                const pasoBtn = event.target;
+                pasoBtn.textContent = 'Paso esta semana';
+                pasoBtn.disabled = true;
+                pasoBtn.style.opacity = '0.7';
+                }
             }
             function invitarGalletas(idReserva) {
-            alert('Función "Invitar Galletas" en desarrollo');
+                alert('Función "Invitar Galletas" en desarrollo');
             }
             function invitarCancha(idReserva) {
-            alert('Función "Invitar un Cancha" en desarrollo');
+                alert('Función "Invitar un Cancha" en desarrollo');
             }
             function pagarCuota(idCuota) {
-            window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
             }
             // === ARMAR EQUIPOS IA ===
             function armarEquiposIA(idReserva) {
-            console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
-            fetch('../api/armar_equipos_ia.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_reserva: idReserva})
-            })
-            .then(response => {
-            console.log('ℹ️ [Frontend] Respuesta recibida, status:', response.status);
-            if (!response.ok) {
-            throw new Error('Respuesta no OK: ' + response.status);
-            }
-            return response.json();
-            })
-            .then(data => {
-            console.log('🤖 [Frontend] Datos recibidos:', data);
-            if (data.success) {
-            console.log('🤖 [Frontend] Llamando a mostrarModalEquipos()');
-            mostrarModalEquipos(data.equipos);
-            } else {
-            console.error('🤖 [Frontend] Error desde API:', data.message);
-            alert('Error: ' + data.message);
-            }
-            })
-            .catch(err => {
-            console.error('🤖 [Frontend] Error en armado de equipos:', err);
-            alert('Error al armar equipos: ' + err.message);
-            });
+                console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
+                fetch('../api/armar_equipos_ia.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_reserva: idReserva})
+                    })
+                .then(response => {
+                    console.log('ℹ️ [Frontend] Respuesta recibida, status:', response.status);
+                    if (!response.ok) {
+                    throw new Error('Respuesta no OK: ' + response.status);
+                }
+                return response.json();
+                })
+                .then(data => {
+                console.log('🤖 [Frontend] Datos recibidos:', data);
+                if (data.success) {
+                console.log('🤖 [Frontend] Llamando a mostrarModalEquipos()');
+                mostrarModalEquipos(data.equipos);
+                } else {
+                console.error('🤖 [Frontend] Error desde API:', data.message);
+                alert('Error: ' + data.message);
+                }
+                })
+                .catch(err => {
+                console.error('🤖 [Frontend] Error en armado de equipos:', err);
+                alert('Error al armar equipos: ' + err.message);
+                });
             }
             // === EDITAR PERFIL SOCIO ===
             function editarPerfilSocio(idSocio) {
-            window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
+                window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
             }
             // === ELIMINAR SOCIO ===
             function eliminarSocio(idSocio) {
-            if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
-            fetch('../api/eliminar_socio.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_socio: idSocio})
-            })
-            .then(r => r.json())
-            .then(data => {
-            if (data.success) {
-            mostrarToast('✅ Socio eliminado');
-            setTimeout(() => location.reload(), 1500);
-            } else {
-            mostrarToast('❌ ' + data.message);
-            }
-            });
+                if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
+                fetch('../api/eliminar_socio.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_socio: idSocio})
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast('✅ Socio eliminado');
+                setTimeout(() => location.reload(), 1500);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                });
             }
             // === BAJARSE DE EVENTO ===
             function bajarseEvento(idReserva, idSocioObjetivo = null) {
@@ -1473,37 +1472,37 @@
 
             // === REVISAR PAGO ===
             function revisarPago(idCuota) {
-            fetch('../api/revisar_pago.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_cuota: idCuota})
-            })
-            .then(r => r.json())
-            .then(data => {
-            if (data.success) {
-            mostrarToast('✅ Cuota en revisión');
-            setTimeout(() => cargarTabla('cuotas'), 1000);
-            } else {
-            mostrarToast('❌ ' + data.message);
-            }
-            });
+                fetch('../api/revisar_pago.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast('✅ Cuota en revisión');
+                setTimeout(() => cargarTabla('cuotas'), 1000);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                });
             }
             // === VALIDAR PAGO ===
             function validarPago(idCuota) {
-            fetch('../api/validar_pago.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id_cuota: idCuota})
-            })
-            .then(r => r.json())
-            .then(data => {
-            if (data.success) {
-            mostrarToast('✅ Pago validado');
-            setTimeout(() => cargarTabla('cuotas'), 1000);
-            } else {
-            mostrarToast('❌ ' + data.message);
-            }
-            });
+                fetch('../api/validar_pago.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast('✅ Pago validado');
+                setTimeout(() => cargarTabla('cuotas'), 1000);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                });
             }
             // === ASIGNAR CERVEZA ===
             function asignarCerveza(idInscrito, estado) {
