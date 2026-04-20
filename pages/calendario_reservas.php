@@ -964,7 +964,7 @@ $recinto = $stmt->fetch();
 
                 card.innerHTML = `
                     <div class="deporte-icon" style="font-size: 1.5rem; margin-bottom: 0.5rem;">${iconos[reserva.id_deporte] || '️'}</div>
-                    <div class="cancha-nombre" style="font-weight:bold; font-size:1rem; margin-bottom:0.3rem; color:white;">${reserva.nro_cancha || 'Cancha'}</div>
+                    <div class="cancha-nombre" style="font-weight:bold; font-size:1rem; margin-bottom:0.1rem; color:white;">${reserva.nro_cancha || 'Cancha'}</div>
                     <div class="fecha-hora" style="font-size:0.9rem; opacity:0.9; margin-bottom:0.5rem;">
                         ${formatTimeDisplay(reserva.hora_inicio)}<br>
                         <span style="display:flex; align-items:center;">
