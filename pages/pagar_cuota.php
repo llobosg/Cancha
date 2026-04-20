@@ -10,14 +10,13 @@ if (!isset($_SESSION['id_socio']) || !isset($_GET['id_cuota'])) {
 $id_cuota = (int)$_GET['id_cuota'];
 $id_socio = $_SESSION['id_socio'];
 
-// === 1. Obtener datos de la cuota y reserva asociada ===
+// === 1. Obtener datos de la cuota ===
 $stmt = $pdo->prepare("
     SELECT 
         c.id_cuota, c.monto, c.fecha_vencimiento, c.estado, c.tipo_actividad, c.id_evento, c.comentario as comentario_previo,
         s.nombre AS socio_nombre, s.email AS socio_email, s.alias,
         sc.id_club, cl.nombre AS club_nombre, cl.email_responsable,
         r.fecha AS fecha_origen, r.monto_total, r.monto_recaudacion, r.tipo_pago as tipo_pago_defecto, r.mes, r.valor_mes,
-        -- Obtenemos el nombre de la cancha directamente si es reserva, o el tipo de evento si es evento
         COALESCE(ca.nombre_cancha, te.tipoevento, 'Cuota General') AS detalle_origen
     FROM cuotas c
     INNER JOIN socios s ON c.id_socio = s.id_socio
@@ -34,7 +33,7 @@ $stmt->execute([$id_cuota, $id_socio]);
 $cuota = $stmt->fetch();
 
 if (!$cuota) {
-    die('<div style="text-align:center;color:white;margin-top:50px;"><h2>❌ Cuota no encontrada o no pertenece a tu usuario</h2><a href="dashboard_socio.php" style="color:#FFD700;">Volver</a></div>');
+    die('<div style="text-align:center;color:white;margin-top:50px;"><h2>❌ Cuota no encontrada</h2><a href="dashboard_socio.php" style="color:#FFD700;">Volver</a></div>');
 }
 
 $error = '';
@@ -44,7 +43,7 @@ $success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_pago = $_POST['fecha_pago'] ?? '';
     $comentario = trim($_POST['comentario'] ?? '');
-    $tipo_pago_seleccionado = $_POST['tipo_pago'] ?? 'semana'; // semana o mes
+    $tipo_pago_seleccionado = $_POST['tipo_pago'] ?? 'semana';
     $monto_ingresado = (float)($_POST['monto_pagado'] ?? 0);
     
     // Validaciones básicas
@@ -53,38 +52,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($monto_ingresado <= 0) {
         $error = 'El monto ingresado debe ser mayor a 0.';
     } else {
-        // Validar monto según tipo de pago seleccionado
+        // Validar monto
         $monto_esperado = 0;
         if ($tipo_pago_seleccionado === 'mes') {
             $monto_esperado = (float)($cuota['valor_mes'] ?? 0);
-            if ($monto_esperado == 0) $monto_esperado = (float)$cuota['monto']; // Fallback
-            if (abs($monto_ingresado - $monto_esperado) > 1) { // Margen de error 1 peso
-                $error = "El monto para pago mensual debe ser aproximadamente $" . number_format($monto_esperado, 0, ',', '.');
+            if ($monto_esperado == 0) $monto_esperado = (float)$cuota['monto'];
+            if (abs($monto_ingresado - $monto_esperado) > 1) {
+                $error = "El monto mensual debe ser $" . number_format($monto_esperado, 0, ',', '.');
             }
         } else {
-            // Semana
             $monto_esperado = (float)$cuota['monto'];
             if (abs($monto_ingresado - $monto_esperado) > 1) {
-                $error = "El monto para pago semanal debe ser $" . number_format($monto_esperado, 0, ',', '.');
+                $error = "El monto semanal debe ser $" . number_format($monto_esperado, 0, ',', '.');
             }
         }
 
-        // Manejo de archivo adjunto
+        // Manejo de archivo adjunto (CORREGIDO)
         $adjunto = null;
         if (!$error && !empty($_FILES['adjunto']['name'])) {
             $target_dir = __DIR__ . '/../uploads/comprobantes/';
-            if (!is_dir($target_dir)) mkdir($target_dir, 0755, true);
             
-            $ext = strtolower(pathinfo($_FILES['adjunto']['name'], PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'pdf'])) {
-                $file_name = 'pago_' . $id_cuota . '_' . time() . '.' . $ext;
-                if (move_uploaded_file($_FILES['adjunto']['tmp_name'], $target_dir . $file_name)) {
-                    $adjunto = $file_name;
-                } else {
-                    $error = 'Error al subir el archivo.';
+            // Asegurar que la carpeta exista y tenga permisos
+            if (!is_dir($target_dir)) {
+                if (!mkdir($target_dir, 0755, true)) {
+                    $error = 'No se pudo crear la carpeta de comprobantes.';
                 }
-            } else {
-                $error = 'Solo se permiten imágenes (JPG, PNG) o PDF.';
+            }
+            
+            if (!$error) {
+                $ext = strtolower(pathinfo($_FILES['adjunto']['name'], PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
+                
+                if (!in_array($ext, $allowed)) {
+                    $error = 'Solo se permiten JPG, PNG o PDF.';
+                } elseif ($_FILES['adjunto']['error'] !== UPLOAD_ERR_OK) {
+                    $error = 'Error al subir el archivo (Código: ' . $_FILES['adjunto']['error'] . ').';
+                } else {
+                    $file_name = 'pago_' . $id_cuota . '_' . time() . '.' . $ext;
+                    $target_file = $target_dir . $file_name;
+                    
+                    if (move_uploaded_file($_FILES['adjunto']['tmp_name'], $target_file)) {
+                        $adjunto = $file_name;
+                    } else {
+                        $error = 'Error al mover el archivo al servidor.';
+                    }
+                }
             }
         }
 
@@ -102,46 +114,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         updated_at = NOW()
                     WHERE id_cuota = ?
                 ");
-                
-                // Ejecutar con los 4 parámetros en orden
                 $stmt_upd->execute([$fecha_pago, $comentario, $adjunto, $id_cuota]);
 
-                // 2. Si es reserva, actualizar monto_recaudacion ACUMULADO
+                // 2. Si es reserva, actualizar monto_recaudacion
                 if ($cuota['tipo_actividad'] === 'reserva' && $cuota['id_evento']) {
-                    // Obtener monto actual recaudado
                     $stmt_curr = $pdo->prepare("SELECT monto_recaudacion FROM reservas WHERE id_reserva = ?");
                     $stmt_curr->execute([$cuota['id_evento']]);
                     $current_recaudado = (float)($stmt_curr->fetchColumn() ?: 0);
                     
                     $nuevo_total = $current_recaudado + $monto_ingresado;
-                    
-                    // Determinar estado de pago de la reserva
                     $nuevo_estado_pago = 'pendiente';
+                    
                     if ($nuevo_total >= (float)$cuota['monto_total']) {
                         $nuevo_estado_pago = 'pagado';
-                        $nuevo_total = (float)$cuota['monto_total']; // Ajustar si se pasó
+                        $nuevo_total = (float)$cuota['monto_total'];
                     } elseif ($nuevo_total > 0) {
                         $nuevo_estado_pago = 'parcial';
                     }
 
-                    $stmt_res = $pdo->prepare("
-                        UPDATE reservas 
-                        SET monto_recaudacion = ?,
-                            estado_pago = ?,
-                            updated_at = NOW()
-                        WHERE id_reserva = ?
-                    ");
+                    $stmt_res = $pdo->prepare("UPDATE reservas SET monto_recaudacion = ?, estado_pago = ?, updated_at = NOW() WHERE id_reserva = ?");
                     $stmt_res->execute([$nuevo_total, $nuevo_estado_pago, $cuota['id_evento']]);
                 }
 
                 $pdo->commit();
                 $success = true;
 
-                // TODO: Aquí podrías enviar correos de confirmación si deseas
-
             } catch (Exception $e) {
                 $pdo->rollBack();
-                $error = 'Error al procesar el pago: ' . $e->getMessage();
+                $error = 'Error interno: ' . $e->getMessage();
             }
         }
     }
@@ -151,12 +151,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pagar Cuota - <?= htmlspecialchars($cuota['club_nombre']) ?></title>
     <link rel="stylesheet" href="../styles.css">
     <style>
         body {
-            background: linear-gradient(rgba(0, 20, 10, 0.7), rgba(0, 30, 15, 0.8)), url('../assets/img/cancha_pasto2.jpg') center/cover fixed;
+            background: linear-gradient(rgba(0, 20, 10, 0.85), rgba(0, 30, 15, 0.9)), url('../assets/img/cancha_pasto2.jpg') center/cover fixed;
             font-family: 'Segoe UI', sans-serif;
             margin: 0;
             min-height: 100vh;
@@ -164,85 +164,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             align-items: center;
             color: #333;
+            padding: 10px;
         }
         .modal-container {
             background: white;
-            width: 95%;
-            max-width: 700px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            width: 100%;
+            max-width: 600px; /* Un poco más estrecho para móvil */
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
             overflow: hidden;
             position: relative;
-            animation: slideUp 0.4s ease-out;
         }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
         .modal-header {
             background: #071289;
             color: white;
-            padding: 1rem 1.5rem;
+            padding: 0.8rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .modal-header h2 { margin: 0; font-size: 1.4rem; }
-        .close-x { font-size: 1.8rem; cursor: pointer; color: #FFD700; text-decoration: none; font-weight: bold; }
-        .close-x:hover { color: white; }
-
-        .modal-body { padding: 2rem; }
+        .modal-header h2 { margin: 0; font-size: 1.2rem; }
+        .close-x { font-size: 1.5rem; cursor: pointer; color: #FFD700; text-decoration: none; font-weight: bold; }
         
-        /* Grid Layout 2 Columnas */
+        .modal-body { padding: 1.2rem; }
+        
+        /* GRID LAYOUT OPTIMIZADO PARA MÓVIL */
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
+            grid-template-columns: 1fr 1fr; /* 2 Columnas siempre */
+            gap: 0.8rem; /* Espacio reducido */
         }
         .full-width { grid-column: span 2; }
         
-        .form-group label { display: block; font-weight: 600; margin-bottom: 0.4rem; color: #444; font-size: 0.9rem; }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label { 
+            font-weight: 600; 
+            margin-bottom: 0.2rem; 
+            color: #444; 
+            font-size: 0.8rem; /* Letra más pequeña para ahorrar espacio */
+            text-transform: uppercase;
+        }
         .form-group input, .form-group select, .form-group textarea {
             width: 100%;
-            padding: 0.7rem;
+            padding: 0.5rem; /* Padding reducido */
             border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
             box-sizing: border-box;
+            background: #fff;
         }
-        .form-group input[readonly] { background: #f0f2f5; color: #666; cursor: not-allowed; }
+        .form-group input[readonly] { background: #f0f2f5; color: #666; }
         
-        .radio-group { display: flex; gap: 1rem; margin-top: 0.5rem; }
-        .radio-option { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        /* Radio Buttons Compactos */
+        .radio-group { 
+            display: flex; 
+            gap: 1rem; 
+            align-items: center;
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .radio-option { display: flex; align-items: center; gap: 0.3rem; font-size: 0.9rem; cursor: pointer; }
+        .radio-option input { margin: 0; width: auto; }
         
         .btn-submit {
             background: #28a745;
             color: white;
             border: none;
-            padding: 1rem;
-            border-radius: 8px;
-            font-size: 1.1rem;
+            padding: 0.8rem;
+            border-radius: 6px;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
             width: 100%;
             margin-top: 1rem;
-            transition: background 0.2s;
         }
-        .btn-submit:hover { background: #218838; }
         .btn-cancel {
             display: block;
             text-align: center;
-            margin-top: 1rem;
+            margin-top: 0.8rem;
             color: #666;
             text-decoration: none;
             font-size: 0.9rem;
         }
-        .alert { padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; text-align: center; }
-        .alert-error { background: #ffebee; color: #c62828; }
-        .alert-success { background: #e8f5e9; color: #2e7d32; }
+        .alert { padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; text-align: center; font-size: 0.9rem; }
+        .alert-error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
 
-        @media (max-width: 600px) {
-            .form-grid { grid-template-columns: 1fr; gap: 1rem; }
-            .full-width { grid-column: span 1; }
-            .modal-body { padding: 1.5rem; }
+        /* Ajustes específicos para pantallas muy pequeñas */
+        @media (max-width: 360px) {
+            .form-grid { gap: 0.5rem; }
+            .modal-body { padding: 1rem; }
+            .form-group label { font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -250,16 +267,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="modal-container">
     <div class="modal-header">
-        <h2>💳 Pagar Cuota</h2>
+        <h2> Pagar Cuota</h2>
         <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="close-x">&times;</a>
     </div>
 
     <div class="modal-body">
         <?php if ($success): ?>
             <div class="alert alert-success">
-                <h3>✅ ¡Pago Registrado!</h3>
-                <p>Tu comprobante ha sido enviado a revisión.</p>
-                <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="btn-submit" style="text-decoration:none; display:inline-block; margin-top:1rem;">Volver al Dashboard</a>
+                <h3 style="margin-top:0">✅ ¡Pago Registrado!</h3>
+                <p>Tu comprobante está en revisión.</p>
+                <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" class="btn-submit" style="text-decoration:none; display:inline-block; margin-top:0.5rem;">Volver</a>
             </div>
         <?php else: ?>
             <?php if ($error): ?>
@@ -268,34 +285,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <form method="POST" enctype="multipart/form-data">
                 <div class="form-grid">
-                    <!-- Columna 1: Detalles -->
+                    <!-- Fila 1: Detalle (Ocupa todo el ancho) -->
                     <div class="form-group full-width">
                         <label>Detalle del Pago</label>
                         <input type="text" value="<?= htmlspecialchars($cuota['detalle_origen']) ?>" readonly>
                     </div>
                     
+                    <!-- Fila 2: Mes | Fecha Vence -->
                     <div class="form-group">
-                        <label>Mes Correspondiente</label>
+                        <label>Mes Aplica</label>
                         <input type="text" value="<?= htmlspecialchars($cuota['mes'] ?? date('F Y')) ?>" readonly>
                     </div>
-
                     <div class="form-group">
-                        <label>Fecha Vencimiento</label>
+                        <label>Fecha Vence</label>
                         <input type="text" value="<?= date('d/m/Y', strtotime($cuota['fecha_vencimiento'])) ?>" readonly>
                     </div>
 
-                    <!-- Columna 2: Montos -->
+                    <!-- Fila 3: $ Semana | $ Mes -->
                     <div class="form-group">
                         <label>$ Valor Semana</label>
                         <input type="text" value="$<?= number_format($cuota['monto'], 0, ',', '.') ?>" readonly>
                     </div>
-
                     <div class="form-group">
                         <label>$ Valor Mes</label>
                         <input type="text" value="$<?= number_format($cuota['valor_mes'] ?? $cuota['monto'], 0, ',', '.') ?>" readonly>
                     </div>
 
-                    <!-- Selección Tipo Pago -->
+                    <!-- Fila 4: Tipo Pago (Ocupa todo el ancho) -->
                     <div class="form-group full-width">
                         <label>Tipo de Pago *</label>
                         <div class="radio-group">
@@ -303,36 +319,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="radio" name="tipo_pago" value="semana" checked onchange="toggleMontoInput()"> Semana
                             </label>
                             <label class="radio-option">
-                                <input type="radio" name="tipo_pago" value="mes" onchange="toggleMontoInput()"> Mes Completo
+                                <input type="radio" name="tipo_pago" value="mes" onchange="toggleMontoInput()"> Mes
                             </label>
                         </div>
                     </div>
 
-                    <!-- Monto a Pagar (Dinámico) -->
-                    <div class="form-group full-width">
-                        <label for="monto_pagado">$ Monto a Pagar *</label>
-                        <input type="number" id="monto_pagado" name="monto_pagado" step="100" required 
-                               value="<?= $cuota['monto'] ?>" 
-                               placeholder="Ingresa el monto exacto">
-                        <small style="color:#666; font-size:0.8rem;">* Debe coincidir con el valor seleccionado arriba.</small>
-                    </div>
-
-                    <!-- Fecha Pago -->
+                    <!-- Fila 5: Monto a Pagar | Fecha Pago -->
                     <div class="form-group">
-                        <label for="fecha_pago">Fecha de Pago *</label>
+                        <label>Monto a Pagar $ *</label>
+                        <input type="number" id="monto_pagado" name="monto_pagado" step="100" required 
+                               value="<?= $cuota['monto'] ?>" readonly style="background:#e8f5e9; font-weight:bold; color:#2e7d32;">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Pago *</label>
                         <input type="date" id="fecha_pago" name="fecha_pago" required value="<?= date('Y-m-d') ?>">
                     </div>
 
-                    <!-- Adjunto -->
-                    <div class="form-group">
-                        <label for="adjunto">Comprobante (Opcional)</label>
+                    <!-- Fila 6: Comprobante (Ocupa todo el ancho) -->
+                    <div class="form-group full-width">
+                        <label>Comprobante (Opcional)</label>
                         <input type="file" id="adjunto" name="adjunto" accept=".jpg,.jpeg,.png,.pdf">
                     </div>
 
-                    <!-- Comentario -->
+                    <!-- Fila 7: Comentarios (Ocupa todo el ancho) -->
                     <div class="form-group full-width">
-                        <label for="comentario">Comentarios</label>
-                        <textarea id="comentario" name="comentario" rows="2" placeholder="Ej: Transferencia desde Banco Estado..."></textarea>
+                        <label>Comentarios</label>
+                        <textarea id="comentario" name="comentario" rows="2" placeholder="Ej: Transferencia..."></textarea>
                     </div>
                 </div>
 
@@ -352,16 +364,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const tipo = document.querySelector('input[name="tipo_pago"]:checked').value;
         if (tipo === 'mes') {
             inputMonto.value = valorMes;
-            inputMonto.readOnly = true; // Forzamos que no editen para evitar errores
-            inputMonto.style.background = '#e8f5e9';
         } else {
             inputMonto.value = valorSemana;
-            inputMonto.readOnly = true;
-            inputMonto.style.background = '#e8f5e9';
         }
     }
-    
-    // Inicializar
     toggleMontoInput();
 </script>
 
