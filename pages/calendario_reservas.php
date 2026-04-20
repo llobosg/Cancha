@@ -171,11 +171,18 @@ $recinto = $stmt->fetch();
         border-radius: 50%;
     }
     
-    .estado-disponible { background: #FFD700; } /* Amarillo */
-    .estado-reservada { background: #9C27B0; }  /* Morado */
-    .estado-ocupada { background: #4CAF50; }    /* Verde */
-    .estado-cancelada { background: #F44336; }  /* Rojo */
-    .estado-mantencion { background: #FF9800; } /* Naranja */
+    /* === COLORES DE ESTADOS (Actualizados) === */
+    .estado-disponible { background: #4CAF50 !important; } /* Verde */
+    .estado-reservada { background: #2196F3 !important; }  /* Azul (Cambiado) */
+    .estado-ocupada { background: #9C27B0 !important; }    /* Morado (Cambiado) */
+    .estado-cancelada { background: #F44336 !important; }  /* Rojo */
+    .estado-parcial { background: #FFC107 !important; }    /* Amarillo (Nuevo) */
+    .estado-mantencion { background: #FF9800 !important; } /* Naranja */
+
+    /* Opcional: Si quieres que el texto dentro de la ficha también cambie de color según el estado */
+    .reserva-card[data-estado="parcial"] {
+        border: 2px solid #FFC107;
+    }
   
     /* Panel lateral - CORREGIDO */
         .detail-panel {
@@ -920,18 +927,20 @@ $recinto = $stmt->fetch();
             'reservada': 'Reservada',
             'ocupada': 'Ocupada',
             'cancelada': 'Cancelada',
-            'mantencion': 'Mantención'
+            'mantencion': 'Mantención',
+            'parcial': 'Pago Parcial' // ✅ NUEVO: Texto para pago parcial
         };
         return estados[estado] || estado;
     }
 
     function getEstadoClass(estado) {
         switch(estado) {
-            case 'disponible': return 'estado-disponible';
-            case 'reservada': return 'estado-reservada';
-            case 'ocupada': return 'estado-ocupada';
-            case 'cancelada': return 'estado-cancelada';
-            case 'mantencion': return 'estado-mantencion';
+            case 'disponible': return 'estado-disponible'; // Verde
+            case 'reservada': return 'estado-reservada';   // Azul
+            case 'ocupada': return 'estado-ocupada';       // Morado
+            case 'cancelada': return 'estado-cancelada';   // Rojo
+            case 'parcial': return 'estado-parcial';       // Amarillo (Nuevo)
+            case 'mantencion': return 'estado-mantencion'; // Naranja
             default: return 'estado-disponible';
         }
     }

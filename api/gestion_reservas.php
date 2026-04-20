@@ -107,9 +107,14 @@ function procesarPagoParcial($pdo, $data) {
     }
     
     // 2. Determinar nuevo estado
-    $nuevo_estado_pago = 'pendiente';
+    $nuevo_estado_pago = 'pendiente'; // Por defecto sigue pendiente
+
     if ($monto_pagado >= $monto_total_original) {
         $nuevo_estado_pago = 'pagado';
+    } else {
+        // Si pagó menos, marcamos como 'parcial' (si la columna lo permite) o dejamos 'pendiente'
+        // Recomendado: Usar 'parcial' si tu BD lo soporta, sino 'pendiente' con notas claras.
+        $nuevo_estado_pago = 'parcial'; 
     }
     
     // 3. Construir el texto de notas en PHP (Más seguro)
