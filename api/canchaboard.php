@@ -195,13 +195,72 @@ function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
     $fecha_hoy = date('Y-m-d');
     $rango_dias = 30; 
     
-    if ($filtros['fecha'] === 'hoy') $rango_dias = 0;
-    elseif ($filtros['fecha'] === 'mañana') $rango_dias = 1;
-    elseif ($filtros['fecha'] === 'semana') $rango_dias = 7;
-    elseif ($filtros['fecha'] === 'mes') $rango_dias = 30;
+    // Lógica de fechas
+    if ($filtros['fecha'] === 'hoy') {
+        $rango_dias = 0;
+    } elseif ($filtros['fecha'] === 'mañana') {
+        $rango_dias = 1;
+    } elseif ($filtros['fecha'] === 'semana') {
+        $rango_dias = 7;
+    } elseif ($filtros['fecha'] === 'mes') {
+        $rango_dias = 30;
+    } else {
+        // CASO NUEVO: Si no hay fecha específica o es 'reservas' (todas), ampliamos el rango
+        // Podríamos poner 365 días o NULL para todo el historial
+        $rango_dias = 365; // Mostramos hasta un año hacia adelante y atrás si es necesario
+        // Opcional: Si quieres TODAS sin límite, maneja la fecha_inicio/fin diferente abajo
+    }
     
+    // Definir fechas base
+    // Si queremos ver también las PASADAS, debemos restar días a la fecha_inicio
+    $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
+    
+    // Si el filtro es para ver "Reservas" (historial), empezamos desde hace X días
+    // Ajusta '90' según cuánto historial quieras mostrar
+    $dias_historial = ($filtros['fecha'] === 'reservas' || empty($filtros['fecha'])) ? 90 : 0;
+    $fecha_inicio = date('Y-m-d', strtotime("-$dias_historial days"));
+    
+    // Si el rango_dias era específico (ej. semana), mantenemos la lógica original de inicio en HOY
+    if (!empty($filtros['fecha']) && $filtros['fecha'] !== 'reservas') {
+        $fecha_inicio = $fecha_hoy;
+        $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
+    }
+
+    error_log("📅 [FILTRO] Rango fechas: $fecha_inicio a $fecha_fin");
+
     // Obtener datos base con el rango calculado
-    $todos_datos = getReservasDataOptimizada($pdo, $id_recinto, $rango_dias);
+    // NOTA: getReservasDataOptimizada usa $rango_dias relativo a HOY hacia adelante.
+    // Para soportar pasado, necesitamos ajustar la función getReservasDataOptimizada 
+    // o hacer una consulta directa aquí. 
+    
+    // MEJOR OPCIÓN: Modificar ligeramente getReservasDataOptimizada para aceptar fecha_inicio explícita
+    // Pero para no romper todo, hagamos un truco: si es 'reservas', pedimos un rango grande (ej. 400 días)
+    // y filtramos por estado 'reservada'/'confirmada' independientemente de la fecha en el loop.
+    
+    if ($filtros['fecha'] === 'reservas' || (empty($filtros['fecha']) && empty($filtros['estado']))) {
+         // Forzamos un rango amplio para capturar pasado y futuro cercano
+         $rango_dias = 400; 
+         $fecha_inicio = date('Y-m-d', strtotime('-30 days')); // 30 días atrás
+         $fecha_fin = date('Y-m-d', strtotime('+365 days'));   // 1 año adelante
+    } else {
+         $fecha_inicio = date('Y-m-d');
+         $fecha_fin = date('Y-m-d', strtotime("+$rango_dias days"));
+    }
+
+    // LLAMADA A LA FUNCIÓN BASE (Debemos pasarle fechas custom o usar el truco del rango)
+    // Como getReservasDataOptimizada calcula fechas internamente, vamos a forzar el rango grande
+    // y luego filtrar en PHP si es necesario.
+    
+    // Truco: Calculamos días totales desde hoy hasta la fecha_fin deseada
+    $diff = strtotime($fecha_fin) - strtotime($fecha_inicio);
+    $dias_totales = floor($diff / (60 * 60 * 24));
+    
+    // Obtenemos datos desde HOY hasta el fin (la función siempre empieza en hoy)
+    // PARA VER EL PASADO, necesitamos modificar getReservasDataOptimizada para aceptar fecha_inicio.
+    // HACEMOS ESO AHORA MISMO EN EL CÓDIGO DE ABAJO (versión modificada de la función).
+    
+    $todos_datos = getReservasDataOptimizadaConRangoCustom($pdo, $id_recinto, $fecha_inicio, $fecha_fin);
+    
     error_log("📊 [FILTRO] Datos base obtenidos: " . count($todos_datos));
     
     $datos_filtrados = [];
@@ -213,11 +272,12 @@ function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
             $saltar = true;
         }
         
-        // Filtro Estado
+        // Filtro Estado (Aquí es clave: si el estado es 'reservada', mostramos aunque sea pasada)
         if (!$saltar && !empty($filtros['estado'])) {
             $esReservaReal = !empty($dato['id_reserva']) && $dato['id_reserva'] !== 'null';
             $estadoReserva = $dato['estado_reserva'] ?? null;
             $estadoDisp = $dato['estado_disponibilidad'] ?? 'disponible';
+            $estadoPago = $dato['estado_pago'] ?? null;
             
             $pasaEstado = false;
             switch($filtros['estado']) {
@@ -225,24 +285,27 @@ function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
                     $pasaEstado = (!$esReservaReal && ($estadoDisp === 'disponible' || empty($estadoDisp)));
                     break;
                 case 'reservada':
-                    $pasaEstado = ($esReservaReal && $estadoReserva === 'confirmada') || $estadoDisp === 'reservada';
+                    // MUESTRA RESERVAS CONFIRMADAS (PASADAS O FUTURAS)
+                    $pasaEstado = ($esReservaReal && in_array($estadoReserva, ['confirmada', 'completada']));
                     break;
                 case 'ocupada':
-                    $pasaEstado = ($esReservaReal && $estadoReserva === 'completada') || $estadoDisp === 'ocupada';
+                    $pasaEstado = ($esReservaReal && $estadoReserva === 'completada');
                     break;
                 case 'cancelada':
-                    $pasaEstado = ($esReservaReal && $estadoReserva === 'cancelada') || $estadoDisp === 'cancelada';
+                    $pasaEstado = ($esReservaReal && $estadoReserva === 'cancelada');
                     break;
+                case 'parcial':
+                     $pasaEstado = ($esReservaReal && $estadoPago === 'parcial');
+                     break;
             }
             if (!$pasaEstado) $saltar = true;
         }
         
-        // Filtro Fecha Específica (si es hoy o mañana, filtramos exacto)
-        if (!$saltar && !empty($filtros['fecha'])) {
+        // Filtro Fecha Específica (solo si no estamos en modo "todas las reservas")
+        if (!$saltar && !empty($filtros['fecha']) && $filtros['fecha'] !== 'reservas') {
             $fecha_dato = $dato['fecha'];
             if ($filtros['fecha'] === 'hoy' && $fecha_dato !== $fecha_hoy) $saltar = true;
             elseif ($filtros['fecha'] === 'mañana' && $fecha_dato !== date('Y-m-d', strtotime('+1 day'))) $saltar = true;
-            // Para semana/mes ya usamos el rango_dias al obtener datos base
         }
         
         if (!$saltar) $datos_filtrados[] = $dato;
@@ -250,6 +313,47 @@ function getReservasFiltradasOptimizadas($pdo, $id_recinto, $filtros) {
     
     error_log("✅ [FILTRO] Resultado final: " . count($datos_filtrados));
     return $datos_filtrados;
+}
+
+// NUEVA FUNCIÓN AUXILIAR PARA PERMITIR FECHA INICIO CUSTOM (PASADO)
+function getReservasDataOptimizadaConRangoCustom($pdo, $id_recinto, $fecha_inicio_custom, $fecha_fin_custom) {
+    // Copia de getReservasDataOptimizada pero usando las fechas pasadas por argumento
+    error_log("📊 [DB CUSTOM] Buscando desde $fecha_inicio_custom hasta $fecha_fin_custom");
+
+    $stmt_canchas = $pdo->prepare("SELECT id_cancha, nro_cancha, nombre_cancha, id_deporte, dias_disponibles, hora_inicio, hora_fin, duracion_bloque FROM canchas WHERE id_recinto = ? AND activa = 1");
+    $stmt_canchas->execute([$id_recinto]);
+    $canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (empty($canchas)) return [];
+    
+    $todas_disponibilidades = [];
+    foreach ($canchas as $cancha) {
+        $disponibilidades = generarDisponibilidadCancha($cancha, $fecha_inicio_custom, $fecha_fin_custom);
+        $todas_disponibilidades = array_merge($todas_disponibilidades, $disponibilidades);
+    }
+    
+    $stmt_reservas = $pdo->prepare("SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin, dc.estado as estado_disponibilidad, r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total, r.tipo_reserva, r.id_convenio, r.notas, cl.nombre as nombre_club, s.alias as nombre_responsable, r.telefono_cliente, r.email_cliente FROM disponibilidad_canchas dc LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva LEFT JOIN clubs cl ON r.id_club = cl.id_club LEFT JOIN socios s ON r.id_socio = s.id_socio WHERE dc.fecha BETWEEN ? AND ? AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)");
+    $stmt_reservas->execute([$fecha_inicio_custom, $fecha_fin_custom, $id_recinto]);
+    $reservas_reales = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
+    
+    $reservas_map = [];
+    foreach ($reservas_reales as $reserva) {
+        $key = $reserva['id_cancha'].'_'.$reserva['fecha'].'_'.$reserva['hora_inicio'];
+        $reservas_map[$key] = $reserva;
+    }
+    
+    $resultado_final = [];
+    foreach ($todas_disponibilidades as $disp) {
+        $key = $disp['id_cancha'].'_'.$disp['fecha'].'_'.$disp['hora_inicio'];
+        $resultado_final[] = isset($reservas_map[$key]) ? array_merge($disp, $reservas_map[$key]) : $disp;
+    }
+    
+    usort($resultado_final, function($a, $b) {
+        if ($a['fecha'] != $b['fecha']) return strcmp($a['fecha'], $b['fecha']);
+        return strcmp($a['hora_inicio'], $b['hora_inicio']);
+    });
+    
+    return $resultado_final;
 }
 
 function getDetalleReserva($pdo, $id_disponibilidad, $id_recinto) {

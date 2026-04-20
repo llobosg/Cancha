@@ -699,11 +699,12 @@ $recinto = $stmt->fetch();
         </select>
         
         <select class="control-select" id="filtroEstado">
-          <option value="">Todos los estados</option>
-          <option value="disponible">Disponible</option>
-          <option value="reservada">Reservada</option>
-          <option value="ocupada">Ocupada</option>
-          <option value="cancelada">Cancelada</option>
+            <option value="">Todos los estados</option>
+            <option value="disponible">Disponibles</option>
+            <option value="reservada">Reservadas</option> <!-- Esta mostrará pasadas y futuras -->
+            <option value="ocupada">Ocupadas</option>
+            <option value="cancelada">Canceladas</option>
+            <option value="parcial">Pago Parcial</option>
         </select>
         
         <select class="control-select" id="filtroFecha">

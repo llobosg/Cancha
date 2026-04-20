@@ -36,6 +36,7 @@ function procesarPagoReserva($pdo, $data) {
     $id_reserva = (int)($data['id_reserva'] ?? 0);
     $metodo_pago = trim($data['metodo_pago'] ?? '');
     $transaccion_id = trim($data['transaccion_id'] ?? '');
+    $monto_total = (float)($data['monto_total'] ?? 0); // Asumimos pago total
     
     if (!$id_reserva || !$metodo_pago) {
         throw new Exception('Datos incompletos para procesar pago');
@@ -59,23 +60,24 @@ function procesarPagoReserva($pdo, $data) {
         throw new Exception('Esta reserva ya está pagada');
     }
     
-    // Actualizar estado de pago
+    // Actualizar estado de pago (PAGO COMPLETO)
     $stmt_update = $pdo->prepare("
         UPDATE reservas 
         SET estado_pago = 'pagado',
             metodo_pago = ?,
             transaccion_id = ?,
+            monto_recaudacion = ?, -- Actualizamos el monto recaudado
             updated_at = NOW()
         WHERE id_reserva = ?
     ");
-    $stmt_update->execute([$metodo_pago, $transaccion_id ?: null, $id_reserva]);
+    $stmt_update->execute([$metodo_pago, $transaccion_id ?: null, $monto_total, $id_reserva]);
     
-    //Opcional: Enviar email de confirmación de pago
-    enviarEmailConfirmacionPago($reserva, $metodo_pago);
+    // NOTA: Función enviarEmailConfirmacionPago eliminada porque no existe.
+    // Si necesitas enviar emails, debes crear esa función o usar mail() directamente.
     
     return [
         'success' => true,
-        'message' => 'Pago registrado correctamente',
+        'message' => 'Pago total registrado correctamente',
         'id_reserva' => $id_reserva
     ];
 }
@@ -92,8 +94,8 @@ function procesarPagoParcial($pdo, $data) {
         throw new Exception('Datos incompletos o inválidos');
     }
     
-    // 1. Verificar reserva y obtener notas actuales
-    $stmt_check = $pdo->prepare("SELECT id_reserva, estado_pago, monto_total, notas FROM reservas WHERE id_reserva = ?");
+    // 1. Obtener datos actuales (incluyendo monto_recaudacion actual si hubo pagos previos)
+    $stmt_check = $pdo->prepare("SELECT id_reserva, estado_pago, monto_total, monto_recaudacion, notas FROM reservas WHERE id_reserva = ?");
     $stmt_check->execute([$id_reserva]);
     $reserva = $stmt_check->fetch(PDO::FETCH_ASSOC);
     
@@ -101,23 +103,26 @@ function procesarPagoParcial($pdo, $data) {
         throw new Exception('Reserva no encontrada');
     }
     
-    // Si ya está pagado completamente, lanzar error
+    // Si ya está pagado completamente, bloquear
     if ($reserva['estado_pago'] === 'pagado') {
         throw new Exception('Esta reserva ya está marcada como PAGADA.');
     }
     
+    // Calcular nuevo monto recaudado acumulado
+    $monto_recaudado_actual = (float)($reserva['monto_recaudacion'] ?? 0);
+    $nuevo_monto_recaudado = $monto_recaudado_actual + $monto_pagado;
+    
     // 2. Determinar nuevo estado
-    $nuevo_estado_pago = 'pendiente'; // Por defecto sigue pendiente
-
-    if ($monto_pagado >= $monto_total_original) {
+    $nuevo_estado_pago = 'parcial'; // Por defecto es parcial
+    
+    // Si el acumulado cubre el total, marcamos como pagado
+    if ($nuevo_monto_recaudado >= $monto_total_original) {
         $nuevo_estado_pago = 'pagado';
-    } else {
-        // Si pagó menos, marcamos como 'parcial' (si la columna lo permite) o dejamos 'pendiente'
-        // Recomendado: Usar 'parcial' si tu BD lo soporta, sino 'pendiente' con notas claras.
-        $nuevo_estado_pago = 'parcial'; 
+        // Ajustar al monto exacto si se pasó (opcional)
+        // $nuevo_monto_recaudado = $monto_total_original; 
     }
     
-    // 3. Construir el texto de notas en PHP (Más seguro)
+    // 3. Construir el texto de notas
     $fecha_hoy = date('d/m/Y H:i');
     $nota_nueva = "\n[PAGO {$fecha_hoy}]: $" . number_format($monto_pagado, 0, ',', '.') . " vía {$metodo_pago}";
     
@@ -125,7 +130,6 @@ function procesarPagoParcial($pdo, $data) {
         $nota_nueva .= " - Obs: {$notas_pago}";
     }
     
-    // Combinar con notas existentes si las hay
     $notas_finales = !empty($reserva['notas']) ? $reserva['notas'] . $nota_nueva : ltrim($nota_nueva);
     
     // 4. Actualizar la reserva
@@ -134,6 +138,7 @@ function procesarPagoParcial($pdo, $data) {
         SET estado_pago = ?,
             metodo_pago = ?,
             transaccion_id = ?,
+            monto_recaudacion = ?, -- ACTUALIZADO: Guardamos el acumulado
             notas = ?,
             updated_at = NOW()
         WHERE id_reserva = ?
@@ -143,6 +148,7 @@ function procesarPagoParcial($pdo, $data) {
         $nuevo_estado_pago,
         $metodo_pago,
         $transaccion_id,
+        $nuevo_monto_recaudado,
         $notas_finales,
         $id_reserva
     ]);
@@ -150,7 +156,8 @@ function procesarPagoParcial($pdo, $data) {
     return [
         'success' => true,
         'message' => 'Pago registrado correctamente. Estado: ' . $nuevo_estado_pago,
-        'estado_nuevo' => $nuevo_estado_pago
+        'estado_nuevo' => $nuevo_estado_pago,
+        'monto_recaudado' => $nuevo_monto_recaudado
     ];
 }
 ?>
