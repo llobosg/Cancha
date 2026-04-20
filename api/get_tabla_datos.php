@@ -69,32 +69,82 @@ try {
             break;
 
         case 'cuotas':
-            // Si no hay club, mostramos cuotas personales si existieran (ajustar lógica según necesidad)
-            // Por ahora, si no hay club, asumimos que las cuotas son de club o eventos de club
-            if (!$club_id) { echo json_encode([]); exit; }
+            // Si no hay club, no hay cuotas de club que mostrar
+            if (!$club_id) { 
+                echo json_encode([]); 
+                exit; 
+            }
 
-            $stmt = $pdo->prepare("
-                SELECT
-                    COALESCE(r.fecha, e.fecha) AS fecha, r.hora_inicio,
-                    COALESCE(te.tipoevento, ete.tipoevento) AS id_tipoevento,
-                    COALESCE(rd.nombre, cl.nombre, 'Evento') AS origen,
-                    COALESCE(r.monto_total, e.valor_cuota, 0) AS costo_evento,
-                    s.alias AS nombre, p.puesto AS posicion_jugador,
-                    c.monto AS cuota_monto, c.monto AS monto, c.comentario, c.estado, c.fecha_pago, c.id_cuota AS id_inscrito
-                FROM cuotas c
-                JOIN socios s ON c.id_socio = s.id_socio
-                LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
-                LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
-                LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
-                LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
-                LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
-                LEFT JOIN clubs cl ON r.id_club = cl.id_club
-                LEFT JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
-                LEFT JOIN tipoeventos ete ON e.id_tipoevento COLLATE utf8mb4_unicode_ci = ete.id_tipoevento COLLATE utf8mb4_unicode_ci
-                WHERE c.id_socio = ? AND COALESCE(r.id_club, e.id_club) = ?
-                ORDER BY c.fecha_vencimiento DESC
-            ");
-            $stmt->execute([$id_socio, $club_id]);
+            // Verificar si el usuario actual es responsable del club
+            $es_responsable = false;
+            if (isset($_SESSION['id_socio'])) {
+                $stmt_rol = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
+                $stmt_rol->execute([$_SESSION['id_socio']]);
+                $rol_data = $stmt_rol->fetch();
+                $es_responsable = ($rol_data && $rol_data['es_responsable'] == 1);
+            }
+
+            $sql = "";
+            $params = [];
+
+            if ($es_responsable) {
+                // === LÓGICA PARA RESPONSABLE: Ver TODAS las cuotas del club ===
+                // Filtramos solo por el ID del club, sin restringir por id_socio
+                $sql = "
+                    SELECT
+                        COALESCE(r.fecha, e.fecha) AS fecha, r.hora_inicio,
+                        COALESCE(te.tipoevento, ete.tipoevento) AS id_tipoevento,
+                        COALESCE(rd.nombre, cl.nombre, 'Evento') AS origen,
+                        COALESCE(r.monto_total, e.valor_cuota, 0) AS costo_evento,
+                        s.alias AS nombre, p.puesto AS posicion_jugador,
+                        c.monto AS cuota_monto, c.monto AS monto, c.comentario, c.estado, c.fecha_pago, c.id_cuota AS id_inscrito
+                    FROM cuotas c
+                    JOIN socios s ON c.id_socio = s.id_socio
+                    LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
+                    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+                    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+                    LEFT JOIN clubs cl ON r.id_club = cl.id_club
+                    LEFT JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    LEFT JOIN tipoeventos ete ON e.id_tipoevento COLLATE utf8mb4_unicode_ci = ete.id_tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE COALESCE(r.id_club, e.id_club) = ?
+                    ORDER BY c.fecha_vencimiento DESC
+                ";
+                $params[] = $club_id;
+                
+                error_log("🔍 [API CUOTAS] Modo Responsable: Cargando TODAS las cuotas del club $club_id");
+            } else {
+                // === LÓGICA PARA SOCIO NORMAL: Ver solo SUS cuotas ===
+                $sql = "
+                    SELECT
+                        COALESCE(r.fecha, e.fecha) AS fecha, r.hora_inicio,
+                        COALESCE(te.tipoevento, ete.tipoevento) AS id_tipoevento,
+                        COALESCE(rd.nombre, cl.nombre, 'Evento') AS origen,
+                        COALESCE(r.monto_total, e.valor_cuota, 0) AS costo_evento,
+                        s.alias AS nombre, p.puesto AS posicion_jugador,
+                        c.monto AS cuota_monto, c.monto AS monto, c.comentario, c.estado, c.fecha_pago, c.id_cuota AS id_inscrito
+                    FROM cuotas c
+                    JOIN socios s ON c.id_socio = s.id_socio
+                    LEFT JOIN puestos p ON s.id_puesto = p.id_puesto
+                    LEFT JOIN reservas r ON c.id_evento = r.id_reserva AND c.tipo_actividad = 'reserva'
+                    LEFT JOIN eventos e ON c.id_evento = e.id_evento AND c.tipo_actividad = 'evento'
+                    LEFT JOIN canchas ca ON r.id_cancha = ca.id_cancha
+                    LEFT JOIN recintos_deportivos rd ON ca.id_recinto = rd.id_recinto
+                    LEFT JOIN clubs cl ON r.id_club = cl.id_club
+                    LEFT JOIN tipoeventos te ON ca.id_deporte COLLATE utf8mb4_unicode_ci = te.tipoevento COLLATE utf8mb4_unicode_ci
+                    LEFT JOIN tipoeventos ete ON e.id_tipoevento COLLATE utf8mb4_unicode_ci = ete.id_tipoevento COLLATE utf8mb4_unicode_ci
+                    WHERE c.id_socio = ? AND COALESCE(r.id_club, e.id_club) = ?
+                    ORDER BY c.fecha_vencimiento DESC
+                ";
+                $params[] = $id_socio;
+                $params[] = $club_id;
+                
+                error_log("🔍 [API CUOTAS] Modo Socio: Cargando solo cuotas del socio $id_socio en club $club_id");
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
             break;
 
