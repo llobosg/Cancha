@@ -719,7 +719,6 @@ $recinto = $stmt->fetch();
   
   <div class="dashboard-container" style="margin-top: 70px;">
     <div>
-      <div class="controls-section">
         <!-- Filtro de Vista: Planilla vs Fichas -->
         <div style="display:flex; justify-content:center; margin-bottom:1rem; gap:1rem; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:8px; width:fit-content; margin-left:auto; margin-right:auto;">
             <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold;">
@@ -763,6 +762,7 @@ $recinto = $stmt->fetch();
                 </div>
             </div>
         </div>
+      <div class="controls-section">
         <select class="control-select" id="filtroDeporte">
           <option value="">Todos los deportes</option>
           <option value="futbol">Fútbol</option>
@@ -1605,46 +1605,60 @@ $recinto = $stmt->fetch();
     // Filtro por estado
     document.getElementById('filtroEstado').addEventListener('change', aplicarFiltrosConAPI);
 
-    // Función que llama a la API de filtrado con POST
     async function aplicarFiltrosConAPI() {
-    const deporte = document.getElementById('filtroDeporte').value;
-    const estado = document.getElementById('filtroEstado').value;
-    const fecha = document.getElementById('filtroFecha').value;
-    
-    console.log('🔍 Filtros enviados:', { deporte, estado, fecha });
-
-    try {
-        const formData = new FormData();
-        formData.append('action', 'filtrar_reservas');
-        formData.append('deporte', deporte);
-        formData.append('estado', estado);
-        formData.append('fecha', fecha);
+        const deporte = document.getElementById('filtroDeporte').value;
+        const estado = document.getElementById('filtroEstado').value;
+        const fecha = document.getElementById('filtroFecha').value;
         
-        // Log de lo que se envía
-        for (let pair of formData.entries()) {
-            console.log(pair[0]+ ', ' + pair[1]); 
+        // Detectar vista actual
+        const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked').value;
+        
+        console.log('🔍 Filtros enviados:', { deporte, estado, fecha, vista: vistaActual });
+
+        if (vistaActual === 'planilla') {
+            // Si estamos en vista Planilla, recargamos la planilla con los nuevos filtros
+            // Nota: La planilla usa principalmente el Deporte y la Fecha seleccionada en sus propios controles
+            // Pero si quieres que el filtro de Estado afecte a la planilla, tendrías que pasar ese parámetro a la API.
+            // Por ahora, asumimos que cambiar el deporte en los filtros generales debe refrescar la planilla.
+            
+            if (deporte) {
+                deporteSeleccionadoPlanilla = deporte; // Actualizar variable global de la planilla
+                cargarPlanillaReservas(); // Llamar a la función de la planilla
+            } else {
+                alert("Para ver la Planilla, debes seleccionar un Deporte específico.");
+                // Opcional: Forzar volver a fichas o limpiar selección
+            }
+            return; // Salimos aquí para no ejecutar la lógica de fichas
         }
 
-        const response = await fetch('../api/canchaboard.php', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        console.log('📡 Respuesta API (Total items):', data.length);
-        
-        if (data.error) {
-            throw new Error(data.error);
+        // === LÓGICA ORIGINAL PARA FICHAS ===
+        try {
+            const formData = new FormData();
+            formData.append('action', 'filtrar_reservas');
+            formData.append('deporte', deporte);
+            formData.append('estado', estado);
+            formData.append('fecha', fecha);
+            
+            const response = await fetch('../api/canchaboard.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            console.log(' Respuesta API (Total items):', data.length);
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            reservasData = data;
+            renderizarReservas(reservasData);
+            
+        } catch (error) {
+            console.error('Error al aplicar filtros:', error);
+            showToast('❌ Error al filtrar reservas', 'error');
         }
-        
-        reservasData = data;
-        renderizarReservas(reservasData);
-        
-    } catch (error) {
-        console.error('Error al aplicar filtros:', error);
-        showToast('❌ Error al filtrar reservas', 'error');
     }
-}
 
     // Cargar datos iniciales con "Hoy" por defecto
     document.addEventListener('DOMContentLoaded', function() {
@@ -2005,15 +2019,26 @@ $recinto = $stmt->fetch();
         document.getElementById('vistaPlanilla').style.display = vista === 'planilla' ? 'block' : 'none';
         
         if (vista === 'planilla') {
-            // Obtener deporte actual del filtro
-            deporteSeleccionadoPlanilla = document.getElementById('filtroDeporte').value;
-            if (!deporteSeleccionadoPlanilla) {
-                alert('Por favor selecciona un deporte primero para ver la planilla.');
+            // Obtener el deporte seleccionado en el filtro general
+            const deporteFiltro = document.getElementById('filtroDeporte').value;
+            
+            if (!deporteFiltro) {
+                alert('️ Por favor selecciona un Deporte en los filtros superiores para ver la Planilla.');
+                // Opcional: Devolver a fichas si no hay deporte
                 document.querySelector('input[value="fichas"]').checked = true;
-                cambiarVistaCalendario('fichas');
+                document.getElementById('vistaFichas').style.display = 'block';
+                document.getElementById('vistaPlanilla').style.display = 'none';
                 return;
             }
+            
+            deporteSeleccionadoPlanilla = deporteFiltro;
+            
+            // Sincronizar la fecha de la planilla con el filtro de fecha general si es necesario
+            // O usar la fecha de hoy por defecto
             cargarPlanillaReservas();
+        } else {
+            // Si volvemos a Fichas, aseguramos que se carguen los datos actuales
+            aplicarFiltrosConAPI();
         }
     }
 
