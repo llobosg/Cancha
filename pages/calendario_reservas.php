@@ -2160,44 +2160,39 @@ $recinto = $stmt->fetch();
         });
     }
 
-    // === INICIALIZACIÓN ROBUSTA (CORREGIDA) ===
+    // === INICIALIZACIÓN FORZADA A PLANILLA ===
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("🚀 Iniciando calendario_reservas...");
+        console.log("🚀 Iniciando calendario_reservas (Modo Planilla Forzado)...");
 
-        // 1. Forzar vista Planilla
-        const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
-        if (radioPlanilla) {
-            radioPlanilla.checked = true;
-            cambiarVistaCalendario('planilla');
-        }
+        // 1. NO buscamos radio buttons. Definimos la vista manualmente.
+        const vistaForzada = 'planilla';
         
+        // Ocultar fichas si existen y mostrar planilla
+        const fichasDiv = document.getElementById('vistaFichas');
+        const planillaDiv = document.getElementById('vistaPlanilla');
+        
+        if (fichasDiv) fichasDiv.style.display = 'none';
+        if (planillaDiv) planillaDiv.style.display = 'block';
+
         // 2. Definir fecha global
         window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
         console.log("📅 Fecha global:", window.fechaPlanillaActual);
 
-        // 3. Ejecutar carga con retraso y validación suave
+        // 3. Cargar datos inmediatamente
         setTimeout(() => {
-            const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
+            console.log("✅ Vista Planilla activada manualmente. Iniciando carga...");
             
-            // Buscamos el select. Si no existe, usamos null pero intentamos cargar igual.
+            // Verificar select de deporte (que SÍ está visible en el header lila)
             const selectDeporte = document.getElementById('filtroDeporte');
-            
-            if (vistaActual === 'planilla') {
-                console.log("✅ Vista Planilla activa. Intentando cargar...");
-                
-                if (selectDeporte) {
-                    console.log("✅ Select Deporte encontrado.");
-                    if (!selectDeporte.value) selectDeporte.value = ""; 
-                } else {
-                    console.warn("⚠️ WARNING: Select #filtroDeporte NO encontrado en el DOM. Se usará valor por defecto.");
-                }
-                
-                // LLAMAMOS A CARGAR DE TODAS FORMAS
-                cargarPlanillaReservas();
+            if (selectDeporte) {
+                if (!selectDeporte.value) selectDeporte.value = ""; 
+                console.log("✅ Select Deporte listo.");
             } else {
-                console.warn("⚠️ La vista activa no es Planilla.");
+                console.warn("️ Select Deporte no encontrado (revisa el HTML).");
             }
-        }, 600); // Aumentamos a 600ms para asegurar renderizado total
+            
+            cargarPlanillaReservas();
+        }, 500);
     });
 
     // === FUNCIÓN CARGAR PLANILLA (TOLERANTE A ERRORES) ===
