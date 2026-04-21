@@ -207,21 +207,62 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         font-size: 1.1rem;
       }
     }
+
+    /* Estilos Top Bar CanchaSport */
+        .top-bar {
+            background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .brand-logo {
+            color: white;
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .brand-logo span { font-size: 1.8rem; }
+        
+        .btn-back {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        .btn-back:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
   </style>
 </head>
 <body>
   <!-- Barra superior -->
-  <div class="top-bar" style="background: white; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000;">
-      <div style="max-width: 1400px; margin: 0 auto; padding: 0 1rem; display: flex; justify-content: space-between; align-items: center;">
-          
-          <!-- Logo / Nombre -->
-          <div class="logo" style="font-weight: 900; font-size: 1.2rem; color: #AB47BC; letter-spacing: -0.5px;">
-              CanchaSport - <?= htmlspecialchars($recinto_nombre) ?>
-          </div>
-
-          <!-- Contenedor del Menú Desplegable + Logout -->
-          <div style="display: flex; align-items: center; gap: 1rem;">
-              
+  <div class="top-bar">
+    <a href="../index.php" class="brand-logo">
+        <span>🏟️</span> CanchaSport - <?= htmlspecialchars($recinto_nombre) ?>
+    </a>
+    
+    <!-- Botón Volver al Dashboard -->
+    <a href="recinto_dashboard.php" class="btn-back">
+        ← Volver al Dashboard
+    </a>
+    <!-- Header con título y menú de usuario -->
+    <!-- Contenedor del Menú Desplegable + Logout -->
+          <div style="display: flex; align-items: center; gap: 1rem;"> 
               <!-- Botón de 3 Puntos (Kebab Menu) -->
               <div style="position: relative;">
                   <button onclick="toggleMenuAdmin(event)" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #555; line-height: 1; padding: 0 5px;" title="Opciones">
@@ -257,7 +298,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                   X Salir
               </a>
           </div>
-      </div>
   </div>
 
   <!-- Animación CSS para el menú -->
