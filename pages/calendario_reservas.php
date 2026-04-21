@@ -1224,32 +1224,61 @@ $recinto = $stmt->fetch();
 
     // === ABRIR MODAL DE PAGO DESDE EL DETALLE (ACTUALIZADO) ===
     function abrirModalPagoDesdeDetalle() {
-        if (!reservaActualSeleccionada) return;
+        console.log("💳 Intentando abrir modal de pago...");
         
+        // Verificación de seguridad
+        if (!window.reservaActualSeleccionada) {
+            console.error("❌ ERROR: reservaActualSeleccionada está vacía.");
+            alert("⚠️ No se han cargado los datos de la reserva. Intenta abrir el detalle nuevamente.");
+            return;
+        }
+        
+        console.log("✅ Datos encontrados:", window.reservaActualSeleccionada);
+
         // Ocultar menú de acciones
-        document.getElementById('actionMenuModal').style.display = 'none';
+        const menu = document.getElementById('actionMenuModal');
+        if (menu) menu.style.display = 'none';
         
-        const idReserva = reservaActualSeleccionada.id_reserva;
-        const montoTotal = parseFloat(reservaActualSeleccionada.monto_total);
+        const idReserva = window.reservaActualSeleccionada.id_reserva;
+        const montoTotal = parseFloat(window.reservaActualSeleccionada.monto_total);
         
+        if (!idReserva || isNaN(montoTotal)) {
+            alert("⚠️ Datos de pago incompletos en la reserva.");
+            return;
+        }
+
         // Llenar información base
-        document.getElementById('infoIdReserva').textContent = idReserva;
-        document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
+        const infoId = document.getElementById('infoIdReserva');
+        const infoMonto = document.getElementById('infoMontoTotal');
         
-        // PRE-LLENAR EL MONTO CON EL TOTAL (pero editable)
+        if (infoId) infoId.textContent = idReserva;
+        if (infoMonto) infoMonto.textContent = '$' + montoTotal.toLocaleString();
+        
+        // PRE-LLENAR EL MONTO
         const inputMonto = document.getElementById('montoPagar');
-        inputMonto.value = montoTotal; 
+        if (inputMonto) {
+            inputMonto.value = montoTotal; 
+        }
         
-        // Resetear otros campos
-        document.getElementById('formPago').dataset.idReserva = idReserva;
-        document.getElementById('formPago').dataset.montoOriginal = montoTotal; // Guardamos el original para comparar
-        document.getElementById('formPago').reset();
-        document.getElementById('montoPagar').value = montoTotal; // Restaurar valor tras el reset
-        document.getElementById('campoTransaccion').style.display = 'none';
+        // Resetear form y configurar dataset
+        const formPago = document.getElementById('formPago');
+        if (formPago) {
+            formPago.dataset.idReserva = idReserva;
+            formPago.dataset.montoOriginal = montoTotal;
+            formPago.reset();
+            if (inputMonto) inputMonto.value = montoTotal; // Restaurar valor
+            
+            const campoTrans = document.getElementById('campoTransaccion');
+            if (campoTrans) campoTrans.style.display = 'none';
+        }
         
-        // Cerrar modal detalle y abrir pago
+        // Cambiar de modal
         cerrarModalDetalle();
-        document.getElementById('modalPago').style.display = 'flex';
+        const modalPago = document.getElementById('modalPago');
+        if (modalPago) {
+            modalPago.style.display = 'flex';
+            console.log("✅ Modal de Pago abierto correctamente");
+        }
     }
 
     // === LISTENER PARA MÉTODO DE PAGO (Igual que antes) ===
@@ -2263,15 +2292,13 @@ $recinto = $stmt->fetch();
 
     // === FUNCIÓN PARA ABRIR DETALLE DESDE PLANILLA (CORREGIDA) ===
     function abrirDetalleDesdePlanilla(idReserva) {
-        console.log("️ Click en Reserva ID:", idReserva);
+        console.log("🖱️ Click en Reserva ID:", idReserva);
 
         if (!idReserva) {
             alert("Error: ID de reserva inválido");
             return;
         }
 
-        // Enviamos id_disponibilidad=0 (para que el backend sepa que debe buscar por reserva)
-        // y enviamos el id_reserva real.
         const formData = new URLSearchParams();
         formData.append('id_disponibilidad', '0'); 
         formData.append('id_reserva', idReserva);
@@ -2280,11 +2307,17 @@ $recinto = $stmt->fetch();
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: formData,
-            credentials: 'include' // ✅ IMPORTANTE
+            credentials: 'include'
         })
         .then(response => response.json())
         .then(detalle => {
             if (detalle.error) throw new Error(detalle.error);
+            
+            // ✅ CORRECCIÓN CLAVE: Guardar los datos en la variable global
+            // Esto permite que el botón "Pagar" tenga acceso a id_reserva y monto_total
+            window.reservaActualSeleccionada = detalle; 
+            
+            console.log("✅ Datos guardados en reservaActualSeleccionada:", detalle);
             
             if (typeof mostrarDetalleReserva === 'function') {
                 mostrarDetalleReserva(detalle);
