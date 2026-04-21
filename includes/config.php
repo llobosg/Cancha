@@ -2,6 +2,15 @@
 // includes/config.php
 header("Access-Control-Allow-Origin: https://canchasport.com");
 
+// Configuración de sesión para producción (Railway/HTTPS)
+if (isset($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
+    ini_set('session.cookie_secure', 1);
+}
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+// Permitir cookies en contextos cruzados si es necesario (ajustar según necesidad)
+ini_set('session.cookie_samesite', 'Lax'); 
+
 // Configuración de sesión segura y consistente
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([

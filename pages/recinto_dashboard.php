@@ -14,13 +14,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Validar rol de recinto
+// 2. Validación de seguridad
+// Verifica que exista id_recinto Y que el rol sea válido (admin o asistente)
 if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
-    header('Location: ../index.php');
+    error_log("❌ [DASHBOARD] Sesión inválida o faltante. Redirigiendo a login.");
+    error_log("Datos sesión actuales: " . print_r($_SESSION, true)); // Para ver qué llega
+    
+    // Redirigir al login de recintos, NO al index general
+    header('Location: login_recintos.php'); 
     exit;
 }
 
-require_once __DIR__ . '/../includes/permisos.php'; // Cargar funciones
+// Opcional: Si quieres forzar que solo entren admin o asistente
+$rol_permitido = $_SESSION['recinto_rol'];
+if (!in_array($rol_permitido, ['admin', 'asistente'])) {
+     // Si el rol no es correcto, destruir sesión y echar
+     session_destroy();
+     header('Location: login_recintos.php');
+     exit;
+}
+
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/permisos.php';
 
 // Obtener datos del usuario logueado para mostrar en el perfil
 $stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");

@@ -1,8 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
-
 error_log("🔍 [LOGIN_RECINTOS] Inicio del script");
 error_log("🔍 [LOGIN_RECINTOS] Sesión actual: " . print_r($_SESSION, true));
 
@@ -10,7 +8,6 @@ error_log("🔍 [LOGIN_RECINTOS] Sesión actual: " . print_r($_SESSION, true));
 if (isset($_SESSION['id_socio'])) {
     error_log("⚠️ [LOGIN_RECINTOS] Sesión de socio detectada. Destruyendo...");
     session_destroy();
-    session_start();
     error_log("✅ [LOGIN_RECINTOS] Nueva sesión iniciada sin id_socio");
 }
 
@@ -54,16 +51,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("❌ [LOGIN_RECINTOS] Recinto no verificado para usuario: '$usuario'");
             } else {
                 // 4. Iniciar sesión con los datos de $admin (que ya tiene todo incluido)
-                session_start();
+                if (session_status() === PHP_SESSION_NONE) {
+                    session_start();
+                }
                 
                 $_SESSION['id_recinto'] = $admin['id_recinto'];
                 $_SESSION['id_admin'] = $admin['id_admin']; // Usamos id_admin directo
                 $_SESSION['recinto_usuario'] = $admin['usuario'];
                 $_SESSION['nombre_recinto'] = $admin['nombre_recinto'];
-                
-                // ✅ Guardar el rol (asegurando que exista, default 'admin' si es null)
-                $_SESSION['recinto_rol'] = $admin['rol'] ?? 'admin'; 
-                
+                $_SESSION['recinto_rol'] = $admin['rol'] ?? 'admin';
+
                 error_log("✅ [LOGIN_RECINTOS] Sesión iniciada correctamente. Rol: " . $_SESSION['recinto_rol']);
                 error_log("✅ [LOGIN_RECINTOS] Redirigiendo a recinto_dashboard.php");
                 
