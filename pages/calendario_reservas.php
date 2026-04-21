@@ -1212,72 +1212,6 @@ $recinto = $stmt->fetch();
         document.getElementById('modalDetalleReserva').style.display = 'flex';
     }
 
-    // === RENDERIZAR CONTENIDO DENTRO DEL MODAL ===
-    function renderizarContenidoDetalle(detalle) {
-        const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
-        const money = (v) => '$' + parseInt(v || 0).toLocaleString();
-        
-        // Controlar visibilidad del botón Pagar en el modal
-        const btnPagarModal = document.getElementById('btnPagarModal');
-        if (btnPagarModal) {
-            if ((parseFloat(detalle.monto_total) > 0) && detalle.estado_pago === 'pendiente') {
-                btnPagarModal.style.display = 'block';
-                btnPagarModal.dataset.monto = detalle.monto_total;
-                btnPagarModal.dataset.idReserva = detalle.id_reserva;
-            } else {
-                btnPagarModal.style.display = 'none';
-            }
-        }
-
-        // Dentro de renderizarContenidoDetalle, cambia el HTML generado así:
-
-        const html = `
-            <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
-                
-                <!-- BLOQUE 1: DATOS PRINCIPALES (Clase: .info-grid-2col) -->
-                <div class="info-grid-2col" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; background: #f0f4f8; padding: 0.8rem; border-radius: 8px;">
-                    <div><strong style="color:#071289;">📅 Fecha:</strong> ${val(detalle.fecha)}</div>
-                    <div><strong style="color:#071289;"> Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
-                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
-                    <div><strong style="color:#071289;"> Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
-                </div>
-
-                <!-- BLOQUE 2: CLIENTE (Clase: .client-grid-2col) -->
-                <div class="client-grid-2col" style="margin-bottom: 1rem;">
-                    <h4 style="color:#071289; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:0.8rem; grid-column: 1/-1;">👤 Información del Cliente</h4>
-                    <p style="margin:0.2rem 0;"><strong>Nombre:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</p>
-                    <p style="margin:0.2rem 0;"><strong>Teléfono:</strong> ${val(detalle.telefono_cliente)}</p>
-                    <p style="margin:0.2rem 0;"><strong>Email:</strong> ${val(detalle.email_cliente)}</p>
-                    ${detalle.nombre_club ? `<p style="margin:0.2rem 0;"><strong>Club:</strong> ${val(detalle.nombre_club)}</p>` : ''}
-                </div>
-
-                <!-- BLOQUE 3: MONTO Y ESTADOS (Clase: .status-blocks) -->
-                <div class="status-blocks" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
-                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 10px; text-align: center; border: 1px solid #bbdefb; display:flex; flex-direction:column; justify-content:center;">
-                        <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO TOTAL</div>
-                        <div style="font-size: 1.5rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
-                    </div>
-                    
-                    <div style="background: #fff3e0; padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #ffe0b2; gap: 0.5rem;">
-                        <div>
-                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
-                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
-                        </div>
-                        <div style="border-top: 1px dashed #ffcc80; margin: 0.3rem 0;"></div>
-                        <div>
-                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
-                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                ${detalle.notas ? `<div style="margin-top:1rem; background:#fffde7; padding:1rem; border-radius:8px; border-left:4px solid #fbc02d; color:#333;"><strong>📝 Notas:</strong> ${val(detalle.notas)}</div>` : ''}
-            </div>
-        `;
-        
-        document.getElementById('contenidoDetalle').innerHTML = html;
-    }
-
     // === CERRAR MODALES ===
     function cerrarModalDetalle() {
         document.getElementById('modalDetalleReserva').style.display = 'none';
@@ -1470,70 +1404,6 @@ $recinto = $stmt->fetch();
                 ✅ Disponible para reservar
             </div>
         `;
-    }
-
-    function mostrarDetalleReserva(detalle) {
-        console.log(" Renderizando detalle con datos REALES:", detalle);
-
-        // Función auxiliar para evitar errores con nulos
-        const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
-        const money = (v) => '$' + parseInt(v || 0).toLocaleString();
-        
-        // Construcción del HTML USANDO EXCLUSIVAMENTE la variable 'detalle'
-        const html = `
-            <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
-                <!-- Datos Principales -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: #f0f4f8; padding: 1rem; border-radius: 10px;">
-                    <div><strong style="color:#071289;">📅 Fecha:</strong> ${val(detalle.fecha)}</div>
-                    <div><strong style="color:#071289;">⏰ Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
-                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
-                    <div><strong style="color:#071289;"> Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
-                </div>
-
-                <!-- Cliente -->
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color:#071289; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:1rem;">👤 Información del Cliente</h4>
-                    <p style="margin:0.3rem 0;"><strong>Nombre:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</p>
-                    <p style="margin:0.3rem 0;"><strong>Teléfono:</strong> ${val(detalle.telefono_cliente)}</p>
-                    <p style="margin:0.3rem 0;"><strong>Email:</strong> ${val(detalle.email_cliente)}</p>
-                    ${detalle.nombre_club ? `<p style="margin:0.3rem 0;"><strong>Club:</strong> ${val(detalle.nombre_club)}</p>` : ''}
-                </div>
-
-                <!-- Monto y Estados -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 10px; text-align: center; border: 1px solid #bbdefb;">
-                        <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO TOTAL</div>
-                        <div style="font-size: 1.5rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
-                    </div>
-                    
-                    <div style="background: #fff3e0; padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #ffe0b2;">
-                        <div style="margin-bottom: 0.5rem;">
-                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
-                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
-                        </div>
-                        <div style="border-top: 1px dashed #ffcc80; margin: 0.5rem 0;"></div>
-                        <div>
-                            <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
-                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                ${detalle.notas ? `<div style="margin-top:1rem; background:#fffde7; padding:1rem; border-radius:8px; border-left:4px solid #fbc02d; color:#333;"><strong>📝 Notas:</strong> ${val(detalle.notas)}</div>` : ''}
-            </div>
-        `;
-        
-        // Inyectar HTML en el contenedor correcto
-        const container = document.getElementById('contenidoDetalle'); // Asegúrate que este ID exista en tu modal
-        if (container) {
-            container.innerHTML = html;
-            console.log("✅ Detalle renderizado correctamente con datos nuevos");
-        } else {
-            console.error("❌ No se encontró el contenedor #contenidoDetalle");
-            // Fallback por si usas otro ID
-            const fallback = document.getElementById('detalleContent');
-            if(fallback) fallback.innerHTML = html;
-        }
     }
 
     async function anularReserva() {
@@ -1923,58 +1793,95 @@ $recinto = $stmt->fetch();
 
     // === ACTUALIZAR mostrarDetalleReserva PARA MOSTRAR BOTÓN PAGAR ===
 
-    // Reemplaza tu función mostrarDetalleReserva actual por esta versión que activa el botón
+    // === FUNCIÓN ÚNICA PARA MOSTRAR DETALLE (Reemplaza a las dos anteriores) ===
     function mostrarDetalleReserva(detalle) {
-        console.log("🎨 Renderizando detalle...", detalle);
+        console.log("🎨 Renderizando detalle con datos REALES:", detalle);
 
+        // Funciones auxiliares
         const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
         const money = (v) => '$' + parseInt(v || 0).toLocaleString();
-        
-        // Lógica para mostrar/ocultar botón de pagar
-        const btnPagar = document.getElementById('btnPagarDropdown');
-        if (btnPagar) {
-            // Mostrar solo si hay monto > 0 y estado de pago es pendiente
+
+        // Lógica para el botón de Pagar (si existe en el modal)
+        const btnPagarModal = document.getElementById('btnPagarModal');
+        if (btnPagarModal) {
             if ((parseFloat(detalle.monto_total) > 0) && detalle.estado_pago === 'pendiente') {
-                btnPagar.style.display = 'block';
-                // Guardar datos en el botón para usarlos luego
-                btnPagar.dataset.monto = detalle.monto_total;
-                btnPagar.dataset.idReserva = detalle.id_reserva;
+                btnPagarModal.style.display = 'block';
+                btnPagarModal.dataset.monto = detalle.monto_total;
+                btnPagarModal.dataset.idReserva = detalle.id_reserva;
             } else {
-                btnPagar.style.display = 'none';
+                btnPagarModal.style.display = 'none';
             }
         }
 
-        // Construcción del HTML (igual que antes pero simplificado para el ejemplo)
+        // Construcción del HTML Dinámico
         const html = `
-            <div style="font-size: 0.9rem; line-height: 1.6; color: #333333;">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
-                    <div><strong style="color:#071289;">📅 Fecha:</strong> <span>${val(detalle.fecha)}</span></div>
-                    <div><strong style="color:#071289;">⏰ Hora:</strong> <span>${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</span></div>
-                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> <span>${val(detalle.nombre_cancha)}</span></div>
-                    <div><strong style="color:#071289;"> Deporte:</strong> <span>${val(detalle.id_deporte).toUpperCase()}</span></div>
-                </div>
-                <div style="margin-bottom: 1rem; background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
-                    <div style="margin-bottom: 0.5rem;"><strong style="color:#071289;">👤 Cliente:</strong> <span>${val(detalle.nombre_responsable || detalle.email_cliente)}</span></div>
-                    <div><strong style="color:#071289;"> Teléfono:</strong> <span>${val(detalle.telefono_cliente)}</span></div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO</div>
-                        <div style="font-size: 1.4rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
-                    </div>
-                    <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
-                        <div style="font-size: 1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
+            <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
+                
+                <!-- Encabezado Fecha/Hora -->
+                <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 1px solid #bbdefb;">
+                    <h3 style="margin: 0 0 0.5rem 0; color: #0d47a1;"> ${val(detalle.fecha)}</h3>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #1565c0;">
+                        ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}
                     </div>
                 </div>
+
+                <!-- Datos Principales -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <strong style="color:#071289;">🏟️ Cancha:</strong><br>
+                        <span>${val(detalle.nombre_cancha)} (${val(detalle.nro_cancha)})</span>
+                    </div>
+                    <div>
+                        <strong style="color:#071289;">⚽ Deporte:</strong><br>
+                        <span>${val(detalle.id_deporte).toUpperCase()}</span>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <strong style="color:#071289;"> Cliente:</strong><br>
+                        <span>${val(detalle.nombre_responsable || detalle.email_cliente)}</span>
+                        ${detalle.nombre_club ? `<br><small style="color:#666;">Club: ${val(detalle.nombre_club)}</small>` : ''}
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <strong style="color:#071289;"> Contacto:</strong><br>
+                        <span>${val(detalle.telefono_cliente)}</span> | ${val(detalle.email_cliente)}
+                    </div>
+                </div>
+
+                <!-- Monto y Estados -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.8rem; color: #666; font-weight: bold;">💰 MONTO TOTAL</div>
+                        <div style="font-size: 1.4rem; font-weight: 900; color: #2e7d32;">${money(detalle.monto_total)}</div>
+                        ${detalle.monto_recaudacion ? `<div style="font-size: 0.8rem; color: #1565c0;">(Recaudado: ${money(detalle.monto_recaudacion)})</div>` : ''}
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: center;">
+                        <div style="background: #fff3e0; padding: 0.5rem; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 0.7rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
+                            <div style="font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
+                        </div>
+                        <div style="background: #e8f5e9; padding: 0.5rem; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 0.7rem; color: #2E7D32; font-weight: bold;">ESTADO PAGO</div>
+                            <div style="font-weight: bold; color: #1b5e20;">${val(detalle.estado_pago).toUpperCase()}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${detalle.notas ? `
+                <div style="margin-top: 1.5rem; background: #fffde7; padding: 1rem; border-radius: 8px; border-left: 4px solid #fbc02d; color: #333;">
+                    <strong> Observaciones:</strong> ${val(detalle.notas)}
+                </div>` : ''}
             </div>
         `;
-
-        const container = document.getElementById('detalleContent');
+        
+        // Inyectar HTML
+        let container = document.getElementById('contenidoDetalle');
+        if (!container) container = document.getElementById('detalleContent');
+        
         if (container) {
-            container.style.backgroundColor = '#ffffff'; 
-            container.style.color = '#333333';
             container.innerHTML = html;
+            console.log("✅ Detalle renderizado correctamente");
+        } else {
+            console.error("❌ Contenedor del modal no encontrado");
         }
     }
 
