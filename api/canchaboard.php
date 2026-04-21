@@ -73,12 +73,7 @@ try {
 
         case 'get_planilla_reservas':
             $fecha = $_GET['fecha'] ?? date('Y-m-d');
-            $deporte = $_GET['deporte'] ?? ''; // Ej: 'padel'
-            
-            if (!$deporte) {
-                echo json_encode(['error' => 'Deporte requerido']);
-                exit;
-            }
+            $deporte = $_GET['deporte'] ?? ''; // Puede venir vacío ("Todos los deportes")
             
             echo json_encode(getPlanillaReservas($pdo, $id_recinto, $fecha, $deporte));
             break;
