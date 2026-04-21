@@ -2183,34 +2183,83 @@ $recinto = $stmt->fetch();
     const fechaPlanillaInput = document.getElementById('fechaPlanillaInput');
 
     // Bandera para evitar el loop
-    let estaActualizandoFecha = false;
+    // Variable Global (Asegúrate que esté declarada fuera de cualquier función)
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    let estaActualizandoFecha = false; // Bandera para evitar loops del input
 
+    // === FUNCIÓN PARA CAMBIAR DÍA (ANTERIOR / SIGUIENTE) ===
     function cambiarDiaPlanilla(dias) {
-        if (estaActualizandoFecha) return; // Evitar recursión
+        console.log(`🔄 Cambiando día: ${dias} desde ${fechaPlanillaActual}`);
         
-        const fecha = new Date(fechaPlanillaActual);
-        fecha.setDate(fecha.getDate() + dias);
-        fechaPlanillaActual = fecha.toISOString().split('T')[0];
+        // 1. Calcular nueva fecha EXPLÍCITAMENTE
+        const fechaObj = new Date(fechaPlanillaActual);
+        fechaObj.setDate(fechaObj.getDate() + dias);
         
+        // 2. Actualizar la variable GLOBAL inmediatamente
+        const nuevaFecha = fechaObj.toISOString().split('T')[0];
+        window.fechaPlanillaActual = nuevaFecha; // Forzamos la ventana global
+        
+        console.log(`✅ Nueva fecha establecida: ${window.fechaPlanillaActual}`);
+        
+        // 3. Llamar a cargar SIN esperar ni verificar banderas innecesarias aquí
         cargarPlanillaReservas();
     }
 
+    // === FUNCIÓN IR A HOY ===
     function irAHoyPlanilla() {
-        if (estaActualizandoFecha) return;
-        
-        fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toISOString().split('T')[0];
+        window.fechaPlanillaActual = hoy;
+        console.log(`✅ Fecha reseteada a Hoy: ${hoy}`);
         cargarPlanillaReservas();
     }
 
-    // Listener del input de fecha
+    // === LISTENER DEL INPUT DE FECHA (Solo para cambios manuales) ===
     const fechaInput = document.getElementById('fechaPlanillaInput');
     if (fechaInput) {
         fechaInput.addEventListener('change', function() {
-            if (estaActualizandoFecha) return;
-            
-            fechaPlanillaActual = this.value;
-            cargarPlanillaReservas();
+            // Evitar loop si el cambio fue programático
+            if (this.value !== window.fechaPlanillaActual) {
+                window.fechaPlanillaActual = this.value;
+                cargarPlanillaReservas();
+            }
         });
+    }
+
+    // === FUNCIÓN CARGAR PLANILLA (CORREGIDA) ===
+    async function cargarPlanillaReservas() {
+        // Usar SIEMPRE la variable global actualizada
+        const fechaParaUsar = window.fechaPlanillaActual;
+        const deporteSelect = document.getElementById('filtroDeporte');
+        const deporte = deporteSelect ? (deporteSelect.value || "") : "";
+        
+        console.log(`📡 Iniciando carga para fecha: ${fechaParaUsar} | Deporte: ${deporte}`);
+
+        try {
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaParaUsar}&deporte=${encodeURIComponent(deporte)}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            // Actualizar visualmente el input SOLO si es diferente (evita trigger de change)
+            if (fechaInput && fechaInput.value !== fechaParaUsar) {
+                fechaInput.value = fechaParaUsar;
+            }
+            
+            renderizarPlanilla(data);
+            console.log("✅ Planilla cargada exitosamente");
+            
+        } catch (error) {
+            console.error("❌ Error al cargar:", error);
+            alert('Error: ' + error.message);
+        }
     }
 
     // === FUNCIÓN PARA ABRIR DETALLE DESDE PLANILLA (CORREGIDA) ===
@@ -2286,70 +2335,6 @@ $recinto = $stmt->fetch();
             cargarPlanillaReservas();
         }, 500);
     });
-
-    // === FUNCIÓN CARGAR PLANILLA (TOLERANTE A ERRORES) ===
-    async function cargarPlanillaReservas() {
-        estaActualizandoFecha = true; // Activar bandera
-        const deporteSelect = document.getElementById('filtroDeporte');
-        let deporte = "";
-        
-        if (deporteSelect) {
-            deporte = deporteSelect.value || "";
-        } else {
-            console.warn("⚠️ Usando deporte vacío por defecto (select no encontrado).");
-        }
-        
-        deporteSeleccionadoPlanilla = deporte;
-        
-        // Asegurar fecha
-        if (!window.fechaPlanillaActual) {
-            window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
-        }
-        const fecha = window.fechaPlanillaActual;
-
-        try {
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fecha}&deporte=${encodeURIComponent(deporte)}`;
-            console.log("📡 Fetching URL:", url);
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                credentials: 'include'
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            // Actualizar input visual si existe
-            const inputFecha = document.getElementById('fechaPlanillaInput');
-            if (inputFecha) inputFecha.value = fecha;
-            
-            renderizarPlanilla(data);
-            console.log("✅ Planilla cargada con éxito!");
-
-            if (inputFecha && inputFecha.value !== fechaPlanillaActual) {
-                inputFecha.value = fechaPlanillaActual;
-            }
-
-            // Desactivar bandera después de un pequeño delay para permitir interacción manual
-            setTimeout(() => {
-                estaActualizandoFecha = false;
-            }, 100);
-            
-        } catch (error) {
-            console.error("❌ Error crítico al cargar planilla:", error);
-            // Mostramos alerta solo si es un error real de backend, no de frontend
-            if (error.message.includes("HTTP") || error.message.includes("Acceso")) {
-                alert('Error de conexión o sesión: ' + error.message);
-            }
-        }
-    }
   </script>
 </body>
 </html>
