@@ -1867,7 +1867,6 @@ $recinto = $stmt->fetch();
             console.error("❌ Contenedor del modal no encontrado");
         }
         // === NUEVA LÓGICA: FILTRAR ACCIONES SEGÚN ESTADO DE PAGO ===
-        const btnPagarModal = document.getElementById('btnPagarModal');
         const menuAcciones = document.getElementById('actionMenuModal');
         
         // Verificar si tenemos los elementos del menú
