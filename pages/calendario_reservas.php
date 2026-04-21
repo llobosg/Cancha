@@ -852,6 +852,30 @@ $recinto = $stmt->fetch();
                             <button onclick="cambiarDiaPlanilla(-1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; line-height:1;">&lt;</button>
                             <button onclick="cambiarDiaPlanilla(1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; line-height:1;">&gt;</button>
                         </div>
+
+                        <!-- Filtros Deporte y Estado -->
+                        <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px;">
+                            <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
+                                <option value="">Todos los deportes</option>
+                                <option value="futbol">Fútbol</option>
+                                <option value="futbolito">Futbolito</option>
+                                <option value="futsal">Futsal</option>
+                                <option value="tenis">Tenis</option>
+                                <option value="padel">Pádel</option>
+                                <option value="voleyball">Voleyball</option>
+                                <option value="otro">Quincho/Otro</option>
+                            </select>
+                            
+                            <select class="control-select" id="filtroEstado" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
+                                <option value="">Todos los estados</option>
+                                <option value="disponible">Disponible</option>
+                                <option value="reservada">Reservadas</option>
+                                <option value="pagadas">Pagadas</option>
+                                <option value="parcial">Pago Parcial</option>
+                                <option value="ocupada">Ocupadas</option>
+                                <option value="cancelada">Canceladas</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
