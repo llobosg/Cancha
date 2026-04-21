@@ -256,7 +256,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       
       <!-- Logo / Marca -->
       <a href="../index.php" class="brand-logo" style="color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <span style="font-size: 1.8rem;">🏟️</span> CanchaSport
+          CanchaSport
       </a>
       
       <!-- Menú de Usuario y Sesión -->
@@ -281,7 +281,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                   <div style="padding: 0.5rem;">
                       <?php if (esAdmin()): ?>
                           <a href="gestion_asistentes.php" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-                              👥 Gestionar Asistentes
+                              👥 Asistentes
                           </a>
                       <?php endif; ?>
 
@@ -294,7 +294,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
           <!-- Botón Cerrar Sesión -->
           <a href="logout.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; backdrop-filter: blur(5px);">
-              🚪 Salir
+              Salir
           </a>
       </div>
   </div>
@@ -399,21 +399,53 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         </div>
     <?php endif; ?>
 
-    <!-- 3. SECCIÓN PRINCIPAL COMUN: PLANILLA DE RESERVAS -->
-    <!-- Visible para AMBOS roles -->
-    <div class="main-content-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #eee;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-            <h2 style="margin: 0; color: #333; font-size: 1.4rem;">📅 Planilla de Reservas</h2>
-            <a href="calendario_reservas.php?vista=planilla" style="color: #071289; text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #f0f4f8; padding: 0.5rem 1rem; border-radius: 6px;">Ver modo completo &rarr;</a>
-        </div>
+    <!-- 3. SECCIÓN PRINCIPAL: PLANILLA INTEGRADA (Solo Admin) -->
+    <?php if (esAdmin()): ?>
+    <div class="main-content-section" style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #eee; display: flex; flex-direction: column; height: 600px;">
         
-        <div style="text-align: center; padding: 2rem; background: #f9f9f9; border-radius: 8px; border: 1px dashed #ccc;">
-            <p style="color: #666; margin-bottom: 1rem;">Accede a la vista detallada de horarios, estados de pago y gestión de canchas.</p>
-            <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; padding: 0.8rem 2rem; background: #071289; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; transition: 0.2s;">Ir a la Planilla Completa</a>
+        <!-- Cabecera de la Planilla -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: #f8f9fa; border-bottom: 1px solid #eee;">
+            <div>
+                <h2 style="margin: 0; color: #333; font-size: 1.3rem; font-weight: 700;">📅 Planilla de Reservas - Hoy</h2>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: #666;">Vista rápida operativa. Fecha: <?= date('d/m/Y') ?></p>
+            </div>
+            
+            <!-- Enlace a Modo Avanzado (Solo si necesitan filtros complejos) -->
+            <a href="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>" target="_blank" 
+              style="font-size: 0.85rem; color: #AB47BC; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; background: white; padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #e1bee7; transition: 0.2s;">
+                <span>🔍 Abrir modo avanzado</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
+        </div>
+
+        <!-- Contenido: IFRAME de la Planilla (Ajustado) -->
+        <div style="flex: 1; position: relative; background: #fff;">
+            <!-- Usamos un iframe apuntando a la URL de la planilla con parámetros fijos para hoy -->
+            <iframe src="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>&embed=true" 
+                    style="width: 100%; height: 100%; border: none; display: block;" 
+                    title="Planilla de Reservas">
+                <p>Tu navegador no soporta iframes.</p>
+            </iframe>
+            
+            <!-- Nota: Para que esto funcione perfecto, en calendario_reservas.php debes detectar el parámetro ?embed=true 
+                para ocultar su propio header/top-bar y mostrar solo la tabla. Si no quieres complicarte con embed, 
+                puedes simplemente redirigir todo el dashboard a la planilla o usar fetch para traer los datos JSON y renderizarlos aquí. 
+                
+                OPCIÓN SIMPLIFICADA (Sin Iframe): Botón grande de acceso directo si prefieres no incrustar.
+            -->
         </div>
     </div>
 
-  </div>
+    <?php else: ?>
+        <!-- Para Asistentes, mostramos el botón grande de acceso como teníamos antes -->
+        <div class="main-content-section" style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;">
+            <h2 style="color: #333; margin-bottom: 1rem;">📅 Acceso a Planilla de Reservas</h2>
+            <p style="color: #666; margin-bottom: 2rem;">Gestiona horarios, estados de pago y disponibilidad en tiempo real.</p>
+            <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; padding: 1rem 2.5rem; background: #071289; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(7, 18, 137, 0.3); transition: 0.2s;">
+                Ir a la Planilla Completa
+            </a>
+        </div>
+    <?php endif; ?>
 
 <script>
     document.querySelectorAll('.filter-btn').forEach(btn => {
