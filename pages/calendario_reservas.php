@@ -1866,6 +1866,39 @@ $recinto = $stmt->fetch();
         } else {
             console.error("❌ Contenedor del modal no encontrado");
         }
+        // === NUEVA LÓGICA: FILTRAR ACCIONES SEGÚN ESTADO DE PAGO ===
+        const btnPagarModal = document.getElementById('btnPagarModal');
+        const menuAcciones = document.getElementById('actionMenuModal');
+        
+        // Verificar si tenemos los elementos del menú
+        if (menuAcciones) {
+            const btnAnular = menuAcciones.querySelector('[onclick="anularReserva()"]');
+            const btnCancelar = menuAcciones.querySelector('[onclick="cancelarReserva()"]');
+            
+            const estadoPago = detalle.estado_pago || '';
+            
+            // Si el estado es 'pagado', ocultamos Anular y Cancelar
+            if (estadoPago === 'pagado') {
+                if (btnAnular) btnAnular.style.display = 'none';
+                if (btnCancelar) btnCancelar.style.display = 'none';
+                console.log("✅ Reserva Pagada: Acciones de Anular/Cancelar ocultadas.");
+            } else {
+                // Si no está pagada, aseguramos que estén visibles (por si venían de otra vista)
+                if (btnAnular) btnAnular.style.display = 'block';
+                if (btnCancelar) btnCancelar.style.display = 'block';
+            }
+            
+            // Lógica existente para el botón Pagar (mantenerla)
+            if (btnPagarModal) {
+                if ((parseFloat(detalle.monto_total) > 0) && estadoPago !== 'pagado') {
+                    btnPagarModal.style.display = 'block';
+                    btnPagarModal.dataset.monto = detalle.monto_total;
+                    btnPagarModal.dataset.idReserva = detalle.id_reserva;
+                } else {
+                    btnPagarModal.style.display = 'none';
+                }
+            }
+        }
     }
 
     // === FUNCIÓN PARA ABRIR MODAL DE PAGO (Actualizada) ===
