@@ -87,11 +87,11 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       border-bottom: 2px solid rgba(255,255,255,0.3);
     }
     .logo {
-      width: 60px; height: 60px;
+      width: 768px; height: 768px;
       border-radius: 12px;
       background: var(--card-bg);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.8rem;
+      font-size: 1.5rem;
     }
     .filters-bar {
       display: flex; gap: 0.5rem; margin-bottom: 1.2rem;
@@ -214,7 +214,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   <div class="top-bar">
     <div class="logo"> CanchaSport ⚽ <?= htmlspecialchars($recinto_nombre) ?></div>
   </div>
-  
+
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
