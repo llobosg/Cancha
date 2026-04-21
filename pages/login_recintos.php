@@ -1,6 +1,14 @@
 <?php
+// pages/login_recintos.php
+
+// 1. Iniciar sesión PRIMERO
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../includes/config.php';
 
+// Ahora sí puedes usar $_SESSION sin warnings
 error_log("🔍 [LOGIN_RECINTOS] Inicio del script");
 error_log("🔍 [LOGIN_RECINTOS] Sesión actual: " . print_r($_SESSION, true));
 
@@ -51,10 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("❌ [LOGIN_RECINTOS] Recinto no verificado para usuario: '$usuario'");
             } else {
                 // 4. Iniciar sesión con los datos de $admin (que ya tiene todo incluido)
-                if (session_status() === PHP_SESSION_NONE) {
-                    session_start();
-                }
-                
                 $_SESSION['id_recinto'] = $admin['id_recinto'];
                 $_SESSION['id_admin'] = $admin['id_admin']; // Usamos id_admin directo
                 $_SESSION['recinto_usuario'] = $admin['usuario'];

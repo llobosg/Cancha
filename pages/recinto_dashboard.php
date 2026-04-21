@@ -1,38 +1,37 @@
 <?php
-require_once __DIR__ . '/../includes/config.php';
+// pages/recinto_dashboard.php
 
-// Configuración consistente de sesión
+// 1. Iniciar sesión
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 86400,
-        'path' => '/',
-        'domain' => '',
-        'secure' => isset($_SERVER['HTTPS']),
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
     session_start();
 }
 
-// 2. Validación de seguridad
-// Verifica que exista id_recinto Y que el rol sea válido (admin o asistente)
-if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
-    error_log("❌ [DASHBOARD] Sesión inválida o faltante. Redirigiendo a login.");
-    error_log("Datos sesión actuales: " . print_r($_SESSION, true)); // Para ver qué llega
+// 2. Debug: Ver qué tenemos exactamente
+$rol_actual = $_SESSION['recinto_rol'] ?? 'NO_EXISTE';
+$id_recinto_actual = $_SESSION['id_recinto'] ?? 'NO_EXISTE';
+
+error_log(" [DASHBOARD] Verificando sesión...");
+error_log("   - id_recinto: " . var_export($id_recinto_actual, true));
+error_log("   - rol: '" . $rol_actual . "' (Tipo: " . gettype($rol_actual) . ")");
+
+// 3. Validación corregida
+// Verificamos explícitamente que existan y que el rol sea uno de los esperados
+$roles_validos = ['admin', 'asistente'];
+
+if (!isset($_SESSION['id_recinto']) || !isset($_SESSION['recinto_rol']) || !in_array($rol_actual, $roles_validos)) {
+    error_log("❌ [DASHBOARD] FALLÓ LA VALIDACIÓN.");
+    error_log("   - isset(id_recinto): " . (isset($_SESSION['id_recinto']) ? 'SI' : 'NO'));
+    error_log("   - isset(rol): " . (isset($_SESSION['recinto_rol']) ? 'SI' : 'NO'));
+    error_log("   - in_array(rol): " . (in_array($rol_actual, $roles_validos) ? 'SI' : 'NO'));
     
-    // Redirigir al login de recintos, NO al index general
-    header('Location: login_recintos.php'); 
+    // Opcional: Si quieres ser menos estricto y solo verificar que exista el ID
+    // if (!isset($_SESSION['id_recinto'])) { ... }
+    
+    header('Location: login_recintos.php');
     exit;
 }
 
-// Opcional: Si quieres forzar que solo entren admin o asistente
-$rol_permitido = $_SESSION['recinto_rol'];
-if (!in_array($rol_permitido, ['admin', 'asistente'])) {
-     // Si el rol no es correcto, destruir sesión y echar
-     session_destroy();
-     header('Location: login_recintos.php');
-     exit;
-}
+error_log("✅ [DASHBOARD] Sesión válida. Rol: $rol_actual");
 
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/permisos.php';
