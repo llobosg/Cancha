@@ -1473,84 +1473,66 @@ $recinto = $stmt->fetch();
     }
 
     function mostrarDetalleReserva(detalle) {
-        console.log("🎨 Renderizando detalle con datos:", detalle);
+        console.log(" Renderizando detalle con datos REALES:", detalle);
 
-        // Función auxiliar segura
+        // Función auxiliar para evitar errores con nulos
         const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
         const money = (v) => '$' + parseInt(v || 0).toLocaleString();
         
-        // HTML con estilos inline forzados para contraste (Texto oscuro #333 sobre fondo claro/blanco)
+        // Construcción del HTML USANDO EXCLUSIVAMENTE la variable 'detalle'
         const html = `
-            <div style="font-size: 0.9rem; line-height: 1.6; color: #333333;">
-                
-                <!-- Encabezado -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
-                    <div><strong style="color:#071289;">📅 Fecha:</strong> <span style="color:#333;">${val(detalle.fecha)}</span></div>
-                    <div><strong style="color:#071289;"> Hora:</strong> <span style="color:#333;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</span></div>
-                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> <span style="color:#333;">${val(detalle.nombre_cancha)} (Nro ${val(detalle.nro_cancha)})</span></div>
-                    <div><strong style="color:#071289;">🎾 Deporte:</strong> <span style="color:#333;">${val(detalle.id_deporte).toUpperCase()}</span></div>
+            <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
+                <!-- Datos Principales -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: #f0f4f8; padding: 1rem; border-radius: 10px;">
+                    <div><strong style="color:#071289;">📅 Fecha:</strong> ${val(detalle.fecha)}</div>
+                    <div><strong style="color:#071289;">⏰ Hora:</strong> ${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    <div><strong style="color:#071289;">🏟️ Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
+                    <div><strong style="color:#071289;"> Deporte:</strong> ${val(detalle.id_deporte).toUpperCase()}</div>
                 </div>
 
-                <!-- Información Cliente -->
-                <div style="margin-bottom: 1rem; background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
-                    <div style="margin-bottom: 0.5rem;"><strong style="color:#071289;">👤 Cliente:</strong> <span style="color:#333;">${val(detalle.nombre_responsable || detalle.email_cliente)}</span></div>
-                    <div style="margin-bottom: 0.5rem;"><strong style="color:#071289;">📞 Teléfono:</strong> <span style="color:#333;">${val(detalle.telefono_cliente)}</span></div>
-                    <div><strong style="color:#071289;">📧 Email:</strong> <span style="color:#333;">${val(detalle.email_cliente)}</span></div>
-                    ${detalle.nombre_club ? `<div style="margin-top:0.5rem;"><strong style="color:#071289;">🏢 Club:</strong> <span style="color:#333;">${val(detalle.nombre_club)}</span></div>` : ''}
+                <!-- Cliente -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color:#071289; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:1rem;">👤 Información del Cliente</h4>
+                    <p style="margin:0.3rem 0;"><strong>Nombre:</strong> ${val(detalle.nombre_responsable || detalle.email_cliente)}</p>
+                    <p style="margin:0.3rem 0;"><strong>Teléfono:</strong> ${val(detalle.telefono_cliente)}</p>
+                    <p style="margin:0.3rem 0;"><strong>Email:</strong> ${val(detalle.email_cliente)}</p>
+                    ${detalle.nombre_club ? `<p style="margin:0.3rem 0;"><strong>Club:</strong> ${val(detalle.nombre_club)}</p>` : ''}
                 </div>
 
-                <!-- Información Económica y Estado -->
+                <!-- Monto y Estados -->
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <!-- Columna Izquierda: Monto -->
-                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; text-align: center;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 10px; text-align: center; border: 1px solid #bbdefb;">
                         <div style="font-size: 0.8rem; color: #1565C0; font-weight: bold; margin-bottom: 0.5rem;">💰 MONTO TOTAL</div>
-                        <div style="font-size: 1.4rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
+                        <div style="font-size: 1.5rem; color: #0d47a1; font-weight: 900;">${money(detalle.monto_total)}</div>
                     </div>
-
-                    <!-- Columna Derecha: Estados -->
-                    <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;">
-                        <div>
+                    
+                    <div style="background: #fff3e0; padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #ffe0b2;">
+                        <div style="margin-bottom: 0.5rem;">
                             <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO RESERVA</div>
-                            <div style="font-size: 1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_reserva).toUpperCase()}</div>
                         </div>
                         <div style="border-top: 1px dashed #ffcc80; margin: 0.5rem 0;"></div>
                         <div>
                             <div style="font-size: 0.75rem; color: #E65100; font-weight: bold;">ESTADO PAGO</div>
-                            <div style="font-size: 1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: #bf360c;">${val(detalle.estado_pago).toUpperCase()}</div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Notas -->
-                ${detalle.notas ? `
-                <div style="margin-top: 1rem; background: #fffde7; padding: 0.8rem; border-radius: 8px; border-left: 4px solid #fbc02d; color: #333;">
-                    <strong style="color:#f57f17;">📝 Notas:</strong> ${val(detalle.notas)}
-                </div>` : ''}
                 
-                ${detalle.id_convenio ? `
-                <div style="margin-top: 0.8rem; font-size: 0.8rem; color: #555; text-align: right;">
-                    ID Convenio: <strong>${detalle.id_convenio}</strong>
-                </div>` : ''}
-                
-                <!-- Tipo Reserva -->
-                <div style="margin-top: 0.8rem; text-align: center; font-size: 0.85rem; color: #666; font-style: italic;">
-                    Tipo de Arriendo: <strong>${val(detalle.tipo_reserva).toUpperCase()}</strong>
-                </div>
+                ${detalle.notas ? `<div style="margin-top:1rem; background:#fffde7; padding:1rem; border-radius:8px; border-left:4px solid #fbc02d; color:#333;"><strong>📝 Notas:</strong> ${val(detalle.notas)}</div>` : ''}
             </div>
         `;
-
-        // Inyectar HTML
-        const container = document.getElementById('detalleContent');
+        
+        // Inyectar HTML en el contenedor correcto
+        const container = document.getElementById('contenidoDetalle'); // Asegúrate que este ID exista en tu modal
         if (container) {
-            // Asegurar que el contenedor tenga fondo blanco para que el texto oscuro se vea
-            container.style.backgroundColor = '#ffffff'; 
-            container.style.color = '#333333';
-            container.style.padding = '1rem';
-            container.style.borderRadius = '12px';
             container.innerHTML = html;
-            console.log("✅ Detalle renderizado con contraste corregido");
+            console.log("✅ Detalle renderizado correctamente con datos nuevos");
         } else {
-            console.error("❌ No se encontró el contenedor #detalleContent");
+            console.error("❌ No se encontró el contenedor #contenidoDetalle");
+            // Fallback por si usas otro ID
+            const fallback = document.getElementById('detalleContent');
+            if(fallback) fallback.innerHTML = html;
         }
     }
 
