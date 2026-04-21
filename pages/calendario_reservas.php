@@ -831,8 +831,9 @@ $recinto = $stmt->fetch();
                         </div>
 
                         <!-- Filtros Deporte y Estado -->
-                        <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px;">
-                            <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
+                        <!-- Filtros Deporte y Estado (Asegúrate que estén AQUÍ visibles) -->
+                        <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px; margin-left: 1rem;">
+                            <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.9); color:#333; border:1px solid rgba(0,0,0,0.1);">
                                 <option value="">Todos los deportes</option>
                                 <option value="futbol">Fútbol</option>
                                 <option value="futbolito">Futbolito</option>
@@ -843,7 +844,7 @@ $recinto = $stmt->fetch();
                                 <option value="otro">Quincho/Otro</option>
                             </select>
                             
-                            <select class="control-select" id="filtroEstado" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
+                            <select class="control-select" id="filtroEstado" style="flex:1; background:rgba(255,255,255,0.9); color:#333; border:1px solid rgba(0,0,0,0.1);">
                                 <option value="">Todos los estados</option>
                                 <option value="disponible">Disponible</option>
                                 <option value="reservada">Reservadas</option>
@@ -1914,31 +1915,6 @@ $recinto = $stmt->fetch();
     let fechaPlanillaActual = new Date().toISOString().split('T')[0];
     let deporteSeleccionadoPlanilla = '';
 
-    // === INICIALIZACIÓN AL CARGAR LA PÁGINA ===
-    document.addEventListener('DOMContentLoaded', () => {
-        // 1. Forzar vista Planilla por defecto
-        const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
-        if (radioPlanilla) {
-            radioPlanilla.checked = true;
-            cambiarVistaCalendario('planilla');
-        }
-        
-        // 2. Inicializar fecha actual SI NO EXISTE
-        if (!window.fechaPlanillaActual) {
-            window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
-            console.log("📅 Fecha inicializada a:", window.fechaPlanillaActual);
-        }
-
-        // 3. Cargar datos inmediatamente después de un pequeño delay para asegurar que el DOM esté listo
-        setTimeout(() => {
-            const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
-            if (vistaActual === 'planilla') {
-                console.log("🚀 Iniciando carga automática de planilla...");
-                cargarPlanillaReservas();
-            }
-        }, 300); // 300ms es suficiente para que los selects se rendericen
-    });
-
     // === CAMBIAR VISTA (CORREGIDO CON VALIDACIONES) ===
     function cambiarVistaCalendario(vista) {
         const fichasDiv = document.getElementById('vistaFichas');
@@ -2033,43 +2009,46 @@ $recinto = $stmt->fetch();
     // === CARGAR PLANILLA (Sin cambios mayores, solo asegúrate que exista) ===
     async function cargarPlanillaReservas() {
         const deporteSelect = document.getElementById('filtroDeporte');
-        // Asegurar que deporte sea un string (puede ser vacío "")
-        const deporte = deporteSelect ? deporteSelect.value : ""; 
-        
-        deporteSeleccionadoPlanilla = deporte;
-        
-        // Asegurar que la fecha esté inicializada
-        if (!fechaPlanillaActual) {
-            fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        if (!deporteSelect) {
+            console.error(" No se encontró el select #filtroDeporte");
+            return;
         }
 
+        const deporte = deporteSelect.value;
+        deporteSeleccionadoPlanilla = deporte;
+        
+        // Usar la variable global window.fechaPlanillaActual
+        if (!window.fechaPlanillaActual) {
+            window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        }
+        
+        const fecha = window.fechaPlanillaActual;
+
         try {
-            // ✅ 1. DEFINIR LA VARIABLE 'url' EXPLÍCITAMENTE AQUÍ
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fecha}&deporte=${encodeURIComponent(deporte)}`;
+            console.log(" Fetching:", url);
             
-            console.log("Cargando planilla desde:", url); // Opcional: para depurar
-            
-            // ✅ 2. USAR 'url' EN EL FETCH CON CREDENTIALS
             const response = await fetch(url, {
                 method: 'GET',
-                credentials: 'include' // ✅ Esto soluciona el error 401 anterior
+                credentials: 'include'
             });
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
             
-            if (data.error) {
-                throw new Error(data.error);
-            }
+            if (data.error) throw new Error(data.error);
             
             // Actualizar input visual
             const inputFecha = document.getElementById('fechaPlanillaInput');
-            if (inputFecha) inputFecha.value = fechaPlanillaActual;
+            if (inputFecha) inputFecha.value = fecha;
             
             renderizarPlanilla(data);
+            console.log("✅ Planilla cargada exitosamente");
             
         } catch (error) {
-            console.error("Error Planilla:", error);
-            alert('Error: ' + error.message);
+            console.error("❌ Error Planilla:", error);
+            alert('Error al cargar la planilla: ' + error.message);
         }
     }
 
@@ -2227,6 +2206,39 @@ $recinto = $stmt->fetch();
             alert("No se pudo cargar el detalle: " + err.message);
         });
     }
+
+    / === INICIALIZACIÓN ROBUSTA AL CARGAR LA PÁGINA ===
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("🚀 Iniciando calendario_reservas...");
+
+        // 1. Asegurar que la vista sea Planilla por defecto
+        const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
+        if (radioPlanilla) {
+            radioPlanilla.checked = true;
+            cambiarVistaCalendario('planilla');
+        }
+        
+        // 2. Definir fecha global EXPLÍCITAMENTE
+        window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        console.log("📅 Fecha global establecida:", window.fechaPlanillaActual);
+
+        // 3. Esperar un poco más (500ms) para asegurar que todos los selects estén renderizados
+        setTimeout(() => {
+            const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
+            
+            // Verificar que el select de deporte exista
+            const selectDeporte = document.getElementById('filtroDeporte');
+            
+            if (vistaActual === 'planilla' && selectDeporte) {
+                console.log(" Ejecutando carga automática de planilla...");
+                // Forzar valor si está vacío
+                if (!selectDeporte.value) selectDeporte.value = ""; 
+                cargarPlanillaReservas();
+            } else {
+                console.warn("⚠️ No se pudo iniciar la carga: Vista incorrecta o select faltante.");
+            }
+        }, 500);
+    });
   </script>
 </body>
 </html>
