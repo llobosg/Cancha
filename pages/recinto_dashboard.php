@@ -248,6 +248,32 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             backdrop-filter: blur(5px);
         }
         .btn-back:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+
+        /* Resetear márgenes y asegurar que el top-bar pegue al borde */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden; /* Evita scroll horizontal indeseado */
+        }
+
+        /* Asegurar que el contenedor principal no tenga margen superior extra */
+        .container, .dashboard-container {
+            margin-top: 0; 
+            padding-top: 0;
+        }
+
+        /* Forzar que el top-bar esté realmente fijo arriba */
+        .top-bar {
+            position: sticky; /* O fixed si prefieres que flote sobre todo */
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 9999; /* Muy alto para estar encima de todo */
+            margin: 0;
+            padding-top: 1rem; /* Tu padding original */
+            padding-bottom: 1rem;
+        }
   </style>
 </head>
 <body>
@@ -421,10 +447,10 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         <!-- Contenido: IFRAME de la Planilla (Ajustado) -->
         <div style="flex: 1; position: relative; background: #fff;">
             <!-- Usamos un iframe apuntando a la URL de la planilla con parámetros fijos para hoy -->
-            <iframe src="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>&embed=true" 
+            <!-- En recinto_dashboard.php -->
+            <iframe src="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>&embed=true&sin_header=true" 
                     style="width: 100%; height: 100%; border: none; display: block;" 
                     title="Planilla de Reservas">
-                <p>Tu navegador no soporta iframes.</p>
             </iframe>
             
             <!-- Nota: Para que esto funcione perfecto, en calendario_reservas.php debes detectar el parámetro ?embed=true 

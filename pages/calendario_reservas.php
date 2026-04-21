@@ -1,20 +1,29 @@
 <?php
-require_once __DIR__ . '/../includes/config.php';
+    require_once __DIR__ . '/../includes/config.php';
 
-session_start();
+    session_start();
 
-if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
-    header('Location: ../index.php');
-    exit;
-}
+    if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+        header('Location: ../index.php');
+        exit;
+    }
 
-$id_recinto = $_SESSION['id_recinto'];
-$es_embed = isset($_GET['embed']) && $_GET['embed'] === 'true';
+    $id_recinto = $_SESSION['id_recinto'];
+    $es_embed = isset($_GET['embed']) && $_GET['embed'] === 'true';
 
-// Obtener datos del recinto
-$stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
-$stmt->execute([$id_recinto]);
-$recinto = $stmt->fetch();
+    // Obtener datos del recinto
+    $stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
+    $stmt->execute([$id_recinto]);
+    $recinto = $stmt->fetch();
+
+    // Detectar si viene en modo incrustado (iframe)
+    $es_embed = isset($_GET['embed']) && $_GET['embed'] === 'true';
+    $ocultar_header = isset($_GET['sin_header']) && $_GET['sin_header'] === 'true';
+
+    // Si es embed, forzamos la vista a planilla si no viene especificada
+    if ($es_embed && !isset($_GET['vista'])) {
+        $_GET['vista'] = 'planilla'; // Forzar vista planilla
+    }
 ?>
 <!DOCTYPE html>
 <html lang="es">
