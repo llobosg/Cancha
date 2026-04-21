@@ -1916,24 +1916,27 @@ $recinto = $stmt->fetch();
 
     // === INICIALIZACIÓN AL CARGAR LA PÁGINA ===
     document.addEventListener('DOMContentLoaded', () => {
+        // 1. Forzar vista Planilla por defecto
         const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
         if (radioPlanilla) {
             radioPlanilla.checked = true;
             cambiarVistaCalendario('planilla');
         }
         
-        // Pequeño delay para asegurar que el DOM del select esté listo
+        // 2. Inicializar fecha actual SI NO EXISTE
+        if (!window.fechaPlanillaActual) {
+            window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
+            console.log("📅 Fecha inicializada a:", window.fechaPlanillaActual);
+        }
+
+        // 3. Cargar datos inmediatamente después de un pequeño delay para asegurar que el DOM esté listo
         setTimeout(() => {
-            const vista = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
-            if (vista === 'planilla') {
-                // Forzamos que el valor sea "" (Todos) si está null/undefined
-                const selectDeporte = document.getElementById('filtroDeporte');
-                if (selectDeporte && !selectDeporte.value) {
-                    selectDeporte.value = ""; 
-                }
+            const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
+            if (vistaActual === 'planilla') {
+                console.log("🚀 Iniciando carga automática de planilla...");
                 cargarPlanillaReservas();
             }
-        }, 200);
+        }, 300); // 300ms es suficiente para que los selects se rendericen
     });
 
     // === CAMBIAR VISTA (CORREGIDO CON VALIDACIONES) ===
@@ -2098,69 +2101,58 @@ $recinto = $stmt->fetch();
 
     function renderizarPlanilla(data) {
         const table = document.getElementById('tablaPlanilla');
-        
-        // 1. Forzar layout fijo en la tabla (CRUCIAL)
         table.style.tableLayout = 'fixed'; 
-        table.style.width = 'auto'; // Que no se estire al 100% forzoso si sobra espacio
         
         if (!data.canchas.length) {
             table.innerHTML = '<tr><td style="padding:2rem; text-align:center; color:#666;">No hay canchas operativas.</td></tr>';
             return;
         }
         
-        // Definir anchos fijos exactos
-        const anchoHorario = '110px'; // Suficiente para " Horario "
-        const anchoCancha = '140px';  // Fijo para todas las canchas
+        const anchoHorario = '110px';
+        const anchoCancha = '140px';
 
         let html = `<thead><tr>`;
         
-        // Header Horario
-        html += `<th style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; text-align:center; border-right:2px solid #fff;"> Horario </th>`;
+        // ✅ Header Horario: font-weight: 400 !important
+        html += `<th style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; text-align:center; border-right:2px solid #fff; font-weight: 400 !important;"> Horario </th>`;
         
-        // Headers Canchas
+        // ✅ Headers Canchas: font-weight: 400 !important
         data.canchas.forEach(c => {
-            html += `<th style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            html += `<th style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 400 !important;">
                         ${c.nombre_cancha || 'Cancha'}
                     </th>`;
         });
         html += `</tr></thead><tbody>`;
         
-        // Filas
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
                 html += `<tr>`;
                 
-                // Celda Horario
-                html += `<td style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#f8f9fa; font-weight:bold; text-align:center; padding:5px; border-bottom:1px solid #ddd; position:sticky; left:0; z-index:1; color:#333333; border-right:2px solid #ccc;">
+                // ✅ Celda Horario: font-weight: 400 !important
+                html += `<td style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#f8f9fa; font-weight: 400 !important; text-align:center; padding:5px; border-bottom:1px solid #ddd; position:sticky; left:0; z-index:1; color:#333333; border-right:2px solid #ccc;">
                             ${slot.label}
                         </td>`;
                 
-                // Celdas Cancha
                 data.canchas.forEach(cancha => {
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const reserva = data.reservas[key];
                     
-                    let bgClass = '#e0e0e0';
+                    let bgClass = '#e0e0e0'; 
                     let cellContent = '';
                     let clickEvt = '';
                     
                     if (reserva) {
-                        if (reserva.estado_pago === 'pagado') {
-                        bgClass = '#a5d6a7'; // Verde para Pagado
-                        } else if (reserva.estado_pago === 'parcial') {
-                            bgClass = '#fff59d'; // Amarillo para Parcial
-                        } else {
-                            // Pendiente, en_revision, o cualquier otro estado = ROJO
-                            bgClass = '#ffcdd2'; 
-                        }
+                        if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7';
+                        else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d';
+                        else bgClass = '#ffcdd2'; // Rojo
                         
                         const nombre = (reserva.nombre_socio || reserva.nombre_cliente || 'Reserva').substring(0, 12) + '...';
                         cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div>`;
                         clickEvt = `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
                     }
                     
-                   // Celda Cancha (Sin Bold en el contenido, solo en el contenedor si fuera necesario, pero quitamos font-weight:bold)
-                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight:normal; cursor:pointer; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #fff;" ${clickEvt}>${cellContent}</td>`;
+                    // ✅ Celda Cancha: font-weight: 400 !important
+                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight: 400 !important; cursor:pointer; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #fff;" ${clickEvt}>${cellContent}</td>`;
                 });
                 
                 html += `</tr>`;
