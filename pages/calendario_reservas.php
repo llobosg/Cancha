@@ -725,6 +725,45 @@ $recinto = $stmt->fetch();
         z-index: 2;
         position: relative;
     }
+
+    /* Líneas blancas para la planilla */
+    .planilla-table th, 
+    .planilla-table td {
+        border: 1px solid rgba(255, 255, 255, 0.6) !important; /* Líneas blancas semitransparentes */
+        border-collapse: collapse;
+    }
+
+    /* Color texto grafito para la columna Horario (primera columna) */
+    .planilla-table td:first-child, 
+    .planilla-table th:first-child {
+        color: #333333 !important; /* Grafito oscuro */
+        font-weight: bold;
+        background: #f8f9fa !important; /* Fondo claro para contraste */
+        border-right: 2px solid #ddd !important;
+    }
+
+    /* Ajuste del header de la tabla (Nombres de Canchas) */
+    .planilla-table thead th {
+        background: #AB47BC !important; /* Color lila para cabecera de columnas */
+        color: white !important;
+        padding: 10px;
+    }
+
+    /* Scrollbar personalizado para que combine */
+    #vistaPlanilla div[style*="overflow:auto"]::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    #vistaPlanilla div[style*="overflow:auto"]::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+    }
+    #vistaPlanilla div[style*="overflow:auto"]::-webkit-scrollbar-thumb {
+        background: #BA68C8; 
+        border-radius: 4px;
+    }
+    #vistaPlanilla div[style*="overflow:auto"]::-webkit-scrollbar-thumb:hover {
+        background: #8E24AA; 
+    }
 </style>
 </head>
 <body>
@@ -738,29 +777,19 @@ $recinto = $stmt->fetch();
         </div>
     </div>
     
-    <div class="dashboard-container" style="margin-top: 70px;">
-        <div>
-            <!-- 1. FILTROS PRINCIPALES (Fichas/Planilla + Deporte/Estado/Fecha) -->
-            <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem;">
-                
-                <!-- Fila Superior: Selector de Vista + Filtros Clásicos -->
+    <!-- Contenedor Principal que ocupa toda la pantalla pero centra el contenido -->
+    <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent;">
+        
+        <!-- Tercio Central: Aquí va todo el contenido -->
+        <div style="width: 100%; max-width: 1400px; display:flex; flex-direction:column; gap:1rem;">
+            
+            <!-- BARRA DE FILTROS (Fija al hacer scroll del contenido) -->
+            <div style="background: rgba(20, 20, 40, 0.9); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: sticky; top: 80px; z-index: 100; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
                     
-                    <!-- Selector Radial Grande -->
-                    <div style="background:rgba(255,255,255,0.1); padding:0.4rem; border-radius:8px; display:flex; gap:0.5rem;">
-                        <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold; padding:0.4rem 1rem; background:rgba(0,0,0,0.2); border-radius:6px; transition:0.3s;">
-                            <input type="radio" name="vistaCalendario" value="fichas" checked onchange="cambiarVistaCalendario('fichas')" style="display:none;">
-                            📋 Fichas
-                        </label>
-                        <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; transition:0.3s;" id="btnLabelPlanilla">
-                            <input type="radio" name="vistaCalendario" value="planilla" onchange="cambiarVistaCalendario('planilla')" style="display:none;">
-                            Planilla
-                        </label>
-                    </div>
-
-                    <!-- Filtros Clásicos -->
-                    <div class="controls-section" style="margin:0; flex:1; justify-content:flex-end; min-width:300px;">
-                        <select class="control-select" id="filtroDeporte" style="flex:1;">
+                    <!-- Izquierda: Filtros Clásicos -->
+                    <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px;">
+                        <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
                             <option value="">Todos los deportes</option>
                             <option value="futbol">Fútbol</option>
                             <option value="futbolito">Futbolito</option>
@@ -771,7 +800,7 @@ $recinto = $stmt->fetch();
                             <option value="otro">Quincho/Otro</option>
                         </select>
                         
-                        <select class="control-select" id="filtroEstado" style="flex:1;">
+                        <select class="control-select" id="filtroEstado" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
                             <option value="">Todos los estados</option>
                             <option value="disponible">Disponible</option>
                             <option value="reservada">Reservadas</option>
@@ -781,7 +810,7 @@ $recinto = $stmt->fetch();
                             <option value="cancelada">Canceladas</option>
                         </select>
                         
-                        <select class="control-select" id="filtroFecha" style="flex:1;">
+                        <select class="control-select" id="filtroFecha" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
                             <option value="">Últimos 30 días</option>
                             <option value="hoy">Hoy</option>
                             <option value="mañana">Mañana</option>
@@ -789,69 +818,82 @@ $recinto = $stmt->fetch();
                             <option value="mes">Este mes</option>
                         </select>
                     </div>
+
+                    <!-- Derecha: Selector Radial (Planilla/Fichas) -->
+                    <div style="background:rgba(255,255,255,0.1); padding:0.3rem; border-radius:8px; display:flex; gap:0.5rem;">
+                        <label style="display:flex; align-items:center; cursor:pointer; color:#aaa; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; transition:0.3s;" id="lblFichas">
+                            <input type="radio" name="vistaCalendario" value="fichas" onchange="cambiarVistaCalendario('fichas')" style="display:none;">
+                            📋 Fichas
+                        </label>
+                        <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; background:rgba(255,255,255,0.2); box-shadow:0 2px 5px rgba(0,0,0,0.2);" id="lblPlanilla">
+                            <input type="radio" name="vistaCalendario" value="planilla" checked onchange="cambiarVistaCalendario('planilla')" style="display:none;">
+                            Planilla
+                        </label>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. CONTENEDOR VISTA: FICHAS -->
-            <div id="vistaFichas">
-                <div id="reservasGrid" class="reservas-grid">
-                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">Cargando...</div>
-                </div>
+            <!-- VISTA: FICHAS (Oculta por defecto si queremos Planilla como default) -->
+            <div id="vistaFichas" style="display:none;">
+                <div id="reservasGrid" class="reservas-grid"></div>
             </div>
 
-            <!-- 3. CONTENEDOR VISTA: PLANILLA (Con nuevo Header Azul) -->
-            <div id="vistaPlanilla" style="display:none;">
+            <!-- VISTA: PLANILLA (Visible por defecto) -->
+            <div id="vistaPlanilla">
                 
-                <!-- Header Azul con Controles de Fecha -->
-                <div style="background: linear-gradient(90deg, #4FC3F7 0%, #29B6F6 100%); padding: 1rem; border-radius: 8px 8px 0 0; display:flex; justify-content:space-between; align-items:center; color:#01579B; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <!-- Header Lila Degradé -->
+                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2);">
                     
-                    <div style="font-weight:bold; font-size:1.1rem;">📅 Gestión de Horarios</div>
+                    <!-- Izquierda: Título -->
+                    <div style="font-weight:bold; font-size:1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">📅 Gestión de Horarios</div>
                     
-                    <div style="display:flex; align-items:center; gap:1rem;">
-                        <!-- Input Fecha Nativo -->
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <span style="font-size:0.9rem; font-weight:600;">Fecha:</span>
-                            <input type="date" id="fechaPlanillaInput" value="<?= date('Y-m-d') ?>" 
-                                style="padding:0.4rem; border-radius:4px; border:none; outline:none; font-family:sans-serif; cursor:pointer;">
-                        </div>
+                    <!-- Centro: Controles de Fecha -->
+                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 30px; backdrop-filter: blur(5px);">
+                        
+                        <!-- Input Fecha -->
+                        <input type="date" id="fechaPlanillaInput" value="<?= date('Y-m-d') ?>" 
+                            style="background:transparent; border:none; outline:none; color:white; font-weight:bold; font-family:sans-serif; cursor:pointer; text-align:center;">
+                        
+                        <!-- Separador -->
+                        <div style="width:1px; height:20px; background:rgba(255,255,255,0.5);"></div>
 
                         <!-- Botón Hoy -->
-                        <button onclick="irAHoyPlanilla()" style="background:white; color:#0288D1; border:none; padding:0.4rem 1.2rem; border-radius:20px; font-weight:bold; font-size:0.85rem; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); transition:0.2s;">
+                        <button onclick="irAHoyPlanilla()" style="background:white; color:#8E24AA; border:none; padding:0.3rem 1rem; border-radius:20px; font-weight:bold; font-size:0.8rem; cursor:pointer; transition:0.2s;">
                             Hoy
                         </button>
 
-                        <!-- Botones < y > Circulares -->
-                        <div style="display:flex; gap:0.5rem;">
-                            <button onclick="cambiarDiaPlanilla(-1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.8); border:none; color:#0277BD; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
-                                &lt;
-                            </button>
-                            <button onclick="cambiarDiaPlanilla(1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.8); border:none; color:#0277BD; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
-                                &gt;
-                            </button>
+                        <!-- Botones < > -->
+                        <div style="display:flex; gap:0.3rem;">
+                            <button onclick="cambiarDiaPlanilla(-1)" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">&lt;</button>
+                            <button onclick="cambiarDiaPlanilla(1)" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">&gt;</button>
                         </div>
                     </div>
+                    
+                    <!-- Espacio vacío a la derecha para equilibrar (opcional) -->
+                    <div style="width: 100px;"></div> 
                 </div>
 
-                <!-- Tabla Planilla -->
-                <div style="overflow-x:auto; background:white; border-radius:0 0 8px 8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                <!-- Tabla Planilla (Scrollable independientemente) -->
+                <div style="overflow:auto; background:white; border-radius:0 0 12px 12px; box-shadow:0 10px 20px rgba(0,0,0,0.1); max-height: 70vh; /* Limita altura para scroll interno */">
                     <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
                         <!-- Se llena con JS -->
                     </table>
                 </div>
                 
                 <!-- Leyenda -->
-                <div style="margin-top:1rem; display:flex; gap:1.5rem; color:white; justify-content:center; font-size:0.9rem;">
+                <div style="margin-top:1rem; display:flex; gap:1.5rem; color:white; justify-content:center; font-size:0.9rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="width:12px; height:12px; background:#e0e0e0; border-radius:50%;"></span> Disponible
+                        <span style="width:12px; height:12px; background:#e0e0e0; border:1px solid #fff; border-radius:50%;"></span> Disponible
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="width:12px; height:12px; background:#ffcdd2; border-radius:50%;"></span> Ocupado
+                        <span style="width:12px; height:12px; background:#ffcdd2; border:1px solid #fff; border-radius:50%;"></span> Ocupado
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="width:12px; height:12px; background:#a5d6a7; border-radius:50%;"></span> Pagado
+                        <span style="width:12px; height:12px; background:#a5d6a7; border:1px solid #fff; border-radius:50%;"></span> Pagado
                     </div>
                 </div>
             </div>
+            
         </div>
     </div>
     
@@ -1688,17 +1730,6 @@ $recinto = $stmt->fetch();
         }
     }
 
-    // Cargar datos iniciales con "Hoy" por defecto
-    document.addEventListener('DOMContentLoaded', function() {
-        // Establecer valores por defecto en los selects
-        document.getElementById('filtroFecha').value = 'hoy';
-        document.getElementById('filtroDeporte').value = '';
-        document.getElementById('filtroEstado').value = '';
-        
-        // Cargar reservas de hoy
-        cargarReservasConRango(0);
-    });
-
     document.getElementById('mensajeForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const mensaje = document.getElementById('mensajeTexto').value.trim();
@@ -2042,30 +2073,53 @@ $recinto = $stmt->fetch();
     let deporteSeleccionadoPlanilla = '';
 
     // Cambiar entre vistas
+    // Al inicio del script o en DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // Forzar vista Planilla por defecto
+        document.querySelector('input[name="vistaCalendario"][value="planilla"]').checked = true;
+        cambiarVistaCalendario('planilla');
+    });
+
     function cambiarVistaCalendario(vista) {
-        document.getElementById('vistaFichas').style.display = vista === 'fichas' ? 'block' : 'none';
-        document.getElementById('vistaPlanilla').style.display = vista === 'planilla' ? 'block' : 'none';
-        
+        const fichasDiv = document.getElementById('vistaFichas');
+        const planillaDiv = document.getElementById('vistaPlanilla');
+        const lblFichas = document.getElementById('lblFichas');
+        const lblPlanilla = document.getElementById('lblPlanilla');
+
         if (vista === 'planilla') {
-            // Obtener el deporte seleccionado en el filtro general
-            const deporteFiltro = document.getElementById('filtroDeporte').value;
+            fichasDiv.style.display = 'none';
+            planillaDiv.style.display = 'block';
             
-            if (!deporteFiltro) {
-                alert('️ Por favor selecciona un Deporte en los filtros superiores para ver la Planilla.');
-                // Opcional: Devolver a fichas si no hay deporte
-                document.querySelector('input[value="fichas"]').checked = true;
-                document.getElementById('vistaFichas').style.display = 'block';
-                document.getElementById('vistaPlanilla').style.display = 'none';
-                return;
+            // Estilo activo para Planilla
+            lblPlanilla.style.background = 'rgba(255,255,255,0.2)';
+            lblPlanilla.style.color = 'white';
+            lblPlanilla.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            
+            // Estilo inactivo para Fichas
+            lblFichas.style.background = 'transparent';
+            lblFichas.style.color = '#aaa';
+            lblFichas.style.boxShadow = 'none';
+            
+            // Cargar datos si hay deporte seleccionado
+            const deporte = document.getElementById('filtroDeporte').value;
+            if(deporte) {
+                deporteSeleccionadoPlanilla = deporte;
+                cargarPlanillaReservas();
             }
-            
-            deporteSeleccionadoPlanilla = deporteFiltro;
-            
-            // Sincronizar la fecha de la planilla con el filtro de fecha general si es necesario
-            // O usar la fecha de hoy por defecto
-            cargarPlanillaReservas();
         } else {
-            // Si volvemos a Fichas, aseguramos que se carguen los datos actuales
+            fichasDiv.style.display = 'block';
+            planillaDiv.style.display = 'none';
+            
+            // Estilo activo para Fichas
+            lblFichas.style.background = 'rgba(255,255,255,0.2)';
+            lblFichas.style.color = 'white';
+            lblFichas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            
+            // Estilo inactivo para Planilla
+            lblPlanilla.style.background = 'transparent';
+            lblPlanilla.style.color = '#aaa';
+            lblPlanilla.style.boxShadow = 'none';
+            
             aplicarFiltrosConAPI();
         }
     }
@@ -2147,7 +2201,7 @@ $recinto = $stmt->fetch();
 
                     let cellContent = '';
                     let bgClass = '#e0e0e0'; // Valor por defecto: Gris (Disponible)
-                    let cellStyle = ''; 
+                    let cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; padding:8px; height:40px; vertical-align:middle;`; 
                     let colSpan = 1;
 
                     if (reserva) {
