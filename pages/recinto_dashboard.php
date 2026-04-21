@@ -376,7 +376,11 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
          
     </div>
 
-    <!-- 2. CONTENIDO ESPECÍFICO POR ROL --> 
+    <!-- 2. CONTENIDO ESPECÍFICO POR ROL -->
+    <!-- Acciones rápidas -->
+        <div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <button class="action-btn" id="btnCalendarioReservas" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Calendario reservas</button>
+        </div> 
     <?php if (esAdmin()): ?>
         <!-- === VISTA ADMIN === -->
         
