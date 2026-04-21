@@ -51,9 +51,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("❌ [LOGIN_RECINTOS] Recinto no verificado para usuario: '$usuario'");
             } else {
                 // Iniciar sesión
-                $_SESSION['id_recinto'] = $admin['id_recinto'];
-                $_SESSION['id_admin_recinto'] = $admin['id_admin'];
-                $_SESSION['recinto_rol'] = 'admin_recinto';
+                // Obtener el nombre del recinto para mostrarlo en el dashboard
+                $_SESSION['nombre_recinto'] = $admin['nombre_recinto'];
+                if ($stmt->rowCount() > 0) {
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    // Validar contraseña
+                    if (password_verify($password_input, $user['contraseña'])) {
+                        session_start();
+                        $_SESSION['id_recinto'] = $user['id_recinto'];
+                        $_SESSION['id_admin_recinto'] = $admin['id_admin'];
+                        $_SESSION['id_admin'] = $user['id_admin'];
+                        $_SESSION['recinto_usuario'] = $user['usuario'];
+                        $_SESSION['recinto_rol'] = $user['rol']; // ✅ Guardamos el rol aquí
+                        
+                        // Redirigir al dashboard
+                        header('Location: recinto_dashboard.php');
+                        exit;
+                    } else {
+                        $error = "Contraseña incorrecta";
+                    }
+                }
                 error_log("✅ [LOGIN_RECINTOS] Sesión iniciada correctamente. Redirigiendo a recinto_dashboard.php");
                 header('Location: recinto_dashboard.php');
                 exit;

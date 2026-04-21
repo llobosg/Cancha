@@ -852,7 +852,7 @@
                                     <!-- <div style="margin:0.3rem 0;"><strong>💰 Arriendo</strong> $<?= number_format((int)$monto_total, 0, ',', '.') ?></div> --->
                                     <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
                                     <div style="margin:0.3rem 0; font-size:0.8rem; color:#FFD700;">
-                                        <strong>💰 Cuota:</strong> $<?= number_format((int)($proximo_evento['monto_recaudacion'] ?? 0), 0, ',', '.') ?> • <strong>📅 Mes:</strong> $<?= number_format($valor_mes, 0, ',', '.') ?><br>
+                                        <strong>💰 Cuota:</strong> $<?= number_format((int)($proximo_evento['monto_recaudacion'] ?? 0), 0, ',', '.') ?> • <strong>Mes:</strong> $<?= number_format($valor_mes, 0, ',', '.') ?><br>
                                         <strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?>
                                     </div>
                                     <?php endif; ?>

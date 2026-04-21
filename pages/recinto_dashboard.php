@@ -20,6 +20,13 @@ if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin_reci
     exit;
 }
 
+require_once __DIR__ . '/../includes/permisos.php'; // Cargar funciones
+
+// Obtener datos del usuario logueado para mostrar en el perfil
+$stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
+$stmt_user->execute([$_SESSION['id_admin']]);
+$usuario_actual = $stmt_user->fetch();
+
 // Cargar datos del recinto
 $id_recinto = $_SESSION['id_recinto'] ?? null;
 $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
@@ -169,6 +176,25 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       </div>
     </div>
 
+    <?php if (esAdmin()): ?>
+        <!-- SECCIÓN FINANCIERA (Solo Admin) -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h5>Ingresos Hoy</h5>
+                        <h3>$<?= number_format($ingresos_hoy, 0) ?></h3>
+                    </div>
+                </div>
+            </div>
+             <div class="stat-card">
+                <div class="stat-title">Ingresos este mes</div>
+                <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
+                <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- Gráficos -->
     <div class="stats-grid">
       <div class="stat-card">
@@ -180,12 +206,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           </svg>
         </div>
         <div>6/10 reservadas</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-title">Ingresos este mes</div>
-        <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
-        <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
       </div>
 
       <div class="stat-card">
@@ -224,6 +244,58 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <p>Selecciona una acción rápida para comenzar.</p>
     </div>
   </div>
+
+  <?php if (esAdmin()): ?>
+    <!-- SECCIÓN FINANCIERA (Solo Admin) -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Ingresos Hoy</h5>
+                    <h3>$<?= number_format($ingresos_hoy, 0) ?></h3>
+                </div>
+            </div>
+        </div>
+        <!-- Más tarjetas financieras... -->
+    </div>
+  <?php endif; ?>
+
+  <nav class="navbar ...">
+    <!-- Enlaces comunes (Ambos roles) -->
+    <a href="calendario_reservas.php" class="nav-link"> Calendario</a>
+    <a href="gestion_canchas.php" class="nav-link">🏟️ Canchas</a>
+    <a href="reserva_manual.php" class="nav-link"> Reserva Manual</a>
+    <a href="gestion_torneos.php" class="nav-link">🏆 Torneos</a>
+    
+    <?php if (esAdmin()): ?>
+        <!-- Solo Admin -->
+        <a href="gestion_asistentes.php" class="nav-link text-warning">👥 Gestionar Asistentes</a>
+        <a href="reportes_financieros.php" class="nav-link">💰 Reportes</a>
+        <a href="perfil_admin.php?id=<?= $usuario_actual['id_admin'] ?>" class="nav-link">⚙️ Mi Perfil</a>
+    <?php else: ?>
+        <!-- Solo Asistente -->
+        <a href="perfil_asistente.php?id=<?= $usuario_actual['id_admin'] ?>" class="nav-link">👤 Mi Perfil</a>
+    <?php endif; ?>
+  </nav>
+
+  <?php if (esAdmin()): ?>
+    <div class="container mt-5">
+        <h2>Gestión de Asistentes del Recinto</h2>
+        <button class="btn btn-primary" data-toggle="modal" data-target="#modalNuevoAsistente">
+            + Registrar Nuevo Asistente
+        </button>
+        
+        <!-- Tabla de asistentes existentes -->
+        <table class="table table-striped mt-3">
+            <!-- ... contenido de la tabla ... -->
+        </table>
+    </div>
+
+    <!-- Modal de Registro (HTML) -->
+    <div class="modal fade" id="modalNuevoAsistente">
+        <!-- ... formulario para crear asistente ... -->
+    </div>
+  <?php endif; ?>
 
   <script>
     document.querySelectorAll('.filter-btn').forEach(btn => {
