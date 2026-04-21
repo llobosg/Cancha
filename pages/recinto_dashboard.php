@@ -210,9 +210,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   </style>
 </head>
 <body>
-  <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-    <!-- ✅ NUEVO HEADER CANCHASPORT -->
-    <!-- Barra superior -->
+  <!-- Barra superior -->
     <div class="top-bar">
       <h1 style="color: #071289; margin: 0; font-size: 1.5rem;">CanchaSport</h1>
         <div class="hero">
@@ -221,8 +219,8 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
           <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
       </p>
-    </div>
-
+  </div>
+  <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
          <?php if (esAdmin()): ?>
