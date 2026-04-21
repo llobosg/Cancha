@@ -1526,9 +1526,9 @@ $recinto = $stmt->fetch();
     }
 
     // Filtro por fecha: llama a la acción correcta con POST
-    document.getElementById('filtroFecha').addEventListener('change', function() {
-        aplicarFiltrosConAPI();
-    });
+    //document.getElementById('filtroFecha').addEventListener('change', function() {
+    //    aplicarFiltrosConAPI();
+    //});
 
     // Filtro por deporte
     document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltrosConAPI);
