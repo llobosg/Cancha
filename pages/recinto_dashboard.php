@@ -274,6 +274,18 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             padding-top: 1rem; /* Tu padding original */
             padding-bottom: 1rem;
         }
+        /* Estilos específicos para integrar la planilla en el dashboard */
+        body { background: #f4f6f9; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        .dashboard-content { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+        
+        /* Contenedor de la Planilla */
+        .planilla-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-top: 1rem;
+        }
   </style>
 </head>
 <body>
@@ -337,25 +349,25 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   }
   </style>
 
+  <!-- Scripts necesarios para el menú y la planilla (si el iframe no carga los scripts propios) -->
   <script>
+      // Lógica del menú desplegable
       function toggleMenuAdmin(event) {
           event.stopPropagation();
           const menu = document.getElementById('menuAdmin');
-          const isVisible = menu.style.display === 'block';
-          menu.style.display = isVisible ? 'none' : 'block';
+          menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
       }
-
       function closeMenuAdmin() {
           document.getElementById('menuAdmin').style.display = 'none';
       }
-
-      document.addEventListener('click', function(event) {
-          const menu = document.getElementById('menuAdmin');
-          const button = event.target.closest('button[onclick="toggleMenuAdmin(event)"]');
-          if (!button && menu.style.display === 'block') {
+      document.addEventListener('click', (e) => {
+          if (!e.target.closest('#menuAdmin') && !e.target.closest('button[onclick="toggleMenuAdmin"]')) {
               closeMenuAdmin();
           }
       });
+
+      // Nota: Si usas el iframe, los scripts de la planilla corren dentro del iframe.
+      // Si copias el HTML de la planilla aquí directamente, asegúrate de incluir los scripts de calendario_reservas.php al final de este archivo.
   </script>
 
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
@@ -424,38 +436,31 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             </div>
         </div>
     <?php endif; ?>
-
-    <!-- 3. SECCIÓN PRINCIPAL: ACCESO DIRECTO A PLANILLA -->
-    <div class="main-content-section" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; border: 1px solid #dee2e6; position: relative; overflow: hidden;">
-        
-        <!-- Decoración de fondo sutil -->
-        <div style="position: absolute; top: -20px; right: -20px; font-size: 8rem; opacity: 0.05; pointer-events: none;"></div>
-
-        <h2 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.6rem; font-weight: 800;">📅 Planilla de Reservas</h2>
-        <p style="color: #666; margin-bottom: 2rem; font-size: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-            Gestiona horarios, estados de pago y disponibilidad en tiempo real. 
-            <br><span style="font-size: 0.9rem; color: #888;">(Fecha actual: <?= date('d/m/Y') ?>)</span>
-        </p>
-        
-        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-            <!-- Botón Principal: Ir a la Planilla -->
-            <a href="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>" 
-              style="text-decoration: none; padding: 1rem 2.5rem; background: #AB47BC; color: white; border-radius: 50px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(171, 71, 188, 0.3); transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;">
-                <span>Ir a la Planilla Completa</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            </a>
-            
-            <!-- Botón Secundario: Ver Resumen Rápido (Opcional, si quisieras implementar algo luego) -->
-            <!-- Por ahora solo dejamos el principal para mantener "menos es más" -->
-        </div>
-    </div>
   </div>
+ 
+  <!-- CONTENIDO PRINCIPAL: PLANILLA DIRECTA -->
+  <div class="dashboard-content">
+      
+      <!-- Encabezado contextual rápido -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding: 0 0.5rem;">
+          <h2 style="margin:0; color:#333; font-size:1.4rem;">📅 Planilla de Reservas - Hoy</h2>
+          <div style="font-size:0.9rem; color:#666;">
+              Rol: <strong><?= ucfirst($rol_actual) ?></strong> | Recinto: <?= htmlspecialchars($recinto_nombre) ?>
+          </div>
+      </div>
 
-  <!-- Submodal Genérico para mostrar detalles sin salir de la página -->
-  <div id="submodalGenerico" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:white; padding:2rem; border-radius:12px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;" id="submodalContenido">
-      <!-- Contenido dinámico aquí -->
-    </div>
+      <!-- Aquí incrustamos la lógica de la Planilla -->
+      <!-- En lugar de hacer un include complejo, copiaremos la estructura esencial de calendario_reservas.php 
+          pero simplificada para que cargue rápido aquí. Opcionalmente, puedes usar un iframe si prefieres aislarlo. -->
+      
+      <!-- OPCIÓN A: IFRAME (Más fácil de mantener, usa tu archivo calendario_reservas.php existente) -->
+      <div class="planilla-container" style="height: 80vh; position: relative;">
+          <iframe src="calendario_reservas.php?embed=true&fecha=<?= date('Y-m-d') ?>" 
+                  style="width: 100%; height: 100%; border: none;" 
+                  title="Planilla de Reservas">
+          </iframe>
+      </div>
+
   </div>
 
 <script>
@@ -1013,13 +1018,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   document.getElementById('btnCalendarioReservas')?.addEventListener('click', () => {
       window.location.href = 'calendario_reservas.php';
   });
-
-  // === MENÚ ADMIN ===
-  function toggleMenuAdmin(event) {
-      event.stopPropagation();
-      const menu = document.getElementById('menuAdmin');
-      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-  }
 
   // Cerrar menú al hacer clic fuera
   document.addEventListener('click', () => {
