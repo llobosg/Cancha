@@ -253,12 +253,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   <!-- Barra superior -->
   <div class="top-bar">
     <a href="../index.php" class="brand-logo">
-        <span>🏟️</span> CanchaSport - <?= htmlspecialchars($recinto_nombre) ?>
-    </a>
-    
-    <!-- Botón Volver al Dashboard -->
-    <a href="recinto_dashboard.php" class="btn-back">
-        ← Volver al Dashboard
+        CanchaSport
     </a>
     <!-- Header con título y menú de usuario -->
     <!-- Contenedor del Menú Desplegable + Logout -->
@@ -295,7 +290,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
               <!-- Botón Cerrar Sesión (Visible siempre) -->
               <a href="login_email.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #FFEBEE; color: #D32F2F; border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; border: 1px solid #FFCDD2;">
-                  X Salir
+                Salir
               </a>
           </div>
   </div>
