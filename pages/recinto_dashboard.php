@@ -212,8 +212,8 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 <body>
   <!-- Barra superior -->
   <div class="top-bar">
-    <div class="hero">
-        <h2 class="title-cancha">CanchaSport <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700; margin: 0; font-size: 1.5rem;">⚽</span></h2>
+    <div class="logo">⚽</div>
+        <h2 class="title-cancha">CanchaSport ⚽></h2>
         <p style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
             Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
             <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
