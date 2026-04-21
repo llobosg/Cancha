@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Usuario y contraseña son requeridos';
         error_log("❌ [LOGIN_RECINTOS] Usuario o contraseña vacíos");
     } else {
-        // Verificar credenciales
+        // 1. Preparar y ejecutar consulta UNA SOLA VEZ
         $stmt = $pdo->prepare("
             SELECT ar.*, rd.nombre as nombre_recinto, rd.email_verified
             FROM admin_recintos ar 
@@ -41,8 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE ar.usuario = ?
         ");
         $stmt->execute([$usuario]);
-        $admin = $stmt->fetch();
         
+        // 2. Obtener el usuario
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // 3. Verificar si existe y si la contraseña es correcta
         if ($admin && password_verify($contraseña, $admin['contraseña'])) {
             error_log("✅ [LOGIN_RECINTOS] Credenciales válidas para usuario: '$usuario'");
             
@@ -50,29 +53,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Tu recinto no ha sido verificado. Por favor, revisa tu email.';
                 error_log("❌ [LOGIN_RECINTOS] Recinto no verificado para usuario: '$usuario'");
             } else {
-                // Iniciar sesión
-                // Obtener el nombre del recinto para mostrarlo en el dashboard
+                // 4. Iniciar sesión con los datos de $admin (que ya tiene todo incluido)
+                session_start();
+                
+                $_SESSION['id_recinto'] = $admin['id_recinto'];
+                $_SESSION['id_admin'] = $admin['id_admin']; // Usamos id_admin directo
+                $_SESSION['recinto_usuario'] = $admin['usuario'];
                 $_SESSION['nombre_recinto'] = $admin['nombre_recinto'];
-                if ($stmt->rowCount() > 0) {
-                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    // Validar contraseña
-                    if (password_verify($password_input, $user['contraseña'])) {
-                        session_start();
-                        $_SESSION['id_recinto'] = $user['id_recinto'];
-                        $_SESSION['id_admin_recinto'] = $admin['id_admin'];
-                        $_SESSION['id_admin'] = $user['id_admin'];
-                        $_SESSION['recinto_usuario'] = $user['usuario'];
-                        $_SESSION['recinto_rol'] = $user['rol']; // ✅ Guardamos el rol aquí
-                        
-                        // Redirigir al dashboard
-                        header('Location: recinto_dashboard.php');
-                        exit;
-                    } else {
-                        $error = "Contraseña incorrecta";
-                    }
-                }
-                error_log("✅ [LOGIN_RECINTOS] Sesión iniciada correctamente. Redirigiendo a recinto_dashboard.php");
+                
+                // ✅ Guardar el rol (asegurando que exista, default 'admin' si es null)
+                $_SESSION['recinto_rol'] = $admin['rol'] ?? 'admin'; 
+                
+                error_log("✅ [LOGIN_RECINTOS] Sesión iniciada correctamente. Rol: " . $_SESSION['recinto_rol']);
+                error_log("✅ [LOGIN_RECINTOS] Redirigiendo a recinto_dashboard.php");
+                
                 header('Location: recinto_dashboard.php');
                 exit;
             }
