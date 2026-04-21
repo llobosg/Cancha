@@ -2207,7 +2207,7 @@ $recinto = $stmt->fetch();
         });
     }
 
-    / === INICIALIZACIÓN ROBUSTA AL CARGAR LA PÁGINA ===
+    // === INICIALIZACIÓN ROBUSTA AL CARGAR LA PÁGINA ===
     document.addEventListener('DOMContentLoaded', () => {
         console.log("🚀 Iniciando calendario_reservas...");
 
