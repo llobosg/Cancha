@@ -1,12 +1,13 @@
 <?php
 // pages/login_recintos.php
 
-// 1. Iniciar sesión PRIMERO
+// 1. Incluir config.php (Aquí se aplican las configuraciones de sesión automáticamente)
+require_once __DIR__ . '/../includes/config.php';
+
+// 2. Iniciar sesión (Ahora es seguro porque config.php ya configuró las cookies)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-require_once __DIR__ . '/../includes/config.php';
 
 // Ahora sí puedes usar $_SESSION sin warnings
 error_log("🔍 [LOGIN_RECINTOS] Inicio del script");

@@ -1,11 +1,13 @@
 <?php
 // pages/recinto_dashboard.php
 
-// 1. Iniciar sesión
+// 1. Incluir config.php
+require_once __DIR__ . '/../includes/config.php';
+
+// 2. Iniciar sesión
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 // 2. Debug: Ver qué tenemos exactamente
 $rol_actual = $_SESSION['recinto_rol'] ?? 'NO_EXISTE';
 $id_recinto_actual = $_SESSION['id_recinto'] ?? 'NO_EXISTE';
@@ -33,7 +35,6 @@ if (!isset($_SESSION['id_recinto']) || !isset($_SESSION['recinto_rol']) || !in_a
 
 error_log("✅ [DASHBOARD] Sesión válida. Rol: $rol_actual");
 
-require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/permisos.php';
 
 // Obtener datos del usuario logueado para mostrar en el perfil
