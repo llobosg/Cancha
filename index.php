@@ -1,71 +1,75 @@
 <?php
-session_start();
-// Procesar login alternativo - ACTUALIZADO PARA SOCIOS INDIVIDUALES Y CLUBES
-$error_login = '';
-if (isset($_POST['login_alternativo'])) {
-    $email = trim($_POST['email_alt'] ?? '');
-    $password = $_POST['password_alt'] ?? '';
-    
-    if (empty($email) || empty($password)) {
-        $error_login = 'Email y contraseña son requeridos';
-    } else {
-        require_once __DIR__ . '/includes/config.php';
-        
-        // Buscar socio por email (modo individual o multiclub)
-        $stmt = $pdo->prepare("
-            SELECT id_socio, password_hash, email
-            FROM socios 
-            WHERE email = ? AND password_hash IS NOT NULL
-        ");
-        $stmt->execute([$email]);
-        $socio = $stmt->fetch();
+  // pages/index.php
+  require_once __DIR__ . '/includes/config.php';
+  
+  // 2. AHORA SÍ iniciar la sesión (si es necesario aquí)
+  if (session_status() === PHP_SESSION_NONE) {
+      session_start();
+  }
+  // Procesar login alternativo - ACTUALIZADO PARA SOCIOS INDIVIDUALES Y CLUBES
+  $error_login = '';
+  if (isset($_POST['login_alternativo'])) {
+      $email = trim($_POST['email_alt'] ?? '');
+      $password = $_POST['password_alt'] ?? '';
+      
+      if (empty($email) || empty($password)) {
+          $error_login = 'Email y contraseña son requeridos';
+      } else {        
+          // Buscar socio por email (modo individual o multiclub)
+          $stmt = $pdo->prepare("
+              SELECT id_socio, password_hash, email
+              FROM socios 
+              WHERE email = ? AND password_hash IS NOT NULL
+          ");
+          $stmt->execute([$email]);
+          $socio = $stmt->fetch();
 
-        if ($socio && password_verify($password, $socio['password_hash'])) {
-            // Login exitoso
-            $_SESSION['id_socio'] = $socio['id_socio'];
-            $_SESSION['user_email'] = $email;
+          if ($socio && password_verify($password, $socio['password_hash'])) {
+              // Login exitoso
+              $_SESSION['id_socio'] = $socio['id_socio'];
+              $_SESSION['user_email'] = $email;
 
-            // 🔥 Forzar cookie de respaldo
-            setcookie('cancha_session_id', session_id(), [
-                'expires' => time() + 86400,
-                'path' => '/',
-                'domain' => '',
-                'secure' => isset($_SERVER['HTTPS']),
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
+              // 🔥 Forzar cookie de respaldo
+              setcookie('cancha_session_id', session_id(), [
+                  'expires' => time() + 86400,
+                  'path' => '/',
+                  'domain' => '',
+                  'secure' => isset($_SERVER['HTTPS']),
+                  'httponly' => true,
+                  'samesite' => 'Lax'
+              ]);
 
-            // Verificar si pertenece a algún club
-            $stmt_clubes = $pdo->prepare("
-                SELECT c.id_club, c.email_responsable, c.nombre
-                FROM socio_club sc
-                JOIN clubs c ON sc.id_club = c.id_club
-                WHERE sc.id_socio = ? AND sc.estado = 'activo'
-                ORDER BY c.nombre ASC
-                LIMIT 1
-            ");
-            $stmt_clubes->execute([$socio['id_socio']]);
-            $primer_club = $stmt_clubes->fetch();
+              // Verificar si pertenece a algún club
+              $stmt_clubes = $pdo->prepare("
+                  SELECT c.id_club, c.email_responsable, c.nombre
+                  FROM socio_club sc
+                  JOIN clubs c ON sc.id_club = c.id_club
+                  WHERE sc.id_socio = ? AND sc.estado = 'activo'
+                  ORDER BY c.nombre ASC
+                  LIMIT 1
+              ");
+              $stmt_clubes->execute([$socio['id_socio']]);
+              $primer_club = $stmt_clubes->fetch();
 
-            if ($primer_club) {
-                // Tiene al menos un club → redirigir al primero
-                $club_slug = substr(md5($primer_club['id_club'] . $primer_club['email_responsable']), 0, 8);
-                $_SESSION['club_id'] = $primer_club['id_club'];
-                $_SESSION['current_club'] = $club_slug;
-                header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
-                exit;
-            } else {
-                // Es socio individual
-                header('Location: pages/dashboard_socio.php');
-                exit;
-            }
-        } else {
-            $error_login = 'Credenciales incorrectas o contraseña no configurada';
-        }
-    }
-}
-$show_splash = !isset($_SESSION['visited_index']) || $_SESSION['visited_index'] === false;
-$_SESSION['visited_index'] = true;
+              if ($primer_club) {
+                  // Tiene al menos un club → redirigir al primero
+                  $club_slug = substr(md5($primer_club['id_club'] . $primer_club['email_responsable']), 0, 8);
+                  $_SESSION['club_id'] = $primer_club['id_club'];
+                  $_SESSION['current_club'] = $club_slug;
+                  header('Location: pages/dashboard_socio.php?id_club=' . $club_slug);
+                  exit;
+              } else {
+                  // Es socio individual
+                  header('Location: pages/dashboard_socio.php');
+                  exit;
+              }
+          } else {
+              $error_login = 'Credenciales incorrectas o contraseña no configurada';
+          }
+      }
+  }
+  $show_splash = !isset($_SESSION['visited_index']) || $_SESSION['visited_index'] === false;
+  $_SESSION['visited_index'] = true;
 ?>
 <!DOCTYPE html>
 <html lang="es">

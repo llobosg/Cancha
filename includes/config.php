@@ -1,27 +1,29 @@
 <?php
 // includes/config.php
 
-// 1. CONFIGURACIÓN DE SESIÓN (DEBE SER LO PRIMERO ABSOLUTO)
-// Estas líneas solo funcionan si se ejecutan ANTES de session_start() en cualquier script.
-// Como config.php se incluye al principio, aquí es el lugar correcto.
+// Solo aplicar configuraciones de sesión si la sesión AÚN NO ha empezado
+if (session_status() === PHP_SESSION_NONE) {
+    
+    // Configuración de cookies seguras
+    if (isset($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
+        ini_set('session.cookie_secure', 1);
+    }
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_samesite', 'Lax');
 
-// Configuración de cookies seguras para producción
-if (isset($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
-    ini_set('session.cookie_secure', 1);
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'domain' => '', 
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+} else {
+    // Si la sesión ya está activa, registramos un warning en log pero no rompemos la pantalla
+    error_log("️ [CONFIG] Intento de configurar sesión cuando ya estaba activa. Revisa el orden de los requires.");
 }
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_samesite', 'Lax');
-
-// Parámetros avanzados de la cookie de sesión
-session_set_cookie_params([
-    'lifetime' => 86400,
-    'path' => '/',
-    'domain' => '', 
-    'secure' => isset($_SERVER['HTTPS']),
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
 
 // Ocultar errores en pantalla (pero guardarlos en log)
 ini_set('display_errors', 0);
