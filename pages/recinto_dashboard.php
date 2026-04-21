@@ -180,20 +180,48 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
     .hidden-panel {
         display: none !important;
     }
+
+    .title-cancha {
+        font-size: 2.8rem;
+        margin-top: 1.5rem;
+    }
+    
+    .title-cancha {
+      font-family: 'Dancing Script', cursive;
+      font-size: 3.8rem;
+      margin: 2rem 0 1rem 0;
+      color: white;
+      text-shadow: 0 3px 6px rgba(245, 243, 247, 0.84);
+    }
+
+    @media (max-width: 768px) {
+      .top-bar {
+        padding: 0 1rem;
+        height: 55px;
+      }
+      .title-cancha {
+        font-size: 2.8rem;
+        margin-top: 1.5rem;
+      }
+      .subtitle {
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- ✅ NUEVO HEADER CANCHASPORT -->
-    <header style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1.5rem 2rem; border-radius: 16px; box-shadow: 0 8px 20px rgba(186, 104, 200, 0.3); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden;">
-         <div>
-            <h1 style="color: #071289; margin: 0; font-size: 1.8rem;">CanchaSport</h1>
-            <p style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
-                <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
-            </p>
-        </div>
-    </header>
+    <!-- Barra superior -->
+    <div class="top-bar">
+      <h1 style="color: #071289; margin: 0; font-size: 1.5rem;">CanchaSport</h1>
+        <div class="hero">
+      <h1 class="title-cancha">CanchaSport <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
+      <p style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+          Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
+          <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
+      </p>
+    </div>
 
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
