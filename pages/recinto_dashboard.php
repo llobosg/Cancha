@@ -211,21 +211,24 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 </head>
 <body>
   <!-- Barra superior -->
-    <div class="top-bar">
-      <h1 style="color: #071289; margin: 0; font-size: 1.5rem;">CanchaSport</h1>
-        <div class="hero">
-      <h1 class="title-cancha">CanchaSport <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700;">⚽</span></h1>
-      <p style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-          Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
-          <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
-      </p>
+  <div class="top-bar">
+    <div class="hero">
+        <h2 class="title-cancha">CanchaSport <span onclick="window.location.href='pages/ceo_login.php'" style="cursor:pointer; color:#FFD700; margin: 0; font-size: 1.5rem;">⚽</span></h2>
+        <p style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+            Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
+            <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
+        </p>
+        <div style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+            Usuario: <?= htmlspecialchars($usuario_actual['nombre']) ?>
+        </div>
+    </div>
   </div>
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
          <?php if (esAdmin()): ?>
             <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #AB47BC; border-radius: 8px; font-weight: bold; border: 2px solid #AB47BC; transition: 0.2s;">
-                👥 Gestionar Asistentes
+                👥 Asistentes
             </a>
         <?php endif; ?>
         <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #333; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
