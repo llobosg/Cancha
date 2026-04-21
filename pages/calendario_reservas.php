@@ -1917,19 +1917,24 @@ $recinto = $stmt->fetch();
 
     // === INICIALIZACIÓN AL CARGAR LA PÁGINA ===
     document.addEventListener('DOMContentLoaded', () => {
-        // Forzar vista Planilla por defecto
         const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
         if (radioPlanilla) {
             radioPlanilla.checked = true;
             cambiarVistaCalendario('planilla');
         }
         
-        // Cargar datos iniciales si hay deporte seleccionado (o todos)
+        // Pequeño delay para asegurar que el DOM del select esté listo
         setTimeout(() => {
-            if (document.getElementById('vistaPlanilla').style.display !== 'none') {
+            const vista = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
+            if (vista === 'planilla') {
+                // Forzamos que el valor sea "" (Todos) si está null/undefined
+                const selectDeporte = document.getElementById('filtroDeporte');
+                if (selectDeporte && !selectDeporte.value) {
+                    selectDeporte.value = ""; 
+                }
                 cargarPlanillaReservas();
             }
-        }, 100);
+        }, 200);
     });
 
     // === CAMBIAR VISTA (CORREGIDO CON VALIDACIONES) ===

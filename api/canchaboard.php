@@ -436,17 +436,30 @@ function getDetalleReserva($pdo, $id_disponibilidad, $id_recinto) {
 }
 
 function getPlanillaReservas($pdo, $id_recinto, $fecha, $deporte) {
-    // 1. Obtener Canchas Activas y Operativas del Deporte seleccionado
+    // Validación suave: si es null, lo convertimos a string vacío
+    $deporte = $deporte ?? ''; 
+    
+    // Construcción dinámica del WHERE
+    $where_deporte = "";
+    $params = [$id_recinto];
+    
+    if ($deporte !== '') {
+        $where_deporte = "AND id_deporte = ?";
+        $params[] = $deporte;
+    }
+    // Si $deporte es '', la consulta trae TODAS las canchas operativas
+    
     $stmt_canchas = $pdo->prepare("
-        SELECT id_cancha, nro_cancha, nombre_cancha, hora_inicio, hora_fin, duracion_bloque
+        SELECT id_cancha, nro_cancha, nombre_cancha, hora_inicio, hora_fin, duracion_bloque, id_deporte
         FROM canchas
         WHERE id_recinto = ? 
-        AND id_deporte = ? 
         AND activa = 1 
         AND estado = 'Operativa'
+        $where_deporte
         ORDER BY nro_cancha ASC
     ");
-    $stmt_canchas->execute([$id_recinto, $deporte]);
+    
+    $stmt_canchas->execute($params);
     $canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
     
     if (empty($canchas)) {
