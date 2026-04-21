@@ -349,27 +349,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   }
   </style>
 
-  <!-- Scripts necesarios para el menú y la planilla (si el iframe no carga los scripts propios) -->
-  <script>
-      // Lógica del menú desplegable
-      function toggleMenuAdmin(event) {
-          event.stopPropagation();
-          const menu = document.getElementById('menuAdmin');
-          menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-      }
-      function closeMenuAdmin() {
-          document.getElementById('menuAdmin').style.display = 'none';
-      }
-      document.addEventListener('click', (e) => {
-          if (!e.target.closest('#menuAdmin') && !e.target.closest('button[onclick="toggleMenuAdmin"]')) {
-              closeMenuAdmin();
-          }
-      });
-
-      // Nota: Si usas el iframe, los scripts de la planilla corren dentro del iframe.
-      // Si copias el HTML de la planilla aquí directamente, asegúrate de incluir los scripts de calendario_reservas.php al final de este archivo.
-  </script>
-
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
@@ -440,31 +419,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             </div>
         </div>
     <?php endif; ?>
-  </div>
- 
-  <!-- CONTENIDO PRINCIPAL: PLANILLA DIRECTA -->
-  <div class="dashboard-content">
-      
-      <!-- Encabezado contextual rápido -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding: 0 0.5rem;">
-          <h2 style="margin:0; color:#333; font-size:1.4rem;">📅 Planilla de Reservas - Hoy</h2>
-          <div style="font-size:0.9rem; color:#666;">
-              Rol: <strong><?= ucfirst($rol_actual) ?></strong> | Recinto: <?= htmlspecialchars($recinto_nombre) ?>
-          </div>
-      </div>
-
-      <!-- Aquí incrustamos la lógica de la Planilla -->
-      <!-- En lugar de hacer un include complejo, copiaremos la estructura esencial de calendario_reservas.php 
-          pero simplificada para que cargue rápido aquí. Opcionalmente, puedes usar un iframe si prefieres aislarlo. -->
-      
-      <!-- OPCIÓN A: IFRAME (Más fácil de mantener, usa tu archivo calendario_reservas.php existente) -->
-      <div class="planilla-container" style="height: 80vh; position: relative;">
-          <iframe src="calendario_reservas.php?embed=true&fecha=<?= date('Y-m-d') ?>" 
-                  style="width: 100%; height: 100%; border: none;" 
-                  title="Planilla de Reservas">
-          </iframe>
-      </div>
-
   </div>
 
 <script>

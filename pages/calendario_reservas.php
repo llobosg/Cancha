@@ -1,8 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-$es_embed = isset($_GET['embed']) && $_GET['embed'] === 'true';
-
 session_start();
 
 if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
@@ -16,11 +14,6 @@ $id_recinto = $_SESSION['id_recinto'];
 $stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
 $stmt->execute([$id_recinto]);
 $recinto = $stmt->fetch();
-
-if ($es_embed) {
-    // Opcional: Forzar estilo mínimo para el body dentro del iframe
-    echo "<style>body { margin:0; padding:0; background: transparent; } .top-bar { display: none; }</style>";
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -774,17 +767,15 @@ if ($es_embed) {
 </style>
 </head>
 <body>
-    <?php if (!$es_embed): ?>
-        <div class="header">
-            <div class="main-title-section">
-            <div class="logo-corporativo">⚽</div>
-            <h1 class="main-title">Cancha</h1>
-            </div>
-            <div>
-            <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
-            </div>
+    <div class="header">
+        <div class="main-title-section">
+        <div class="logo-corporativo">⚽</div>
+        <h1 class="main-title">Cancha</h1>
         </div>
-    <?php endif; ?>
+        <div>
+        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+        </div>
+    </div>
     
     <!-- Contenedor Principal -->
     <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent; overflow-x: hidden;">
