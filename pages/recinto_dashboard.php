@@ -212,17 +212,9 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 <body>
   <!-- Barra superior -->
   <div class="top-bar">
-    <div class="logo">⚽</div>
-        <h2 class="title-cancha">CanchaSport ⚽></h2>
-        <p style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-            Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
-            <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Administrador</span> <?php endif; ?>
-        </p>
-        <div style="color: #f1f1e8; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-            Usuario: <?= htmlspecialchars($usuario_actual['nombre']) ?>
-        </div>
-    </div>
+    <div class="logo"> CanchaSport ⚽ <?= htmlspecialchars($recinto_nombre) ?></div>
   </div>
+  
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
