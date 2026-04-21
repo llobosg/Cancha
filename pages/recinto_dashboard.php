@@ -212,20 +212,33 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 <body>
   <!-- Barra superior -->
   <div class="top-bar">
-    <div class="logo" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;"> CanchaSport ⚽ <?= htmlspecialchars($recinto_nombre) ?></div>
+    <div class="logo" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;"> CanchaSport ⚽🎾 <?= htmlspecialchars($recinto_nombre) ?></div>
+    <!-- Menú del admin -->
+      <div style="position: relative; display: inline-block; margin-left: 1rem;">
+        <button class="filter-btn" style="padding:0.4rem 0.6rem;" onclick="toggleMenuAdmin(event)">
+          ⋮
+        </button>
+        <div id="menuAdmin" style="display:none; position:absolute; right:0; top:100%; background:white; border:1px solid #ccc; border-radius:6px; z-index:10; min-width:200px; box-shadow:0 4px 8px rgba(0,0,0,0.1);">
+                <?php if (esAdmin()): ?>
+                  <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #AB47BC; border-radius: 8px; font-weight: bold; border: 2px solid #AB47BC; transition: 0.2s;">
+                      👥 Asistentes
+                  </a>
+              <?php else: ?>
+                  <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #333; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+                      ⚙️ Mi Perfil
+                  </a>
+              <?php endif; ?>
+        </div>
+      </div>
+      <a href="logout.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #FF6B6B; color: white; border-radius: 8px; font-weight: bold; border: 2px solid #FF6B6B; transition: 0.2s;">
+                  🚪 Cerrar Sesión
+      </a>
   </div>
 
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
     <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
-         <?php if (esAdmin()): ?>
-            <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #AB47BC; border-radius: 8px; font-weight: bold; border: 2px solid #AB47BC; transition: 0.2s;">
-                👥 Asistentes
-            </a>
-        <?php endif; ?>
-        <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #333; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-            ⚙️ Mi Perfil
-        </a>
+         
     </div>
 
     <!-- 2. CONTENIDO ESPECÍFICO POR ROL --> 
