@@ -2279,55 +2279,38 @@ $recinto = $stmt->fetch();
 
     // === FUNCIÓN PARA ABRIR DETALLE DESDE PLANILLA (CORREGIDA) ===
     function abrirDetalleDesdePlanilla(idReserva) {
-        console.log("️ Click detectado en Reserva ID:", idReserva);
+        console.log("️ Click en Reserva ID:", idReserva);
 
-        if (!idReserva || idReserva === 'undefined' || idReserva === null) {
-            console.error("❌ Error: ID de reserva inválido o nulo.");
-            alert("No se pudo identificar la reserva. Intenta recargar la página.");
+        if (!idReserva) {
+            alert("Error: ID de reserva inválido");
             return;
         }
 
-        // Verificar que la función de renderizado exista
-        if (typeof mostrarDetalleReserva !== 'function') {
-            console.error("❌ Error: La función 'mostrarDetalleReserva' no está definida.");
-            return;
-        }
+        // Enviamos id_disponibilidad=0 (para que el backend sepa que debe buscar por reserva)
+        // y enviamos el id_reserva real.
+        const formData = new URLSearchParams();
+        formData.append('id_disponibilidad', '0'); 
+        formData.append('id_reserva', idReserva);
 
-        // Obtener el modal
-        const modal = document.getElementById('modalDetalleReserva');
-        if (!modal) {
-            console.error("❌ Error: El elemento 'modalDetalleReserva' no existe en el DOM.");
-            alert("Error de interfaz: Modal no encontrado.");
-            return;
-        }
-
-        // Fetch para obtener los detalles
-        // Nota: Usamos id_disponibilidad=0 porque estamos buscando por id_reserva directamente
         fetch('../api/canchaboard.php?action=get_detalle_reserva', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `id_disponibilidad=0&id_reserva=${idReserva}`
+            body: formData
         })
-        .then(response => {
-            if (!response.ok) throw new Error('Error de red: ' + response.status);
-            return response.json();
-        })
+        .then(response => response.json())
         .then(detalle => {
-            console.log("✅ Datos recibidos:", detalle);
+            if (detalle.error) throw new Error(detalle.error);
             
-            if (detalle.error) {
-                throw new Error(detalle.error);
+            if (typeof mostrarDetalleReserva === 'function') {
+                mostrarDetalleReserva(detalle);
+                const modal = document.getElementById('modalDetalleReserva');
+                if (modal) modal.style.display = 'flex';
+            } else {
+                console.error("Función mostrarDetalleReserva no definida");
             }
-            
-            // Renderizar y Mostrar
-            mostrarDetalleReserva(detalle);
-            modal.style.display = 'flex'; // Forzar display flex para centrar
-            
-            // Asegurar que el z-index sea alto para estar sobre la planilla
-            modal.style.zIndex = '9999'; 
         })
         .catch(err => {
-            console.error("❌ Error al cargar detalle:", err);
+            console.error("Error:", err);
             alert("No se pudo cargar el detalle: " + err.message);
         });
     }

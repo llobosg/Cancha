@@ -25,12 +25,38 @@ try {
             error_log("📅 [API] Cargando reservas. Rango: $rango_dias días");
             echo json_encode(getReservasDataOptimizada($pdo, $id_recinto, $rango_dias));
             break;
-            
+
         case 'get_detalle_reserva':
+            // Intentar obtener id_disponibilidad primero
             $id_disponibilidad = (int)($_POST['id_disponibilidad'] ?? 0);
+            
+            // Si no hay id_disponibilidad, buscar por id_reserva
             if (!$id_disponibilidad) {
-                throw new Exception('ID de disponibilidad requerido');
+                $id_reserva_alt = (int)($_POST['id_reserva'] ?? 0);
+                
+                if ($id_reserva_alt) {
+                    // Buscar el id_disponibilidad asociado a esta reserva en la fecha/hora correspondiente
+                    // O simplemente llamar a una función que busque directo por reserva
+                    // Para simplificar, vamos a modificar la llamada a la función getDetalleReserva
+                    // para que acepte buscar por ID de reserva si la disponibilidad es 0.
+                    
+                    // Opción A: Buscar el ID de disponibilidad primero (más robusto)
+                    $stmt_find_disp = $pdo->prepare("SELECT id_disponibilidad FROM disponibilidad_canchas WHERE id_reserva = ? LIMIT 1");
+                    $stmt_find_disp->execute([$id_reserva_alt]);
+                    $disp_data = $stmt_find_disp->fetch();
+                    
+                    if ($disp_data) {
+                        $id_disponibilidad = (int)$disp_data['id_disponibilidad'];
+                    } else {
+                        // Si no hay registro en disponibilidad (raro), lanzamos error o manejamos例外
+                        throw new Exception('No se encontró disponibilidad asociada a esta reserva');
+                    }
+                } else {
+                    throw new Exception('ID de disponibilidad o ID de reserva requerido');
+                }
             }
+
+            // Ahora sí llamamos a la función con el ID válido
             echo json_encode(getDetalleReserva($pdo, $id_disponibilidad, $id_recinto));
             break;
             
