@@ -2333,7 +2333,6 @@ $recinto = $stmt->fetch();
             renderizarPlanilla(data);
             console.log("✅ Planilla cargada con éxito!");
 
-            const inputFecha = document.getElementById('fechaPlanillaInput');
             if (inputFecha && inputFecha.value !== fechaPlanillaActual) {
                 inputFecha.value = fechaPlanillaActual;
             }
