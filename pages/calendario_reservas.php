@@ -847,8 +847,10 @@ $recinto = $stmt->fetch();
                                 <option value="">Todos los estados</option>
                                 <option value="disponible">Disponible</option>
                                 <option value="reservada">Reservadas</option>
+                                <!-- NUEVOS FILTROS DE PAGO -->
                                 <option value="pagadas">Pagadas</option>
                                 <option value="parcial">Pago Parcial</option>
+                                <option value="no_pagadas">No Pagadas (Reservadas sin pago)</option> 
                                 <option value="ocupada">Ocupadas</option>
                                 <option value="cancelada">Canceladas</option>
                             </select>
@@ -1964,19 +1966,20 @@ $recinto = $stmt->fetch();
     }
 
     // === APLICAR FILTROS (CORREGIDO: ELIMINADO REFERENCIA A filtroFecha) ===
+   let estadoSeleccionadoPlanilla = ""; // Variable global nueva
+
     async function aplicarFiltrosConAPI() {
         const deporte = document.getElementById('filtroDeporte').value;
         const estado = document.getElementById('filtroEstado').value;
-        // ELIMINADO: const fecha = document.getElementById('filtroFecha').value; 
         
-        const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
+        // Guardar el estado seleccionado globalmente
+        estadoSeleccionadoPlanilla = estado;
         
-        if (vistaActual === 'planilla') {
-            if (!deporte && deporte !== "") { 
-                // Si es vacío ("Todos"), está bien. Solo alertar si es null/undefined raro.
-            }
-            deporteSeleccionadoPlanilla = deporte;
-            cargarPlanillaReservas();
+        if ('planilla' === 'planilla') { // Siempre true en nuestro caso forzado
+            console.log(`🔄 Filtro Estado: ${estado}. Recargando Planilla...`);
+            
+            deporteSeleccionadoPlanilla = deporte || "";
+            cargarPlanillaReservas(); // Recarga los datos brutos
             return;
         }
 
@@ -2042,13 +2045,13 @@ $recinto = $stmt->fetch();
         
         const anchoHorario = '110px';
         const anchoCancha = '140px';
+        
+        // Obtener el filtro activo
+        const filtroActivo = estadoSeleccionadoPlanilla || ""; 
 
         let html = `<thead><tr>`;
-        
-        // ✅ Header Horario: font-weight: 400 !important
         html += `<th style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; text-align:center; border-right:2px solid #fff; font-weight: 400 !important;"> Horario </th>`;
         
-        // ✅ Headers Canchas: font-weight: 400 !important
         data.canchas.forEach(c => {
             html += `<th style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 400 !important;">
                         ${c.nombre_cancha || 'Cancha'}
@@ -2060,7 +2063,7 @@ $recinto = $stmt->fetch();
             if (slot.is_label_row) {
                 html += `<tr>`;
                 
-                // ✅ Celda Horario: font-weight: 400 !important
+                // Celda Horario
                 html += `<td style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#f8f9fa; font-weight: 400 !important; text-align:center; padding:5px; border-bottom:1px solid #ddd; position:sticky; left:0; z-index:1; color:#333333; border-right:2px solid #ccc;">
                             ${slot.label}
                         </td>`;
@@ -2069,22 +2072,67 @@ $recinto = $stmt->fetch();
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const reserva = data.reservas[key];
                     
-                    let bgClass = '#e0e0e0'; 
+                    let bgClass = '#e0e0e0'; // Default: Disponible (Gris)
                     let cellContent = '';
                     let clickEvt = '';
+                    let opacity = '1';
+                    let borderColor = '#fff';
                     
-                    if (reserva) {
-                        if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7';
-                        else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d';
-                        else bgClass = '#ffcdd2'; // Rojo
+                    // === LÓGICA DE FILTRADO Y COLORES ===
+                    let cumpleFiltro = false;
+                    let esDisponible = !reserva;
+                    
+                    if (esDisponible) {
+                        // Si es disponible
+                        if (filtroActivo === '' || filtroActivo === 'disponible') {
+                            cumpleFiltro = true;
+                            bgClass = '#e0e0e0'; // Gris claro
+                        }
+                    } else {
+                        // Es una Reserva
+                        const estadoPago = reserva.estado_pago || 'pendiente';
                         
-                        const nombre = (reserva.nombre_socio || reserva.nombre_cliente || 'Reserva').substring(0, 12) + '...';
-                        cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div>`;
-                        clickEvt = `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
+                        // Determinar si cumple el filtro seleccionado
+                        if (filtroActivo === '') {
+                            cumpleFiltro = true; // Mostrar todo
+                        } else if (filtroActivo === 'pagadas' && estadoPago === 'pagado') {
+                            cumpleFiltro = true;
+                        } else if (filtroActivo === 'parcial' && estadoPago === 'parcial') {
+                            cumpleFiltro = true;
+                        } else if (filtroActivo === 'no_pagadas' && (estadoPago === 'pendiente' || estadoPago === null)) {
+                            cumpleFiltro = true;
+                        } else if (filtroActivo === 'reservada' && estadoPago !== 'pagado') {
+                            // Reservadas genéricas (pendientes o parciales)
+                            cumpleFiltro = true;
+                        }
+                        
+                        // Asignar colores si es reserva (independiente del filtro, para referencia visual)
+                        if (estadoPago === 'pagado') bgClass = '#a5d6a7'; // Verde
+                        else if (estadoPago === 'parcial') bgClass = '#fff59d'; // Amarillo
+                        else bgClass = '#ffcdd2'; // Rojo (Pendiente/No pagado)
+                        
+                        if (cumpleFiltro) {
+                            const nombre = (reserva.nombre_socio || reserva.nombre_cliente || 'Reserva').substring(0, 12) + '...';
+                            cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div><div style="font-size:0.65rem; opacity:0.8;">${estadoPago.toUpperCase()}</div>`;
+                            clickEvt = `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
+                        }
                     }
-                    
-                    // ✅ Celda Cancha: font-weight: 400 !important
-                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight: 400 !important; cursor:pointer; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #fff;" ${clickEvt}>${cellContent}</td>`;
+
+                    // === APLICAR ESTILO SEGÚN FILTRO ===
+                    if (!cumpleFiltro && !esDisponible) {
+                        // Si es reserva pero NO cumple el filtro: Atenuar fuertemente
+                        opacity = '0.2'; 
+                        borderColor = '#eee';
+                        cellContent = ''; // Ocultar texto
+                        clickEvt = ''; // Desactivar click
+                    } else if (!cumpleFiltro && esDisponible) {
+                        // Si es disponible y buscamos solo reservadas: Ocultar casi totalmente
+                        opacity = '0.1';
+                        cellContent = '';
+                    }
+
+                    // Renderizar celda
+                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight: 400 !important; cursor:${clickEvt ? 'pointer' : 'default'}; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid ${borderColor}; opacity: ${opacity};" ${clickEvt}>${cellContent}</td>`;
                 });
                 
                 html += `</tr>`;
