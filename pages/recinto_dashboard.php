@@ -201,18 +201,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               ⚙️ Mi Perfil
             </a>
 
-            <div class="container mt-5">
-                <h2>Gestión de Asistentes del Recinto</h2>
-                <button class="btn btn-primary" data-toggle="modal" data-target="#modalNuevoAsistente">
-                    + Registrar Nuevo Asistente
-                </button>
-                
-                <!-- Tabla de asistentes existentes -->
-                <table class="table table-striped mt-3">
-                    <!-- ... contenido de la tabla ... -->
-                </table>
-            </div>
-
             <!-- Modal de Registro (HTML) -->
             <div class="modal fade" id="modalNuevoAsistente">
                 <!-- ... formulario para crear asistente ... -->
@@ -267,6 +255,14 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
               <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
             </div>
+
+             <!-- Panel de Torneos -->
+            <div class="dynamic-panel" id="panelTorneos">
+              <h3>🏆 Torneos Americanos Activos</h3>
+              <div id="listaTorneos" style="margin-top: 1rem;">
+                <p>Cargando torneos...</p>
+              </div>
+            </div>
         <?php endif; ?>
     </div>  
 
@@ -290,20 +286,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         </div>
     </div>
 
-    <!-- Panel de Torneos -->
-    <div class="dynamic-panel" id="panelTorneos">
-      <h3>🏆 Torneos Americanos Activos</h3>
-      <div id="listaTorneos" style="margin-top: 1rem;">
-        <p>Cargando torneos...</p>
-      </div>
-    </div>
-
-    <!-- Panel dinámico -->
-    <div class="dynamic-panel" id="dynamicPanel">
-      <h3>📋 Bienvenido al panel de administración</h3>
-      <p>Selecciona una acción rápida para comenzar.</p>
-    </div>
-  </div>
+   
 
   <script>
     document.querySelectorAll('.filter-btn').forEach(btn => {
