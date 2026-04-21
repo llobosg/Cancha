@@ -2029,6 +2029,10 @@ $recinto = $stmt->fetch();
 
     // === CARGAR PLANILLA (Sin cambios mayores, solo asegúrate que exista) ===
     async function cargarPlanillaReservas() {
+        const response = await fetch(url, {
+            method: 'GET', // o POST si corresponde
+            credentials: 'include' // ✅ IMPORTANTE: Envía las cookies de sesión
+        });
         const deporteSelect = document.getElementById('filtroDeporte');
         const deporte = deporteSelect ? deporteSelect.value : ""; // Asegurar que sea string vacío si no existe
         
@@ -2135,16 +2139,22 @@ $recinto = $stmt->fetch();
                     let clickEvt = '';
                     
                     if (reserva) {
-                        if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7';
-                        else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d';
-                        else bgClass = '#ffcdd2';
+                        if (reserva.estado_pago === 'pagado') {
+                        bgClass = '#a5d6a7'; // Verde para Pagado
+                        } else if (reserva.estado_pago === 'parcial') {
+                            bgClass = '#fff59d'; // Amarillo para Parcial
+                        } else {
+                            // Pendiente, en_revision, o cualquier otro estado = ROJO
+                            bgClass = '#ffcdd2'; 
+                        }
                         
                         const nombre = (reserva.nombre_socio || reserva.nombre_cliente || 'Reserva').substring(0, 12) + '...';
                         cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div>`;
                         clickEvt = `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
                     }
                     
-                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #fff;" ${clickEvt}>${cellContent}</td>`;
+                   // Celda Cancha (Sin Bold en el contenido, solo en el contenedor si fuera necesario, pero quitamos font-weight:bold)
+                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight:normal; cursor:pointer; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #fff;" ${clickEvt}>${cellContent}</td>`;
                 });
                 
                 html += `</tr>`;
@@ -2199,7 +2209,8 @@ $recinto = $stmt->fetch();
         fetch('../api/canchaboard.php?action=get_detalle_reserva', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData
+            body: formData,
+            credentials: 'include' // ✅ IMPORTANTE
         })
         .then(response => response.json())
         .then(detalle => {
