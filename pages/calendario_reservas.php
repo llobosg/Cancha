@@ -2184,7 +2184,6 @@ $recinto = $stmt->fetch();
 
     // Bandera para evitar el loop
     // Variable Global (Asegúrate que esté declarada fuera de cualquier función)
-    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
     let estaActualizandoFecha = false; // Bandera para evitar loops del input
 
     // === FUNCIÓN PARA CAMBIAR DÍA (ANTERIOR / SIGUIENTE) ===
