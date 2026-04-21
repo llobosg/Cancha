@@ -191,33 +191,86 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
             <h1 style="color: #071289; margin: 0; font-size: 1.8rem;">Panel de Administración</h1>
             <p style="color: #666; margin: 0.5rem 0 0 0;">Recinto: <?= htmlspecialchars($recinto_nombre) ?></p>
         </div>
-        
-        <!-- Botones de Gestión (Subidos arriba a la derecha) -->
-        <div style="display: flex; gap: 1rem;">
-            <?php if (esAdmin()): ?>
-                <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-                    👥 Gestionar Asistentes
-                </a>
-                <a href="perfil_admin.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-                    ⚙️ Mi Perfil
-                </a>
-            <?php endif; ?>
-        </div>
-        <a href="../index.php" class="filter-btn" style="background:#FF6B6B;">Salir</a>
+
+        <?php if (esAdmin()): ?>
+            <!-- Solo Admin -->
+            <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+              👥 Gestionar Asistentes
+            </a>
+            <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+              ⚙️ Mi Perfil
+            </a>
+
+            <div class="container mt-5">
+                <h2>Gestión de Asistentes del Recinto</h2>
+                <button class="btn btn-primary" data-toggle="modal" data-target="#modalNuevoAsistente">
+                    + Registrar Nuevo Asistente
+                </button>
+                
+                <!-- Tabla de asistentes existentes -->
+                <table class="table table-striped mt-3">
+                    <!-- ... contenido de la tabla ... -->
+                </table>
+            </div>
+
+            <!-- Modal de Registro (HTML) -->
+            <div class="modal fade" id="modalNuevoAsistente">
+                <!-- ... formulario para crear asistente ... -->
+            </div>
+
+            <!-- 2. FILA DE KPIS (Solo Ingresos Este Mes) -->
+            <!-- Ajustado al tamaño de las otras fichas y alineado a la izquierda -->
+            <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <div class="stat-card" style="flex: 0 0 auto; min-width: 250px; max-width: 300px; background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Ingresos Este Mes</h3>
+                    <div style="font-size: 2.2rem; font-weight: 900;">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
+                    <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Actualizado al <?= date('d/m/Y') ?></div>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- Solo Asistente -->
+            <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="nav-link">👤 Mi Perfil</a>
+
+            <!-- 2. FILA DE KPIS (Solo Ingresos Este Mes) -->
+            <!-- Ajustado al tamaño de las otras fichas y alineado a la izquierda -->
+            <!-- Gráficos -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-title">Canchas disponibles</div>
+                <div class="chart">
+                  <svg viewBox="0 0 100 20" style="width:100%; height:100%;">
+                    <rect x="0" y="0" width="100" height="20" fill="rgba(255,255,255,0.2)" rx="3"/>
+                    <rect x="0" y="0" width="60" height="20" fill="var(--accent)" rx="3"/>
+                  </svg>
+                </div>
+                <div>6/10 reservadas</div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-title">Ocupación MTD</div>
+                <div class="chart">
+                  <svg viewBox="0 0 100 100" style="width:80px; height:80px; margin:0 auto;">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8"
+                            stroke-dasharray="282" stroke-dashoffset="<?= 282 * (1 - 0.72) ?>" transform="rotate(-90 50 50)"/>
+                    <text x="50" y="55" text-anchor="middle" fill="white" font-size="16">72%</text>
+                  </svg>
+                </div>
+                <div>+7% vs mes anterior</div>
+              </div>
+            </div>
+
+             <!-- Acciones rápidas -->
+            <div class="quick-actions">
+              <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
+              <button class="action-btn" id="btnCalendarioReservas">Calendario reservas</button>
+              <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
+              <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
+            </div>
+        <?php endif; ?>
     </div>  
 
-    <!-- 2. FILA DE KPIS (Solo Ingresos Este Mes) -->
-    <!-- Ajustado al tamaño de las otras fichas y alineado a la izquierda -->
-    <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-        <div class="stat-card" style="flex: 0 0 auto; min-width: 250px; max-width: 300px; background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);">
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Ingresos Este Mes</h3>
-            <div style="font-size: 2.2rem; font-weight: 900;">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
-            <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Actualizado al <?= date('d/m/Y') ?></div>
-        </div>
-        
-        <!-- AQUÍ OCULTAMOS: Canchas Disponibles, Ocupación MTD, etc. -->
-        <!-- Simplemente no incluimos el HTML de esas tarjetas -->
-    </div>
+    
 
      <!-- 3. SECCIÓN PRINCIPAL: PLANILLA DE RESERVAS -->
     <!-- Reemplaza los botones de acción y torneos por esto -->
@@ -237,76 +290,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="filters-bar">
-      <button class="filter-btn active" data-period="month">Mes</button>
-      <button class="filter-btn" data-period="week">Semana</button>
-      <button class="filter-btn" data-period="day">Hoy</button>
-      <!-- Menú del admin -->
-      <div style="position: relative; display: inline-block; margin-left: 1rem;">
-        <button class="filter-btn" style="padding:0.4rem 0.6rem;" onclick="toggleMenuAdmin(event)">
-          ⋮
-        </button>
-        <div id="menuAdmin" style="display:none; position:absolute; right:0; top:100%; background:white; border:1px solid #ccc; border-radius:6px; z-index:10; min-width:200px; box-shadow:0 4px 8px rgba(0,0,0,0.1);">
-          <a href="mantenedor_admin_recinto.php" style="display:block; padding:0.6rem 1rem; color:#071289; text-decoration:none; font-size:0.9rem;">👤 Perfil Admin recinto deportivo</a>
-        </div>
-      </div>
-    </div>
-
-    <?php if (esAdmin()): ?>
-        <!-- SECCIÓN FINANCIERA (Solo Admin) -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <h5>Ingresos Hoy</h5>
-                        <h3>$<?= number_format($ingresos_hoy, 0) ?></h3>
-                    </div>
-                </div>
-            </div>
-             <div class="stat-card">
-                <div class="stat-title">Ingresos este mes</div>
-                <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
-                <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <!-- Gráficos -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-title">Canchas disponibles</div>
-        <div class="chart">
-          <svg viewBox="0 0 100 20" style="width:100%; height:100%;">
-            <rect x="0" y="0" width="100" height="20" fill="rgba(255,255,255,0.2)" rx="3"/>
-            <rect x="0" y="0" width="60" height="20" fill="var(--accent)" rx="3"/>
-          </svg>
-        </div>
-        <div>6/10 reservadas</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-title">Ocupación MTD</div>
-        <div class="chart">
-          <svg viewBox="0 0 100 100" style="width:80px; height:80px; margin:0 auto;">
-            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
-            <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8"
-                    stroke-dasharray="282" stroke-dashoffset="<?= 282 * (1 - 0.72) ?>" transform="rotate(-90 50 50)"/>
-            <text x="50" y="55" text-anchor="middle" fill="white" font-size="16">72%</text>
-          </svg>
-        </div>
-        <div>+7% vs mes anterior</div>
-      </div>
-    </div>
-
-    <!-- Acciones rápidas -->
-    <div class="quick-actions">
-      <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
-      <button class="action-btn" id="btnCalendarioReservas">Calendario reservas</button>
-      <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
-      <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
-    </div>
-
     <!-- Panel de Torneos -->
     <div class="dynamic-panel" id="panelTorneos">
       <h3>🏆 Torneos Americanos Activos</h3>
@@ -321,58 +304,6 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       <p>Selecciona una acción rápida para comenzar.</p>
     </div>
   </div>
-
-  <?php if (esAdmin()): ?>
-    <!-- SECCIÓN FINANCIERA (Solo Admin) -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h5>Ingresos Hoy</h5>
-                    <h3>$<?= number_format($ingresos_hoy, 0) ?></h3>
-                </div>
-            </div>
-        </div>
-        <!-- Más tarjetas financieras... -->
-    </div>
-  <?php endif; ?>
-
-  <nav class="navbar ...">
-    <!-- Enlaces comunes (Ambos roles) -->
-    <a href="calendario_reservas.php" class="nav-link"> Calendario</a>
-    <a href="gestion_canchas.php" class="nav-link">🏟️ Canchas</a>
-    <a href="reserva_manual.php" class="nav-link"> Reserva Manual</a>
-    <a href="gestion_torneos.php" class="nav-link">🏆 Torneos</a>
-    
-    <?php if (esAdmin()): ?>
-        <!-- Solo Admin -->
-        <a href="gestion_asistentes.php" class="nav-link text-warning">👥 Gestionar Asistentes</a>
-        <a href="reportes_financieros.php" class="nav-link">💰 Reportes</a>
-        <a href="perfil_admin.php?id=<?= $usuario_actual['id_admin'] ?>" class="nav-link">⚙️ Mi Perfil</a>
-    <?php else: ?>
-        <!-- Solo Asistente -->
-        <a href="perfil_asistente.php?id=<?= $usuario_actual['id_admin'] ?>" class="nav-link">👤 Mi Perfil</a>
-    <?php endif; ?>
-  </nav>
-
-  <?php if (esAdmin()): ?>
-    <div class="container mt-5">
-        <h2>Gestión de Asistentes del Recinto</h2>
-        <button class="btn btn-primary" data-toggle="modal" data-target="#modalNuevoAsistente">
-            + Registrar Nuevo Asistente
-        </button>
-        
-        <!-- Tabla de asistentes existentes -->
-        <table class="table table-striped mt-3">
-            <!-- ... contenido de la tabla ... -->
-        </table>
-    </div>
-
-    <!-- Modal de Registro (HTML) -->
-    <div class="modal fade" id="modalNuevoAsistente">
-        <!-- ... formulario para crear asistente ... -->
-    </div>
-  <?php endif; ?>
 
   <script>
     document.querySelectorAll('.filter-btn').forEach(btn => {
