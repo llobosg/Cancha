@@ -831,7 +831,6 @@ $recinto = $stmt->fetch();
                         </div>
 
                         <!-- Filtros Deporte y Estado -->
-                        <!-- Filtros Deporte y Estado (Asegúrate que estén AQUÍ visibles) -->
                         <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px; margin-left: 1rem;">
                             <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.9); color:#333; border:1px solid rgba(0,0,0,0.1);">
                                 <option value="">Todos los deportes</option>
@@ -2006,52 +2005,6 @@ $recinto = $stmt->fetch();
         }
     }
 
-    // === CARGAR PLANILLA (Sin cambios mayores, solo asegúrate que exista) ===
-    async function cargarPlanillaReservas() {
-        const deporteSelect = document.getElementById('filtroDeporte');
-        if (!deporteSelect) {
-            console.error(" No se encontró el select #filtroDeporte");
-            return;
-        }
-
-        const deporte = deporteSelect.value;
-        deporteSeleccionadoPlanilla = deporte;
-        
-        // Usar la variable global window.fechaPlanillaActual
-        if (!window.fechaPlanillaActual) {
-            window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
-        }
-        
-        const fecha = window.fechaPlanillaActual;
-
-        try {
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fecha}&deporte=${encodeURIComponent(deporte)}`;
-            console.log(" Fetching:", url);
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                credentials: 'include'
-            });
-            
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const data = await response.json();
-            
-            if (data.error) throw new Error(data.error);
-            
-            // Actualizar input visual
-            const inputFecha = document.getElementById('fechaPlanillaInput');
-            if (inputFecha) inputFecha.value = fecha;
-            
-            renderizarPlanilla(data);
-            console.log("✅ Planilla cargada exitosamente");
-            
-        } catch (error) {
-            console.error("❌ Error Planilla:", error);
-            alert('Error al cargar la planilla: ' + error.message);
-        }
-    }
-
     function cambiarDiaPlanilla(dias) {
         const fecha = new Date(fechaPlanillaActual);
         fecha.setDate(fecha.getDate() + dias);
@@ -2207,38 +2160,100 @@ $recinto = $stmt->fetch();
         });
     }
 
-    // === INICIALIZACIÓN ROBUSTA AL CARGAR LA PÁGINA ===
+    // === INICIALIZACIÓN ROBUSTA (CORREGIDA) ===
     document.addEventListener('DOMContentLoaded', () => {
         console.log("🚀 Iniciando calendario_reservas...");
 
-        // 1. Asegurar que la vista sea Planilla por defecto
+        // 1. Forzar vista Planilla
         const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
         if (radioPlanilla) {
             radioPlanilla.checked = true;
             cambiarVistaCalendario('planilla');
         }
         
-        // 2. Definir fecha global EXPLÍCITAMENTE
+        // 2. Definir fecha global
         window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
-        console.log("📅 Fecha global establecida:", window.fechaPlanillaActual);
+        console.log("📅 Fecha global:", window.fechaPlanillaActual);
 
-        // 3. Esperar un poco más (500ms) para asegurar que todos los selects estén renderizados
+        // 3. Ejecutar carga con retraso y validación suave
         setTimeout(() => {
             const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
             
-            // Verificar que el select de deporte exista
+            // Buscamos el select. Si no existe, usamos null pero intentamos cargar igual.
             const selectDeporte = document.getElementById('filtroDeporte');
             
-            if (vistaActual === 'planilla' && selectDeporte) {
-                console.log(" Ejecutando carga automática de planilla...");
-                // Forzar valor si está vacío
-                if (!selectDeporte.value) selectDeporte.value = ""; 
+            if (vistaActual === 'planilla') {
+                console.log("✅ Vista Planilla activa. Intentando cargar...");
+                
+                if (selectDeporte) {
+                    console.log("✅ Select Deporte encontrado.");
+                    if (!selectDeporte.value) selectDeporte.value = ""; 
+                } else {
+                    console.warn("⚠️ WARNING: Select #filtroDeporte NO encontrado en el DOM. Se usará valor por defecto.");
+                }
+                
+                // LLAMAMOS A CARGAR DE TODAS FORMAS
                 cargarPlanillaReservas();
             } else {
-                console.warn("⚠️ No se pudo iniciar la carga: Vista incorrecta o select faltante.");
+                console.warn("⚠️ La vista activa no es Planilla.");
             }
-        }, 500);
+        }, 600); // Aumentamos a 600ms para asegurar renderizado total
     });
+
+    // === FUNCIÓN CARGAR PLANILLA (TOLERANTE A ERRORES) ===
+    async function cargarPlanillaReservas() {
+        // Obtener select de forma segura
+        const deporteSelect = document.getElementById('filtroDeporte');
+        let deporte = "";
+        
+        if (deporteSelect) {
+            deporte = deporteSelect.value || "";
+        } else {
+            console.warn("⚠️ Usando deporte vacío por defecto (select no encontrado).");
+        }
+        
+        deporteSeleccionadoPlanilla = deporte;
+        
+        // Asegurar fecha
+        if (!window.fechaPlanillaActual) {
+            window.fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        }
+        const fecha = window.fechaPlanillaActual;
+
+        try {
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fecha}&deporte=${encodeURIComponent(deporte)}`;
+            console.log("📡 Fetching URL:", url);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Actualizar input visual si existe
+            const inputFecha = document.getElementById('fechaPlanillaInput');
+            if (inputFecha) inputFecha.value = fecha;
+            
+            renderizarPlanilla(data);
+            console.log("✅ Planilla cargada con éxito!");
+            
+        } catch (error) {
+            console.error("❌ Error crítico al cargar planilla:", error);
+            // Mostramos alerta solo si es un error real de backend, no de frontend
+            if (error.message.includes("HTTP") || error.message.includes("Acceso")) {
+                alert('Error de conexión o sesión: ' + error.message);
+            }
+        }
+    }
   </script>
 </body>
 </html>
