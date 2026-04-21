@@ -1996,10 +1996,7 @@ $recinto = $stmt->fetch();
         }
     }
 
-    // Cargar datos y renderizar
-    // Variable global para la fecha
-    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
-
+    // Cargar datos y renderizar planilla de reservas
     function cargarPlanillaReservas() {
         // Obtener deporte seleccionado (puede estar vacío para "Todos")
         const deporte = document.getElementById('filtroDeporte').value;
