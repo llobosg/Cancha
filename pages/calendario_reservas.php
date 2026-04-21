@@ -1536,35 +1536,6 @@ $recinto = $stmt->fetch();
     // Filtro por estado
     document.getElementById('filtroEstado').addEventListener('change', aplicarFiltrosConAPI);
 
-    async function aplicarFiltrosConAPI() {
-        const deporte = document.getElementById('filtroDeporte').value;
-        const estado = document.getElementById('filtroEstado').value;
-        const fecha = document.getElementById('filtroFecha').value;
-        
-        const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked').value;
-        
-        // Si estamos en Fichas, ejecutar lógica normal
-        if (vistaActual === 'fichas') {
-            // ... tu código existente de fetch para fichas ...
-            return;
-        }
-
-        // Si estamos en Planilla
-        if (vistaActual === 'planilla') {
-            if (!deporte) {
-                alert("Para ver la Planilla, selecciona un Deporte.");
-                return;
-            }
-            deporteSeleccionadoPlanilla = deporte;
-            
-            // Solo cargar si el contenedor de la planilla es visible
-            if (document.getElementById('vistaPlanilla').style.display !== 'none') {
-                cargarPlanillaReservas();
-            }
-            return;
-        }
-    }
-
     document.getElementById('mensajeForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const mensaje = document.getElementById('mensajeTexto').value.trim();
@@ -1944,88 +1915,139 @@ $recinto = $stmt->fetch();
     let fechaPlanillaActual = new Date().toISOString().split('T')[0];
     let deporteSeleccionadoPlanilla = '';
 
-    // Cambiar entre vistas
-    // Al inicio del script o en DOMContentLoaded
+    // === INICIALIZACIÓN AL CARGAR LA PÁGINA ===
     document.addEventListener('DOMContentLoaded', () => {
         // Forzar vista Planilla por defecto
-        document.querySelector('input[name="vistaCalendario"][value="planilla"]').checked = true;
-        cambiarVistaCalendario('planilla');
+        const radioPlanilla = document.querySelector('input[name="vistaCalendario"][value="planilla"]');
+        if (radioPlanilla) {
+            radioPlanilla.checked = true;
+            cambiarVistaCalendario('planilla');
+        }
+        
+        // Cargar datos iniciales si hay deporte seleccionado (o todos)
+        setTimeout(() => {
+            if (document.getElementById('vistaPlanilla').style.display !== 'none') {
+                cargarPlanillaReservas();
+            }
+        }, 100);
     });
 
+    // === CAMBIAR VISTA (CORREGIDO CON VALIDACIONES) ===
     function cambiarVistaCalendario(vista) {
         const fichasDiv = document.getElementById('vistaFichas');
         const planillaDiv = document.getElementById('vistaPlanilla');
+        
+        // Usar selectores más seguros o verificar existencia antes de usar
         const lblFichas = document.getElementById('lblFichas');
         const lblPlanilla = document.getElementById('lblPlanilla');
 
         if (vista === 'planilla') {
-            fichasDiv.style.display = 'none';
-            planillaDiv.style.display = 'block';
+            if (fichasDiv) fichasDiv.style.display = 'none';
+            if (planillaDiv) planillaDiv.style.display = 'block';
             
-            // Estilo activo para Planilla
-            lblPlanilla.style.background = 'rgba(255,255,255,0.2)';
-            lblPlanilla.style.color = 'white';
-            lblPlanilla.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-            
-            // Estilo inactivo para Fichas
-            lblFichas.style.background = 'transparent';
-            lblFichas.style.color = '#aaa';
-            lblFichas.style.boxShadow = 'none';
-            
-            // Cargar datos si hay deporte seleccionado
-            const deporte = document.getElementById('filtroDeporte').value;
-            if(deporte) {
-                deporteSeleccionadoPlanilla = deporte;
-                cargarPlanillaReservas();
+            // Estilos solo si existen los elementos
+            if (lblPlanilla) {
+                lblPlanilla.style.background = 'rgba(255,255,255,0.2)';
+                lblPlanilla.style.color = 'white';
+                lblPlanilla.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
             }
+            if (lblFichas) {
+                lblFichas.style.background = 'transparent';
+                lblFichas.style.color = '#aaa';
+                lblFichas.style.boxShadow = 'none';
+            }
+            
+            // Cargar datos
+            cargarPlanillaReservas();
         } else {
-            fichasDiv.style.display = 'block';
-            planillaDiv.style.display = 'none';
+            if (fichasDiv) fichasDiv.style.display = 'block';
+            if (planillaDiv) planillaDiv.style.display = 'none';
             
-            // Estilo activo para Fichas
-            lblFichas.style.background = 'rgba(255,255,255,0.2)';
-            lblFichas.style.color = 'white';
-            lblFichas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            if (lblFichas) {
+                lblFichas.style.background = 'rgba(255,255,255,0.2)';
+                lblFichas.style.color = 'white';
+                lblFichas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            }
+            if (lblPlanilla) {
+                lblPlanilla.style.background = 'transparent';
+                lblPlanilla.style.color = '#aaa';
+                lblPlanilla.style.boxShadow = 'none';
+            }
             
-            // Estilo inactivo para Planilla
-            lblPlanilla.style.background = 'transparent';
-            lblPlanilla.style.color = '#aaa';
-            lblPlanilla.style.boxShadow = 'none';
-            
-            aplicarFiltrosConAPI();
+            // Para fichas, llamamos a la función original si existe
+            if (typeof aplicarFiltrosConAPI === 'function') {
+                aplicarFiltrosConAPI();
+            }
         }
     }
 
-    // Cargar datos y renderizar planilla de reservas
-    function cargarPlanillaReservas() {
-        // Obtener deporte seleccionado (puede estar vacío para "Todos")
+    // === APLICAR FILTROS (CORREGIDO: ELIMINADO REFERENCIA A filtroFecha) ===
+    async function aplicarFiltrosConAPI() {
         const deporte = document.getElementById('filtroDeporte').value;
+        const estado = document.getElementById('filtroEstado').value;
+        // ELIMINADO: const fecha = document.getElementById('filtroFecha').value; 
         
-        // Ya NO validamos si deporte está vacío. Si es "", la API traerá todas las canchas operativas.
+        const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked')?.value;
         
+        if (vistaActual === 'planilla') {
+            if (!deporte && deporte !== "") { 
+                // Si es vacío ("Todos"), está bien. Solo alertar si es null/undefined raro.
+            }
+            deporteSeleccionadoPlanilla = deporte;
+            cargarPlanillaReservas();
+            return;
+        }
+
+        // Lógica original para FICHAS (si la necesitas)
         try {
-            // Construir URL con deporte (vacío o valor) y fecha
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+            const formData = new FormData();
+            formData.append('action', 'filtrar_reservas');
+            formData.append('deporte', deporte);
+            formData.append('estado', estado);
+            // formData.append('fecha', fecha); // Eliminado también aquí si no lo usas
             
-            fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) throw new Error(data.error);
-                
-                // Actualizar UI
-                const tituloElement = document.getElementById('fechaPlanillaTitulo'); // Opcional si usaste el input directo
-                const inputElement = document.getElementById('fechaPlanillaInput');
-                
-                if (inputElement) inputElement.value = fechaPlanillaActual;
-                
-                renderizarPlanilla(data);
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert('Error al cargar la planilla: ' + error.message);
+            const response = await fetch('../api/canchaboard.php', {
+                method: 'POST',
+                body: formData
             });
-        } catch (e) {
-            console.error(e);
+            
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            
+            reservasData = data;
+            if (typeof renderizarReservas === 'function') {
+                renderizarReservas(reservasData);
+            }
+        } catch (error) {
+            console.error('Error al aplicar filtros:', error);
+        }
+    }
+
+    // === CARGAR PLANILLA (Sin cambios mayores, solo asegúrate que exista) ===
+    async function cargarPlanillaReservas() {
+        const deporte = document.getElementById('filtroDeporte').value;
+        deporteSeleccionadoPlanilla = deporte; // Actualizar variable global
+        
+        // Usar la fecha global que se actualiza con los botones/input del header
+        if (!fechaPlanillaActual) {
+            fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        }
+
+        try {
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            // Actualizar input visual
+            const inputFecha = document.getElementById('fechaPlanillaInput');
+            if (inputFecha) inputFecha.value = fechaPlanillaActual;
+            
+            renderizarPlanilla(data);
+        } catch (error) {
+            console.error("Error Planilla:", error);
+            alert('Error: ' + error.message);
         }
     }
 
@@ -2057,59 +2079,70 @@ $recinto = $stmt->fetch();
 
     function renderizarPlanilla(data) {
         const table = document.getElementById('tablaPlanilla');
+        
+        // 1. Forzar layout fijo en la tabla (CRUCIAL)
+        table.style.tableLayout = 'fixed'; 
+        table.style.width = 'auto'; // Que no se estire al 100% forzoso si sobra espacio
+        
         if (!data.canchas.length) {
-            table.innerHTML = '<tr><td style="padding:2rem; text-align:center; color:#666;">No hay canchas operativas para esta selección.</td></tr>';
+            table.innerHTML = '<tr><td style="padding:2rem; text-align:center; color:#666;">No hay canchas operativas.</td></tr>';
             return;
         }
         
-        // Calcular ancho fijo para columnas de cancha: 14 caracteres * ~8px (aprox) + padding = ~140px
-        // Usaremos '140px' como ancho fijo para todas las columnas de cancha.
-        const anchoColumnaCancha = '140px'; 
-        const anchoColumnaHorario = '100px'; // Suficiente para " Horario "
+        // Definir anchos fijos exactos
+        const anchoHorario = '110px'; // Suficiente para " Horario "
+        const anchoCancha = '140px';  // Fijo para todas las canchas
 
-        let html = `<thead><tr><th style="background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; width:${anchoColumnaHorario}; min-width:${anchoColumnaHorario}; text-align:center;"> Horario </th>`;
+        let html = `<thead><tr>`;
         
+        // Header Horario
+        html += `<th style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; text-align:center; border-right:2px solid #fff;"> Horario </th>`;
+        
+        // Headers Canchas
         data.canchas.forEach(c => {
-            html += `<th style="background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; width:${anchoColumnaCancha}; min-width:${anchoColumnaCancha}; max-width:${anchoColumnaCancha}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                        ${c.nombre_cancha || 'Cancha ' + c.nro_cancha}
+            html += `<th style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        ${c.nombre_cancha || 'Cancha'}
                     </th>`;
         });
-        html += '</tr></thead><tbody>';
+        html += `</tr></thead><tbody>`;
         
+        // Filas
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
-                html += `<tr>
-                            <td style="background:#f0f0f0; font-weight:bold; text-align:center; padding:5px; border-bottom:1px solid #ccc; position:sticky; left:0; z-index:1; width:${anchoColumnaHorario}; color:#333333;">
-                                ${slot.label}
-                            </td>`;
+                html += `<tr>`;
                 
+                // Celda Horario
+                html += `<td style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#f8f9fa; font-weight:bold; text-align:center; padding:5px; border-bottom:1px solid #ddd; position:sticky; left:0; z-index:1; color:#333333; border-right:2px solid #ccc;">
+                            ${slot.label}
+                        </td>`;
+                
+                // Celdas Cancha
                 data.canchas.forEach(cancha => {
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const reserva = data.reservas[key];
                     
+                    let bgClass = '#e0e0e0';
                     let cellContent = '';
-                    let bgClass = '#e0e0e0'; // Default Gris
+                    let clickEvt = '';
                     
                     if (reserva) {
                         if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7';
                         else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d';
                         else bgClass = '#ffcdd2';
                         
-                        const nombre = reserva.nombre_socio || reserva.nombre_cliente || 'Reserva';
-                        cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div><div style="font-size:0.65rem; opacity:0.8;">${reserva.estado_pago || 'Ocupado'}</div>`;
+                        const nombre = (reserva.nombre_socio || reserva.nombre_cliente || 'Reserva').substring(0, 12) + '...';
+                        cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div>`;
+                        clickEvt = `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
                     }
                     
-                    // Estilo de celda con ancho fijo
-                    const cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; padding:8px; height:40px; vertical-align:middle; width:${anchoColumnaCancha}; min-width:${anchoColumnaCancha}; max-width:${anchoColumnaCancha}; overflow:hidden;`;
-                    const clickEvent = reserva ? `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"` : '';
-                    
-                    html += `<td style="${cellStyle}" ${clickEvent}>${cellContent}</td>`;
+                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #fff;" ${clickEvt}>${cellContent}</td>`;
                 });
-                html += '</tr>';
+                
+                html += `</tr>`;
             }
         });
         
-        html += '</tbody>';
+        html += `</tbody>`;
         table.innerHTML = html;
     }
 
