@@ -829,30 +829,30 @@ $recinto = $stmt->fetch();
             <!-- VISTA: PLANILLA -->
             <div id="vistaPlanilla">
                 
-                <!-- Header Lila con Controles de Fecha CENTRADOS -->
-                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:center; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2); position: relative;">
+                <!-- Header Lila con Controles de Fecha VISIBLES -->
+                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:center; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2); position: relative; z-index: 10; overflow: visible;">
                     
-                    <!-- Controles de Fecha (Centrados) -->
-                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1.5rem; border-radius: 30px; backdrop-filter: blur(5px);">
+                    <!-- Controles de Fecha (Centrados y con alto definido) -->
+                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.25); padding: 0.5rem 1.5rem; border-radius: 30px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); min-height: 45px;">
                         
-                        <span style="font-size:0.9rem; font-weight:600; margin-right:0.5rem;">Fecha:</span>
+                        <span style="font-size:0.9rem; font-weight:600; margin-right:0.5rem; white-space: nowrap;">Fecha:</span>
                         
                         <!-- Input Fecha -->
                         <input type="date" id="fechaPlanillaInput" value="<?= date('Y-m-d') ?>" 
-                            style="background:transparent; border:none; outline:none; color:white; font-weight:bold; font-family:sans-serif; cursor:pointer; text-align:center; width: 140px;">
+                            style="background:transparent; border:none; outline:none; color:white; font-weight:bold; font-family:sans-serif; cursor:pointer; text-align:center; width: 140px; font-size: 0.95rem;">
                         
                         <!-- Separador -->
-                        <div style="width:1px; height:20px; background:rgba(255,255,255,0.5);"></div>
+                        <div style="width:1px; height:20px; background:rgba(255,255,255,0.6);"></div>
 
                         <!-- Botón Hoy -->
-                        <button onclick="irAHoyPlanilla()" style="background:white; color:#8E24AA; border:none; padding:0.3rem 1rem; border-radius:20px; font-weight:bold; font-size:0.8rem; cursor:pointer; transition:0.2s;">
+                        <button onclick="irAHoyPlanilla()" style="background:white; color:#8E24AA; border:none; padding:0.4rem 1.2rem; border-radius:20px; font-weight:bold; font-size:0.85rem; cursor:pointer; transition:0.2s; white-space: nowrap;">
                             Hoy
                         </button>
 
                         <!-- Botones < > -->
-                        <div style="display:flex; gap:0.3rem;">
-                            <button onclick="cambiarDiaPlanilla(-1)" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">&lt;</button>
-                            <button onclick="cambiarDiaPlanilla(1)" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">&gt;</button>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button onclick="cambiarDiaPlanilla(-1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; line-height:1;">&lt;</button>
+                            <button onclick="cambiarDiaPlanilla(1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; line-height:1;">&gt;</button>
                         </div>
                     </div>
                 </div>
