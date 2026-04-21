@@ -159,21 +159,83 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
       border-radius: 14px;
       min-height: 200px;
     }
+
+    /* Asegurar que las tarjetas de estadísticas tengan tamaño consistente */
+    .stat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+
+    /* Botones de acción secundaria (Gestionar Asistentes, Perfil) */
+    .btn-action-secondary:hover {
+        background: #e3f2fd;
+        border-color: #071289;
+        transform: translateY(-2px);
+    }
+
+    /* Ocultar elementos que no queremos ver (por seguridad visual) */
+    .hidden-panel {
+        display: none !important;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
-    <header>
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <div class="logo">🏟️</div>
+
+    <!-- 1. HEADER SUPERIOR: Título y Gestión de Usuarios -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
         <div>
-          <h1><?= htmlspecialchars($recinto_nombre) ?></h1>
-          <p>Panel de Administración</p>
+            <h1 style="color: #071289; margin: 0; font-size: 1.8rem;">Panel de Administración</h1>
+            <p style="color: #666; margin: 0.5rem 0 0 0;">Recinto: <?= htmlspecialchars($recinto_nombre) ?></p>
         </div>
-      </div>
-      <a href="../index.php" class="filter-btn" style="background:#FF6B6B;">Salir</a>
-    </header>
+        
+        <!-- Botones de Gestión (Subidos arriba a la derecha) -->
+        <div style="display: flex; gap: 1rem;">
+            <?php if (esAdmin()): ?>
+                <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+                    👥 Gestionar Asistentes
+                </a>
+                <a href="perfil_admin.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+                    ⚙️ Mi Perfil
+                </a>
+            <?php endif; ?>
+        </div>
+        <a href="../index.php" class="filter-btn" style="background:#FF6B6B;">Salir</a>
+    </div>  
+
+    <!-- 2. FILA DE KPIS (Solo Ingresos Este Mes) -->
+    <!-- Ajustado al tamaño de las otras fichas y alineado a la izquierda -->
+    <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <div class="stat-card" style="flex: 0 0 auto; min-width: 250px; max-width: 300px; background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);">
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Ingresos Este Mes</h3>
+            <div style="font-size: 2.2rem; font-weight: 900;">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
+            <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Actualizado al <?= date('d/m/Y') ?></div>
+        </div>
+        
+        <!-- AQUÍ OCULTAMOS: Canchas Disponibles, Ocupación MTD, etc. -->
+        <!-- Simplemente no incluimos el HTML de esas tarjetas -->
+    </div>
+
+     <!-- 3. SECCIÓN PRINCIPAL: PLANILLA DE RESERVAS -->
+    <!-- Reemplaza los botones de acción y torneos por esto -->
+    <div class="main-content-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; color: #333; font-size: 1.4rem;">📅 Planilla de Reservas</h2>
+            <a href="calendario_reservas.php" style="color: #071289; text-decoration: none; font-weight: bold; font-size: 0.9rem;">Ver modo completo &rarr;</a>
+        </div>
+        
+        <!-- Aquí incrustamos o llamamos al componente de la planilla -->
+        <!-- Si tienes el código de la planilla en un archivo separado, úsalo con include -->
+        <!-- Ejemplo: include 'components/mini_planilla.php'; -->
+        <!-- Por ahora, asumimos que rediriges o muestras un iframe/resumen -->
+        <div style="text-align: center; padding: 2rem; background: #f9f9f9; border-radius: 8px; border: 1px dashed #ccc;">
+            <p style="color: #666;">La vista completa de la Planilla está disponible en el módulo dedicado.</p>
+            <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; margin-top: 1rem; padding: 0.8rem 2rem; background: #071289; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir a la Planilla Completa</a>
+        </div>
+    </div>
 
     <!-- Filtros -->
     <div class="filters-bar">
