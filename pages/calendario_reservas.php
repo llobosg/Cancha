@@ -2029,35 +2029,41 @@ $recinto = $stmt->fetch();
 
     // === CARGAR PLANILLA (Sin cambios mayores, solo asegúrate que exista) ===
     async function cargarPlanillaReservas() {
-        const response = await fetch(url, {
-            method: 'GET', // o POST si corresponde
-            credentials: 'include' // ✅ IMPORTANTE: Envía las cookies de sesión
-        });
         const deporteSelect = document.getElementById('filtroDeporte');
-        const deporte = deporteSelect ? deporteSelect.value : ""; // Asegurar que sea string vacío si no existe
+        // Asegurar que deporte sea un string (puede ser vacío "")
+        const deporte = deporteSelect ? deporteSelect.value : ""; 
         
         deporteSeleccionadoPlanilla = deporte;
         
+        // Asegurar que la fecha esté inicializada
         if (!fechaPlanillaActual) {
             fechaPlanillaActual = new Date().toISOString().split('T')[0];
         }
 
         try {
-            // Enviamos el deporte (puede ser "")
+            // ✅ 1. DEFINIR LA VARIABLE 'url' EXPLÍCITAMENTE AQUÍ
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
             
-            const response = await fetch(url);
+            console.log("Cargando planilla desde:", url); // Opcional: para depurar
+            
+            // ✅ 2. USAR 'url' EN EL FETCH CON CREDENTIALS
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include' // ✅ Esto soluciona el error 401 anterior
+            });
+            
             const data = await response.json();
             
             if (data.error) {
-                // Si el error sigue siendo "Deporte requerido", es que el backend no se actualizó bien
                 throw new Error(data.error);
             }
             
+            // Actualizar input visual
             const inputFecha = document.getElementById('fechaPlanillaInput');
             if (inputFecha) inputFecha.value = fechaPlanillaActual;
             
             renderizarPlanilla(data);
+            
         } catch (error) {
             console.error("Error Planilla:", error);
             alert('Error: ' + error.message);
