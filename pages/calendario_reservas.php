@@ -2127,21 +2127,21 @@ $recinto = $stmt->fetch();
     // Cargar datos y renderizar
     async function cargarPlanillaReservas() {
         if (!deporteSeleccionadoPlanilla) {
-            console.warn("No hay deporte seleccionado para la planilla");
+            console.warn("No hay deporte seleccionado");
             return;
         }
-        
-        // 1. Verificar si el elemento del título existe antes de usarlo
+
+        // Referencias a los elementos
         const tituloElement = document.getElementById('fechaPlanillaTitulo');
         const inputElement = document.getElementById('fechaPlanillaInput');
-        
-        // Si no estamos en la vista planilla o los elementos no existen, salimos o esperamos
-        if (!tituloElement || !inputElement) {
-            console.warn("⚠️ Elementos de la planilla no encontrados. ¿Está visible la vista?");
-            // Opcional: Forzar la carga solo si la vista es visible
-            if (document.getElementById('vistaPlanilla').style.display === 'none') {
-                return; 
-            }
+        const vistaPlanilla = document.getElementById('vistaPlanilla');
+
+        // Si la vista NO está visible, no intentamos actualizar el título/input, 
+        // pero SÍ cargamos los datos para que estén listos cuando se muestre.
+        // Esto evita el error "null" en la consola.
+        if (vistaPlanilla && vistaPlanilla.style.display === 'none') {
+            console.log("Vista Planilla oculta, cargando datos en segundo plano...");
+            // No retornamos, seguimos para cargar los datos en la tabla (que está oculta pero existe)
         }
 
         try {
@@ -2150,7 +2150,7 @@ $recinto = $stmt->fetch();
             
             if (data.error) throw new Error(data.error);
             
-            // 2. Actualizar UI solo si los elementos existen
+            // Actualizar UI solo si los elementos existen (evita el crash)
             if (tituloElement) {
                 const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 tituloElement.textContent = new Date(fechaPlanillaActual).toLocaleDateString('es-ES', opcionesFecha);
@@ -2162,7 +2162,7 @@ $recinto = $stmt->fetch();
             
             renderizarPlanilla(data);
         } catch (error) {
-            console.error(error);
+            console.error("Error crítico:", error);
             alert('Error al cargar la planilla: ' + error.message);
         }
     }
@@ -2230,7 +2230,8 @@ $recinto = $stmt->fetch();
                         `;
                         
                         // Agregar evento click
-                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
+                        const idValido = parseInt(reserva.id_reserva);
+                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${idValido});"`; cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
 
                     } else {
                         // === CELDA DISPONIBLE ===
@@ -2278,49 +2279,56 @@ $recinto = $stmt->fetch();
 
     // === FUNCIÓN PARA ABRIR DETALLE DESDE PLANILLA (CORREGIDA) ===
     function abrirDetalleDesdePlanilla(idReserva) {
-        console.log("️ Click en reserva ID:", idReserva);
-        
-        if (!idReserva) {
-            console.error("ID de reserva inválido");
+        console.log("️ Click detectado en Reserva ID:", idReserva);
+
+        if (!idReserva || idReserva === 'undefined' || idReserva === null) {
+            console.error("❌ Error: ID de reserva inválido o nulo.");
+            alert("No se pudo identificar la reserva. Intenta recargar la página.");
             return;
         }
 
-        // Opción A: Si tienes los datos cargados en una variable global, úsalos
-        // Opción B (Recomendada): Hacer fetch directo al detalle
-        
-        // Usamos la misma lógica que tu submodal actual pero forzando el ID
+        // Verificar que la función de renderizado exista
+        if (typeof mostrarDetalleReserva !== 'function') {
+            console.error("❌ Error: La función 'mostrarDetalleReserva' no está definida.");
+            return;
+        }
+
+        // Obtener el modal
+        const modal = document.getElementById('modalDetalleReserva');
+        if (!modal) {
+            console.error("❌ Error: El elemento 'modalDetalleReserva' no existe en el DOM.");
+            alert("Error de interfaz: Modal no encontrado.");
+            return;
+        }
+
+        // Fetch para obtener los detalles
+        // Nota: Usamos id_disponibilidad=0 porque estamos buscando por id_reserva directamente
         fetch('../api/canchaboard.php?action=get_detalle_reserva', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `id_disponibilidad=0&id_reserva=${idReserva}` 
-            // Nota: Tu API espera id_disponibilidad, pero si solo tenemos id_reserva, 
-            // asegúrate que tu backend pueda buscar solo por id_reserva o pasa un dummy.
-            // Si tu backend falla con 0, intenta buscar la disponibilidad primero o ajusta la API.
+            body: `id_disponibilidad=0&id_reserva=${idReserva}`
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Error de red: ' + response.status);
+            return response.json();
+        })
         .then(detalle => {
+            console.log("✅ Datos recibidos:", detalle);
+            
             if (detalle.error) {
                 throw new Error(detalle.error);
             }
-            console.log("✅ Detalle recibido:", detalle);
             
-            // Llamar a tu función existente que renderiza el modal
-            if (typeof mostrarDetalleReserva === 'function') {
-                mostrarDetalleReserva(detalle);
-                // Asegurar que el modal se muestre
-                const modal = document.getElementById('modalDetalleReserva');
-                if (modal) {
-                    modal.style.display = 'flex';
-                } else {
-                    console.error("Modal no encontrado");
-                }
-            } else {
-                console.error("Función mostrarDetalleReserva no definida");
-            }
+            // Renderizar y Mostrar
+            mostrarDetalleReserva(detalle);
+            modal.style.display = 'flex'; // Forzar display flex para centrar
+            
+            // Asegurar que el z-index sea alto para estar sobre la planilla
+            modal.style.zIndex = '9999'; 
         })
         .catch(err => {
-            console.error("Error al abrir detalle:", err);
-            alert("Error al cargar detalles: " + err.message);
+            console.error("❌ Error al cargar detalle:", err);
+            alert("No se pudo cargar el detalle: " + err.message);
         });
     }
   </script>
