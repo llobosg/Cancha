@@ -783,12 +783,13 @@ $recinto = $stmt->fetch();
         <!-- Tercio Central: Aquí va todo el contenido -->
         <div style="width: 100%; max-width: 1400px; display:flex; flex-direction:column; gap:1rem;">
             
-            <!-- BARRA DE FILTROS (Fija al hacer scroll del contenido) -->
-            <div style="background: rgba(20, 20, 40, 0.9); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: sticky; top: 80px; z-index: 100; border: 1px solid rgba(255,255,255,0.1);">
+            <!-- BARRA DE FILTROS SUPERIOR (Sticky) -->
+            <div style="background: rgba(20, 20, 40, 0.95); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: sticky; top: 80px; z-index: 100; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
                     
-                    <!-- Izquierda: Filtros Clásicos -->
+                    <!-- Izquierda: Filtros Deporte y Estado -->
                     <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px;">
+                        <!-- Filtro Deporte (Ahora opcional, default 'Todos') -->
                         <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
                             <option value="">Todos los deportes</option>
                             <option value="futbol">Fútbol</option>
@@ -809,17 +810,9 @@ $recinto = $stmt->fetch();
                             <option value="ocupada">Ocupadas</option>
                             <option value="cancelada">Canceladas</option>
                         </select>
-                        
-                        <select class="control-select" id="filtroFecha" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
-                            <option value="">Últimos 30 días</option>
-                            <option value="hoy">Hoy</option>
-                            <option value="mañana">Mañana</option>
-                            <option value="semana">Esta semana</option>
-                            <option value="mes">Este mes</option>
-                        </select>
                     </div>
 
-                    <!-- Derecha: Selector Radial (Planilla/Fichas) -->
+                    <!-- Derecha: Selector Radial -->
                     <div style="background:rgba(255,255,255,0.1); padding:0.3rem; border-radius:8px; display:flex; gap:0.5rem;">
                         <label style="display:flex; align-items:center; cursor:pointer; color:#aaa; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; transition:0.3s;" id="lblFichas">
                             <input type="radio" name="vistaCalendario" value="fichas" onchange="cambiarVistaCalendario('fichas')" style="display:none;">
@@ -833,26 +826,20 @@ $recinto = $stmt->fetch();
                 </div>
             </div>
 
-            <!-- VISTA: FICHAS (Oculta por defecto si queremos Planilla como default) -->
-            <div id="vistaFichas" style="display:none;">
-                <div id="reservasGrid" class="reservas-grid"></div>
-            </div>
-
-            <!-- VISTA: PLANILLA (Visible por defecto) -->
+            <!-- VISTA: PLANILLA -->
             <div id="vistaPlanilla">
                 
-                <!-- Header Lila Degradé -->
-                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2);">
+                <!-- Header Lila con Controles de Fecha CENTRADOS -->
+                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:center; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2); position: relative;">
                     
-                    <!-- Izquierda: Título -->
-                    <div style="font-weight:bold; font-size:1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">📅 Gestión de Horarios</div>
-                    
-                    <!-- Centro: Controles de Fecha -->
-                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 30px; backdrop-filter: blur(5px);">
+                    <!-- Controles de Fecha (Centrados) -->
+                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1.5rem; border-radius: 30px; backdrop-filter: blur(5px);">
+                        
+                        <span style="font-size:0.9rem; font-weight:600; margin-right:0.5rem;">Fecha:</span>
                         
                         <!-- Input Fecha -->
                         <input type="date" id="fechaPlanillaInput" value="<?= date('Y-m-d') ?>" 
-                            style="background:transparent; border:none; outline:none; color:white; font-weight:bold; font-family:sans-serif; cursor:pointer; text-align:center;">
+                            style="background:transparent; border:none; outline:none; color:white; font-weight:bold; font-family:sans-serif; cursor:pointer; text-align:center; width: 140px;">
                         
                         <!-- Separador -->
                         <div style="width:1px; height:20px; background:rgba(255,255,255,0.5);"></div>
@@ -868,14 +855,11 @@ $recinto = $stmt->fetch();
                             <button onclick="cambiarDiaPlanilla(1)" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.9); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem;">&gt;</button>
                         </div>
                     </div>
-                    
-                    <!-- Espacio vacío a la derecha para equilibrar (opcional) -->
-                    <div style="width: 100px;"></div> 
                 </div>
 
-                <!-- Tabla Planilla (Scrollable independientemente) -->
-                <div style="overflow:auto; background:white; border-radius:0 0 12px 12px; box-shadow:0 10px 20px rgba(0,0,0,0.1); max-height: 70vh; /* Limita altura para scroll interno */">
-                    <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <!-- Tabla Planilla (Scrollable, Fondo Blanco) -->
+                <div style="overflow:auto; background:white; border-radius:0 0 12px 12px; box-shadow:0 10px 20px rgba(0,0,0,0.1); max-height: 70vh;">
+                    <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem; table-layout: fixed;">
                         <!-- Se llena con JS -->
                     </table>
                 </div>
@@ -892,8 +876,7 @@ $recinto = $stmt->fetch();
                         <span style="width:12px; height:12px; background:#a5d6a7; border:1px solid #fff; border-radius:50%;"></span> Pagado
                     </div>
                 </div>
-            </div>
-            
+            </div>   
         </div>
     </div>
     
@@ -2014,123 +1997,116 @@ $recinto = $stmt->fetch();
     }
 
     // Cargar datos y renderizar
-    async function cargarPlanillaReservas() {
-        if (!deporteSeleccionadoPlanilla) {
-            console.warn("No hay deporte seleccionado");
-            return;
-        }
+    // Variable global para la fecha
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
 
-        // Referencias a los elementos
-        const tituloElement = document.getElementById('fechaPlanillaTitulo');
-        const inputElement = document.getElementById('fechaPlanillaInput');
-        const vistaPlanilla = document.getElementById('vistaPlanilla');
-
-        // Si la vista NO está visible, no intentamos actualizar el título/input, 
-        // pero SÍ cargamos los datos para que estén listos cuando se muestre.
-        // Esto evita el error "null" en la consola.
-        if (vistaPlanilla && vistaPlanilla.style.display === 'none') {
-            console.log("Vista Planilla oculta, cargando datos en segundo plano...");
-            // No retornamos, seguimos para cargar los datos en la tabla (que está oculta pero existe)
-        }
-
+    function cargarPlanillaReservas() {
+        // Obtener deporte seleccionado (puede estar vacío para "Todos")
+        const deporte = document.getElementById('filtroDeporte').value;
+        
+        // Ya NO validamos si deporte está vacío. Si es "", la API traerá todas las canchas operativas.
+        
         try {
-            const response = await fetch(`../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${deporteSeleccionadoPlanilla}`);
-            const data = await response.json();
+            // Construir URL con deporte (vacío o valor) y fecha
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
             
-            if (data.error) throw new Error(data.error);
-            
-            // Actualizar UI solo si los elementos existen (evita el crash)
-            if (tituloElement) {
-                const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                tituloElement.textContent = new Date(fechaPlanillaActual).toLocaleDateString('es-ES', opcionesFecha);
-            }
-            
-            if (inputElement) {
-                inputElement.value = fechaPlanillaActual;
-            }
-            
-            renderizarPlanilla(data);
-        } catch (error) {
-            console.error("Error crítico:", error);
-            alert('Error al cargar la planilla: ' + error.message);
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                
+                // Actualizar UI
+                const tituloElement = document.getElementById('fechaPlanillaTitulo'); // Opcional si usaste el input directo
+                const inputElement = document.getElementById('fechaPlanillaInput');
+                
+                if (inputElement) inputElement.value = fechaPlanillaActual;
+                
+                renderizarPlanilla(data);
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert('Error al cargar la planilla: ' + error.message);
+            });
+        } catch (e) {
+            console.error(e);
         }
     }
+
+    function cambiarDiaPlanilla(dias) {
+        const fecha = new Date(fechaPlanillaActual);
+        fecha.setDate(fecha.getDate() + dias);
+        fechaPlanillaActual = fecha.toISOString().split('T')[0];
+        cargarPlanillaReservas();
+    }
+
+    function irAHoyPlanilla() {
+        fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        cargarPlanillaReservas();
+    }
+
+    // Listener para el input de fecha nativo
+    document.getElementById('fechaPlanillaInput')?.addEventListener('change', function() {
+        fechaPlanillaActual = this.value;
+        cargarPlanillaReservas();
+    });
+
+    // Listener para cambio de deporte (recargar planilla si estamos en esa vista)
+    document.getElementById('filtroDeporte')?.addEventListener('change', function() {
+        const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked').value;
+        if (vistaActual === 'planilla') {
+            cargarPlanillaReservas();
+        }
+    });
 
     function renderizarPlanilla(data) {
         const table = document.getElementById('tablaPlanilla');
         if (!data.canchas.length) {
-            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas para este deporte.</td></tr>';
+            table.innerHTML = '<tr><td style="padding:2rem; text-align:center; color:#666;">No hay canchas operativas para esta selección.</td></tr>';
             return;
         }
         
-        let html = '<thead><tr><th style="background:#071289; color:white; padding:10px; position:sticky; left:0; z-index:2; min-width:80px;">Horario</th>';
+        // Calcular ancho fijo para columnas de cancha: 14 caracteres * ~8px (aprox) + padding = ~140px
+        // Usaremos '140px' como ancho fijo para todas las columnas de cancha.
+        const anchoColumnaCancha = '140px'; 
+        const anchoColumnaHorario = '100px'; // Suficiente para " Horario "
+
+        let html = `<thead><tr><th style="background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; width:${anchoColumnaHorario}; min-width:${anchoColumnaHorario}; text-align:center;"> Horario </th>`;
         
-        // Encabezados de Columnas (Canchas)
         data.canchas.forEach(c => {
-            html += `<th style="background:#071289; color:white; padding:10px; border-left:1px solid #fff; min-width:120px;">
+            html += `<th style="background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; width:${anchoColumnaCancha}; min-width:${anchoColumnaCancha}; max-width:${anchoColumnaCancha}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${c.nombre_cancha || 'Cancha ' + c.nro_cancha}
                     </th>`;
         });
         html += '</tr></thead><tbody>';
         
-        // Filas de Horarios
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
-                // Fila de etiqueta de hora
                 html += `<tr>
-                            <td style="background:#f0f0f0; font-weight:bold; text-align:center; padding:5px; border-bottom:1px solid #ccc; position:sticky; left:0; z-index:1;">
+                            <td style="background:#f0f0f0; font-weight:bold; text-align:center; padding:5px; border-bottom:1px solid #ccc; position:sticky; left:0; z-index:1; width:${anchoColumnaHorario}; color:#333333;">
                                 ${slot.label}
                             </td>`;
                 
                 data.canchas.forEach(cancha => {
-                    // Dentro del bucle data.canchas.forEach(...) en renderizarPlanilla
-
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const reserva = data.reservas[key];
-
+                    
                     let cellContent = '';
-                    let bgClass = '#e0e0e0'; // Valor por defecto: Gris (Disponible)
-                    let cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; padding:8px; height:40px; vertical-align:middle;`; 
-                    let colSpan = 1;
-
+                    let bgClass = '#e0e0e0'; // Default Gris
+                    
                     if (reserva) {
-                        // === LÓGICA DE COLORES SEGÚN ESTADO DE PAGO ===
-                        if (reserva.estado_pago === 'pagado') {
-                            bgClass = '#a5d6a7'; // Verde claro
-                        } else if (reserva.estado_pago === 'parcial') {
-                            bgClass = '#fff59d'; // Amarillo claro
-                        } else if (reserva.estado_pago === 'pendiente' || reserva.estado_pago === 'en_revision') {
-                            bgClass = '#ffcdd2'; // Rojo claro
-                        } else {
-                            // Si tiene estado_pago pero no coincide con los anteriores, usamos rojo por defecto
-                            bgClass = '#ffcdd2'; 
-                        }
-
-                        // Estilo base para celda ocupada
-                        cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; border:1px solid #fff; padding:8px; height:40px; vertical-align:middle;`;
+                        if (reserva.estado_pago === 'pagado') bgClass = '#a5d6a7';
+                        else if (reserva.estado_pago === 'parcial') bgClass = '#fff59d';
+                        else bgClass = '#ffcdd2';
                         
-                        // Contenido de la celda
                         const nombre = reserva.nombre_socio || reserva.nombre_cliente || 'Reserva';
-                        const estadoTexto = reserva.estado_pago ? reserva.estado_pago.toUpperCase() : 'OCUPADO';
-                        
-                        cellContent = `
-                            <div style="font-size:0.7rem; line-height:1.1;">${nombre}</div>
-                            <div style="font-size:0.65rem; opacity:0.8; margin-top:2px;">${estadoTexto}</div>
-                        `;
-                        
-                        // Agregar evento click
-                        const idValido = parseInt(reserva.id_reserva);
-                        cellStyle += ` onclick="abrirDetalleDesdePlanilla(${idValido});"`; cellStyle += ` onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
-
-                    } else {
-                        // === CELDA DISPONIBLE ===
-                        bgClass = '#e0e0e0'; // Gris
-                        cellStyle = `background:${bgClass}; color:#999; text-align:center; font-size:0.75rem; padding:8px; height:40px; vertical-align:middle; border-right:1px solid #ddd;`;
-                        cellContent = ''; // Vacío
+                        cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div><div style="font-size:0.65rem; opacity:0.8;">${reserva.estado_pago || 'Ocupado'}</div>`;
                     }
-
-                    // Generar la etiqueta TD
-                    html += `<td style="${cellStyle}">${cellContent}</td>`;
+                    
+                    // Estilo de celda con ancho fijo
+                    const cellStyle = `background:${bgClass}; color:#333; font-weight:bold; cursor:pointer; padding:8px; height:40px; vertical-align:middle; width:${anchoColumnaCancha}; min-width:${anchoColumnaCancha}; max-width:${anchoColumnaCancha}; overflow:hidden;`;
+                    const clickEvent = reserva ? `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"` : '';
+                    
+                    html += `<td style="${cellStyle}" ${clickEvent}>${cellContent}</td>`;
                 });
                 html += '</tr>';
             }
