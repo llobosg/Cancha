@@ -425,53 +425,38 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
         </div>
     <?php endif; ?>
 
-    <!-- 3. SECCIÓN PRINCIPAL: PLANILLA INTEGRADA (Solo Admin) -->
-    <?php if (esAdmin()): ?>
-    <div class="main-content-section" style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #eee; display: flex; flex-direction: column; height: 600px;">
+    <!-- 3. SECCIÓN PRINCIPAL: ACCESO DIRECTO A PLANILLA -->
+    <div class="main-content-section" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; border: 1px solid #dee2e6; position: relative; overflow: hidden;">
         
-        <!-- Cabecera de la Planilla -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: #f8f9fa; border-bottom: 1px solid #eee;">
-            <div>
-                <h2 style="margin: 0; color: #333; font-size: 1.3rem; font-weight: 700;">📅 Planilla de Reservas - Hoy</h2>
-                <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: #666;">Vista rápida operativa. Fecha: <?= date('d/m/Y') ?></p>
-            </div>
-            
-            <!-- Enlace a Modo Avanzado (Solo si necesitan filtros complejos) -->
-            <a href="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>" target="_blank" 
-              style="font-size: 0.85rem; color: #AB47BC; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; background: white; padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #e1bee7; transition: 0.2s;">
-                <span>🔍 Abrir modo avanzado</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-            </a>
-        </div>
+        <!-- Decoración de fondo sutil -->
+        <div style="position: absolute; top: -20px; right: -20px; font-size: 8rem; opacity: 0.05; pointer-events: none;"></div>
 
-        <!-- Contenido: IFRAME de la Planilla (Ajustado) -->
-        <div style="flex: 1; position: relative; background: #fff;">
-            <!-- Usamos un iframe apuntando a la URL de la planilla con parámetros fijos para hoy -->
-            <!-- En recinto_dashboard.php -->
-            <iframe src="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>&embed=true&sin_header=true" 
-                    style="width: 100%; height: 100%; border: none; display: block;" 
-                    title="Planilla de Reservas">
-            </iframe>
+        <h2 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.6rem; font-weight: 800;">📅 Planilla de Reservas</h2>
+        <p style="color: #666; margin-bottom: 2rem; font-size: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+            Gestiona horarios, estados de pago y disponibilidad en tiempo real. 
+            <br><span style="font-size: 0.9rem; color: #888;">(Fecha actual: <?= date('d/m/Y') ?>)</span>
+        </p>
+        
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <!-- Botón Principal: Ir a la Planilla -->
+            <a href="calendario_reservas.php?vista=planilla&fecha=<?= date('Y-m-d') ?>" 
+              style="text-decoration: none; padding: 1rem 2.5rem; background: #AB47BC; color: white; border-radius: 50px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(171, 71, 188, 0.3); transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <span>Ir a la Planilla Completa</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
             
-            <!-- Nota: Para que esto funcione perfecto, en calendario_reservas.php debes detectar el parámetro ?embed=true 
-                para ocultar su propio header/top-bar y mostrar solo la tabla. Si no quieres complicarte con embed, 
-                puedes simplemente redirigir todo el dashboard a la planilla o usar fetch para traer los datos JSON y renderizarlos aquí. 
-                
-                OPCIÓN SIMPLIFICADA (Sin Iframe): Botón grande de acceso directo si prefieres no incrustar.
-            -->
+            <!-- Botón Secundario: Ver Resumen Rápido (Opcional, si quisieras implementar algo luego) -->
+            <!-- Por ahora solo dejamos el principal para mantener "menos es más" -->
         </div>
     </div>
+  </div>
 
-    <?php else: ?>
-        <!-- Para Asistentes, mostramos el botón grande de acceso como teníamos antes -->
-        <div class="main-content-section" style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;">
-            <h2 style="color: #333; margin-bottom: 1rem;">📅 Acceso a Planilla de Reservas</h2>
-            <p style="color: #666; margin-bottom: 2rem;">Gestiona horarios, estados de pago y disponibilidad en tiempo real.</p>
-            <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; padding: 1rem 2.5rem; background: #071289; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(7, 18, 137, 0.3); transition: 0.2s;">
-                Ir a la Planilla Completa
-            </a>
-        </div>
-    <?php endif; ?>
+  <!-- Submodal Genérico para mostrar detalles sin salir de la página -->
+  <div id="submodalGenerico" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10000;">
+    <div style="background:white; padding:2rem; border-radius:12px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;" id="submodalContenido">
+      <!-- Contenido dinámico aquí -->
+    </div>
+  </div>
 
 <script>
     document.querySelectorAll('.filter-btn').forEach(btn => {

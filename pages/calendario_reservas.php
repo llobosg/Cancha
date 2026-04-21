@@ -816,24 +816,15 @@
 </style>
 </head>
 <body>
-    <?php if (!$ocultar_header && !$es_embed): ?>
-        <div class="top-bar">
-           <a href="../index.php" class="brand-logo">
-            <span>🏟️</span> CanchaSport
-            </a>
-            <!-- Botón Volver al Dashboard -->
-            <a href="recinto_dashboard.php" class="btn-back">
-                ← Volver al Dashboard
-            </a>
+   <div class="header">
+        <div class="main-title-section">
+        <div class="logo-corporativo">⚽</div>
+        <h1 class="main-title">Cancha</h1>
         </div>
-    <?php else: ?>
-        <!-- Si es embed, no mostramos nada aquí, solo el contenido puro -->
-        <!-- Opcional: Podrías poner un estilo inline mínimo para resetear márgenes solo en este caso -->
-        <style>
-            body { margin: 0; padding: 0; background: white; }
-            .dashboard-container { padding: 0; margin: 0; }
-        </style>
-    <?php endif; ?>
+        <div>
+        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+        </div>
+    </div>
     
     <!-- Contenedor Principal -->
     <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent; overflow-x: hidden;">
