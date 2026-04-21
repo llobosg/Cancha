@@ -209,6 +209,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
     }
 
     /* Estilos Top Bar CanchaSport */
+       /* Estilos Top Bar CanchaSport */
         .top-bar {
             background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
             padding: 1rem 2rem;
@@ -250,72 +251,71 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
   </style>
 </head>
 <body>
-  <!-- Barra superior -->
-  <div class="top-bar">
-    <a href="../index.php" class="brand-logo">
-        CanchaSport
-    </a>
-    <!-- Header con título y menú de usuario -->
-    <!-- Contenedor del Menú Desplegable + Logout -->
-          <div style="display: flex; align-items: center; gap: 1rem;"> 
-              <!-- Botón de 3 Puntos (Kebab Menu) -->
-              <div style="position: relative;">
-                  <button onclick="toggleMenuAdmin(event)" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #555; line-height: 1; padding: 0 5px;" title="Opciones">
-                      ⋮
-                  </button>
+  <!-- TOP BAR CANCHASPORT (Unificado) -->
+  <div class="top-bar" style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem 2rem; box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000;">
+      
+      <!-- Logo / Marca -->
+      <a href="../index.php" class="brand-logo" style="color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <span style="font-size: 1.8rem;">🏟️</span> CanchaSport
+      </a>
+      
+      <!-- Menú de Usuario y Sesión -->
+      <div style="display: flex; align-items: center; gap: 1rem;">
+          
+          <!-- Botón Menú Desplegable (Kebab) -->
+          <div style="position: relative;">
+              <button onclick="toggleMenuAdmin(event)" style="background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; cursor: pointer; color: white; line-height: 1; padding: 0.4rem 0.8rem; border-radius: 8px; transition: 0.2s;" title="Opciones">
+                  ⋮
+              </button>
 
-                  <!-- Menú Desplegable -->
-                  <div id="menuAdmin" style="display: none; position: absolute; right: 0; top: 120%; background: white; border: 1px solid #eee; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; animation: fadeIn 0.2s ease;">
-                      
-                      <!-- Cabecera del menú con X de cierre -->
-                      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; background: #fafafa;">
-                          <span style="font-size: 0.8rem; font-weight: bold; color: #999; text-transform: uppercase;">Menú dueño</span>
-                          <span onclick="closeMenuAdmin()" style="cursor: pointer; font-size: 1.2rem; color: #999; font-weight: bold; line-height: 1;" title="Cerrar">&times;</span>
-                      </div>
+              <!-- Menú Desplegable -->
+              <div id="menuAdmin" style="display: none; position: absolute; right: 0; top: 120%; background: white; border: 1px solid #eee; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; animation: fadeIn 0.2s ease;">
+                  
+                  <!-- Cabecera del menú con X -->
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; background: #fafafa;">
+                      <span style="font-size: 0.8rem; font-weight: bold; color: #999; text-transform: uppercase;">Menú</span>
+                      <span onclick="closeMenuAdmin()" style="cursor: pointer; font-size: 1.2rem; color: #999; font-weight: bold; line-height: 1;" title="Cerrar">&times;</span>
+                  </div>
 
-                      <!-- Opciones -->
-                      <div style="padding: 0.5rem;">
-                          <?php if (esAdmin()): ?>
-                              <a href="gestion_asistentes.php" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-                                  👥 Asistentes
-                              </a>
-                          <?php endif; ?>
-
-                          <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-                              ⚙️ Mi Perfil
+                  <!-- Opciones -->
+                  <div style="padding: 0.5rem;">
+                      <?php if (esAdmin()): ?>
+                          <a href="gestion_asistentes.php" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                              👥 Gestionar Asistentes
                           </a>
-                      </div>
+                      <?php endif; ?>
+
+                      <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                          ️ Mi Perfil
+                      </a>
                   </div>
               </div>
-
-              <!-- Botón Cerrar Sesión (Visible siempre) -->
-              <a href="login_email.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #FFEBEE; color: #D32F2F; border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; border: 1px solid #FFCDD2;">
-                Salir
-              </a>
           </div>
+
+          <!-- Botón Cerrar Sesión -->
+          <a href="logout.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; backdrop-filter: blur(5px);">
+              🚪 Salir
+          </a>
+      </div>
   </div>
 
-  <!-- Animación CSS para el menú -->
+  <!-- Animación CSS y Script para el menú (Solo si no los tienes ya en el head/body) -->
   <style>
   @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-10px); }
       to { opacity: 1; transform: translateY(0); }
   }
-  /* Efecto hover en las opciones del menú */
   #menuAdmin a:hover {
       background-color: #f3e5f5; /* Lila muy suave */
       color: #AB47BC;
   }
   </style>
 
-  <!-- Script para controlar el menú -->
   <script>
       function toggleMenuAdmin(event) {
-          event.stopPropagation(); // Evita que el click se propague al document
+          event.stopPropagation();
           const menu = document.getElementById('menuAdmin');
           const isVisible = menu.style.display === 'block';
-          
-          // Si está visible, lo cerramos; si no, lo abrimos
           menu.style.display = isVisible ? 'none' : 'block';
       }
 
@@ -323,11 +323,9 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
           document.getElementById('menuAdmin').style.display = 'none';
       }
 
-      // Cerrar el menú si se hace click fuera de él
       document.addEventListener('click', function(event) {
           const menu = document.getElementById('menuAdmin');
           const button = event.target.closest('button[onclick="toggleMenuAdmin(event)"]');
-          
           if (!button && menu.style.display === 'block') {
               closeMenuAdmin();
           }
