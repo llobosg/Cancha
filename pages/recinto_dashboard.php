@@ -233,7 +233,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                       
                       <!-- Cabecera del menú con X de cierre -->
                       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; background: #fafafa;">
-                          <span style="font-size: 0.8rem; font-weight: bold; color: #999; text-transform: uppercase;">Menú</span>
+                          <span style="font-size: 0.8rem; font-weight: bold; color: #999; text-transform: uppercase;">Menú dueño</span>
                           <span onclick="closeMenuAdmin()" style="cursor: pointer; font-size: 1.2rem; color: #999; font-weight: bold; line-height: 1;" title="Cerrar">&times;</span>
                       </div>
 
@@ -241,7 +241,7 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
                       <div style="padding: 0.5rem;">
                           <?php if (esAdmin()): ?>
                               <a href="gestion_asistentes.php" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-                                  👥 Gestionar Asistentes
+                                  👥 Asistentes
                               </a>
                           <?php endif; ?>
 
@@ -253,8 +253,8 @@ $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
               </div>
 
               <!-- Botón Cerrar Sesión (Visible siempre) -->
-              <a href="logout.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #FFEBEE; color: #D32F2F; border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; border: 1px solid #FFCDD2;">
-                  🚪 Salir
+              <a href="login_email.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #FFEBEE; color: #D32F2F; border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; border: 1px solid #FFCDD2;">
+                  X Salir
               </a>
           </div>
       </div>
