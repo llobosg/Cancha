@@ -2025,22 +2025,27 @@ $recinto = $stmt->fetch();
 
     // === CARGAR PLANILLA (Sin cambios mayores, solo asegúrate que exista) ===
     async function cargarPlanillaReservas() {
-        const deporte = document.getElementById('filtroDeporte').value;
-        deporteSeleccionadoPlanilla = deporte; // Actualizar variable global
+        const deporteSelect = document.getElementById('filtroDeporte');
+        const deporte = deporteSelect ? deporteSelect.value : ""; // Asegurar que sea string vacío si no existe
         
-        // Usar la fecha global que se actualiza con los botones/input del header
+        deporteSeleccionadoPlanilla = deporte;
+        
         if (!fechaPlanillaActual) {
             fechaPlanillaActual = new Date().toISOString().split('T')[0];
         }
 
         try {
+            // Enviamos el deporte (puede ser "")
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+            
             const response = await fetch(url);
             const data = await response.json();
             
-            if (data.error) throw new Error(data.error);
+            if (data.error) {
+                // Si el error sigue siendo "Deporte requerido", es que el backend no se actualizó bien
+                throw new Error(data.error);
+            }
             
-            // Actualizar input visual
             const inputFecha = document.getElementById('fechaPlanillaInput');
             if (inputFecha) inputFecha.value = fechaPlanillaActual;
             
