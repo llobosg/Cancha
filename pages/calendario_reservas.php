@@ -777,19 +777,17 @@ $recinto = $stmt->fetch();
         </div>
     </div>
     
-    <!-- Contenedor Principal que ocupa toda la pantalla pero centra el contenido -->
-    <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent;">
+    <!-- Contenedor Principal -->
+    <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent; overflow-x: hidden;">
         
-        <!-- Tercio Central: Aquí va todo el contenido -->
-        <div style="width: 100%; max-width: 1400px; display:flex; flex-direction:column; gap:1rem;">
+        <!-- Tercio Central -->
+        <div style="width: 100%; max-width: 1400px; display:flex; flex-direction:column; gap:1rem; position: relative;">
             
             <!-- BARRA DE FILTROS SUPERIOR (Sticky) -->
             <div style="background: rgba(20, 20, 40, 0.95); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: sticky; top: 80px; z-index: 100; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
-                    
                     <!-- Izquierda: Filtros Deporte y Estado -->
                     <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px;">
-                        <!-- Filtro Deporte (Ahora opcional, default 'Todos') -->
                         <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
                             <option value="">Todos los deportes</option>
                             <option value="futbol">Fútbol</option>
@@ -816,7 +814,7 @@ $recinto = $stmt->fetch();
                     <div style="background:rgba(255,255,255,0.1); padding:0.3rem; border-radius:8px; display:flex; gap:0.5rem;">
                         <label style="display:flex; align-items:center; cursor:pointer; color:#aaa; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; transition:0.3s;" id="lblFichas">
                             <input type="radio" name="vistaCalendario" value="fichas" onchange="cambiarVistaCalendario('fichas')" style="display:none;">
-                            📋 Fichas
+                            Fichas
                         </label>
                         <label style="display:flex; align-items:center; cursor:pointer; color:white; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; background:rgba(255,255,255,0.2); box-shadow:0 2px 5px rgba(0,0,0,0.2);" id="lblPlanilla">
                             <input type="radio" name="vistaCalendario" value="planilla" checked onchange="cambiarVistaCalendario('planilla')" style="display:none;">
@@ -826,14 +824,14 @@ $recinto = $stmt->fetch();
                 </div>
             </div>
 
-            <!-- VISTA: PLANILLA -->
-            <div id="vistaPlanilla">
+            <!-- VISTA: PLANILLA (Con margen superior extra para separación visual) -->
+            <div id="vistaPlanilla" style="margin-top: 1rem;">
                 
-                <!-- Header Lila con Controles de Fecha VISIBLES -->
-                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:center; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2); position: relative; z-index: 10; overflow: visible;">
+                <!-- Header Lila con Controles de Fecha (Z-INDEX MÁXIMO) -->
+                <div style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem; border-radius: 12px 12px 0 0; display:flex; justify-content:center; align-items:center; color:white; box-shadow: 0 4px 10px rgba(186, 104, 200, 0.3); border-bottom: 2px solid rgba(255,255,255,0.2); position: relative; z-index: 9999; overflow: visible;">
                     
-                    <!-- Controles de Fecha (Centrados y con alto definido) -->
-                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.25); padding: 0.5rem 1.5rem; border-radius: 30px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); min-height: 45px;">
+                    <!-- Controles de Fecha (Centrados) -->
+                    <div style="display:flex; align-items:center; gap:1rem; background: rgba(255,255,255,0.25); padding: 0.5rem 1.5rem; border-radius: 30px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); min-height: 45px; position: relative; z-index: 10000;">
                         
                         <span style="font-size:0.9rem; font-weight:600; margin-right:0.5rem; white-space: nowrap;">Fecha:</span>
                         
@@ -857,7 +855,7 @@ $recinto = $stmt->fetch();
                     </div>
                 </div>
 
-                <!-- Tabla Planilla (Scrollable, Fondo Blanco) -->
+                <!-- Tabla Planilla -->
                 <div style="overflow:auto; background:white; border-radius:0 0 12px 12px; box-shadow:0 10px 20px rgba(0,0,0,0.1); max-height: 70vh;">
                     <table id="tablaPlanilla" class="planilla-table" style="width:100%; border-collapse:collapse; font-size:0.85rem; table-layout: fixed;">
                         <!-- Se llena con JS -->
