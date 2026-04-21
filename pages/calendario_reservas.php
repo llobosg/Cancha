@@ -843,14 +843,13 @@ $recinto = $stmt->fetch();
                                 <option value="otro">Quincho/Otro</option>
                             </select>
                             
-                            <select class="control-select" id="filtroEstado" style="flex:1; background:rgba(255,255,255,0.9); color:#333; border:1px solid rgba(0,0,0,0.1);">
+                            <select class="control-select" id="filtroEstado">
                                 <option value="">Todos los estados</option>
                                 <option value="disponible">Disponible</option>
-                                <option value="reservada">Reservadas</option>
-                                <!-- NUEVOS FILTROS DE PAGO -->
-                                <option value="pagadas">Pagadas</option>
+                                <option value="reservada">Reservadas (Futuras)</option>
+                                <option value="no_pagadas">No Pagadas (Vencidas)</option> <!-- Nuevo nombre -->
                                 <option value="parcial">Pago Parcial</option>
-                                <option value="no_pagadas">No Pagadas (Reservadas sin pago)</option> 
+                                <option value="pagadas">Pagadas</option>
                                 <option value="ocupada">Ocupadas</option>
                                 <option value="cancelada">Canceladas</option>
                             </select>
@@ -1966,7 +1965,7 @@ $recinto = $stmt->fetch();
     }
 
     // === APLICAR FILTROS (CORREGIDO: ELIMINADO REFERENCIA A filtroFecha) ===
-   let estadoSeleccionadoPlanilla = ""; // Variable global nueva
+    let estadoSeleccionadoPlanilla = ""; // Variable global nueva
 
     async function aplicarFiltrosConAPI() {
         const deporte = document.getElementById('filtroDeporte').value;
@@ -2008,18 +2007,6 @@ $recinto = $stmt->fetch();
         }
     }
 
-    function cambiarDiaPlanilla(dias) {
-        const fecha = new Date(fechaPlanillaActual);
-        fecha.setDate(fecha.getDate() + dias);
-        fechaPlanillaActual = fecha.toISOString().split('T')[0];
-        cargarPlanillaReservas();
-    }
-
-    function irAHoyPlanilla() {
-        fechaPlanillaActual = new Date().toISOString().split('T')[0];
-        cargarPlanillaReservas();
-    }
-
     // Listener para el input de fecha nativo
     document.getElementById('fechaPlanillaInput')?.addEventListener('change', function() {
         fechaPlanillaActual = this.value;
@@ -2036,22 +2023,30 @@ $recinto = $stmt->fetch();
 
     function renderizarPlanilla(data) {
         const table = document.getElementById('tablaPlanilla');
+        if (!table) return;
+        
         table.style.tableLayout = 'fixed'; 
         
-        if (!data.canchas.length) {
-            table.innerHTML = '<tr><td style="padding:2rem; text-align:center; color:#666;">No hay canchas operativas.</td></tr>';
+        if (!data.canchas || !data.canchas.length) {
+            table.innerHTML = '<tr><td style="padding:2rem; text-align:center; color:#666;">No hay canchas operativas para esta selección.</td></tr>';
             return;
         }
         
         const anchoHorario = '110px';
         const anchoCancha = '140px';
         
-        // Obtener el filtro activo
+        // Obtener el filtro activo (asegurando que sea string)
         const filtroActivo = estadoSeleccionadoPlanilla || ""; 
 
+        // Fecha actual para comparar vencimientos
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
         let html = `<thead><tr>`;
+        // Header Horario
         html += `<th style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; text-align:center; border-right:2px solid #fff; font-weight: 400 !important;"> Horario </th>`;
         
+        // Headers Canchas
         data.canchas.forEach(c => {
             html += `<th style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 400 !important;">
                         ${c.nombre_cancha || 'Cancha'}
@@ -2059,6 +2054,7 @@ $recinto = $stmt->fetch();
         });
         html += `</tr></thead><tbody>`;
         
+        // Iterar sobre los slots de tiempo
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
                 html += `<tr>`;
@@ -2068,6 +2064,7 @@ $recinto = $stmt->fetch();
                             ${slot.label}
                         </td>`;
                 
+                // Iterar sobre las canchas para cada slot
                 data.canchas.forEach(cancha => {
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const reserva = data.reservas[key];
@@ -2077,62 +2074,101 @@ $recinto = $stmt->fetch();
                     let clickEvt = '';
                     let opacity = '1';
                     let borderColor = '#fff';
+                    let estadoLogicoTexto = '';
                     
-                    // === LÓGICA DE FILTRADO Y COLORES ===
+                    // === LÓGICA DE ESTADO Y FILTRADO ===
                     let cumpleFiltro = false;
                     let esDisponible = !reserva;
                     
                     if (esDisponible) {
-                        // Si es disponible
+                        // Estado: DISPONIBLE
                         if (filtroActivo === '' || filtroActivo === 'disponible') {
                             cumpleFiltro = true;
-                            bgClass = '#e0e0e0'; // Gris claro
                         }
+                        // Color ya definido como gris (#e0e0e0)
                     } else {
-                        // Es una Reserva
-                        const estadoPago = reserva.estado_pago || 'pendiente';
+                        // Es una RESERVA
+                        const estadoPagoRaw = reserva.estado_pago || 'pendiente';
+                        const fechaReserva = new Date(reserva.fecha + 'T00:00:00'); // Asegurar formato fecha
                         
-                        // Determinar si cumple el filtro seleccionado
+                        // Determinar Estado Lógico Real
+                        let estadoLogico = '';
+                        
+                        if (estadoPagoRaw === 'pagado') {
+                            estadoLogico = 'pagada';
+                            bgClass = '#a5d6a7'; // Verde Claro
+                            estadoLogicoTexto = 'PAGADA';
+                        } else if (estadoPagoRaw === 'parcial') {
+                            estadoLogico = 'parcial';
+                            bgClass = '#fff59d'; // Amarillo Claro
+                            estadoLogicoTexto = 'PARCIAL';
+                        } else {
+                            // Pendiente o Null: Depende de la fecha
+                            if (fechaReserva < hoy) {
+                                // Vencido y sin pago total -> NO PAGADA
+                                estadoLogico = 'no_pagada';
+                                bgClass = '#ffcdd2'; // Rojo Claro (Alerta)
+                                estadoLogicoTexto = 'NO PAGADA';
+                            } else {
+                                // Futuro y sin pago total -> RESERVADA
+                                estadoLogico = 'reservada';
+                                bgClass = '#ffecb3'; // Naranja Suave (Info)
+                                estadoLogicoTexto = 'RESERVADA';
+                            }
+                        }
+
+                        // Verificar si cumple el filtro seleccionado
                         if (filtroActivo === '') {
                             cumpleFiltro = true; // Mostrar todo
-                        } else if (filtroActivo === 'pagadas' && estadoPago === 'pagado') {
+                        } else if (filtroActivo === 'pagadas' && estadoLogico === 'pagada') {
                             cumpleFiltro = true;
-                        } else if (filtroActivo === 'parcial' && estadoPago === 'parcial') {
+                        } else if (filtroActivo === 'parcial' && estadoLogico === 'parcial') {
                             cumpleFiltro = true;
-                        } else if (filtroActivo === 'no_pagadas' && (estadoPago === 'pendiente' || estadoPago === null)) {
+                        } else if (filtroActivo === 'no_pagadas' && estadoLogico === 'no_pagada') {
                             cumpleFiltro = true;
-                        } else if (filtroActivo === 'reservada' && estadoPago !== 'pagado') {
-                            // Reservadas genéricas (pendientes o parciales)
+                        } else if (filtroActivo === 'reservada' && estadoLogico === 'reservada') {
                             cumpleFiltro = true;
                         }
                         
-                        // Asignar colores si es reserva (independiente del filtro, para referencia visual)
-                        if (estadoPago === 'pagado') bgClass = '#a5d6a7'; // Verde
-                        else if (estadoPago === 'parcial') bgClass = '#fff59d'; // Amarillo
-                        else bgClass = '#ffcdd2'; // Rojo (Pendiente/No pagado)
-                        
+                        // Preparar contenido si cumple filtro
                         if (cumpleFiltro) {
                             const nombre = (reserva.nombre_socio || reserva.nombre_cliente || 'Reserva').substring(0, 12) + '...';
-                            cellContent = `<div style="font-size:0.7rem; line-height:1.1;">${nombre}</div><div style="font-size:0.65rem; opacity:0.8;">${estadoPago.toUpperCase()}</div>`;
+                            cellContent = `
+                                <div style="font-size:0.7rem; line-height:1.1; font-weight:bold; color:#333;">${nombre}</div>
+                                <div style="font-size:0.65rem; font-weight:900; color:#555; margin-top:2px;">${estadoLogicoTexto}</div>
+                            `;
                             clickEvt = `onclick="abrirDetalleDesdePlanilla(${reserva.id_reserva});"`;
                         }
                     }
 
-                    // === APLICAR ESTILO SEGÚN FILTRO ===
-                    if (!cumpleFiltro && !esDisponible) {
-                        // Si es reserva pero NO cumple el filtro: Atenuar fuertemente
-                        opacity = '0.2'; 
+                    // === APLICAR ESTILO SEGÚN FILTRO (Atenuar si no cumple) ===
+                    if (!cumpleFiltro) {
+                        opacity = '0.15'; // Muy transparente
                         borderColor = '#eee';
                         cellContent = ''; // Ocultar texto
                         clickEvt = ''; // Desactivar click
-                    } else if (!cumpleFiltro && esDisponible) {
-                        // Si es disponible y buscamos solo reservadas: Ocultar casi totalmente
-                        opacity = '0.1';
-                        cellContent = '';
+                        // Mantener el color de fondo original pero muy transparente visualmente
                     }
 
-                    // Renderizar celda
-                    html += `<td style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:${bgClass}; color:#333; font-weight: 400 !important; cursor:${clickEvt ? 'pointer' : 'default'}; padding:8px; height:40px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid ${borderColor}; opacity: ${opacity};" ${clickEvt}>${cellContent}</td>`;
+                    // Renderizar celda final
+                    html += `<td style="
+                        width:${anchoCancha}; 
+                        min-width:${anchoCancha}; 
+                        max-width:${anchoCancha}; 
+                        background:${bgClass}; 
+                        color:#333; 
+                        font-weight: 400 !important; 
+                        cursor:${clickEvt ? 'pointer' : 'default'}; 
+                        padding:8px; 
+                        height:40px; 
+                        vertical-align:middle; 
+                        overflow:hidden; 
+                        text-overflow:ellipsis; 
+                        white-space:nowrap; 
+                        border-left:1px solid ${borderColor}; 
+                        opacity: ${opacity};
+                        transition: opacity 0.2s;
+                    " ${clickEvt}>${cellContent}</td>`;
                 });
                 
                 html += `</tr>`;
@@ -2146,24 +2182,32 @@ $recinto = $stmt->fetch();
     // === LÓGICA DE FECHA PLANILLA ===
     const fechaPlanillaInput = document.getElementById('fechaPlanillaInput');
 
-    function irAHoyPlanilla() {
-        const hoy = new Date().toISOString().split('T')[0];
-        fechaPlanillaInput.value = hoy;
-        fechaPlanillaActual = hoy;
-        cargarPlanillaReservas();
-    }
+    // Bandera para evitar el loop
+    let estaActualizandoFecha = false;
 
     function cambiarDiaPlanilla(dias) {
+        if (estaActualizandoFecha) return; // Evitar recursión
+        
         const fecha = new Date(fechaPlanillaActual);
         fecha.setDate(fecha.getDate() + dias);
         fechaPlanillaActual = fecha.toISOString().split('T')[0];
-        fechaPlanillaInput.value = fechaPlanillaActual; // Sincronizar input
+        
         cargarPlanillaReservas();
     }
 
-    // Escuchar cambios en el input de fecha nativo
-    if (fechaPlanillaInput) {
-        fechaPlanillaInput.addEventListener('change', function() {
+    function irAHoyPlanilla() {
+        if (estaActualizandoFecha) return;
+        
+        fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        cargarPlanillaReservas();
+    }
+
+    // Listener del input de fecha
+    const fechaInput = document.getElementById('fechaPlanillaInput');
+    if (fechaInput) {
+        fechaInput.addEventListener('change', function() {
+            if (estaActualizandoFecha) return;
+            
             fechaPlanillaActual = this.value;
             cargarPlanillaReservas();
         });
@@ -2245,7 +2289,7 @@ $recinto = $stmt->fetch();
 
     // === FUNCIÓN CARGAR PLANILLA (TOLERANTE A ERRORES) ===
     async function cargarPlanillaReservas() {
-        // Obtener select de forma segura
+        estaActualizandoFecha = true; // Activar bandera
         const deporteSelect = document.getElementById('filtroDeporte');
         let deporte = "";
         
@@ -2288,6 +2332,16 @@ $recinto = $stmt->fetch();
             
             renderizarPlanilla(data);
             console.log("✅ Planilla cargada con éxito!");
+
+            const inputFecha = document.getElementById('fechaPlanillaInput');
+            if (inputFecha && inputFecha.value !== fechaPlanillaActual) {
+                inputFecha.value = fechaPlanillaActual;
+            }
+
+            // Desactivar bandera después de un pequeño delay para permitir interacción manual
+            setTimeout(() => {
+                estaActualizandoFecha = false;
+            }, 100);
             
         } catch (error) {
             console.error("❌ Error crítico al cargar planilla:", error);
