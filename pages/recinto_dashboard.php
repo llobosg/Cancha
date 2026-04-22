@@ -196,6 +196,40 @@
   </style>
 </head>
 <body>
+  <!-- HEADER CANCHASPORT -->
+  <header style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1.5rem 2rem; border-radius: 16px; box-shadow: 0 8px 20px rgba(186, 104, 200, 0.3); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden;">
+      
+      <!-- Fondo decorativo sutil (opcional) -->
+      <div style="position: absolute; top: -20px; right: -20px; opacity: 0.1; font-size: 10rem; pointer-events: none; transform: rotate(-15deg);">⚽</div>
+
+      <!-- Logo y Nombre -->
+      <div style="display: flex; align-items: center; gap: 1rem; z-index: 2;">
+          <div style="background: white; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+              🏟️
+          </div>
+          <div>
+              <h1 style="margin: 0; color: white; font-size: 2rem; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.2); letter-spacing: -0.5px;">CanchaSport</h1>
+              <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; font-weight: 500;">Gestión Deportiva Inteligente</p>
+          </div>
+      </div>
+
+      <!-- Iconos de Deportes Flotantes (Decoración) -->
+      <div style="display: flex; gap: 1.5rem; font-size: 2.5rem; z-index: 2; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">
+          <span style="animation: float 3s ease-in-out infinite;">⚽</span>
+          <span style="animation: float 4s ease-in-out infinite 0.5s;">🎾</span>
+          <span style="animation: float 3.5s ease-in-out infinite 1s;">🏐</span>
+          <span style="animation: float 4.5s ease-in-out infinite 0.2s;">🏸</span>
+      </div>
+  </header>
+
+  <!-- Animación CSS para el efecto flotante -->
+  <style>
+  @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+  }
+  </style>
   <!-- Barra superior -->
   <div class="top-bar">
     <div class="logo" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;"> CanchaSport ⚽ <?= htmlspecialchars($recinto_nombre) ?></div>
