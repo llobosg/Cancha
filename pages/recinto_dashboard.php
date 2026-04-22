@@ -196,134 +196,94 @@
   </style>
 </head>
 <body>
-  <!-- HEADER CANCHASPORT -->
-  <header style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1.5rem 2rem; border-radius: 16px; box-shadow: 0 8px 20px rgba(186, 104, 200, 0.3); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden;">
-      
-      <!-- Fondo decorativo sutil (opcional) -->
-      <div style="position: absolute; top: -20px; right: -20px; opacity: 0.1; font-size: 10rem; pointer-events: none; transform: rotate(-15deg);">⚽</div>
-
-      <!-- Logo y Nombre -->
-      <div style="display: flex; align-items: center; gap: 1rem; z-index: 2;">
-          <div style="background: white; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-              🏟️
+  <!-- Barra superior -->
+  <div class="top-bar" style="background: white; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000;">
+      <div style="max-width: 1400px; margin: 0 auto; padding: 0 1rem; display: flex; justify-content: space-between; align-items: center;">
+          
+          <!-- Logo / Nombre -->
+          <div class="logo" style="font-weight: 900; font-size: 1.2rem; color: #AB47BC; letter-spacing: -0.5px;">
+              CanchaSport - <?= htmlspecialchars($recinto_nombre) ?>
           </div>
-          <div>
-              <h1 style="margin: 0; color: white; font-size: 2rem; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.2); letter-spacing: -0.5px;">CanchaSport</h1>
-              <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; font-weight: 500;">Gestión Deportiva Inteligente</p>
+
+          <!-- Contenedor del Menú Desplegable + Logout -->
+          <div style="display: flex; align-items: center; gap: 1rem;">
+              
+              <!-- Botón de 3 Puntos (Kebab Menu) -->
+              <div style="position: relative;">
+                  <button onclick="toggleMenuAdmin(event)" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #555; line-height: 1; padding: 0 5px;" title="Opciones">
+                      ⋮
+                  </button>
+
+                  <!-- Menú Desplegable -->
+                  <div id="menuAdmin" style="display: none; position: absolute; right: 0; top: 120%; background: white; border: 1px solid #eee; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; animation: fadeIn 0.2s ease;">
+                      
+                      <!-- Cabecera del menú con X de cierre -->
+                      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; background: #fafafa;">
+                          <span style="font-size: 0.8rem; font-weight: bold; color: #999; text-transform: uppercase;">Menú</span>
+                          <span onclick="closeMenuAdmin()" style="cursor: pointer; font-size: 1.2rem; color: #999; font-weight: bold; line-height: 1;" title="Cerrar">&times;</span>
+                      </div>
+
+                      <!-- Opciones -->
+                      <div style="padding: 0.5rem;">
+                          <?php if (esAdmin()): ?>
+                              <a href="gestion_asistentes.php" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                                  👥 Gestionar Asistentes
+                              </a>
+                          <?php endif; ?>
+
+                          <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenuAdmin()" style="display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; border-radius: 8px; transition: 0.2s; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                              ⚙️ Mi Perfil
+                          </a>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Botón Cerrar Sesión (Visible siempre) -->
+              <a href="logout.php" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #FFEBEE; color: #D32F2F; border-radius: 8px; font-weight: bold; font-size: 0.9rem; transition: 0.2s; border: 1px solid #FFCDD2;">
+                  🚪 Salir
+              </a>
           </div>
       </div>
+  </div>
 
-      <!-- Iconos de Deportes Flotantes (Decoración) -->
-      <div style="display: flex; gap: 1.5rem; font-size: 2.5rem; z-index: 2; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">
-          <span style="animation: float 3s ease-in-out infinite;">⚽</span>
-          <span style="animation: float 4s ease-in-out infinite 0.5s;">🎾</span>
-          <span style="animation: float 3.5s ease-in-out infinite 1s;">🏐</span>
-          <span style="animation: float 4.5s ease-in-out infinite 0.2s;">🏸</span>
-      </div>
-  </header>
-
-  <!-- Animación CSS para el efecto flotante -->
+  <!-- Animación CSS para el menú -->
   <style>
-  @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
-      100% { transform: translateY(0px); }
+  @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+  }
+  /* Efecto hover en las opciones del menú */
+  #menuAdmin a:hover {
+      background-color: #f3e5f5; /* Lila muy suave */
+      color: #AB47BC;
   }
   </style>
-  <!-- Barra superior -->
-  <div class="top-bar">
-    <div class="logo" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;"> CanchaSport ⚽ <?= htmlspecialchars($recinto_nombre) ?></div>
-  </div>
 
-  <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-    <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
-    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
-         <?php if (esAdmin()): ?>
-            <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #AB47BC; border-radius: 8px; font-weight: bold; border: 2px solid #AB47BC; transition: 0.2s;">
-                👥 Asistentes
-            </a>
-        <?php endif; ?>
-        <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #333; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-            ⚙️ Mi Perfil
-        </a>
-    </div>
+  <!-- Script para controlar el menú -->
+  <script>
+      function toggleMenuAdmin(event) {
+          event.stopPropagation(); // Evita que el click se propague al document
+          const menu = document.getElementById('menuAdmin');
+          const isVisible = menu.style.display === 'block';
+          
+          // Si está visible, lo cerramos; si no, lo abrimos
+          menu.style.display = isVisible ? 'none' : 'block';
+      }
 
-    <!-- 2. CONTENIDO ESPECÍFICO POR ROL --> 
-    <?php if (esAdmin()): ?>
-        <!-- === VISTA ADMIN === -->
-        
-        <!-- Fila de KPIs (Solo Ingresos) -->
-        <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-            <div class="stat-card" style="flex: 0 0 auto; min-width: 250px; max-width: 300px; background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);">
-                <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Ingresos Este Mes</h3>
-                <div style="font-size: 2.2rem; font-weight: 900;">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
-                <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Actualizado al <?= date('d/m/Y') ?></div>
-            </div>
-            <!-- Aquí podrías agregar más KPIs financieros si quisieras en el futuro -->
-        </div>
+      function closeMenuAdmin() {
+          document.getElementById('menuAdmin').style.display = 'none';
+      }
 
-    <?php else: ?>
-        <!-- === VISTA ASISTENTE === -->
-        
-        <!-- Gráficos Operativos -->
-        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-            <div class="stat-card" style="background: #071289; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
-                <div class="stat-title" style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1rem;">Canchas Disponibles</div>
-                <div class="chart" style="margin-bottom: 1rem;">
-                  <svg viewBox="0 0 100 20" style="width:100%; height:20px;">
-                    <rect x="0" y="0" width="100" height="20" fill="rgba(255,255,255,0.2)" rx="3"/>
-                    <rect x="0" y="0" width="60" height="20" fill="#4ECDC4" rx="3"/>
-                  </svg>
-                </div>
-                <div style="font-size: 1.2rem; font-weight: bold;">6/10 Reservadas</div>
-            </div>
-
-            <div class="stat-card" style="background: #071289; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
-                <div class="stat-title" style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1rem;">Ocupación MTD</div>
-                <div class="chart" style="margin-bottom: 1rem; display: flex; justify-content: center;">
-                  <svg viewBox="0 0 100 100" style="width:80px; height:80px;">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#4ECDC4" stroke-width="8"
-                            stroke-dasharray="282" stroke-dashoffset="<?= 282 * (1 - 0.72) ?>" transform="rotate(-90 50 50)"/>
-                    <text x="50" y="55" text-anchor="middle" fill="white" font-size="16" font-weight="bold">72%</text>
-                  </svg>
-                </div>
-                <div style="font-size: 0.9rem;">+7% vs mes anterior</div>
-            </div>
-        </div>
-
-        <!-- Acciones rápidas -->
-        <div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-            <button class="action-btn" id="btnGestionCancha" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Crear Canchas 🎾</button>
-            <button class="action-btn" id="btnCalendarioReservas" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Calendario reservas</button>
-            <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Reserva Manual</button>
-            <button class="action-btn" id="btnCrearTorneo" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Crear Torneo </button>
-        </div>
-
-        <!-- Panel de Torneos (Opcional, si el asistente lo necesita) -->
-        <div class="dynamic-panel" id="panelTorneos" style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid #eee;">
-            <h3 style="margin-top: 0; color: #071289;">🏆 Torneos Americanos Activos</h3>
-            <div id="listaTorneos" style="margin-top: 1rem; color: #666;">
-                <p>Cargando torneos...</p>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <!-- 3. SECCIÓN PRINCIPAL COMUN: PLANILLA DE RESERVAS -->
-    <!-- Visible para AMBOS roles -->
-    <div class="main-content-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #eee;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-            <h2 style="margin: 0; color: #333; font-size: 1.4rem;">📅 Planilla de Reservas</h2>
-            <a href="calendario_reservas.php?vista=planilla" style="color: #071289; text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #f0f4f8; padding: 0.5rem 1rem; border-radius: 6px;">Ver modo completo &rarr;</a>
-        </div>
-        
-        <div style="text-align: center; padding: 2rem; background: #f9f9f9; border-radius: 8px; border: 1px dashed #ccc;">
-            <p style="color: #666; margin-bottom: 1rem;">Accede a la vista detallada de horarios, estados de pago y gestión de canchas.</p>
-            <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; padding: 0.8rem 2rem; background: #071289; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; transition: 0.2s;">Ir a la Planilla Completa</a>
-        </div>
-    </div>
-
-  </div>
+      // Cerrar el menú si se hace click fuera de él
+      document.addEventListener('click', function(event) {
+          const menu = document.getElementById('menuAdmin');
+          const button = event.target.closest('button[onclick="toggleMenuAdmin(event)"]');
+          
+          if (!button && menu.style.display === 'block') {
+              closeMenuAdmin();
+          }
+      });
+  </script>
 
   <script>
     <?php if (esAdmin()): ?>
