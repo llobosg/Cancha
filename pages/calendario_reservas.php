@@ -764,46 +764,34 @@ $recinto = $stmt->fetch();
     #vistaPlanilla div[style*="overflow:auto"]::-webkit-scrollbar-thumb:hover {
         background: #8E24AA; 
     }
-    /* Estilos específicos para la Planilla */
-    .planilla-table th, .planilla-table td {
-        border: 1px solid #ddd;
-        text-align: center;
-        user-select: none;
-    }
-
-    .planilla-table th {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-
-    .planilla-table td:first-child, .planilla-table th:first-child {
-        position: sticky;
-        left: 0;
-        z-index: 5; /* Mayor que las celdas normales, menor que el corner */
-        background: #f8f9fa;
-        border-right: 2px solid #ccc;
-    }
-
-    .planilla-table thead th:first-child {
-        z-index: 20; /* Esquina superior izquierda */
-        background: #071289;
-    }
-
-    /* Hover effect */
-    .planilla-table tbody td:hover {
-        filter: brightness(0.95);
-    }
 </style>
 </head>
 <body>
-    <div class="header">
-        <div class="main-title-section">
-        <div class="logo-corporativo">⚽</div>
-        <h1 class="main-title">Cancha</h1>
-        </div>
-        <div>
-        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+    <!-- TOP BAR CANCHASPORT (El que ya creamos) -->
+    <div class="top-bar" style="background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%); padding: 1rem 2rem; box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000;">
+        <!-- ... (Contenido del Top Bar: Logo, Menú 3 puntos, Salir) ... -->
+        <a href="../index.php" class="brand-logo" style="color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.8rem;">
+            <span style="font-size: 1.8rem;">️</span> CanchaSport
+        </a>
+        
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <!-- Menú Desplegable (Kebab) -->
+            <div style="position: relative;">
+                <button onclick="toggleMenuAdmin(event)" style="background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px;">⋮</button>
+                <div id="menuAdmin" style="display: none; position: absolute; right: 0; top: 120%; background: white; border: 1px solid #eee; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                    <div style="padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between;">
+                        <span style="font-size:0.8rem; font-weight:bold; color:#999;">MENÚ</span>
+                        <span onclick="closeMenuAdmin()" style="cursor:pointer; font-size:1.2rem; color:#999;">&times;</span>
+                    </div>
+                    <div style="padding: 0.5rem;">
+                        <?php if (esAdmin()): ?>
+                            <a href="gestion_asistentes.php" onclick="closeMenuAdmin()" style="display:block; padding:0.8rem; text-decoration:none; color:#333; border-radius:8px;"> Gestionar Asistentes</a>
+                        <?php endif; ?>
+                        <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenuAdmin()" style="display:block; padding:0.8rem; text-decoration:none; color:#333; border-radius:8px;">⚙️ Mi Perfil</a>
+                    </div>
+                </div>
+            </div>
+            <a href="logout.php" style="text-decoration:none; padding:0.6rem 1.2rem; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); border-radius:8px; font-weight:bold;"> Salir</a>
         </div>
     </div>
     
@@ -813,35 +801,11 @@ $recinto = $stmt->fetch();
         <!-- Tercio Central -->
         <div style="width: 100%; max-width: 1400px; display:flex; flex-direction:column; gap:1rem; position: relative;">
             
-            <!-- BARRA DE FILTROS SUPERIOR (Sticky) -->
+            <!-- BARRA DE FILTROS SUPERIOR (Sticky) 
             <div style="background: rgba(20, 20, 40, 0.95); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: sticky; top: 80px; z-index: 100; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
-                    <!-- Izquierda: Filtros Deporte y Estado -->
-                    <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px;">
-                        <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
-                            <option value="">Todos los deportes</option>
-                            <option value="futbol">Fútbol</option>
-                            <option value="futbolito">Futbolito</option>
-                            <option value="futsal">Futsal</option>
-                            <option value="tenis">Tenis</option>
-                            <option value="padel">Pádel</option>
-                            <option value="voleyball">Voleyball</option>
-                            <option value="otro">Quincho/Otro</option>
-                        </select>
-                        
-                        <select class="control-select" id="filtroEstado">
-                            <option value="">Todos los estados</option>
-                            <option value="disponible">Disponible</option>
-                            <option value="reservada">Reservadas (Futuras)</option>
-                            <option value="no_pagadas">No Pagadas (Vencidas)</option> <!-- Nuevo nombre -->
-                            <option value="parcial">Pago Parcial</option>
-                            <option value="pagadas">Pagadas</option>
-                            <option value="ocupada">Ocupadas</option>
-                            <option value="cancelada">Canceladas</option>
-                        </select>
-                    </div>
 
-                    <!-- Derecha: Selector Radial -->
+                    Derecha: Selector Radial para Vista Fichas/Planilla
                     <div style="background:rgba(255,255,255,0.1); padding:0.3rem; border-radius:8px; display:flex; gap:0.5rem;">
                         <label style="display:flex; align-items:center; cursor:pointer; color:#aaa; font-weight:bold; padding:0.4rem 1rem; border-radius:6px; transition:0.3s;" id="lblFichas">
                             <input type="radio" name="vistaCalendario" value="fichas" onchange="cambiarVistaCalendario('fichas')" style="display:none;">
@@ -853,7 +817,7 @@ $recinto = $stmt->fetch();
                         </label>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- VISTA: PLANILLA (Con margen superior extra para separación visual) -->
             <div id="vistaPlanilla" style="margin-top: 1rem;">
@@ -882,6 +846,31 @@ $recinto = $stmt->fetch();
                         <div style="display:flex; gap:0.5rem;">
                             <button onclick="cambiarDiaPlanilla(-1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; line-height:1;">&lt;</button>
                             <button onclick="cambiarDiaPlanilla(1)" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); border:none; color:#6A1B9A; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; line-height:1;">&gt;</button>
+                        </div>
+
+                        <!-- Filtros Deporte y Estado -->
+                        <div style="display:flex; gap:0.8rem; flex:1; min-width: 200px; margin-left: 1rem;">
+                            <select class="control-select" id="filtroDeporte" style="flex:1; background:rgba(255,255,255,0.9); color:#333; border:1px solid rgba(0,0,0,0.1);">
+                                <option value="">Todos los deportes</option>
+                                <option value="futbol">Fútbol</option>
+                                <option value="futbolito">Futbolito</option>
+                                <option value="futsal">Futsal</option>
+                                <option value="tenis">Tenis</option>
+                                <option value="padel">Pádel</option>
+                                <option value="voleyball">Voleyball</option>
+                                <option value="otro">Quincho/Otro</option>
+                            </select>
+                            
+                            <select class="control-select" id="filtroEstado">
+                                <option value="">Todos los estados</option>
+                                <option value="disponible">Disponible</option>
+                                <option value="reservada">Reservadas (Futuras)</option>
+                                <option value="no_pagadas">No Pagadas (Vencidas)</option> <!-- Nuevo nombre -->
+                                <option value="parcial">Pago Parcial</option>
+                                <option value="pagadas">Pagadas</option>
+                                <option value="ocupada">Ocupadas</option>
+                                <option value="cancelada">Canceladas</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1102,9 +1091,7 @@ $recinto = $stmt->fetch();
                     } else if (reserva.estado_pago === 'pendiente') { 
                         colorBadge = '#dc3545'; // Rojo
                     }
-
-                    const idValido = parseInt(reserva.id_reserva);
-                    cellStyle += ` onclick="abrirDetalleDesdePlanilla(${idValido});"`; 
+                    
                     // Badge pequeño al lado del estado
                     badgePagoHTML = `
                         <span style="
@@ -1338,13 +1325,18 @@ $recinto = $stmt->fetch();
 
         // Validación básica
         if (montoPagado <= 0) {
-            alert("️ El monto a pagar debe ser mayor a 0.");
+            alert("⚠️ El monto a pagar debe ser mayor a 0.");
             return;
+        }
+        if (montoPagado > montoOriginal) {
+            if(!confirm("⚠️ El monto ingresado ($" + montoPagado + ") es mayor al total del arriendo ($" + montoOriginal + "). ¿Deseas continuar?")) {
+                return;
+            }
         }
 
         try {
             const formData = new FormData();
-            formData.append('action', 'procesar_pago_parcial'); 
+            formData.append('action', 'procesar_pago_parcial'); // Nueva acción para diferenciar
             formData.append('id_reserva', idReserva);
             formData.append('monto_pagado', montoPagado);
             formData.append('monto_total_original', montoOriginal);
@@ -1355,7 +1347,6 @@ $recinto = $stmt->fetch();
             const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
             const data = await res.json();
 
-            // ✅ LÓGICA DE RESPUESTA INTELIGENTE
             if (data.success) {
                 let msg = "✅ Pago registrado correctamente.";
                 if (montoPagado < montoOriginal) {
@@ -1363,23 +1354,9 @@ $recinto = $stmt->fetch();
                 }
                 alert(msg);
                 cerrarModalPago();
-                location.reload(); // Recargar para ver cambios en la planilla
+                location.reload(); // Recargar para ver cambios
             } else {
-                // Si el error es "Ya está pagada" pero acabamos de pagar, podría ser un race condition o doble click
-                if (data.message && data.message.includes("ya está pagada")) {
-                    console.warn("⚠️ La reserva ya estaba pagada (posible doble intento o actualización rápida).");
-                    // Opcional: Tratarlo como éxito si queremos ser permisivos
-                    // alert("ℹ️ La reserva ya figura como pagada.");
-                    // cerrarModalPago();
-                    // location.reload();
-                    
-                    // O mostrar el error normal si prefieres ser estricto:
-                    alert("ℹ️ " + data.message);
-                    cerrarModalPago();
-                    location.reload();
-                } else {
-                    alert("❌ Error: " + data.message);
-                }
+                alert("❌ Error: " + data.message);
             }
         } catch (err) {
             console.error(err);
@@ -2017,71 +1994,80 @@ $recinto = $stmt->fetch();
     let fechaPlanillaActual = new Date().toISOString().split('T')[0];
     let deporteSeleccionadoPlanilla = '';
 
-    // Cambiar entre vistas
+    // === CAMBIAR VISTA (CORREGIDO CON VALIDACIONES) ===
     function cambiarVistaCalendario(vista) {
-        document.getElementById('vistaFichas').style.display = vista === 'fichas' ? 'block' : 'none';
-        document.getElementById('vistaPlanilla').style.display = vista === 'planilla' ? 'block' : 'none';
+        const fichasDiv = document.getElementById('vistaFichas');
+        const planillaDiv = document.getElementById('vistaPlanilla');
         
+        // Usar selectores más seguros o verificar existencia antes de usar
+        const lblFichas = document.getElementById('lblFichas');
+        const lblPlanilla = document.getElementById('lblPlanilla');
+
         if (vista === 'planilla') {
-            // Obtener el deporte seleccionado en el filtro general
-            const deporteFiltro = document.getElementById('filtroDeporte').value;
+            if (fichasDiv) fichasDiv.style.display = 'none';
+            if (planillaDiv) planillaDiv.style.display = 'block';
             
-            if (!deporteFiltro) {
-                alert('️ Por favor selecciona un Deporte en los filtros superiores para ver la Planilla.');
-                // Opcional: Devolver a fichas si no hay deporte
-                document.querySelector('input[value="fichas"]').checked = true;
-                document.getElementById('vistaFichas').style.display = 'block';
-                document.getElementById('vistaPlanilla').style.display = 'none';
-                return;
+            // Estilos solo si existen los elementos
+            if (lblPlanilla) {
+                lblPlanilla.style.background = 'rgba(255,255,255,0.2)';
+                lblPlanilla.style.color = 'white';
+                lblPlanilla.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            }
+            if (lblFichas) {
+                lblFichas.style.background = 'transparent';
+                lblFichas.style.color = '#aaa';
+                lblFichas.style.boxShadow = 'none';
             }
             
-            deporteSeleccionadoPlanilla = deporteFiltro;
-            
-            // Sincronizar la fecha de la planilla con el filtro de fecha general si es necesario
-            // O usar la fecha de hoy por defecto
+            // Cargar datos
             cargarPlanillaReservas();
         } else {
-            // Si volvemos a Fichas, aseguramos que se carguen los datos actuales
-            aplicarFiltrosConAPI();
+            if (fichasDiv) fichasDiv.style.display = 'block';
+            if (planillaDiv) planillaDiv.style.display = 'none';
+            
+            if (lblFichas) {
+                lblFichas.style.background = 'rgba(255,255,255,0.2)';
+                lblFichas.style.color = 'white';
+                lblFichas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            }
+            if (lblPlanilla) {
+                lblPlanilla.style.background = 'transparent';
+                lblPlanilla.style.color = '#aaa';
+                lblPlanilla.style.boxShadow = 'none';
+            }
+            
+            // Para fichas, llamamos a la función original si existe
+            if (typeof aplicarFiltrosConAPI === 'function') {
+                aplicarFiltrosConAPI();
+            }
         }
     }
 
     // === APLICAR FILTROS (CORREGIDO: ELIMINADO REFERENCIA A filtroFecha) ===
     let estadoSeleccionadoPlanilla = ""; // Variable global nueva
 
-    // === APLICAR FILTROS (CORREGIDO PARA PLANILLA) ===
     async function aplicarFiltrosConAPI() {
         const deporte = document.getElementById('filtroDeporte').value;
         const estado = document.getElementById('filtroEstado').value;
         
-        // Detectar vista actual
-        const vistaActual = 'planilla'; // Forzamos planilla ya que ocultamos los radios
+        // Guardar el estado seleccionado globalmente
+        estadoSeleccionadoPlanilla = estado;
         
-        if (vistaActual === 'planilla') {
-            console.log("🔄 Filtro cambiado en vista Planilla. Recargando...");
+        if ('planilla' === 'planilla') { // Siempre true en nuestro caso forzado
+            console.log(`🔄 Filtro Estado: ${estado}. Recargando Planilla...`);
             
-            // En la vista Planilla, el filtro de "Deporte" sí es útil.
-            // El filtro de "Estado" es más complejo aquí porque la planilla muestra bloques.
-            // Por ahora, ignoramos el filtro de estado en Planilla para evitar errores, 
-            // o podrías implementar una lógica para pintar de gris los bloques no coincidentes.
-            
-            if (deporte !== undefined) {
-                deporteSeleccionadoPlanilla = deporte;
-                cargarPlanillaReservas();
-            } else {
-                console.warn("⚠️ Deporte no definido, usando todos.");
-                deporteSeleccionadoPlanilla = "";
-                cargarPlanillaReservas();
-            }
-            return; // Salimos aquí para NO llamar a renderizarReservas
+            deporteSeleccionadoPlanilla = deporte || "";
+            cargarPlanillaReservas(); // Recarga los datos brutos
+            return;
         }
 
-        // Lógica original para FICHAS (si alguna vez la reactivas)
+        // Lógica original para FICHAS (si la necesitas)
         try {
             const formData = new FormData();
             formData.append('action', 'filtrar_reservas');
             formData.append('deporte', deporte);
             formData.append('estado', estado);
+            // formData.append('fecha', fecha); // Eliminado también aquí si no lo usas
             
             const response = await fetch('../api/canchaboard.php', {
                 method: 'POST',
@@ -2092,18 +2078,11 @@ $recinto = $stmt->fetch();
             if (data.error) throw new Error(data.error);
             
             reservasData = data;
-            
-            // ⚠️ AQUÍ ESTABA EL ERROR: renderizarReservas intentaba tocar un elemento null
-            // Solo ejecutamos si el contenedor existe
-            const grid = document.getElementById('reservasGrid');
-            if (grid && typeof renderizarReservas === 'function') {
+            if (typeof renderizarReservas === 'function') {
                 renderizarReservas(reservasData);
-            } else {
-                console.warn("⚠️ Contenedor de Fichas no encontrado o función no disponible.");
             }
         } catch (error) {
             console.error('Error al aplicar filtros:', error);
-            // No mostramos alert para no molestar si es un cambio de filtro inocuo
         }
     }
 
@@ -2113,15 +2092,11 @@ $recinto = $stmt->fetch();
         cargarPlanillaReservas();
     });
 
-    document.getElementById('filtroDeporte').addEventListener('change', function() {
+    // Listener para cambio de deporte (recargar planilla si estamos en esa vista)
+    document.getElementById('filtroDeporte')?.addEventListener('change', function() {
         const vistaActual = document.querySelector('input[name="vistaCalendario"]:checked').value;
-        
-        if (vistaActual === 'fichas') {
-            aplicarFiltrosConAPI(); // Tu función actual para fichas
-        } else if (vistaActual === 'planilla') {
-            // Si estamos en planilla, recargar la planilla con el nuevo deporte
-            deporteSeleccionadoPlanilla = this.value;
-            cargarPlanillaReservas(); 
+        if (vistaActual === 'planilla') {
+            cargarPlanillaReservas();
         }
     });
 
@@ -2284,8 +2259,10 @@ $recinto = $stmt->fetch();
     }
 
     // === LÓGICA DE FECHA PLANILLA ===
+    const fechaPlanillaInput = document.getElementById('fechaPlanillaInput');
+
+    // Bandera para evitar el loop
     // Variable Global (Asegúrate que esté declarada fuera de cualquier función)
-    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
     let estaActualizandoFecha = false; // Bandera para evitar loops del input
 
     // === FUNCIÓN PARA CAMBIAR DÍA (ANTERIOR / SIGUIENTE) ===
