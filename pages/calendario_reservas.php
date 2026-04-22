@@ -2122,15 +2122,26 @@ $recinto = $stmt->fetch();
         hoy.setHours(0, 0, 0, 0);
 
         let html = `<thead><tr>`;
-        // Header Horario
-        html += `<th style="width:${anchoHorario}; min-width:${anchoHorario}; max-width:${anchoHorario}; background:#AB47BC; color:white; padding:10px; position:sticky; left:0; z-index:2; text-align:center; border-right:2px solid #fff; font-weight: 400 !important;"> Horario </th>`;
-        
-        // Headers Canchas
+    
+        // Columna Hora (Sticky)
+        html += `<th style="min-width:80px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+
+        // === AQUÍ ESTÁ EL CAMBIO CLAVE ===
         data.canchas.forEach(c => {
-            html += `<th style="width:${anchoCancha}; min-width:${anchoCancha}; max-width:${anchoCancha}; background:#AB47BC; color:white; padding:10px; border-left:1px solid #fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 400 !important;">
-                        ${c.nombre_cancha || 'Cancha'}
-                    </th>`;
+            // Obtenemos el ícono basado en el ID, o usamos el default si no existe
+            const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
+            
+            // Opcional: Si quieres mostrar el nombre del deporte además del ícono en el header
+            // const nombreDeporte = c.nombre_cancha.split('-')[0]; // Ejemplo simple
+            
+            html += `
+                <th style="min-width:120px; background:#AB47BC; color:white; font-size:0.9rem;">
+                    <div style="font-size:1.2rem;">${icono}</div>
+                    <div style="font-size:0.8rem; margin-top:4px;">${c.nombre_cancha}</div>
+                </th>
+            `;
         });
+        
         html += `</tr></thead><tbody>`;
         
         // Iterar sobre los slots de tiempo
