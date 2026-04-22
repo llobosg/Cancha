@@ -194,7 +194,7 @@ $ingresos_mes = 1250000;
                   <select id="filtroDeporte" class="control-select">
                       <option value="">Todos los deportes</option>
                       <option value="futbol">Fútbol</option>
-                      <option value="padel">Pádel</option>
+                      <option value="padel" selected>Pádel</option> 
                       <option value="tenis">Tenis</option>
                       <option value="voleyball">Voleyball</option>
                   </select>
@@ -240,122 +240,153 @@ $ingresos_mes = 1250000;
     <?php endif; ?>
 
     // --- Lógica Planilla ---
+    // Variables Globales
     let fechaPlanillaActual = new Date().toISOString().split('T')[0];
-    let estadoSeleccionadoPlanilla = "";
+    let deporteSeleccionado = 'padel'; // Valor por defecto inicial
 
+    // Función para cambiar día (Anterior / Siguiente)
     function cambiarDiaPlanilla(dias) {
-        const f = new Date(fechaPlanillaActual);
-        f.setDate(f.getDate() + dias);
-        fechaPlanillaActual = f.toISOString().split('T')[0];
-        document.getElementById('fechaPlanillaInput').value = fechaPlanillaActual;
+        const fechaObj = new Date(fechaPlanillaActual);
+        fechaObj.setDate(fechaObj.getDate() + dias);
+        
+        // Actualizar variable global
+        fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
+        
+        // Actualizar visualmente el input date
+        const inputFecha = document.getElementById('fechaPlanillaInput');
+        if (inputFecha) inputFecha.value = fechaPlanillaActual;
+        
+        console.log(`🔄 Cambiando fecha a: ${fechaPlanillaActual} | Deporte: ${deporteSeleccionado}`);
+        
+        // Cargar con los datos correctos
         cargarPlanillaReservas();
     }
 
+    // Función Ir a Hoy
     function irAHoyPlanilla() {
         fechaPlanillaActual = new Date().toISOString().split('T')[0];
         document.getElementById('fechaPlanillaInput').value = fechaPlanillaActual;
         cargarPlanillaReservas();
     }
 
-    document.getElementById('fechaPlanillaInput').addEventListener('change', function() {
+    // Listener para cambio manual de fecha
+    document.getElementById('fechaPlanillaInput')?.addEventListener('change', function() {
         fechaPlanillaActual = this.value;
         cargarPlanillaReservas();
     });
-    document.getElementById('filtroDeporte').addEventListener('change', cargarPlanillaReservas);
-    document.getElementById('filtroEstado').addEventListener('change', function() {
-        estadoSeleccionadoPlanilla = this.value;
+
+    // Listener para cambio de deporte (Actualiza la variable global)
+    document.getElementById('filtroDeporte')?.addEventListener('change', function() {
+        deporteSeleccionado = this.value || 'padel'; // Si es vacío, usa padel o deja vacío según prefieras
+        console.log(` Deporte cambiado a: ${deporteSeleccionado}`);
         cargarPlanillaReservas();
     });
 
+    // Función Principal de Carga
     async function cargarPlanillaReservas() {
-      const fechaParaUsar = window.fechaPlanillaActual || new Date().toISOString().split('T')[0];
-      const deporteSelect = document.getElementById('filtroDeporte');
-      
-      // Leer el valor. Gracias al atributo 'selected' en el HTML, esto NUNCA será vacío.
-      let deporte = deporteSelect ? deporteSelect.value : 'futbol'; 
-      
-      // Doble seguridad: si por algún motivo sigue vacío, forzar fútbol
-      if (!deporte) {
-          deporte = 'Pádel'; // Valor por defecto
-          console.warn("⚠️ Deporte seguía vacío, forzando a 'Pádel' para evitar errores en la carga de la planilla.");
+        // 1. Obtener deporte de la variable global (no del select directamente para evitar errores)
+        // Pero sincronizamos por si el usuario cambió el select manualmente
+        const selectDeporte = document.getElementById('filtroDeporte');
+        if (selectDeporte && selectDeporte.value) {
+            deporteSeleccionado = selectDeporte.value;
       }
+        
+        // Si sigue vacío tras todo, usamos el default
+        if (!deporteSeleccionado) deporteSeleccionado = 'padel';
 
-      console.log(`📡 Cargando planilla... Fecha: ${fechaParaUsar}, Deporte: ${deporte}`);
+        console.log(` Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporteSeleccionado}`);
 
-      try {
-          const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaParaUsar}&deporte=${encodeURIComponent(deporte)}`;
-          
-          const response = await fetch(url, { credentials: 'include' });
-          
-          if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
-              throw new Error(errorData.error || `HTTP ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.error) throw new Error(data.error);
-          
-          renderizarPlanilla(data);
-          console.log("✅ Planilla cargada exitosamente");
-          
-      } catch (error) {
-          console.error("❌ Error cargando planilla:", error);
-          document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}<br><small>Verifica que existan canchas operativas para el deporte seleccionado.</small></td></tr>`;
-      }
-  }
+        try {
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporteSeleccionado)}`;
+            
+            const response = await fetch(url, { credentials: 'include' });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            renderizarPlanilla(data);
+            console.log("✅ Planilla cargada exitosamente");
+            
+        } catch (error) {
+            console.error("❌ Error cargando planilla:", error);
+            document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
+        }
+    }
 
     function renderizarPlanilla(data) {
-        const table = document.getElementById('tablaPlanilla');
-        if (!data.canchas || !data.canchas.length) {
-            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas disponibles.</td></tr>';
-            return;
-        }
-        
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-        const filtro = estadoSeleccionadoPlanilla;
-        
-        let html = `<thead><tr><th style="min-width:100px;">Hora</th>`;
-        data.canchas.forEach(c => html += `<th style="min-width:120px;">${c.nombre_cancha}</th>`);
-        html += `</tr></thead><tbody>`;
+      const table = document.getElementById('tablaPlanilla');
+      if (!table) return;
 
-        data.slots.forEach(slot => {
-            if (slot.is_label_row) {
-                html += `<tr><td style="background:#f8f9fa; font-weight:bold;">${slot.label}</td>`;
-                data.canchas.forEach(cancha => {
-                    const key = `${cancha.id_cancha}_${slot.label}`;
-                    const res = data.reservas[key];
-                    let bg = '#e0e0e0'; // Disponible
-                    let content = '';
-                    
-                    if (res) {
-                        if (res.estado_pago === 'pagado') bg = '#a5d6a7';
-                        else if (res.estado_pago === 'parcial') bg = '#fff59d';
-                        else {
-                            const fechaRes = new Date(res.fecha + 'T00:00:00');
-                            bg = (fechaRes < hoy) ? '#ffcdd2' : '#ffecb3';
-                        }
-                        const nombre = (res.nombre_cliente || 'Reserva').substring(0, 10) + '...';
-                        content = `<div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>`;
-                    }
-                    
-                    // Filtrado visual
-                    let opacity = 1;
-                    if (filtro) {
-                        // Lógica simplificada de filtrado para ejemplo
-                        if (filtro === 'pagadas' && res && res.estado_pago !== 'pagado') opacity = 0.2;
-                        if (filtro === 'no_pagadas' && (!res || res.estado_pago === 'pagado')) opacity = 0.2;
-                        // ... agregar más condiciones según necesites
-                    }
+      if (!data.canchas || !data.canchas.length) {
+          table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas para este deporte/fecha.</td></tr>';
+          return;
+      }
 
-                    html += `<td style="background:${bg}; opacity:${opacity}; height:40px;">${content}</td>`;
-                });
-                html += `</tr>`;
-            }
-        });
-        html += `</tbody>`;
-        table.innerHTML = html;
+      let html = `<thead><tr><th style="min-width:100px; background:#AB47BC; color:white; position:sticky; left:0; z-index:2;">Hora</th>`;
+      data.canchas.forEach(c => {
+          html += `<th style="min-width:120px; background:#AB47BC; color:white;">${c.nombre_cancha}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+
+      // Generar slots (asumiendo que data.slots viene de la API o generarlo aquí si es necesario)
+      // Asumiremos que la API ya trae los slots o generamos un rango estándar si no los trae.
+      // Para este ejemplo, usaremos data.slots si existe, sino generamos uno básico.
+      const slots = data.slots || generarSlotsBase(); 
+
+      slots.forEach(slot => {
+          if (slot.is_label_row) {
+              html += `<tr><td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1;">${slot.label}</td>`;
+              
+              data.canchas.forEach(cancha => {
+                  const key = `${cancha.id_cancha}_${slot.label}`;
+                  const res = data.reservas[key];
+                  
+                  let bgClass = '#e0e0e0'; // Gris: Disponible
+                  let cellContent = '';
+                  let onClickAction = '';
+
+                  if (res) {
+                      // === LÓGICA DE COLORES SOLICITADA ===
+                      if (res.estado_pago === 'pagado') {
+                          bgClass = '#4CAF50'; // Verde
+                      } else if (res.estado_pago === 'parcial') {
+                          bgClass = '#FFC107'; // Amarillo
+                      } else {
+                          // Pendiente, reservada, no pagada -> Rojo
+                          bgClass = '#F44336'; // Rojo
+                      }
+
+                      const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 12) + '...';
+                      cellContent = `<div style="font-size:0.75rem; font-weight:bold; color:#333; line-height:1.1;">${nombre}</div>`;
+                      
+                      // === HABILITAR CLICK PARA ABRIR MODAL ===
+                      if (res.id_reserva) {
+                          onClickAction = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
+                      }
+                  }
+
+                  html += `<td style="background:${bgClass}; height:45px; cursor:${onClickAction ? 'pointer' : 'default'};" ${onClickAction}>${cellContent}</td>`;
+              });
+              html += `</tr>`;
+          }
+      });
+
+      html += `</tbody>`;
+      table.innerHTML = html;
     }
+
+  // Función auxiliar por si la API no trae slots (ajusta horas según tu recinto)
+  function generarSlotsBase() {
+      const slots = [];
+      for (let h = 8; h <= 23; h++) {
+          const hora = h.toString().padStart(2, '0') + ':00';
+          slots.push({ label: hora, is_label_row: true });
+      }
+      return slots;
+  }
 
     // Cargar planilla al inicio
     document.addEventListener('DOMContentLoaded', cargarPlanillaReservas);
@@ -385,6 +416,73 @@ $ingresos_mes = 1250000;
         }
     }
     <?php endif; ?>
+
+    async function abrirDetalleDesdePlanilla(idReserva) {
+      console.log("🖱️ Click en Reserva ID:", idReserva);
+      
+      if (!idReserva) {
+          alert("Error: ID de reserva inválido");
+          return;
+      }
+
+      try {
+          // Llamar a la API para obtener detalles completos
+          const formData = new URLSearchParams();
+          formData.append('action', 'get_detalle_reserva');
+          formData.append('id_reserva', idReserva);
+          // Nota: Tu API puede esperar id_disponibilidad, ajusta según tu endpoint real
+          // Si tu API get_detalle_reserva acepta id_reserva directo, úsalo así.
+          // Si necesita id_disponibilidad, quizás debas buscarlo primero o modificar la API.
+          // Asumiendo que tu API actual en canchaboard.php maneja esto:
+          
+          const response = await fetch('../api/canchaboard.php', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: formData,
+              credentials: 'include'
+          });
+
+          const detalle = await response.json();
+
+          if (detalle.error) throw new Error(detalle.error);
+
+          // Guardar en variable global para usar en botones de acción (Pagar, Anular, etc.)
+          window.reservaActualSeleccionada = detalle;
+
+          // Renderizar contenido en el modal
+          if (typeof mostrarDetalleReserva === 'function') {
+              mostrarDetalleReserva(detalle); // Usa tu función existente de calendario_reservas si la copiaste
+          } else {
+              // Fallback simple si no tienes la función mostrarDetalleReserva copiada
+              const container = document.getElementById('contenidoDetalle');
+              if (container) {
+                  container.innerHTML = `
+                      <h3 style="color:#071289;">Detalle Reserva #${detalle.id_reserva}</h3>
+                      <p><strong>Cancha:</strong> ${detalle.nombre_cancha || 'N/A'}</p>
+                      <p><strong>Fecha:</strong> ${detalle.fecha} ${detalle.hora_inicio}</p>
+                      <p><strong>Cliente:</strong> ${detalle.nombre_cliente || detalle.nombre_responsable || 'N/A'}</p>
+                      <p><strong>Estado Pago:</strong> ${detalle.estado_pago || 'Pendiente'}</p>
+                      <p><strong>Monto:</strong> $${detalle.monto_total || 0}</p>
+                  `;
+              }
+          }
+
+          // Mostrar el modal
+          const modal = document.getElementById('modalDetalleReserva');
+          if (modal) {
+              modal.style.display = 'flex';
+          }
+
+      } catch (err) {
+          console.error("Error al cargar detalle:", err);
+          alert("No se pudo cargar el detalle de la reserva.");
+      }
+    }
+
+    // Función para cerrar el modal (agrégala si no la tienes)
+    function cerrarModalDetalleReserva() {
+        document.getElementById('modalDetalleReserva').style.display = 'none';
+    }
   </script>
 </body>
 </html>
