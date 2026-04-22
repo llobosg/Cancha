@@ -100,13 +100,6 @@ $ingresos_mes = 1250000;
     .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 120px; }
     .control-btn { background: white; color: #8E24AA; border: none; padding: 0.3rem 0.8rem; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
     .control-select { background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem; border-radius: 6px; font-size: 0.85rem; }
-    
-    .planilla-table-container { overflow-x: auto; max-height: 65vh; }
-    .planilla-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.85rem; }
-    .planilla-table th, .planilla-table td { border: 1px solid #ddd; text-align: center; padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .planilla-table th { background: #AB47BC; color: white; position: sticky; top: 0; z-index: 10; }
-    .planilla-table td:first-child, .planilla-table th:first-child { position: sticky; left: 0; background: #f8f9fa; z-index: 5; border-right: 2px solid #ccc; color: #333; font-weight: bold; }
-    .planilla-table thead th:first-child { z-index: 20; background: #AB47BC; color: white; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     
@@ -118,29 +111,108 @@ $ingresos_mes = 1250000;
     }
 
     /* Estilos específicos para la planilla de Reservas (pueden ser ajustados según el diseño final) */
-    .planilla-table th, .planilla-table td {
-    border: 1px solid #ddd;
-    text-align: center;
-    padding: 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* === MEJORAS VISUALES PLANILLA === */
+
+    /* Contenedor de la tabla para asegurar que los bordes no se corten */
+    .planilla-table-container {
+        overflow: auto;
+        background: white;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        max-height: 70vh;
+        padding: 4px; /* Pequeño padding interno para que los bordes redondeados no se corten */
     }
-    .planilla-table th {
-        background: #AB47BC;
+
+    .planilla-table {
+        width: 100%;
+        border-collapse: separate; /* CLAVE: Permite border-radius en celdas */
+        border-spacing: 4px; /* Espacio entre celdas para el efecto "tarjeta" */
+        font-size: 0.85rem;
+        table-layout: fixed;
+    }
+
+    /* Estilo general de celdas */
+    .planilla-table th, 
+    .planilla-table td {
+        border: none; /* Quitamos bordes duros antiguos */
+        text-align: center;
+        vertical-align: middle;
+        padding: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Columna de Horas (Sticky y con estilo limpio) */
+    .planilla-table th:first-child,
+    .planilla-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background: #f8f9fa !important;
+        color: #333;
+        font-weight: bold;
+        border-right: 2px solid #e0e0e0; /* Línea separadora suave */
+        border-radius: 6px;
+    }
+
+    /* Encabezados de Canchas */
+    .planilla-table thead th {
+        background: #AB47BC !important;
         color: white;
         position: sticky;
         top: 0;
-        z-index: 10;
-    }
-    .planilla-table td:first-child, .planilla-table th:first-child {
-        position: sticky;
-        left: 0;
-        background: #f8f9fa;
         z-index: 5;
-        border-right: 2px solid #ccc;
-        color: #333;
-        font-weight: bold;
+        border-radius: 8px; /* Bordes redondeados en headers */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* === CELDAS DE RESERVA (El toque UX) === */
+    .planilla-table tbody td {
+        transition: all 0.2s ease;
+        border-radius: 8px; /* Borde redondeado suave */
+        border: 1px solid transparent; /* Borde invisible por defecto */
+    }
+
+    /* Efecto Hover en celdas */
+    .planilla-table tbody td:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 2;
+        position: relative;
+    }
+
+    /* Colores de Estado con Bordes Suaves */
+    /* Verde (Pagado) */
+    td.estado-pagado {
+        background-color: #E8F5E9 !important;
+        border: 1px solid #C8E6C9 !important;
+        color: #2E7D32;
+    }
+
+    /* Amarillo (Parcial) */
+    td.estado-parcial {
+        background-color: #FFFDE7 !important;
+        border: 1px solid #FFF9C4 !important;
+        color: #F57F17;
+    }
+
+    /* Rojo (Pendiente/No Pagado) */
+    td.estado-pendiente {
+        background-color: #FFEBEE !important;
+        border: 1px solid #FFCDD2 !important;
+        color: #C62828;
+    }
+
+    /* Gris (Disponible) */
+    td.estado-disponible {
+        background-color: #FAFAFA !important;
+        border: 1px dashed #E0E0E0 !important; /* Línea punteada sutil */
+    }
+
+    /* Separación visual entre filas (Líneas de cuadrícula) */
+    .planilla-table tbody tr td {
+        border-bottom: 1px solid #f0f0f0; /* Línea horizontal muy suave */
     }
 
     /* Modal Detalle (Base) */
@@ -456,35 +528,31 @@ $ingresos_mes = 1250000;
                     const res = data.reservas[key];
                     
                     let bgClass = '#e0e0e0'; // Gris (Disponible)
+                    let opacity = '1';
+                    let claseEstado = 'estado-disponible'; // Por defecto
                     let cellContent = '';
                     let clickEvt = '';
-                    let opacity = '1';
 
                     if (res) {
-                        // Lógica de Colores Solicitada
+                        // Asignar clase según estado de pago
                         if (res.estado_pago === 'pagado') {
-                            bgClass = '#4CAF50'; // Verde
+                            claseEstado = 'estado-pagado';
                         } else if (res.estado_pago === 'parcial') {
-                            bgClass = '#FFC107'; // Amarillo
+                            claseEstado = 'estado-parcial';
                         } else {
-                            bgClass = '#F44336'; // Rojo (Pendiente/No pagada)
+                            claseEstado = 'estado-pendiente'; // Rojo suave
                         }
                         
                         const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 10) + '..';
-                        cellContent = `<div style="font-size:0.75rem; font-weight:bold; color:#333;">${nombre}</div>`;
+                        cellContent = `<div style="font-size:0.75rem; font-weight:bold;">${nombre}</div>`;
                         
-                        // Habilitar Click
                         if (res.id_reserva) {
                             clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
                         }
                     }
 
-                    // Filtro visual simple (opcional)
-                    if (estadoSeleccionadoPlanilla) {
-                        // Aquí podrías agregar lógica para atenuar si no cumple el filtro
-                    }
-
-                    html += `<td style="background:${bgClass}; height:45px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity};" ${clickEvt}>${cellContent}</td>`;
+                    // Renderizar celda con la nueva clase
+                    html += `<td class="${claseEstado}" style="height:45px; cursor:${clickEvt ? 'pointer' : 'default'};" ${clickEvt}>${cellContent}</td>`;
                 });
                 html += `</tr>`;
             }

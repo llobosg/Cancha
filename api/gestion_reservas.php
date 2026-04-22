@@ -6,13 +6,25 @@ require_once __DIR__ . '/../includes/config.php';
 try {
     session_start();
     
-    // Verificar autenticación de admin de recinto
-    if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
-        throw new Exception('Acceso no autorizado', 401);
+    // 1. Verificar autenticación básica
+    if (!isset($_SESSION['id_recinto'])) {
+        throw new Exception('Sesión no iniciada', 401);
+    }
+
+    // 2. Verificar Rol (ACTUALIZADO PARA NUEVOS ROLES)
+    $rol_actual = $_SESSION['recinto_rol'] ?? '';
+    $roles_permitidos = ['admin', 'asistente']; // Aceptamos ambos roles
+
+    if (!in_array($rol_actual, $roles_permitidos)) {
+        error_log("❌ [API GESTIÓN RESERVAS] Acceso denegado. Rol actual: '$rol_actual'. Roles permitidos: " . implode(', ', $roles_permitidos));
+        throw new Exception('Acceso no autorizado: Rol inválido', 401);
     }
     
     $action = $_POST['action'] ?? $_GET['action'] ?? '';
     
+    // Log de auditoría para saber qué acción se intenta
+    error_log("🎯 [API GESTIÓN RESERVAS] Acción: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
+
     switch ($action) {
         case 'procesar_pago':
             echo json_encode(procesarPagoReserva($pdo, $_POST));
@@ -21,6 +33,8 @@ try {
         case 'procesar_pago_parcial':
             echo json_encode(procesarPagoParcial($pdo, $_POST));
             break;
+            
+        // Agrega aquí otros casos si los tienes (anular, cancelar, etc.)
             
         default:
             throw new Exception('Acción no válida: ' . $action);
