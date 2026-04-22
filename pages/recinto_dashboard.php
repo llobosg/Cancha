@@ -122,7 +122,7 @@ $ingresos_mes = 1250000;
 
   <!-- TOP BAR -->
   <div class="top-bar">
-      <a href="../index.php" class="brand-logo"><span style="font-size: 1.8rem;">🏟️</span> CanchaSport</a>
+      <a href="../index.php" class="brand-logo">CanchaSport</a>
       <div style="display: flex; align-items: center; gap: 1rem;">
           <div style="position: relative;">
               <button class="menu-btn" onclick="toggleMenu(event)"></button>

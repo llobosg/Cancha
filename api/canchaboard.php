@@ -6,7 +6,11 @@
         session_start();
         
         // 1. Verificar autenticación
-        if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+        $rol_actual = $_SESSION['recinto_rol'] ?? '';
+        $roles_permitidos = ['admin', 'asistente']; // Aceptamos ambos roles
+
+        if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_permitidos)) {
+            error_log("❌ [API] Acceso denegado. Rol actual: '$rol_actual'. Roles permitidos: " . implode(', ', $roles_permitidos));
             throw new Exception('Acceso no autorizado', 401);
         }
         
