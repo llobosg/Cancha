@@ -268,18 +268,40 @@ $ingresos_mes = 1250000;
     });
 
     async function cargarPlanillaReservas() {
-        const deporte = document.getElementById('filtroDeporte').value;
-        try {
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
-            const response = await fetch(url, { credentials: 'include' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-            renderizarPlanilla(data);
-        } catch (error) {
-            console.error("Error cargando planilla:", error);
-            document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
-        }
+      const deporteSelect = document.getElementById('filtroDeporte');
+      
+      // ✅ CORRECCIÓN: Si está vacío, seleccionamos el primer deporte disponible o 'futbol' por defecto
+      let deporte = deporteSelect.value;
+      if (!deporte) {
+          // Opción 1: Tomar el primer valor real del select (si existe)
+          if (deporteSelect.options.length > 1) {
+              deporte = deporteSelect.options[1].value; 
+              deporteSelect.value = deporte; // Actualizar visualmente el select
+          } else {
+              // Opción 2: Forzar 'fútbol' si no hay opciones
+              deporte = 'fútbol'; 
+          }
+          console.log(`️ Deporte vacío detectado. Usando por defecto: ${deporte}`);
+      }
+
+      try {
+          const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+          
+          const response = await fetch(url, { credentials: 'include' });
+          
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          
+          const data = await response.json();
+          
+          if (data.error) throw new Error(data.error);
+          
+          renderizarPlanilla(data);
+          console.log("✅ Planilla cargada correctamente");
+          
+      } catch (error) {
+          console.error("❌ Error cargando planilla:", error);
+          document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
+      }
     }
 
     function renderizarPlanilla(data) {
