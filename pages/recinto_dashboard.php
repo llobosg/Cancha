@@ -467,10 +467,6 @@ $ingresos_mes = 1250000;
     }
 
     // === FUNCIONES PARA CERRAR MODALES ===
-    function cerrarModalDetalle() {
-        const modal = document.getElementById('modalDetalleReserva');
-        if (modal) modal.style.display = 'none';
-    }
     function cerrarModalPago() {
         const modal = document.getElementById('modalPago');
         if (modal) modal.style.display = 'none';
@@ -575,81 +571,6 @@ $ingresos_mes = 1250000;
         }
     }
 
-    function renderizarPlanilla(data) {
-      const table = document.getElementById('tablaPlanilla');
-      if (!table) return;
-
-      if (!data.canchas || !data.canchas.length) {
-          table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas para este deporte/fecha.</td></tr>';
-          return;
-      }
-
-      let html = `<thead><tr>`;
-    
-      // Columna Hora (Sticky)
-      // si queremos poner un ícono arriba del nombre de la columna, podríamos usar el ícono del deporte o uno genérico. Esta línea va luego del <th style..... en data.canchas.forEach(c => {....}) para que quede antes de las canchas. Por ejemplo, podríamos usar un ícono de reloj para la columna de hora:
-      //<div style="font-size:1.2rem;">${icono}</div>
-      html += `<th style="min-width:80px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
-
-      data.canchas.forEach(c => {
-          const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-
-          html += `
-            <th style="min-width:120px; background:#AB47BC; color:white; font-size:0.9rem;">
-                <div style="font-size:0.8rem; margin-top:4px;">${c.nombre_cancha}</div>
-            </th>
-          `;
-      });
-      
-      html += `</tr></thead><tbody>`;
-
-      // Generar slots (asumiendo que data.slots viene de la API o generarlo aquí si es necesario)
-      // Asumiremos que la API ya trae los slots o generamos un rango estándar si no los trae.
-      // Para este ejemplo, usaremos data.slots si existe, sino generamos uno básico.
-      const slots = data.slots || generarSlotsBase(); 
-
-      slots.forEach(slot => {
-          if (slot.is_label_row) {
-              html += `<tr><td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1;">${slot.label}</td>`;
-              
-              data.canchas.forEach(cancha => {
-                  const key = `${cancha.id_cancha}_${slot.label}`;
-                  const res = data.reservas[key];
-                  
-                  let bgClass = '#e0e0e0'; // Gris: Disponible
-                  let cellContent = '';
-                  let onClickAction = '';
-
-                  if (res) {
-                      // === LÓGICA DE COLORES SOLICITADA ===
-                      if (res.estado_pago === 'pagado') {
-                          bgClass = '#4CAF50'; // Verde
-                      } else if (res.estado_pago === 'parcial') {
-                          bgClass = '#FFC107'; // Amarillo
-                      } else {
-                          // Pendiente, reservada, no pagada -> Rojo
-                          bgClass = '#F44336'; // Rojo
-                      }
-
-                      const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 12) + '...';
-                      cellContent = `<div style="font-size:0.75rem; font-weight:bold; color:#333; line-height:1.1;">${nombre}</div>`;
-                      
-                      // === HABILITAR CLICK PARA ABRIR MODAL ===
-                      if (res.id_reserva) {
-                          onClickAction = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
-                      }
-                  }
-
-                  html += `<td style="background:${bgClass}; height:45px; cursor:${onClickAction ? 'pointer' : 'default'};" ${onClickAction}>${cellContent}</td>`;
-              });
-              html += `</tr>`;
-          }
-      });
-
-      html += `</tbody>`;
-      table.innerHTML = html;
-    }
-
     // Función auxiliar por si la API no trae slots (ajusta horas según tu recinto)
     function generarSlotsBase() {
         const slots = [];
@@ -694,7 +615,7 @@ $ingresos_mes = 1250000;
         document.getElementById('modalDetalleReserva').style.display = 'none';
     }
 
-    // === FUNCIÓN ÚNICA PARA ABRIR DETALLE ===
+    // === FUNCIÓN ÚNICA PARA ABRIR DETALLE CON ACCIONES ===
     async function abrirDetalleDesdePlanilla(idReserva) {
         console.log("🖱️ Click en Reserva ID:", idReserva);
         
@@ -703,7 +624,7 @@ $ingresos_mes = 1250000;
             return;
         }
 
-        // Mostrar modal inmediatamente con estado de carga
+        // 1. Mostrar modal inmediatamente con estado de carga
         const modal = document.getElementById('modalDetalleReserva');
         const container = document.getElementById('contenidoDetalle');
         
@@ -723,16 +644,20 @@ $ingresos_mes = 1250000;
             });
 
             const detalle = await response.json();
-
             if (detalle.error) throw new Error(detalle.error);
 
-            // Guardar globalmente
+            // 2. Guardar globalmente para usar en las acciones
             window.reservaActualSeleccionada = detalle;
 
-            // Renderizar contenido bonito
+            // 3. Renderizar contenido bonito + BOTONES DE ACCIÓN
             if (container) {
                 const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
                 const money = (v) => '$' + parseInt(v || 0).toLocaleString();
+                
+                // Determinar color del estado
+                let estadoColor = 'red';
+                if (detalle.estado_pago === 'pagado') estadoColor = 'green';
+                else if (detalle.estado_pago === 'parcial') estadoColor = 'orange';
 
                 container.innerHTML = `
                     <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
@@ -755,10 +680,30 @@ $ingresos_mes = 1250000;
                             </div>
                             <div style="text-align:right;">
                                 <div style="font-size:0.8rem; color:#666;">Estado Pago</div>
-                                <div style="font-weight:bold; color:${detalle.estado_pago === 'pagado' ? 'green' : (detalle.estado_pago === 'parcial' ? 'orange' : 'red')}">
+                                <div style="font-weight:bold; color:${estadoColor}">
                                     ${val(detalle.estado_pago).toUpperCase()}
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN DE BOTONES DE ACCIÓN (Agregada) -->
+                    <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
+                        <button id="btnAccionesModal" onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">
+                            ⚙️ Opciones de Gestión
+                        </button>
+                        
+                        <!-- Menú de acciones (Oculto por defecto) -->
+                        <div id="actionMenuModal" class="action-dropdown-menu" style="display:none; position:relative; top:5px; left:0; right:0; margin:0 auto; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.1); background:white; border:1px solid #ddd; border-radius:8px; z-index:10;">
+                            <button class="dropdown-item" onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">🗑️ Anular Reserva</button>
+                            <button class="dropdown-item" onclick="cancelarReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">❌ Cancelar</button>
+                            <button class="dropdown-item" onclick="cambiarCancha()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">🔄 Cambiar Cancha</button>
+                            <button class="dropdown-item" onclick="enviarMensaje()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">💬 Enviar Mensaje</button>
+                            
+                            <!-- Botón Pagar (Solo si no está pagado totalmente) -->
+                            ${detalle.estado_pago !== 'pagado' ? 
+                                `<button class="dropdown-item btn-pay-action" onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; cursor:pointer; font-weight:bold;">💳 Pagar Reserva</button>` 
+                                : ''}
                         </div>
                     </div>
                 `;
@@ -770,30 +715,252 @@ $ingresos_mes = 1250000;
         }
     }
 
+    // === FUNCIONES AUXILIARES PARA EL MENÚ DE ACCIONES ===
+    function toggleActionMenuModal() {
+        const menu = document.getElementById('actionMenuModal');
+        if (menu) {
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+    }
+
+    function cerrarModalDetalle() {
+        const modal = document.getElementById('modalDetalleReserva');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function cerrarModalPago() {
+        const modal = document.getElementById('modalPago');
+        if (modal) modal.style.display = 'none';
+    }
+
+    // === STUBS PARA LAS ACCIONES (Para que no den error al hacer click) ===
+    function anularReserva() {
+        if(confirm("¿Estás seguro de ANULAR esta reserva?")) {
+            alert("Función Anular: Aquí iría la llamada a la API para anular.");
+            // TODO: Implementar llamada API
+        }
+    }
+    function cancelarReserva() {
+        alert("Función Cancelar: En desarrollo.");
+    }
+    function cambiarCancha() {
+        alert("Función Cambiar Cancha: En desarrollo.");
+    }
+    function enviarMensaje() {
+        const modalMsg = document.getElementById('mensajeModal');
+        if(modalMsg) modalMsg.style.display = 'flex';
+    }
+    function closeMensajeModal() {
+        const modalMsg = document.getElementById('mensajeModal');
+        if(modalMsg) modalMsg.style.display = 'none';
+    }
+
+    // === FUNCIÓN PARA ABRIR MODAL DE PAGO (Ya la tenías, asegúrate que esté presente) ===
+    function abrirModalPagoDesdeDetalle() {
+        if (!window.reservaActualSeleccionada) return;
+        
+        const detalle = window.reservaActualSeleccionada;
+        const idReserva = detalle.id_reserva;
+        const montoTotal = parseFloat(detalle.monto_total);
+
+        // Llenar datos del modal de pago
+        document.getElementById('infoIdReserva').textContent = idReserva;
+        document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
+        document.getElementById('montoPagar').value = montoTotal;
+        
+        // Resetear formulario
+        document.getElementById('formPago').reset();
+        document.getElementById('montoPagar').value = montoTotal;
+        document.getElementById('campoTransaccion').style.display = 'none';
+        
+        // Guardar ID en dataset del form para el submit
+        document.getElementById('formPago').dataset.idReserva = idReserva;
+        document.getElementById('formPago').dataset.montoOriginal = montoTotal;
+
+        // Ocultar menú de acciones y mostrar modal de pago
+        document.getElementById('actionMenuModal').style.display = 'none';
+        document.getElementById('modalDetalleReserva').style.display = 'none';
+        document.getElementById('modalPago').style.display = 'flex';
+    }
+
+    // Listener para el método de pago en el modal de pago
+    document.getElementById('metodoPago')?.addEventListener('change', function() {
+        const campo = document.getElementById('campoTransaccion');
+        const input = document.getElementById('transaccionId');
+        if (['transferencia', 'webpay'].includes(this.value)) {
+            campo.style.display = 'block';
+            input.required = true;
+        } else {
+            campo.style.display = 'none';
+            input.required = false;
+        }
+    });
+
+    // Submit del formulario de pago
+    document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const idReserva = this.dataset.idReserva;
+        const montoOriginal = parseFloat(this.dataset.montoOriginal);
+        const montoPagado = parseFloat(document.getElementById('montoPagar').value);
+        const metodo = document.getElementById('metodoPago').value;
+        const transaccion = document.getElementById('transaccionId').value;
+        const notas = document.getElementById('notasPago').value;
+
+        if (montoPagado <= 0) { alert("El monto debe ser mayor a 0"); return; }
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'procesar_pago_parcial');
+            formData.append('id_reserva', idReserva);
+            formData.append('monto_pagado', montoPagado);
+            formData.append('monto_total_original', montoOriginal);
+            formData.append('metodo_pago', metodo);
+            formData.append('transaccion_id', transaccion || '');
+            formData.append('notas_pago', notas);
+
+            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.success) {
+                alert("✅ Pago registrado correctamente.");
+                cerrarModalPago();
+                location.reload(); // Recargar para ver cambios en la planilla
+            } else {
+                alert("❌ Error: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error de conexión al procesar pago");
+        }
+    });
+
     // Función para cerrar
     function cerrarModalDetalle() {
         const modal = document.getElementById('modalDetalleReserva');
         if (modal) modal.style.display = 'none';
     }
   </script>
-  <!-- === ÚNICO MODAL DE DETALLE (Correcto y Funcional) === -->
-  <div id="modalDetalleReserva" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
-      <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-          <!-- Botón Cerrar X -->
-          <span onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
-          
-          <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-weight:bold;">📋 Detalle de Reserva</h3>
-          
-          <!-- Contenedor Dinámico -->
-          <div id="contenidoDetalle">
-              <p style="text-align:center; color:#666;">Cargando detalles...</p>
-          </div>
+  <!-- === SUBMODAL CENTRAL DE DETALLE DE RESERVA === -->
+    <div id="modalDetalleReserva" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 600px; padding: 2rem;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999; z-index:10;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
+            
+            <!-- Aquí se inyectará el contenido dinámico -->
+            <div id="contenidoDetalle" style="color:#333; width: 100%; box-sizing: border-box;">
+                <!-- Ejemplo de contenido dinámico -->
+                <div style="margin-bottom:1rem;">
+                    <strong>Cancha:</strong> Cancha 1 - Fútbol 5
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Fecha y Hora:</strong> 25 de Junio, 18:00 - 19:00
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Cliente:</strong> Juan Pérez
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Estado:</strong> Reservada
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Precio:</strong> $15.000
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Observaciones:</strong> Traer balón propio
+                </div>
+            </div>
+            
+            <!-- Botón de Acciones dentro del modal (Opcional, o usar el menú desplegable si prefieres) -->
+            <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
+                <button id="btnAccionesModal" onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">
+                    ⚙️ Opciones de Gestión
+                </button>
+                
+                <!-- Menú de acciones dentro del modal -->
+                <div id="actionMenuModal" class="action-dropdown-menu" style="display:none; position:relative; top:5px; left:0; right:0; margin:0 auto; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <button class="dropdown-item" onclick="anularReserva()">🗑️ Anular Reserva</button>
+                    <button class="dropdown-item" onclick="cancelarReserva()"> Cancelar</button>
+                    <button class="dropdown-item" onclick="cambiarCancha()">🔄 Cambiar Cancha</button>
+                    <button class="dropdown-item" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
+                    <button id="btnPagarModal" class="dropdown-item btn-pay-action" style="display:none;" onclick="abrirModalPagoDesdeDetalle()">💳 Pagar Reserva</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-          <!-- Botón Cerrar Abajo -->
-          <div style="margin-top:2rem; text-align:center;">
-              <button onclick="cerrarModalDetalle()" style="background:#6c757d; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:bold;">Cerrar</button>
-          </div>
-      </div>
-  </div>
+    <!-- === SUBMODAL DE PAGO (ACTUALIZADO) === -->
+    <div id="modalPago" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 500px;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalPago()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
+            
+            <!-- Información Base (Solo lectura) -->
+            <div style="margin-bottom:1rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
+                <strong>Reserva ID:</strong> <span id="infoIdReserva"></span><br>
+                <strong>Monto Total Arriendo:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;"></span>
+            </div>
+            
+            <form id="formPago">
+                <!-- CAMPO MONTO EDITABLE -->
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">💰 Monto a Abonar ($)</label>
+                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
+                        style="width:100%; padding:0.8rem; border-radius:6px; border:2px solid #4CAF50; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                    <small style="color:#666; font-size:0.8rem;">* Puedes ingresar un pago parcial (ej: $7.500)</small>
+                </div>
+
+                <!-- MÉTODO DE PAGO -->
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; background:white; color:#333;">
+                        <option value="">Seleccionar...</option>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="webpay">Webpay / Tarjeta</option>
+                        <option value="efectivo">Efectivo en Recinto</option>
+                        <option value="convenio">Convenio Club</option>
+                    </select>
+                </div>
+                
+                <!-- ID TRANSACCIÓN (Opcional según método) -->
+                <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Comprobante / ID Transacción</label>
+                    <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+                </div>
+
+                <!-- CAMPO NOTAS (NUEVO) -->
+                <div class="form-group" style="margin-bottom:1.5rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;"> Notas del Pago</label>
+                    <textarea name="notas_pago" id="notasPago" rows="3" placeholder="Ej: Pago parcial de Juan Pérez (1/4). Faltan 3 socios." 
+                            style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; resize:vertical; font-family:sans-serif;"></textarea>
+                </div>
+                
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem;">
+                    Confirmar Registro de Pago
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTA: El panel lateral derecho (.detail-panel) ya NO es necesario. Puedes eliminarlo o dejarlo oculto. -->
+    <!-- Si lo eliminas, recuerda ajustar el grid principal para que ocupe todo el ancho o centrar la grilla. -->
+
+    <!-- Submodal para mensaje - CORREGIDO -->
+    <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
+        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px; position:relative;">
+            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
+            <h3>Enviar Mensaje</h3>
+            <form id="mensajeForm">
+            <div class="form-group">
+                <label for="mensajeTexto">Mensaje *</label>
+                <textarea id="mensajeTexto" name="mensaje" rows="4" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;"></textarea>
+            </div>
+            <button type="submit" class="btn-submit" style="width:100%;">Enviar Mensaje y Correo</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
