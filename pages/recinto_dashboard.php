@@ -857,49 +857,44 @@ $ingresos_mes = 1250000;
         </div>
     </div>
 
-    <!-- === SUBMODAL DE PAGO === -->
-    <div id="modalPago" class="submodal"> <!-- Quita style="display:none" si lo controlas por JS, o déjalo -->
-        <div class="submodal-content">
-            <!-- BOTÓN X PARA VOLVER AL DETALLE -->
-            <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
-            
-            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
-            
-            <!-- Info Base -->
-            <div style="margin-bottom:1rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
-                <strong>Reserva ID:</strong> <span id="infoIdReserva"></span><br>
-                <strong>Monto Total:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;"></span>
-            </div>
-            
-            <form id="formPago">
-                <!-- Campos del formulario (Monto, Método, etc.) -->
-                <div class="form-group" style="margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Monto a Abonar ($)</label>
+    <form id="formPago">
+        <!-- CAMPO MONTO EDITABLE -->
+        <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">💰 Monto a Abonar ($)</label>
                     <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
-                        style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:6px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
-                </div>
-                
-                <div class="form-group" style="margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Método de Pago</label>
-                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
-                        <option value="">Seleccionar...</option>
-                        <option value="transferencia">Transferencia</option>
-                        <option value="webpay">Webpay / Tarjeta</option>
-                        <option value="efectivo">Efectivo</option>
-                    </select>
-                </div>
-
-                <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
-                    <label>ID Transacción</label>
-                    <input type="text" id="transaccionId" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
-                </div>
-
-                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">
-                    Confirmar Pago
-                </button>
-            </form>
+                        style="width:100%; padding:0.8rem; border-radius:6px; border:2px solid #4CAF50; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                    <small style="color:#666; font-size:0.8rem;">* Puedes ingresar un pago parcial (ej: $7.500)</small>
         </div>
-    </div>
+
+        <!-- MÉTODO DE PAGO -->
+        <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; background:white; color:#333;">
+                        <option value="">Seleccionar...</option>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="webpay">Webpay / Tarjeta</option>
+                        <option value="efectivo">Efectivo en Recinto</option>
+                        <option value="convenio">Convenio Club</option>
+                    </select>
+        </div>
+                
+        <!-- ID TRANSACCIÓN (Opcional según método) -->
+        <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Comprobante / ID Transacción</label>
+                    <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+        </div>
+
+        <!-- CAMPO NOTAS (NUEVO) -->
+        <div class="form-group" style="margin-bottom:1.5rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;"> Notas del Pago</label>
+                    <textarea name="notas_pago" id="notasPago" rows="3" placeholder="Ej: Pago parcial de Juan Pérez (1/4). Faltan 3 socios." 
+                            style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; resize:vertical; font-family:sans-serif;"></textarea>
+        </div>
+                
+        <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem;">
+                    Confirmar Registro de Pago
+        </button>
+    </form>
 
      <!-- Modal para enviar mensaje -->
      <div id="mensajeModal" class="submodal" style="display:none;">
