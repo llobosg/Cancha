@@ -617,20 +617,17 @@ $ingresos_mes = 1250000;
     // === FUNCIÓN ÚNICA PARA ABRIR DETALLE CON ACCIONES ===
     async function abrirDetalleDesdePlanilla(idReserva) {
         console.log("🖱️ Click en Reserva ID:", idReserva);
-        
-        if (!idReserva) {
-            alert("Error: ID de reserva inválido");
-            return;
-        }
+        if (!idReserva) return;
 
-        // 1. Mostrar modal inmediatamente con estado de carga
         const modal = document.getElementById('modalDetalleReserva');
         const container = document.getElementById('contenidoDetalle');
         
+        // 1. Mostrar modal y estado de carga
         if (modal) modal.style.display = 'flex';
         if (container) container.innerHTML = '<p style="text-align:center;">Cargando...</p>';
 
         try {
+            // 2. Llamar a API
             const formData = new URLSearchParams();
             formData.append('action', 'get_detalle_reserva');
             formData.append('id_reserva', idReserva);
@@ -645,18 +642,14 @@ $ingresos_mes = 1250000;
             const detalle = await response.json();
             if (detalle.error) throw new Error(detalle.error);
 
-            // 2. Guardar globalmente para usar en las acciones
             window.reservaActualSeleccionada = detalle;
 
-            // 3. Renderizar contenido bonito + BOTONES DE ACCIÓN
+            // 3. Renderizar contenido dinámico + BOTONES
             if (container) {
                 const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
                 const money = (v) => '$' + parseInt(v || 0).toLocaleString();
                 
-                // Determinar color del estado
-                let estadoColor = 'red';
-                if (detalle.estado_pago === 'pagado') estadoColor = 'green';
-                else if (detalle.estado_pago === 'parcial') estadoColor = 'orange';
+                let estadoColor = detalle.estado_pago === 'pagado' ? 'green' : (detalle.estado_pago === 'parcial' ? 'orange' : 'red');
 
                 container.innerHTML = `
                     <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
@@ -664,54 +657,40 @@ $ingresos_mes = 1250000;
                             <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
                             <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
                         </div>
-                        
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
-                            <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
-                            <div style="grid-column: span 2;"><strong>Cliente:</strong> ${val(detalle.nombre_cliente || detalle.nombre_responsable)}</div>
-                            <div style="grid-column: span 2;"><strong>Contacto:</strong> ${val(detalle.telefono_cliente)}</div>
+                            <div><strong>Cliente:</strong> ${val(detalle.nombre_cliente || 'N/A')}</div>
                         </div>
-
-                        <div style="border-top: 1px solid #eee; padding-top: 1rem; display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <div style="font-size:0.8rem; color:#666;">Total</div>
-                                <div style="font-size:1.2rem; font-weight:bold; color:#2e7d32;">${money(detalle.monto_total)}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:0.8rem; color:#666;">Estado Pago</div>
-                                <div style="font-weight:bold; color:${estadoColor}">
-                                    ${val(detalle.estado_pago).toUpperCase()}
-                                </div>
-                            </div>
+                        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:flex; justify-content:space-between;">
+                            <div><strong>Total:</strong> ${money(detalle.monto_total)}</div>
+                            <div style="color:${estadoColor}; font-weight:bold;">${val(detalle.estado_pago).toUpperCase()}</div>
                         </div>
                     </div>
 
-                    <!-- SECCIÓN DE BOTONES DE ACCIÓN (Agregada) -->
+                    <!-- BOTONES DE ACCIÓN -->
                     <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
-                        <button id="btnAccionesModal" onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">
-                            ⚙️ Opciones de Gestión
-                        </button>
-                        
-                        <!-- Menú de acciones (Oculto por defecto) -->
-                        <div id="actionMenuModal" class="action-dropdown-menu" style="display:none; position:relative; top:5px; left:0; right:0; margin:0 auto; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.1); background:white; border:1px solid #ddd; border-radius:8px; z-index:10;">
-                            <button class="dropdown-item" onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">🗑️ Anular Reserva</button>
-                            <button class="dropdown-item" onclick="cancelarReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">❌ Cancelar</button>
-                            <button class="dropdown-item" onclick="cambiarCancha()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">🔄 Cambiar Cancha</button>
-                            <button class="dropdown-item" onclick="enviarMensaje()" style="width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; border-bottom:1px solid #eee;">💬 Enviar Mensaje</button>
-                            
-                            <!-- Botón Pagar (Solo si no está pagado totalmente) -->
+                        <button onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; width:100%;">⚙️ Opciones</button>
+                        <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px;">
+                            <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">🗑️ Anular</button>
+                            <button onclick="enviarMensaje()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">💬 Mensaje</button>
                             ${detalle.estado_pago !== 'pagado' ? 
-                                `<button class="dropdown-item btn-pay-action" onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; cursor:pointer; font-weight:bold;">💳 Pagar Reserva</button>` 
-                                : ''}
+                                `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:green; text-align:left; font-weight:bold;">💳 Pagar</button>` : ''}
                         </div>
                     </div>
                 `;
             }
-
         } catch (err) {
-            console.error(err);
-            if (container) container.innerHTML = `<p style="color:red; text-align:center;">Error: ${err.message}</p>`;
+            if (container) container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
         }
+    }
+
+    function toggleActionMenuModal() {
+        const menu = document.getElementById('actionMenuModal');
+        if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modalDetalleReserva').style.display = 'none';
     }
 
     // === FUNCIONES AUXILIARES PARA EL MENÚ DE ACCIONES ===
@@ -840,5 +819,70 @@ $ingresos_mes = 1250000;
         if (modal) modal.style.display = 'none';
     }
   </script>
+    <!-- === MODAL DETALLE DE RESERVA (ESTRUCTURA) === -->
+    <div id="modalDetalleReserva" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
+        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
+            
+            <!-- AQUÍ LA FUNCIÓN JS INYECTARÁ LOS DATOS Y BOTONES -->
+            <div id="contenidoDetalle" style="color:#333; width: 100%; box-sizing: border-box;">
+                <p style="text-align:center;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- === MODAL DE PAGO (ESTRUCTURA) === -->
+    <div id="modalPago" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="cerrarModalPago()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
+            
+            <div style="margin-bottom:1rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
+                <strong>Reserva ID:</strong> <span id="infoIdReserva"></span><br>
+                <strong>Monto Total:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;"></span>
+            </div>
+            
+            <form id="formPago">
+                <div class="form-group">
+                    <label>Monto a Abonar ($)</label>
+                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:6px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                </div>
+                <div class="form-group">
+                    <label>Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+                        <option value="">Seleccionar...</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="webpay">Webpay / Tarjeta</option>
+                        <option value="efectivo">Efectivo</option>
+                    </select>
+                </div>
+                <div id="campoTransaccion" class="form-group" style="display:none;">
+                    <label>ID Transacción</label>
+                    <input type="text" id="transaccionId" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+                </div>
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">Confirmar Pago</button>
+            </form>
+        </div>
+    </div>
+
+     <!-- Modal para enviar mensaje -->
+     <div id="mensajeModal" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 400px;">
+            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💬 Enviar Mensaje</h3>
+            
+            <form id="formMensaje">
+                <div class="form-group">
+                    <label>Mensaje para el cliente</label>
+                    <textarea id="mensajeCliente" rows="4" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;" placeholder="Escribe tu mensaje aquí..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit" style="width:100%; background:#071289; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">Enviar Mensaje</button>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
