@@ -1,6 +1,7 @@
 <?php
 // pages/login_recintos.php
 
+
 // 1. Incluir config.php (Aquí se aplican las configuraciones de sesión automáticamente)
 require_once __DIR__ . '/../includes/config.php';
 
@@ -59,13 +60,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Tu recinto no ha sido verificado. Por favor, revisa tu email.';
                 error_log("❌ [LOGIN_RECINTOS] Recinto no verificado para usuario: '$usuario'");
             } else {
-                // 4. Iniciar sesión con los datos de $admin (que ya tiene todo incluido)
                 $_SESSION['id_recinto'] = $admin['id_recinto'];
-                $_SESSION['id_admin'] = $admin['id_admin']; // Usamos id_admin directo
+                $_SESSION['id_admin'] = $admin['id_admin'];
                 $_SESSION['recinto_usuario'] = $admin['usuario'];
                 $_SESSION['nombre_recinto'] = $admin['nombre_recinto'];
                 $_SESSION['recinto_rol'] = $admin['rol'] ?? 'admin';
-
+                
+                // ✅ Guardar el rol (asegurando que exista, default 'admin' si es null)
+                $_SESSION['recinto_rol'] = $admin['rol'] ?? 'admin'; 
+                
                 error_log("✅ [LOGIN_RECINTOS] Sesión iniciada correctamente. Rol: " . $_SESSION['recinto_rol']);
                 error_log("✅ [LOGIN_RECINTOS] Redirigiendo a recinto_dashboard.php");
                 

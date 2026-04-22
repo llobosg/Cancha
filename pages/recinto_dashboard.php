@@ -1,6 +1,46 @@
 <?php
+  // pages/recinto_dashboard.php
+
+ // 1. Incluir config.php
   require_once __DIR__ . '/../includes/config.php';
-  session_start();
+
+  // 2. Iniciar sesión
+  if (session_status() === PHP_SESSION_NONE) {
+      session_start();
+  }
+  // 3. Debug: Ver qué tenemos exactamente
+  $rol_actual = $_SESSION['recinto_rol'] ?? 'NO_EXISTE';
+  $id_recinto_actual = $_SESSION['id_recinto'] ?? 'NO_EXISTE';
+
+  error_log(" [DASHBOARD] Verificando sesión...");
+  error_log("   - id_recinto: " . var_export($id_recinto_actual, true));
+  error_log("   - rol: '" . $rol_actual . "' (Tipo: " . gettype($rol_actual) . ")");
+
+  // 4. Validación corregida
+  // Verificamos explícitamente que existan y que el rol sea uno de los esperados
+  $roles_validos = ['admin', 'asistente'];
+
+  if (!isset($_SESSION['id_recinto']) || !isset($_SESSION['recinto_rol']) || !in_array($rol_actual, $roles_validos)) {
+      error_log("❌ [DASHBOARD] FALLÓ LA VALIDACIÓN.");
+      error_log("   - isset(id_recinto): " . (isset($_SESSION['id_recinto']) ? 'SI' : 'NO'));
+      error_log("   - isset(rol): " . (isset($_SESSION['recinto_rol']) ? 'SI' : 'NO'));
+      error_log("   - in_array(rol): " . (in_array($rol_actual, $roles_validos) ? 'SI' : 'NO'));
+      
+      // Opcional: Si quieres ser menos estricto y solo verificar que exista el ID
+      // if (!isset($_SESSION['id_recinto'])) { ... }
+      
+      header('Location: login_recintos.php');
+      exit;
+  }
+
+  error_log("✅ [DASHBOARD] Sesión válida. Rol: $rol_actual");
+
+  require_once __DIR__ . '/../includes/permisos.php';
+
+  // Obtener datos del usuario logueado para mostrar en el perfil
+  $stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
+  $stmt_user->execute([$_SESSION['id_admin']]);
+  $usuario_actual = $stmt_user->fetch();
 
   // Configuración consistente de sesión (Opcional si ya está en config.php, pero seguro tenerlo aquí)
   if (session_status() === PHP_SESSION_NONE) {
@@ -157,6 +197,46 @@
       <a href="../index.php" class="filter-btn" style="background:#FF6B6B;">Salir</a>
     </header>
 
+    <!-- Navbar o Menú Lateral -->
+    <nav>
+        <div class="logo">CanchaSport Admin</div>
+        <ul>
+            <!-- Visible para AMBOS -->
+            <li><a href="calendario_reservas.php">📅 Calendario</a></li>
+            
+            
+            <!-- SOLO ADMIN -->
+            <?php if (esAdmin()): ?>
+                <li><a href="finanzas_recinto.php">💰 Finanzas</a></li>
+                <li><a href="gestion_asistentes.php">👥 Asistentes</a></li>
+                <li><a href="perfil_admin.php">⚙️ Mi Perfil</a></li>
+                <div class="stat-card">
+                  <div class="stat-title">Ingresos este mes</div>
+                  <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
+                  <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
+                </div>
+            <?php endif; ?>
+            
+            <!-- SOLO ASISTENTE (Perfil básico) -->
+            <?php if (esAsistente()): ?>
+                <li><a href="gestion_canchas.php">🏟️ Canchas</a></li>
+                <li><a href="reserva_manual.php">📝 Reserva Manual</a></li>
+                <li><a href="gestion_torneos.php">🏆 Torneos</a></li>
+                <li><a href="perfil_asistente.php"> Mi Perfil</a></li>
+
+                <!-- Acciones rápidas -->
+                <div class="quick-actions">
+                  <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
+                  <button class="action-btn" id="btnCalendarioReservas">Calendario reservas</button>
+                  <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
+                  <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
+                </div>
+            <?php endif; ?>
+
+            <li><a href="../logout.php">🚪 Salir</a></li>
+        </ul>
+    </nav>
+
     <!-- Filtros -->
     <div class="filters-bar">
       <button class="filter-btn active" data-period="month">Mes</button>
@@ -173,46 +253,7 @@
       </div>
     </div>
 
-    <!-- Gráficos -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-title">Canchas disponibles</div>
-        <div class="chart">
-          <svg viewBox="0 0 100 20" style="width:100%; height:100%;">
-            <rect x="0" y="0" width="100" height="20" fill="rgba(255,255,255,0.2)" rx="3"/>
-            <rect x="0" y="0" width="60" height="20" fill="var(--accent)" rx="3"/>
-          </svg>
-        </div>
-        <div>6/10 reservadas</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-title">Ingresos este mes</div>
-        <div style="font-size: 1.4rem; font-weight: bold;">$1.250.000</div>
-        <div style="font-size: 0.9rem; color: #A8E6CF;">+12% vs mes anterior</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-title">Ocupación MTD</div>
-        <div class="chart">
-          <svg viewBox="0 0 100 100" style="width:80px; height:80px; margin:0 auto;">
-            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
-            <circle cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="8"
-                    stroke-dasharray="282" stroke-dashoffset="<?= 282 * (1 - 0.72) ?>" transform="rotate(-90 50 50)"/>
-            <text x="50" y="55" text-anchor="middle" fill="white" font-size="16">72%</text>
-          </svg>
-        </div>
-        <div>+7% vs mes anterior</div>
-      </div>
-    </div>
-
-    <!-- Acciones rápidas -->
-    <div class="quick-actions">
-      <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
-      <button class="action-btn" id="btnCalendarioReservas">Calendario reservas</button>
-      <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual</button>
-      <button class="action-btn" id="btnCrearTorneo">Crear Torneo 🎾</button>
-    </div>
+    
 
     <!-- Panel de Torneos -->
     <div class="dynamic-panel" id="panelTorneos">
@@ -222,14 +263,40 @@
       </div>
     </div>
 
-    <!-- Panel dinámico -->
-    <div class="dynamic-panel" id="dynamicPanel">
-      <h3>📋 Bienvenido al panel de administración</h3>
-      <p>Selecciona una acción rápida para comenzar.</p>
-    </div>
   </div>
 
   <script>
+    <?php if (esAdmin()): ?>
+        <div class="dashboard-section">
+            <h2>Gestión de Asistentes</h2>
+            <button onclick="abrirModalNuevoAsistente()">+ Nuevo Asistente</button>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($lista_asistentes as $asistente): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($asistente['nombre']) ?></td>
+                        <td><?= htmlspecialchars($asistente['email']) ?></td>
+                        <td><?= date('d/m/Y', strtotime($asistente['fecha_asignacion'])) ?></td>
+                        <td>
+                            <button onclick="editarAsistente(<?= $asistente['id_socio'] ?>)">Editar</button>
+                            <button onclick="eliminarAsistente(<?= $asistente['id_socio'] ?>)" style="background:#f44336;">Dar de Baja</button>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
