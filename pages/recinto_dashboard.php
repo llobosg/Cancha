@@ -268,41 +268,42 @@ $ingresos_mes = 1250000;
     });
 
     async function cargarPlanillaReservas() {
+      const fechaParaUsar = window.fechaPlanillaActual || new Date().toISOString().split('T')[0];
       const deporteSelect = document.getElementById('filtroDeporte');
       
-      // ✅ CORRECCIÓN: Si está vacío, seleccionamos el primer deporte disponible o 'futbol' por defecto
-      let deporte = deporteSelect.value;
+      // Leer el valor. Gracias al atributo 'selected' en el HTML, esto NUNCA será vacío.
+      let deporte = deporteSelect ? deporteSelect.value : 'futbol'; 
+      
+      // Doble seguridad: si por algún motivo sigue vacío, forzar fútbol
       if (!deporte) {
-          // Opción 1: Tomar el primer valor real del select (si existe)
-          if (deporteSelect.options.length > 1) {
-              deporte = deporteSelect.options[1].value; 
-              deporteSelect.value = deporte; // Actualizar visualmente el select
-          } else {
-              // Opción 2: Forzar 'fútbol' si no hay opciones
-              deporte = 'fútbol'; 
-          }
-          console.log(`️ Deporte vacío detectado. Usando por defecto: ${deporte}`);
+          deporte = 'futbol'; 
+          console.warn("⚠️ Deporte seguía vacío, forzando a 'futbol'");
       }
 
+      console.log(`📡 Cargando planilla... Fecha: ${fechaParaUsar}, Deporte: ${deporte}`);
+
       try {
-          const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+          const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaParaUsar}&deporte=${encodeURIComponent(deporte)}`;
           
           const response = await fetch(url, { credentials: 'include' });
           
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+              throw new Error(errorData.error || `HTTP ${response.status}`);
+          }
           
           const data = await response.json();
           
           if (data.error) throw new Error(data.error);
           
           renderizarPlanilla(data);
-          console.log("✅ Planilla cargada correctamente");
+          console.log("✅ Planilla cargada exitosamente");
           
       } catch (error) {
           console.error("❌ Error cargando planilla:", error);
-          document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
+          document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}<br><small>Verifica que existan canchas operativas para el deporte seleccionado.</small></td></tr>`;
       }
-    }
+  }
 
     function renderizarPlanilla(data) {
         const table = document.getElementById('tablaPlanilla');
