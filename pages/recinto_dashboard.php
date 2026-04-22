@@ -196,35 +196,25 @@
   </style>
 </head>
 <body>
-  <!-- Contenedor Principal -->
+  <!-- Barra superior -->
+  <div class="top-bar">
+    <div class="logo" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;"> CanchaSport ⚽ <?= htmlspecialchars($recinto_nombre) ?></div>
+  </div>
+
   <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-
-    <!-- 1. HEADER SUPERIOR COMÚN (Título + Botones de Perfil/Gestión) -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">
-        <div>
-            <h1 style="color: #071289; margin: 0; font-size: 1.8rem;">Panel de Administración</h1>
-            <p style="color: #666; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
-                <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Asistente</span> <?php endif; ?>
-            </p>
-        </div>
-
-        <div style="display: flex; gap: 1rem;">
-            <?php if (esAdmin()): ?>
-                <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-                    👥 Gestionar Asistentes
-                </a>
-            <?php endif; ?>
-            
-            <!-- Común para ambos roles -->
-            <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-                ⚙️ Mi Perfil
+    <!-- Sub-header con Botones de Gestión (Anteriormente parte del título) -->
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem; gap: 1rem;">
+         <?php if (esAdmin()): ?>
+            <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #AB47BC; border-radius: 8px; font-weight: bold; border: 2px solid #AB47BC; transition: 0.2s;">
+                👥 Asistentes
             </a>
-        </div>
+        <?php endif; ?>
+        <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: white; color: #333; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+            ⚙️ Mi Perfil
+        </a>
     </div>
 
-    <!-- 2. CONTENIDO ESPECÍFICO POR ROL -->
-    
+    <!-- 2. CONTENIDO ESPECÍFICO POR ROL --> 
     <?php if (esAdmin()): ?>
         <!-- === VISTA ADMIN === -->
         
@@ -298,6 +288,7 @@
             <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; padding: 0.8rem 2rem; background: #071289; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; transition: 0.2s;">Ir a la Planilla Completa</a>
         </div>
     </div>
+
   </div>
 
   <script>
