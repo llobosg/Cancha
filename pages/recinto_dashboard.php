@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+session_start();
 
 // Configuración consistente de sesión
 if (session_status() === PHP_SESSION_NONE) {
@@ -10,8 +11,7 @@ if (session_status() === PHP_SESSION_NONE) {
         'secure' => isset($_SERVER['HTTPS']),
         'httponly' => true,
         'samesite' => 'Lax'
-    ]);
-    session_start();
+    ]); 
 }
 
 // Validar rol de recinto
