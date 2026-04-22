@@ -3,12 +3,10 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-$es_embed = isset($_GET['embed']) && $_GET['embed'] === 'true';
-$rol_actual = $_SESSION['recinto_rol'] ?? '';
-if (!in_array($rol_actual, ['admin', 'asistente'])) {
-    header('Location: ../index.php'); exit;
+if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+    header('Location: ../index.php');
+    exit;
 }
-
 
 $id_recinto = $_SESSION['id_recinto'];
 
@@ -769,17 +767,15 @@ $recinto = $stmt->fetch();
 </style>
 </head>
 <body>
-    <?php if (!$es_embed): ?>
-        <div class="header">
-            <div class="main-title-section">
-            <div class="logo-corporativo">⚽</div>
-            <h1 class="main-title">Cancha</h1>
-            </div>
-            <div>
-            <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
-            </div>
+    <div class="header">
+        <div class="main-title-section">
+        <div class="logo-corporativo">⚽</div>
+        <h1 class="main-title">Cancha</h1>
         </div>
-    <?php endif; ?>
+        <div>
+        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+        </div>
+    </div>
     
     <!-- Contenedor Principal -->
     <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent; overflow-x: hidden;">
@@ -2301,21 +2297,12 @@ $recinto = $stmt->fetch();
         try {
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaParaUsar}&deporte=${encodeURIComponent(deporte)}`;
             
-            console.log(`📡 Iniciando carga para fecha: ${fechaParaUsar} | Deporte: ${deporte}`);
-
             const response = await fetch(url, {
                 method: 'GET',
-                credentials: 'include' // ✅ ESTO ES LO QUE FALTABA: Fuerza el envío de cookies
+                credentials: 'include'
             });
             
-            if (!response.ok) {
-                if (response.status === 401) {
-                    console.error(" Error 401: La sesión no se detectó en el iframe. Verifica que las cookies estén habilitadas.");
-                    // Opcional: Redirigir al login si falla persistentemente
-                    // window.location.href = '../login_recintos.php'; 
-                }
-                throw new Error(`HTTP ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const data = await response.json();
             
