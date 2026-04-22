@@ -2287,38 +2287,43 @@ $recinto = $stmt->fetch();
 
     // === FUNCIÓN CARGAR PLANILLA (CORREGIDA) ===
     async function cargarPlanillaReservas() {
-        // Usar SIEMPRE la variable global actualizada
-        const fechaParaUsar = window.fechaPlanillaActual;
+        const fechaParaUsar = window.fechaPlanillaActual || new Date().toISOString().split('T')[0];
         const deporteSelect = document.getElementById('filtroDeporte');
         const deporte = deporteSelect ? (deporteSelect.value || "") : "";
         
-        console.log(`📡 Iniciando carga para fecha: ${fechaParaUsar} | Deporte: ${deporte}`);
+        console.log(`📡 Iniciando carga... Fecha: ${fechaParaUsar}, Deporte: ${deporte}`);
+        console.log(` Cookie de sesión actual: ${document.cookie ? 'Presente' : 'Ausente'}`); // Debug útil
 
         try {
+            // Asegúrate que la ruta '../api/...' sea correcta desde donde está alojado recinto_dashboard.php
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaParaUsar}&deporte=${encodeURIComponent(deporte)}`;
             
             const response = await fetch(url, {
                 method: 'GET',
-                credentials: 'include'
+                credentials: 'include', // ✅ Esto envía las cookies
+                headers: {
+                    'Content-Type': 'application/json' // Opcional, pero buena práctica
+                }
             });
             
+            if (response.status === 401) {
+                const errorText = await response.text();
+                console.error("❌ Error 401 Detallado:", errorText);
+                throw new Error("Sesión expirada o no válida. Por favor inicia sesión nuevamente.");
+            }
+
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const data = await response.json();
             
             if (data.error) throw new Error(data.error);
             
-            // Actualizar visualmente el input SOLO si es diferente (evita trigger de change)
-            if (fechaInput && fechaInput.value !== fechaParaUsar) {
-                fechaInput.value = fechaParaUsar;
-            }
-            
             renderizarPlanilla(data);
-            console.log("✅ Planilla cargada exitosamente");
+            console.log("✅ Planilla cargada");
             
         } catch (error) {
-            console.error("❌ Error al cargar:", error);
-            alert('Error: ' + error.message);
+            console.error("❌ Error:", error);
+            alert('Error al cargar datos: ' + error.message);
         }
     }
 
