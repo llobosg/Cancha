@@ -139,13 +139,25 @@
     @media (min-width: 768px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
+    /* Asegurar que las tarjetas de estadísticas tengan tamaño consistente */
     .stat-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(10px);
-      padding: 1.2rem;
-      border-radius: 14px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+
+    /* Botones de acción secundaria (Gestionar Asistentes, Perfil) */
+    .btn-action-secondary:hover {
+        background: #e3f2fd;
+        border-color: #071289;
+        transform: translateY(-2px);
+    }
+
+    /* Ocultar elementos que no queremos ver (por seguridad visual) */
+    .hidden-panel {
+        display: none !important;
     }
     .stat-title {
       font-size: 0.95rem;
@@ -185,62 +197,107 @@
 </head>
 <body>
   <!-- Contenedor Principal -->
-  <div class="dashboard-container" style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+  <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
 
-      <!-- 1. HEADER SUPERIOR: Título y Gestión de Usuarios -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-          <div>
-              <h1 style="color: #071289; margin: 0; font-size: 1.8rem;">Panel de Administración</h1>
-              <p style="color: #666; margin: 0.5rem 0 0 0;">Recinto: <?= htmlspecialchars($recinto_nombre) ?></p>
-          </div>
-          
-          <!-- Botones de Gestión (Subidos arriba a la derecha) -->
-          <div style="display: flex; gap: 1rem;">
-              <?php if (esAdmin()): ?>
-                  <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-                      👥 Gestionar Asistentes
-                  </a>
-                  <a href="perfil_admin.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
-                      ⚙️ Mi Perfil
-                  </a>
-              <?php endif; ?>
-          </div>
-      </div>
+    <!-- 1. HEADER SUPERIOR COMÚN (Título + Botones de Perfil/Gestión) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">
+        <div>
+            <h1 style="color: #071289; margin: 0; font-size: 1.8rem;">Panel de Administración</h1>
+            <p style="color: #666; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                Recinto: <?= htmlspecialchars($recinto_nombre) ?> 
+                <?php if (esAsistente()): ?> <span style="background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">Rol: Asistente</span> <?php endif; ?>
+            </p>
+        </div>
 
-      <!-- 2. FILA DE KPIS (Solo Ingresos Este Mes) -->
-      <!-- Ajustado al tamaño de las otras fichas y alineado a la izquierda -->
-      <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-          <div class="stat-card" style="flex: 0 0 auto; min-width: 250px; max-width: 300px; background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);">
-              <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Ingresos Este Mes</h3>
-              <div style="font-size: 2.2rem; font-weight: 900;">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
-              <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Actualizado al <?= date('d/m/Y') ?></div>
-          </div>
-          
-          <!-- AQUÍ OCULTAMOS: Canchas Disponibles, Ocupación MTD, etc. -->
-          <!-- Simplemente no incluimos el HTML de esas tarjetas -->
-      </div>
+        <div style="display: flex; gap: 1rem;">
+            <?php if (esAdmin()): ?>
+                <a href="gestion_asistentes.php" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+                    👥 Gestionar Asistentes
+                </a>
+            <?php endif; ?>
+            
+            <!-- Común para ambos roles -->
+            <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" class="btn-action-secondary" style="text-decoration: none; padding: 0.6rem 1.2rem; background: #f0f4f8; color: #071289; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; transition: 0.2s;">
+                ⚙️ Mi Perfil
+            </a>
+        </div>
+    </div>
 
-      <!-- 3. SECCIÓN PRINCIPAL: PLANILLA DE RESERVAS -->
-      <!-- Reemplaza los botones de acción y torneos por esto -->
-      <div class="main-content-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <h2 style="margin: 0; color: #333; font-size: 1.4rem;">📅 Planilla de Reservas</h2>
-              <a href="calendario_reservas.php" style="color: #071289; text-decoration: none; font-weight: bold; font-size: 0.9rem;">Ver modo completo &rarr;</a>
-          </div>
-          
-          <!-- Aquí incrustamos o llamamos al componente de la planilla -->
-          <!-- Si tienes el código de la planilla en un archivo separado, úsalo con include -->
-          <!-- Ejemplo: include 'components/mini_planilla.php'; -->
-          <!-- Por ahora, asumimos que rediriges o muestras un iframe/resumen -->
-          <div style="text-align: center; padding: 2rem; background: #f9f9f9; border-radius: 8px; border: 1px dashed #ccc;">
-              <p style="color: #666;">La vista completa de la Planilla está disponible en el módulo dedicado.</p>
-              <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; margin-top: 1rem; padding: 0.8rem 2rem; background: #071289; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir a la Planilla Completa</a>
-          </div>
-      </div>
+    <!-- 2. CONTENIDO ESPECÍFICO POR ROL -->
+    
+    <?php if (esAdmin()): ?>
+        <!-- === VISTA ADMIN === -->
+        
+        <!-- Fila de KPIs (Solo Ingresos) -->
+        <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+            <div class="stat-card" style="flex: 0 0 auto; min-width: 250px; max-width: 300px; background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Ingresos Este Mes</h3>
+                <div style="font-size: 2.2rem; font-weight: 900;">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Actualizado al <?= date('d/m/Y') ?></div>
+            </div>
+            <!-- Aquí podrías agregar más KPIs financieros si quisieras en el futuro -->
+        </div>
 
-      <!-- 4. OCULTAR: Panel Bienvenida, Menú extra, Torneos Activos, Botones de Acción -->
-      <!-- Simplemente borramos o comentamos esos bloques HTML -->
-      
+    <?php else: ?>
+        <!-- === VISTA ASISTENTE === -->
+        
+        <!-- Gráficos Operativos -->
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="stat-card" style="background: #071289; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div class="stat-title" style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1rem;">Canchas Disponibles</div>
+                <div class="chart" style="margin-bottom: 1rem;">
+                  <svg viewBox="0 0 100 20" style="width:100%; height:20px;">
+                    <rect x="0" y="0" width="100" height="20" fill="rgba(255,255,255,0.2)" rx="3"/>
+                    <rect x="0" y="0" width="60" height="20" fill="#4ECDC4" rx="3"/>
+                  </svg>
+                </div>
+                <div style="font-size: 1.2rem; font-weight: bold;">6/10 Reservadas</div>
+            </div>
+
+            <div class="stat-card" style="background: #071289; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div class="stat-title" style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1rem;">Ocupación MTD</div>
+                <div class="chart" style="margin-bottom: 1rem; display: flex; justify-content: center;">
+                  <svg viewBox="0 0 100 100" style="width:80px; height:80px;">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#4ECDC4" stroke-width="8"
+                            stroke-dasharray="282" stroke-dashoffset="<?= 282 * (1 - 0.72) ?>" transform="rotate(-90 50 50)"/>
+                    <text x="50" y="55" text-anchor="middle" fill="white" font-size="16" font-weight="bold">72%</text>
+                  </svg>
+                </div>
+                <div style="font-size: 0.9rem;">+7% vs mes anterior</div>
+            </div>
+        </div>
+
+        <!-- Acciones rápidas -->
+        <div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <button class="action-btn" id="btnGestionCancha" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Crear Canchas 🎾</button>
+            <button class="action-btn" id="btnCalendarioReservas" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Calendario reservas</button>
+            <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Reserva Manual</button>
+            <button class="action-btn" id="btnCrearTorneo" style="padding: 1rem; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: bold; color: #333; transition: 0.2s;">Crear Torneo </button>
+        </div>
+
+        <!-- Panel de Torneos (Opcional, si el asistente lo necesita) -->
+        <div class="dynamic-panel" id="panelTorneos" style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid #eee;">
+            <h3 style="margin-top: 0; color: #071289;">🏆 Torneos Americanos Activos</h3>
+            <div id="listaTorneos" style="margin-top: 1rem; color: #666;">
+                <p>Cargando torneos...</p>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- 3. SECCIÓN PRINCIPAL COMUN: PLANILLA DE RESERVAS -->
+    <!-- Visible para AMBOS roles -->
+    <div class="main-content-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #eee;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 style="margin: 0; color: #333; font-size: 1.4rem;">📅 Planilla de Reservas</h2>
+            <a href="calendario_reservas.php?vista=planilla" style="color: #071289; text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #f0f4f8; padding: 0.5rem 1rem; border-radius: 6px;">Ver modo completo &rarr;</a>
+        </div>
+        
+        <div style="text-align: center; padding: 2rem; background: #f9f9f9; border-radius: 8px; border: 1px dashed #ccc;">
+            <p style="color: #666; margin-bottom: 1rem;">Accede a la vista detallada de horarios, estados de pago y gestión de canchas.</p>
+            <a href="calendario_reservas.php?vista=planilla" style="display: inline-block; padding: 0.8rem 2rem; background: #071289; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; transition: 0.2s;">Ir a la Planilla Completa</a>
+        </div>
+    </div>
   </div>
 
   <script>
