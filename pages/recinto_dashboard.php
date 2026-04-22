@@ -705,20 +705,24 @@ $ingresos_mes = 1250000;
         document.getElementById('modalDetalleReserva').style.display = 'none';
     }
 
-    // === FUNCIÓN ÚNICA PARA ABRIR DETALLE CON ACCIONES ===
+    // === FUNCIÓN ÚNICA PARA ABRIR DETALLE CON NOTAS Y ACCIONES ===
     async function abrirDetalleDesdePlanilla(idReserva) {
         console.log("🖱️ Click en Reserva ID:", idReserva);
-        if (!idReserva) return;
+        
+        if (!idReserva) {
+            alert("Error: ID de reserva inválido");
+            return;
+        }
 
+        // 1. Mostrar modal inmediatamente con estado de carga
         const modal = document.getElementById('modalDetalleReserva');
         const container = document.getElementById('contenidoDetalle');
         
-        // 1. Mostrar modal y estado de carga
         if (modal) modal.style.display = 'flex';
-        if (container) container.innerHTML = '<p style="text-align:center;">Cargando...</p>';
+        if (container) container.innerHTML = '<p style="text-align:center; color:#666;">Cargando detalles...</p>';
 
         try {
-            // 2. Llamar a API
+            // 2. Llamar a la API
             const formData = new URLSearchParams();
             formData.append('action', 'get_detalle_reserva');
             formData.append('id_reserva', idReserva);
@@ -733,51 +737,121 @@ $ingresos_mes = 1250000;
             const detalle = await response.json();
             if (detalle.error) throw new Error(detalle.error);
 
+            // 3. Guardar globalmente para usar en las acciones (ej. Pagar)
             window.reservaActualSeleccionada = detalle;
 
-            // 3. Renderizar contenido dinámico + BOTONES
+            // 4. Renderizar contenido bonito + NOTAS + BOTONES
             if (container) {
                 const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
                 const money = (v) => '$' + parseInt(v || 0).toLocaleString();
-                
-                let estadoColor = detalle.estado_pago === 'pagado' ? 'green' : (detalle.estado_pago === 'parcial' ? 'orange' : 'red');
 
-                container.innerHTML = `
+                // Cálculos financieros
+                const montoTotal = parseFloat(detalle.monto_total || 0);
+                const montoRecaudado = parseFloat(detalle.monto_recaudacion || 0);
+                const saldoPendiente = montoTotal - montoRecaudado;
+                const esParcial = (detalle.estado_pago === 'parcial');
+
+                // Color del estado
+                let estadoColor = 'red';
+                if (detalle.estado_pago === 'pagado') estadoColor = 'green';
+                else if (detalle.estado_pago === 'parcial') estadoColor = '#F57F17';
+
+                // Construcción del HTML
+                let html = `
                     <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
+                        <!-- Encabezado Fecha/Hora -->
                         <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
                             <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
                             <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        
+                        <!-- Datos Principales -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                             <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
-                            <div><strong>Cliente:</strong> ${val(detalle.nombre_cliente || 'N/A')}</div>
+                            <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
+                            <div style="grid-column: span 2;"><strong>Cliente:</strong> ${val(detalle.nombre_cliente || detalle.nombre_responsable)}</div>
+                            <div style="grid-column: span 2;"><strong>Contacto:</strong> ${val(detalle.telefono_cliente)}</div>
                         </div>
-                        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:flex; justify-content:space-between;">
-                            <div><strong>Total:</strong> ${money(detalle.monto_total)}</div>
-                            <div style="color:${estadoColor}; font-weight:bold;">${val(detalle.estado_pago).toUpperCase()}</div>
-                        </div>
-                    </div>
 
-                    <!-- BOTONES DE ACCIÓN -->
-                    <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
-                        <button onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; width:100%;">⚙️ Opciones</button>
-                        <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px;">
-                            <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">🗑️ Anular</button>
-                            <button onclick="enviarMensaje()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">💬 Mensaje</button>
-                            ${detalle.estado_pago !== 'pagado' ? 
-                                `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:green; text-align:left; font-weight:bold;">💳 Pagar</button>` : ''}
+                        <!-- Sección Financiera Detallada -->
+                        <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                                <span style="color:#666; font-size:0.9rem;">Monto Total</span>
+                                <span style="font-weight:bold; font-size:1.1rem;">${money(montoTotal)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                                <span style="color:#666; font-size:0.9rem;">Abonado</span>
+                                <span style="font-weight:bold; color:#2e7d32;">${money(montoRecaudado)}</span>
+                            </div>
+                            
+                            ${esParcial ? `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:0.5rem; border-top:1px dashed #ccc;">
+                                <span style="color:#c62828; font-size:0.9rem; font-weight:bold;">Saldo Pendiente</span>
+                                <span style="font-weight:bold; color:#c62828; font-size:1.1rem;">${money(saldoPendiente)}</span>
+                            </div>
+                            ` : ''}
+                            
+                            <div style="margin-top:0.5rem; text-align:right;">
+                                <span style="font-size:0.8rem; color:#666;">Estado: </span>
+                                <span style="font-weight:bold; color:${estadoColor}; text-transform:uppercase;">${val(detalle.estado_pago)}</span>
+                            </div>
                         </div>
+                `;
+
+                // === SECCIÓN DE NOTAS (Destacada si es parcial o si hay notas) ===
+                const notas = val(detalle.notas, '');
+                if (notas && notas !== 'null') {
+                    const bgNota = esParcial ? '#FFF3E0' : '#FFFDE7';
+                    const borderNota = esParcial ? '#FFB74D' : '#FFF59D';
+                    
+                    html += `
+                        <div style="background: ${bgNota}; padding: 0.8rem; border-radius: 6px; border-left: 4px solid ${borderNota}; margin-bottom: 1rem;">
+                            <div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; text-transform: uppercase;">
+                                📝 Historial / Notas
+                            </div>
+                            <div style="font-size: 0.9rem; color: #333; white-space: pre-wrap; font-family: sans-serif;">
+                                ${notas}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div>`; // Cierre del contenedor principal de datos
+
+                // Inyectar HTML base
+                container.innerHTML = html;
+
+                // === AGREGAR BOTONES DE ACCIÓN AL FINAL ===
+                const actionContainer = document.createElement('div');
+                actionContainer.style.marginTop = '1rem';
+                actionContainer.style.textAlign = 'center';
+                actionContainer.innerHTML = `
+                    <button onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; width:100%; font-weight:bold;">
+                        ⚙️ Opciones de Gestión
+                    </button>
+                    <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white; overflow:hidden;">
+                        <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🗑️ Anular Reserva</button>
+                        <button onclick="enviarMensaje()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">💬 Enviar Mensaje</button>
+                        ${detalle.estado_pago !== 'pagado' ? 
+                            `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold; cursor:pointer;">💳 Pagar / Abonar</button>` 
+                            : ''}
                     </div>
                 `;
+                container.appendChild(actionContainer);
             }
+
         } catch (err) {
-            if (container) container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            console.error(err);
+            if (container) container.innerHTML = `<p style="color:red; text-align:center;">Error: ${err.message}</p>`;
         }
     }
 
+    // Función auxiliar para el menú de acciones
     function toggleActionMenuModal() {
         const menu = document.getElementById('actionMenuModal');
-        if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        if (menu) {
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
     }
 
     // === FUNCIONES AUXILIARES PARA EL MENÚ DE ACCIONES ===
