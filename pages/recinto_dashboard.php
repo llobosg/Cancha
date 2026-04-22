@@ -276,8 +276,8 @@ $ingresos_mes = 1250000;
       
       // Doble seguridad: si por algún motivo sigue vacío, forzar fútbol
       if (!deporte) {
-          deporte = 'futbol'; 
-          console.warn("⚠️ Deporte seguía vacío, forzando a 'futbol'");
+          deporte = 'Pádel'; // Valor por defecto
+          console.warn("⚠️ Deporte seguía vacío, forzando a 'Pádel' para evitar errores en la carga de la planilla.");
       }
 
       console.log(`📡 Cargando planilla... Fecha: ${fechaParaUsar}, Deporte: ${deporte}`);
