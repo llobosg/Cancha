@@ -192,9 +192,9 @@ $ingresos_mes = 1250000;
               </div>
               <div class="control-group">
                   <select id="filtroDeporte" class="control-select">
-                      <option value="">Todos los deportes</option>
+                      <option value="todos" selected>Todos los deportes</option>
                       <option value="futbol">Fútbol</option>
-                      <option value="padel" selected>Pádel</option> 
+                      <option value="padel">Pádel</option> 
                       <option value="tenis">Tenis</option>
                       <option value="voleyball">Voleyball</option>
                   </select>
@@ -220,6 +220,26 @@ $ingresos_mes = 1250000;
 
   <!-- Scripts -->
   <script>
+    // Mapeo de ID_Deporte a Íconos (Basado en tu tabla SQL)
+    const iconosDeporte = {
+        1: '🎾',   // Pádel
+        2: '🎾',   // Tenis (usamos misma raqueta o 🥎 si prefieres)
+        3: '🏐',   // Volley
+        4: '🏋️',   // Gimnasio
+        5: '👤',   // Clases partic.
+        6: '🏃',   // Entrenamiento
+        7: '🏊',   // Natación
+        8: '🧘',   // Pilates
+        9: '💪',   // Pesas
+        10: '⚽',  // Fútbol
+        11: '⚽',  // Futbolito
+        12: '⚽',  // Futsal
+        13: '⚽',  // Escuela Fútbol
+        14: '🏊',  // Escuela natación
+        15: '🚴',  // Ciclismo
+        'default': '🏟️' // Por defecto para cualquier otro deporte nuevo
+    };
+
     // --- Lógica Menú ---
     function toggleMenu(e) { e.stopPropagation(); const m = document.getElementById('adminMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
     function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
@@ -277,7 +297,7 @@ $ingresos_mes = 1250000;
 
     // Listener para cambio de deporte (Actualiza la variable global)
     document.getElementById('filtroDeporte')?.addEventListener('change', function() {
-        deporteSeleccionado = this.value || 'padel'; // Si es vacío, usa padel o deja vacío según prefieras
+        deporteSeleccionado = this.value || 'todos'; // Si es vacío, usa todos o deja vacío según prefieras
         console.log(` Deporte cambiado a: ${deporteSeleccionado}`);
         cargarPlanillaReservas();
     });
@@ -292,7 +312,7 @@ $ingresos_mes = 1250000;
       }
         
         // Si sigue vacío tras todo, usamos el default
-        if (!deporteSeleccionado) deporteSeleccionado = 'padel';
+        if (!deporteSeleccionado) deporteSeleccionado = 'todos';
 
         console.log(` Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporteSeleccionado}`);
 
@@ -325,10 +345,22 @@ $ingresos_mes = 1250000;
           return;
       }
 
-      let html = `<thead><tr><th style="min-width:100px; background:#AB47BC; color:white; position:sticky; left:0; z-index:2;">Hora</th>`;
+      let html = `<thead><tr>`;
+    
+      // Columna Hora (Sticky)
+      html += `<th style="min-width:80px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+
       data.canchas.forEach(c => {
-          html += `<th style="min-width:120px; background:#AB47BC; color:white;">${c.nombre_cancha}</th>`;
+          const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
+
+          html += `
+            <th style="min-width:120px; background:#AB47BC; color:white; font-size:0.9rem;">
+                <div style="font-size:1.2rem;">${icono}</div>
+                <div style="font-size:0.8rem; margin-top:4px;">${c.nombre_cancha}</div>
+            </th>
+          `;
       });
+      
       html += `</tr></thead><tbody>`;
 
       // Generar slots (asumiendo que data.slots viene de la API o generarlo aquí si es necesario)
@@ -378,15 +410,15 @@ $ingresos_mes = 1250000;
       table.innerHTML = html;
     }
 
-  // Función auxiliar por si la API no trae slots (ajusta horas según tu recinto)
-  function generarSlotsBase() {
-      const slots = [];
-      for (let h = 8; h <= 23; h++) {
-          const hora = h.toString().padStart(2, '0') + ':00';
-          slots.push({ label: hora, is_label_row: true });
-      }
-      return slots;
-  }
+    // Función auxiliar por si la API no trae slots (ajusta horas según tu recinto)
+    function generarSlotsBase() {
+        const slots = [];
+        for (let h = 8; h <= 23; h++) {
+            const hora = h.toString().padStart(2, '0') + ':00';
+            slots.push({ label: hora, is_label_row: true });
+        }
+        return slots;
+    }
 
     // Cargar planilla al inicio
     document.addEventListener('DOMContentLoaded', cargarPlanillaReservas);
