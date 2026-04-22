@@ -742,113 +742,6 @@ $ingresos_mes = 1250000;
         if(modalMsg) modalMsg.style.display = 'none';
     }
 
-    // === FUNCIONES DE NAVEGACIÓN DE MODALES ===
-    // Función para la "X" del modal de pago: Vuelve al modal de Detalle
-    function volverAlDetalle() {
-        document.getElementById('modalPago').style.display = 'none';
-        // El modalDetalleReserva debería seguir visible debajo
-    }
-
-    // Función para cerrar TODO (usada si quieres salir completamente)
-    function cerrarModalPago() {
-        document.getElementById('modalPago').style.display = 'none';
-        document.getElementById('modalDetalleReserva').style.display = 'none';
-    }
-
-    // Función para abrir el modal de pago DESDE el detalle
-    function abrirModalPagoDesdeDetalle() {
-        if (!window.reservaActualSeleccionada) return;
-        
-        const detalle = window.reservaActualSeleccionada;
-        const idReserva = detalle.id_reserva;
-        const montoTotal = parseFloat(detalle.monto_total);
-
-        // 1. Llenar datos
-        document.getElementById('infoIdReserva').textContent = idReserva;
-        document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
-        document.getElementById('montoPagar').value = montoTotal; // Pre-llenar con el total
-        
-        // Resetear form
-        document.getElementById('formPago').reset();
-        document.getElementById('montoPagar').value = montoTotal;
-        document.getElementById('campoTransaccion').style.display = 'none';
-        
-        // Guardar IDs para el submit
-        document.getElementById('formPago').dataset.idReserva = idReserva;
-        document.getElementById('formPago').dataset.montoOriginal = montoTotal;
-
-        // 2. Ocultar menú de acciones si está abierto
-        const menu = document.getElementById('actionMenuModal');
-        if (menu) menu.style.display = 'none';
-
-        // 3. MOSTRAR modal de pago ENCIMA del detalle
-        document.getElementById('modalPago').style.display = 'flex';
-    }
-
-    // Listener para mostrar/ocultar campo de transacción
-    document.getElementById('metodoPago')?.addEventListener('change', function() {
-        const campo = document.getElementById('campoTransaccion');
-        const input = document.getElementById('transaccionId');
-        if (['transferencia', 'webpay'].includes(this.value)) {
-            campo.style.display = 'block';
-            input.required = true;
-        } else {
-            campo.style.display = 'none';
-            input.required = false;
-        }
-    });
-
-    // Submit del formulario de pago (Lógica Parcial/Total)
-    document.getElementById('formPago')?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const idReserva = this.dataset.idReserva;
-        const montoOriginal = parseFloat(this.dataset.montoOriginal);
-        const montoPagado = parseFloat(document.getElementById('montoPagar').value);
-        const metodo = document.getElementById('metodoPago').value;
-        const transaccion = document.getElementById('transaccionId').value;
-        const notas = document.getElementById('notasPago').value;
-
-        if (montoPagado <= 0) { alert("El monto debe ser mayor a 0"); return; }
-
-        try {
-            const formData = new FormData();
-            formData.append('action', 'procesar_pago_parcial'); // Acción que maneja parciales
-            formData.append('id_reserva', idReserva);
-            formData.append('monto_pagado', montoPagado);
-            formData.append('monto_total_original', montoOriginal);
-            formData.append('metodo_pago', metodo);
-            formData.append('transaccion_id', transaccion || '');
-            formData.append('notas_pago', notas);
-
-            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
-            const data = await res.json();
-
-            if (data.success) {
-                let msg = "✅ Pago registrado correctamente.";
-                if (montoPagado < montoOriginal) {
-                    msg += " La reserva queda con saldo pendiente (Pago Parcial).";
-                }
-                alert(msg);
-                
-                // Cerrar modales y recargar para ver cambios en la planilla
-                document.getElementById('modalPago').style.display = 'none';
-                document.getElementById('modalDetalleReserva').style.display = 'none';
-                location.reload(); 
-            } else {
-                alert("❌ Error: " + data.message);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("❌ Error de conexión al procesar pago");
-        }
-    });
-
-    // Función para cerrar TODO (usada por la X del modal detalle)
-    function cerrarModalDetalle() {
-        document.getElementById('modalDetalleReserva').style.display = 'none';
-        document.getElementById('modalPago').style.display = 'none'; // Por seguridad
-    }
   </script>
     <!-- === MODAL DETALLE DE RESERVA (ESTRUCTURA) === -->
     <div id="modalDetalleReserva" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
@@ -936,6 +829,179 @@ $ingresos_mes = 1250000;
             </form>
         </div>
     </div>
+    <!-- === SISTEMA DE TOAST NOTIFICATIONS === -->
+    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
 
+    <script>
+    // Función para mostrar Toast
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        
+        // Estilos según tipo
+        const bg = type === 'success' ? 'linear-gradient(135deg, #4CAF50, #2E7D32)' : 
+                  (type === 'warning' ? 'linear-gradient(135deg, #FF9800, #EF6C00)' : 'linear-gradient(135deg, #F44336, #C62828)');
+        
+        toast.style.cssText = `
+            background: ${bg};
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-weight: bold;
+            font-family: sans-serif;
+            animation: slideIn 0.3s ease-out forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        `;
+        
+        // Icono
+        const icon = type === 'success' ? '✅' : (type === 'warning' ? '⚠️' : '❌');
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        
+        container.appendChild(toast);
+        
+        // Eliminar después de 4 segundos
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-in forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // Animaciones CSS para Toast
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    `;
+    document.head.appendChild(style);
+
+    // === FUNCIONES DE MODALES Y PAGO ===
+
+    // Volver al detalle desde el modal de pago
+    function volverAlDetalle() {
+        document.getElementById('modalPago').style.display = 'none';
+        document.getElementById('modalDetalleReserva').style.display = 'flex';
+    }
+
+    // Abrir modal de pago desde el detalle
+    function abrirModalPagoDesdeDetalle() {
+        if (!window.reservaActualSeleccionada) return;
+        
+        const detalle = window.reservaActualSeleccionada;
+        const idReserva = detalle.id_reserva;
+        const montoTotal = parseFloat(detalle.monto_total);
+
+        // Llenar datos
+        document.getElementById('infoIdReserva').textContent = idReserva;
+        document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
+        document.getElementById('montoPagar').value = montoTotal;
+        
+        // Resetear form
+        document.getElementById('formPago').reset();
+        document.getElementById('montoPagar').value = montoTotal;
+        document.getElementById('campoTransaccion').style.display = 'none';
+        
+        // Guardar IDs para el submit
+        document.getElementById('formPago').dataset.idReserva = idReserva;
+        document.getElementById('formPago').dataset.montoOriginal = montoTotal;
+
+        // Ocultar menú de acciones y mostrar modal de pago
+        const menu = document.getElementById('actionMenuModal');
+        if (menu) menu.style.display = 'none';
+        
+        document.getElementById('modalDetalleReserva').style.display = 'none'; // Ocultar detalle
+        document.getElementById('modalPago').style.display = 'flex'; // Mostrar pago
+    }
+
+    // Listener para método de pago (mostrar campo transacción)
+    document.getElementById('metodoPago')?.addEventListener('change', function() {
+        const campo = document.getElementById('campoTransaccion');
+        const input = document.getElementById('transaccionId');
+        if (['transferencia', 'webpay'].includes(this.value)) {
+            campo.style.display = 'block';
+            input.required = true;
+        } else {
+            campo.style.display = 'none';
+            input.required = false;
+        }
+    });
+
+    // SUBMIT DEL FORMULARIO DE PAGO (Conexión con API y Toast)
+    document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const idReserva = this.dataset.idReserva;
+        const montoOriginal = parseFloat(this.dataset.montoOriginal);
+        const montoPagado = parseFloat(document.getElementById('montoPagar').value);
+        const metodo = document.getElementById('metodoPago').value;
+        const transaccion = document.getElementById('transaccionId').value;
+        const notas = document.getElementById('notasPago').value;
+
+        if (montoPagado <= 0) { 
+            showToast("El monto debe ser mayor a 0", "error"); 
+            return; 
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'procesar_pago_parcial');
+            formData.append('id_reserva', idReserva);
+            formData.append('monto_pagado', montoPagado);
+            formData.append('monto_total_original', montoOriginal);
+            formData.append('metodo_pago', metodo);
+            formData.append('transaccion_id', transaccion || '');
+            formData.append('notas_pago', notas);
+
+            console.log(`📝 [AUDITORÍA] Iniciando pago Reserva ID: ${idReserva} | Monto: $${montoPagado}`);
+
+            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.success) {
+                let msg = "✅ Pago registrado correctamente.";
+                let type = "success";
+
+                if (montoPagado < montoOriginal) {
+                    msg = `⚠️ Pago Parcial registrado. Faltan $${(montoOriginal - montoPagado).toLocaleString()}.`;
+                    type = "warning";
+                } else {
+                    msg = "✅ ¡Reserva Pagada Completamente!";
+                }
+
+                showToast(msg, type);
+                console.log(`✅ [AUDITORÍA] Éxito. Reserva ${idReserva} actualizada.`);
+
+                // Cerrar modales
+                document.getElementById('modalPago').style.display = 'none';
+                document.getElementById('modalDetalleReserva').style.display = 'none';
+
+                // Recargar la planilla para ver el cambio de color
+                if (typeof cargarPlanillaReservas === 'function') {
+                    cargarPlanillaReservas();
+                } else {
+                    location.reload();
+                }
+
+            } else {
+                showToast("❌ Error: " + data.message, "error");
+                console.error(`❌ [AUDITORÍA] Error: ${data.message}`);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("❌ Error de conexión al procesar pago", "error");
+        }
+    });
+
+    // Funciones auxiliares de cierre
+    function cerrarModalDetalle() {
+        document.getElementById('modalDetalleReserva').style.display = 'none';
+    }
+    function cerrarModalPago() {
+        document.getElementById('modalPago').style.display = 'none';
+    }
+    </script>
 </body>
 </html>
