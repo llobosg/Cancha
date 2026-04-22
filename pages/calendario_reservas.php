@@ -14,6 +14,18 @@ $id_recinto = $_SESSION['id_recinto'];
 $stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
 $stmt->execute([$id_recinto]);
 $recinto = $stmt->fetch();
+
+<?php if (!$es_embed): ?>
+   <div class="header">
+        <div class="main-title-section">
+        <div class="logo-corporativo">⚽</div>
+        <h1 class="main-title">Cancha</h1>
+        </div>
+        <div>
+        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+        </div>
+    </div>
+<?php endif; ?>
 ?>
 <!DOCTYPE html>
 <html lang="es">
