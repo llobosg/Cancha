@@ -102,17 +102,68 @@ $ingresos_mes = 1250000;
     .control-select { background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem; border-radius: 6px; font-size: 0.85rem; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Responsive Móvil */
+
+    /* === ESTILOS DE TABLA Y COLUMNAS FIJAS === */
+    .planilla-table {
+        width: 100%;
+        border-collapse: separate; /* Importante para bordes redondeados */
+        border-spacing: 4px;
+        table-layout: fixed; /* CLAVE: Respeta los anchos definidos */
+    }
+
+    /* Columna de HORAS (Sticky Left) */
+    .planilla-table th:first-child,
+    .planilla-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 20;
+        background: #f8f9fa !important;
+        color: #333;
+        font-weight: bold;
+        border-right: 2px solid #e0e0e0;
+        border-radius: 6px;
+        /* Ancho fijo e inamovible */
+        min-width: 70px !important;
+        max-width: 70px !important;
+        width: 70px !important;
+        padding: 4px !important;
+        font-size: 0.75rem;
+        text-align: center;
+    }
+
+    /* Columnas de CANCHAS */
+    .planilla-table th, 
+    .planilla-table td {
+        /* Ancho base para canchas. Si hay pocas, no se estirarán demasiado gracias a max-width */
+        min-width: 100px;
+        max-width: 140px;
+        width: 120px; /* Ancho preferido */
+        padding: 4px;
+        vertical-align: middle;
+    }
+
+    /* Ajuste para Móvil */
     @media (max-width: 768px) {
+        .planilla-table th:first-child,
+        .planilla-table td:first-child {
+            min-width: 60px !important;
+            max-width: 60px !important;
+            width: 60px !important;
+            font-size: 0.7rem;
+            white-space: nowrap; /* Evita que la hora se parta */
+            overflow: visible; /* Asegura que se vea completa */
+            padding: 4px !important;
+        }
+         /* Columnas de CANCHAS */
+        .planilla-table th, 
+        .planilla-table td {
+            min-width: 80px !important; /* Un poco más anchas para leer nombres cortos */
+            padding: 4px !important;
+        }
         .dashboard-header { flex-direction: column; align-items: stretch; }
         .income-card { margin-left: 0; width: 100%; max-width: 100%; text-align: center; }
         .quick-actions { grid-template-columns: 1fr 1fr; }
-    }
 
-    /* === AJUSTES RESPONSIVE PARA LA PLANILLA === */
-    @media (max-width: 768px) {
-        /* Contenedor de la tabla */
         .planilla-table-container {
             max-height: 75vh; /* Un poco más de altura en móvil */
         }
@@ -120,24 +171,6 @@ $ingresos_mes = 1250000;
         /* Tabla */
         .planilla-table {
             font-size: 0.75rem; /* Fuente más pequeña */
-        }
-
-        /* Columna de HORAS (Sticky Left) */
-        .planilla-table th:first-child,
-        .planilla-table td:first-child {
-            min-width: 60px !important; /* Ancho mínimo suficiente para "08:00" */
-            width: 60px !important;
-            font-size: 0.7rem;
-            padding: 4px !important;
-            white-space: nowrap; /* Evita que la hora se parta */
-            overflow: visible; /* Asegura que se vea completa */
-        }
-
-        /* Columnas de CANCHAS */
-        .planilla-table th, 
-        .planilla-table td {
-            min-width: 80px !important; /* Un poco más anchas para leer nombres cortos */
-            padding: 4px !important;
         }
 
         /* Encabezados de Canchas */
@@ -155,52 +188,6 @@ $ingresos_mes = 1250000;
             font-size: 0.65rem;
             line-height: 1.1;
         }
-    }
-
-    /* Estilos específicos para la planilla de Reservas (pueden ser ajustados según el diseño final) */
-    /* === MEJORAS VISUALES PLANILLA === */
-
-    /* Contenedor de la tabla para asegurar que los bordes no se corten */
-    .planilla-table-container {
-        overflow: auto;
-        background: white;
-        border-radius: 0 0 12px 12px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        max-height: 70vh;
-        padding: 4px; /* Pequeño padding interno para que los bordes redondeados no se corten */
-    }
-
-    .planilla-table {
-        width: 100%;
-        border-collapse: separate; /* CLAVE: Permite border-radius en celdas */
-        border-spacing: 4px; /* Espacio entre celdas para el efecto "tarjeta" */
-        font-size: 0.85rem;
-        table-layout: fixed;
-    }
-
-    /* Estilo general de celdas */
-    .planilla-table th, 
-    .planilla-table td {
-        border: none; /* Quitamos bordes duros antiguos */
-        text-align: center;
-        vertical-align: middle;
-        padding: 8px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Columna de Horas (Sticky y con estilo limpio) */
-    .planilla-table th:first-child,
-    .planilla-table td:first-child {
-        position: sticky;
-        left: 0;
-        z-index: 10;
-        background: #f8f9fa !important;
-        color: #333;
-        font-weight: bold;
-        border-right: 2px solid #e0e0e0; /* Línea separadora suave */
-        border-radius: 6px;
     }
 
     /* Encabezados de Canchas */
@@ -560,25 +547,27 @@ $ingresos_mes = 1250000;
         }
     }
 
-    // === RENDERIZADO CON FILTRO DE ESTADO ===
+    // === RENDERIZADO CON FILTRO DE ESTADO CORREGIDO ===
     function renderizarPlanilla(data, filtroEstado) {
         const table = document.getElementById('tablaPlanilla');
         if (!table) return;
 
         if (!data.canchas || !data.canchas.length) {
-            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas.</td></tr>';
+            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas para esta selección.</td></tr>';
             return;
         }
 
         let html = `<thead><tr>`;
-        html += `<th style="min-width:60px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+        // Header Hora
+        html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
 
+        // Headers Canchas
         data.canchas.forEach(c => {
             const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
             html += `
-                <th style="min-width:80px; background:#AB47BC; color:white; font-size:0.8rem;">
+                <th style="background:#AB47BC; color:white; font-size:0.8rem;">
                     <div style="font-size:1rem;">${icono}</div>
-                    <div style="font-size:0.7rem; margin-top:2px;">${c.nombre_cancha}</div>
+                    <div style="font-size:0.7rem; margin-top:2px; white-space:normal;">${c.nombre_cancha}</div>
                 </th>
             `;
         });
@@ -589,20 +578,21 @@ $ingresos_mes = 1250000;
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
                 html += `<tr>`;
+                // Celda Hora
                 html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; border-right:2px solid #ccc; font-size:0.75rem;">${slot.label}</td>`;
                 
                 data.canchas.forEach(cancha => {
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const res = data.reservas[key];
                     
-                    let bgClass = 'estado-disponible'; // Por defecto gris
+                    let bgClass = 'estado-disponible';
                     let cellContent = '';
                     let clickEvt = '';
                     let opacity = '1';
                     let cumpleFiltro = true;
 
                     if (res) {
-                        // Determinar estado lógico
+                        // 1. Determinar Estado Lógico Real
                         let estadoLogico = '';
                         if (res.estado_pago === 'pagado') estadoLogico = 'pagadas';
                         else if (res.estado_pago === 'parcial') estadoLogico = 'parcial';
@@ -612,17 +602,16 @@ $ingresos_mes = 1250000;
                             estadoLogico = (fechaRes < hoy) ? 'no_pagadas' : 'reservada';
                         }
 
-                        // === APLICAR FILTRO DE ESTADO ===
+                        // 2. Aplicar Filtro de Estado
                         if (filtroEstado && filtroEstado !== '') {
-                            if (filtroEstado === 'pagadas' && estadoLogico !== 'pagadas') cumpleFiltro = false;
-                            if (filtroEstado === 'parcial' && estadoLogico !== 'parcial') cumpleFiltro = false;
-                            if (filtroEstado === 'no_pagadas' && estadoLogico !== 'no_pagadas') cumpleFiltro = false;
-                            if (filtroEstado === 'reservada' && estadoLogico !== 'reservada') cumpleFiltro = false;
-                            // Puedes agregar más casos según tus opciones del select
+                            // Si el filtro es 'disponible', ocultamos las reservadas
+                            if (filtroEstado === 'disponible') cumpleFiltro = false;
+                            // Si el filtro es específico, debe coincidir
+                            else if (filtroEstado !== estadoLogico) cumpleFiltro = false;
                         }
 
+                        // 3. Definir apariencia si cumple filtro
                         if (cumpleFiltro) {
-                            // Asignar clases CSS
                             if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                             else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
                             else bgClass = 'estado-pendiente';
@@ -634,16 +623,16 @@ $ingresos_mes = 1250000;
                                 clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
                             }
                         } else {
-                            // Si no cumple filtro, atenuar o ocultar
-                            opacity = '0.1'; 
+                            // NO CUMPLE FILTRO: Atenuar y vaciar
+                            opacity = '0.05'; // Casi invisible
                             cellContent = '';
                             clickEvt = '';
                         }
                     } else {
-                        // Es disponible
-                        if (filtroEstado && filtroEstado !== 'disponible') {
+                        // Es Disponible
+                        if (filtroEstado && filtroEstado !== 'disponible' && filtroEstado !== '') {
                             // Si filtramos por algo que no sea disponible, ocultamos las libres
-                            // Opcional: opacity = '0.1';
+                            opacity = '0.05';
                         }
                     }
 
@@ -747,7 +736,8 @@ $ingresos_mes = 1250000;
             
             if (data.error) throw new Error(data.error);
             
-            renderizarPlanilla(data);
+            // Pasar el estado global al renderizado
+            renderizarPlanilla(data, estadoSeleccionadoPlanilla); 
             console.log("✅ Planilla cargada exitosamente");
             
         } catch (error) {
