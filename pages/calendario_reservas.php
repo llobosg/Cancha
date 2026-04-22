@@ -3,10 +3,12 @@ require_once __DIR__ . '/../includes/config.php';
 
 session_start();
 
-if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
-    header('Location: ../index.php');
-    exit;
+$es_embed = isset($_GET['embed']) && $_GET['embed'] === 'true';
+$rol_actual = $_SESSION['recinto_rol'] ?? '';
+if (!in_array($rol_actual, ['admin', 'asistente'])) {
+    header('Location: ../index.php'); exit;
 }
+
 
 $id_recinto = $_SESSION['id_recinto'];
 
@@ -14,18 +16,6 @@ $id_recinto = $_SESSION['id_recinto'];
 $stmt = $pdo->prepare("SELECT nombre, logorecinto FROM recintos_deportivos WHERE id_recinto = ?");
 $stmt->execute([$id_recinto]);
 $recinto = $stmt->fetch();
-
-<?php if (!$es_embed): ?>
-   <div class="header">
-        <div class="main-title-section">
-        <div class="logo-corporativo">⚽</div>
-        <h1 class="main-title">Cancha</h1>
-        </div>
-        <div>
-        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
-        </div>
-    </div>
-<?php endif; ?>
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -779,15 +769,17 @@ $recinto = $stmt->fetch();
 </style>
 </head>
 <body>
-    <div class="header">
-        <div class="main-title-section">
-        <div class="logo-corporativo">⚽</div>
-        <h1 class="main-title">Cancha</h1>
+    <?php if (!$es_embed): ?>
+        <div class="header">
+            <div class="main-title-section">
+            <div class="logo-corporativo">⚽</div>
+            <h1 class="main-title">Cancha</h1>
+            </div>
+            <div>
+            <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
+            </div>
         </div>
-        <div>
-        <a href="recinto_dashboard.php" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
-        </div>
-    </div>
+    <?php endif; ?>
     
     <!-- Contenedor Principal -->
     <div class="dashboard-container" style="display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding-top:80px; background: transparent; overflow-x: hidden;">
