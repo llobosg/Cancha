@@ -116,6 +116,32 @@ $ingresos_mes = 1250000;
         .income-card { margin-left: 0; width: 100%; max-width: 100%; text-align: center; }
         .quick-actions { grid-template-columns: 1fr 1fr; }
     }
+
+    /* Estilos específicos para la planilla de Reservas (pueden ser ajustados según el diseño final) */
+    .planilla-table th, .planilla-table td {
+    border: 1px solid #ddd;
+    text-align: center;
+    padding: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+    .planilla-table th {
+        background: #AB47BC;
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .planilla-table td:first-child, .planilla-table th:first-child {
+        position: sticky;
+        left: 0;
+        background: #f8f9fa;
+        z-index: 5;
+        border-right: 2px solid #ccc;
+        color: #333;
+        font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -165,6 +191,56 @@ $ingresos_mes = 1250000;
           <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
           <button class="action-btn" id="btnTorneosActivos">Torneos Activos </button>
           <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual 📝</button>
+      </div>
+
+      <!-- === CONTENEDOR DE LA PLANILLA === -->
+      <div class="planilla-wrapper" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 2rem;">
+          
+          <!-- Controles Superiores -->
+          <div style="background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; color: white;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px;">
+                  <span style="font-size:0.8rem; font-weight:600;">Fecha:</span>
+                  <input type="date" id="fechaPlanillaInput" style="background: transparent; border: none; outline: none; color: white; font-weight: bold; width: 130px;">
+                  <button onclick="irAHoyPlanilla()" style="background: white; color: #8E24AA; border: none; padding: 0.3rem 0.8rem; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Hoy</button>
+                  <button onclick="cambiarDiaPlanilla(-1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&lt;</button>
+                  <button onclick="cambiarDiaPlanilla(1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&gt;</button>
+              </div>
+              
+              <div style="display: flex; gap: 0.5rem;">
+                  <select id="filtroDeporte" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
+                      <option value="todos">Todos los deportes</option>
+                      <option value="padel">Pádel</option>
+                      <option value="futbol">Fútbol</option>
+                      <option value="tenis">Tenis</option>
+                      <!-- Agrega más según tus IDs -->
+                  </select>
+                  <select id="filtroEstado" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
+                      <option value="">Todos los estados</option>
+                      <option value="pagadas">Pagadas</option>
+                      <option value="parcial">Pago Parcial</option>
+                      <option value="no_pagadas">No Pagadas</option>
+                  </select>
+              </div>
+          </div>
+
+          <!-- Tabla -->
+          <div style="overflow-x: auto; max-height: 65vh;">
+              <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.85rem;">
+                  <!-- Se llena con JS -->
+              </table>
+          </div>
+      </div>
+
+      <!-- === MODAL DETALLE RESERVA === -->
+      <div id="modalDetalleReserva" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
+          <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
+              <span onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+              <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center;">📋 Detalle de Reserva</h3>
+              <div id="contenidoDetalle">Cargando...</div>
+              <div style="margin-top:2rem; text-align:center;">
+                  <button onclick="cerrarModalDetalle()" style="background:#6c757d; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer;">Cerrar</button>
+              </div>
+          </div>
       </div>
       
       <!-- Panel Torneos (Oculto por defecto, se muestra con botón) -->
@@ -240,6 +316,256 @@ $ingresos_mes = 1250000;
         'default': '🏟️' // Por defecto para cualquier otro deporte nuevo
     };
 
+    // === INICIO CODIGO DE CALENDARIO_RESERVAS.JS INTEGRADO Y ADAPTADO PARA ESTE DASHBOARD ===
+
+    // === VARIABLES GLOBALES PARA LA PLANILLA ===
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    let estadoSeleccionadoPlanilla = "";
+    let reservaActualSeleccionada = null; // Para guardar datos al hacer click
+
+    // === FUNCIONES DE NAVEGACIÓN DE FECHA ===
+    function cambiarDiaPlanilla(dias) {
+        const fechaObj = new Date(fechaPlanillaActual);
+        fechaObj.setDate(fechaObj.getDate() + dias);
+        fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
+        
+        const inputFecha = document.getElementById('fechaPlanillaInput');
+        if (inputFecha) inputFecha.value = fechaPlanillaActual;
+        
+        cargarPlanillaReservas();
+    }
+
+    function irAHoyPlanilla() {
+        fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        const inputFecha = document.getElementById('fechaPlanillaInput');
+        if (inputFecha) inputFecha.value = fechaPlanillaActual;
+        cargarPlanillaReservas();
+    }
+
+    // Listeners para los controles
+    document.addEventListener('DOMContentLoaded', () => {
+        const fechaInput = document.getElementById('fechaPlanillaInput');
+        if (fechaInput) {
+            fechaInput.value = fechaPlanillaActual;
+            fechaInput.addEventListener('change', function() {
+                fechaPlanillaActual = this.value;
+                cargarPlanillaReservas();
+            });
+        }
+        
+        const filtroDeporte = document.getElementById('filtroDeporte');
+        if (filtroDeporte) {
+            filtroDeporte.addEventListener('change', cargarPlanillaReservas);
+        }
+        
+        const filtroEstado = document.getElementById('filtroEstado');
+        if (filtroEstado) {
+            filtroEstado.addEventListener('change', function() {
+                estadoSeleccionadoPlanilla = this.value;
+                cargarPlanillaReservas();
+            });
+        }
+
+        // Carga inicial
+        cargarPlanillaReservas();
+    });
+
+    // === FUNCIÓN PRINCIPAL DE CARGA ===
+    async function cargarPlanillaReservas() {
+        const deporteSelect = document.getElementById('filtroDeporte');
+        let deporte = deporteSelect ? deporteSelect.value : "todos";
+        
+        // Si viene vacío o "todos", la API debe manejarlo (asegúrate que tu API acepte 'todos' o vacío)
+        if (!deporte) deporte = "todos";
+
+        console.log(`📡 Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
+
+        try {
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+            
+            const response = await fetch(url, { credentials: 'include' });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            
+            renderizarPlanilla(data);
+            console.log("✅ Planilla cargada exitosamente");
+            
+        } catch (error) {
+            console.error("❌ Error al cargar:", error);
+            document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}</td></tr>`;
+        }
+    }
+
+    // === FUNCIÓN DE RENDERIZADO (COPIADA Y ADAPTADA) ===
+    function renderizarPlanilla(data) {
+        const table = document.getElementById('tablaPlanilla');
+        if (!table) return;
+
+        if (!data.canchas || !data.canchas.length) {
+            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas.</td></tr>';
+            return;
+        }
+
+        let html = `<thead><tr>`;
+        // Columna Hora Sticky
+        html += `<th style="min-width:80px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+
+        // Headers de Canchas con Íconos
+        data.canchas.forEach(c => {
+            const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
+            html += `
+                <th style="min-width:120px; background:#AB47BC; color:white; font-size:0.9rem;">
+                    <div style="font-size:1.2rem;">${icono}</div>
+                    <div style="font-size:0.8rem; margin-top:4px;">${c.nombre_cancha}</div>
+                </th>
+            `;
+        });
+        html += `</tr></thead><tbody>`;
+
+        // Iterar Slots (Horarios)
+        data.slots.forEach(slot => {
+            if (slot.is_label_row) {
+                html += `<tr>`;
+                // Celda Hora
+                html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; border-right:2px solid #ccc;">${slot.label}</td>`;
+                
+                // Celdas de Canchas
+                data.canchas.forEach(cancha => {
+                    const key = `${cancha.id_cancha}_${slot.label}`;
+                    const res = data.reservas[key];
+                    
+                    let bgClass = '#e0e0e0'; // Gris (Disponible)
+                    let cellContent = '';
+                    let clickEvt = '';
+                    let opacity = '1';
+
+                    if (res) {
+                        // Lógica de Colores Solicitada
+                        if (res.estado_pago === 'pagado') {
+                            bgClass = '#4CAF50'; // Verde
+                        } else if (res.estado_pago === 'parcial') {
+                            bgClass = '#FFC107'; // Amarillo
+                        } else {
+                            bgClass = '#F44336'; // Rojo (Pendiente/No pagada)
+                        }
+                        
+                        const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 10) + '..';
+                        cellContent = `<div style="font-size:0.75rem; font-weight:bold; color:#333;">${nombre}</div>`;
+                        
+                        // Habilitar Click
+                        if (res.id_reserva) {
+                            clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
+                        }
+                    }
+
+                    // Filtro visual simple (opcional)
+                    if (estadoSeleccionadoPlanilla) {
+                        // Aquí podrías agregar lógica para atenuar si no cumple el filtro
+                    }
+
+                    html += `<td style="background:${bgClass}; height:45px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity};" ${clickEvt}>${cellContent}</td>`;
+                });
+                html += `</tr>`;
+            }
+        });
+
+        html += `</tbody>`;
+        table.innerHTML = html;
+    }
+
+    // === ABRIR DETALLE DESDE LA PLANILLA ===
+    async function abrirDetalleDesdePlanilla(idReserva) {
+        console.log("🖱️ Click en Reserva ID:", idReserva);
+        if (!idReserva) return;
+
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'get_detalle_reserva');
+            formData.append('id_reserva', idReserva);
+
+            const response = await fetch('../api/canchaboard.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formData,
+                credentials: 'include'
+            });
+
+            const detalle = await response.json();
+            if (detalle.error) throw new Error(detalle.error);
+
+            // Guardar globalmente
+            window.reservaActualSeleccionada = detalle;
+
+            // Renderizar en el modal
+            const container = document.getElementById('contenidoDetalle');
+            if (container && typeof mostrarDetalleReserva === 'function') {
+                mostrarDetalleReserva(detalle); // Usamos la función avanzada si existe
+            } else if (container) {
+                // Fallback simple
+                container.innerHTML = `
+                    <h3>Detalle Reserva #${detalle.id_reserva}</h3>
+                    <p><strong>Cancha:</strong> ${detalle.nombre_cancha}</p>
+                    <p><strong>Cliente:</strong> ${detalle.nombre_cliente || 'N/A'}</p>
+                    <p><strong>Estado Pago:</strong> ${detalle.estado_pago}</p>
+                `;
+            }
+
+            // Mostrar Modal
+            const modal = document.getElementById('modalDetalleReserva');
+            if (modal) modal.style.display = 'flex';
+
+        } catch (err) {
+            console.error(err);
+            alert("Error al cargar detalle: " + err.message);
+        }
+    }
+
+    // === FUNCIÓN PARA MOSTRAR DETALLE (COPIAR DE CALENDARIO_RESERVAS.PHP) ===
+    function mostrarDetalleReserva(detalle) {
+        // ... (Copia el contenido de la función desde el archivo original) ...
+        // Asegúrate de incluir también las funciones auxiliares val() y money() si están separadas.
+        const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
+        const money = (v) => '$' + parseInt(v || 0).toLocaleString();
+        
+        const container = document.getElementById('contenidoDetalle');
+        if(!container) return;
+
+        const html = `
+            <div style="font-size: 0.95rem; line-height: 1.8; color: #333;">
+                <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                    <h3 style="margin: 0; color: #0d47a1;"> ${val(detalle.fecha)}</h3>
+                    <div style="font-size: 1.2rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
+                    <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
+                    <div style="grid-column: span 2;"><strong>Cliente:</strong> ${val(detalle.nombre_cliente || detalle.nombre_responsable)}</div>
+                    <div style="grid-column: span 2;"><strong>Contacto:</strong> ${val(detalle.telefono_cliente)}</div>
+                </div>
+                <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:flex; justify-content:space-between;">
+                    <div><strong>Total:</strong> ${money(detalle.monto_total)}</div>
+                    <div><strong>Estado:</strong> ${val(detalle.estado_pago).toUpperCase()}</div>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
+
+    // === FUNCIONES PARA CERRAR MODALES ===
+    function cerrarModalDetalle() {
+        const modal = document.getElementById('modalDetalleReserva');
+        if (modal) modal.style.display = 'none';
+    }
+    function cerrarModalPago() {
+        const modal = document.getElementById('modalPago');
+        if (modal) modal.style.display = 'none';
+    }
+    // === FIN CODIGO DE CALENDARIO_RESERVAS.JS INTEGRADO ===
+
+
     // --- Lógica Menú ---
     function toggleMenu(e) { e.stopPropagation(); const m = document.getElementById('adminMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
     function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
@@ -302,6 +628,8 @@ $ingresos_mes = 1250000;
         cargarPlanillaReservas();
     });
 
+    
+
     // Función Principal de Carga
     async function cargarPlanillaReservas() {
         // 1. Obtener deporte de la variable global (no del select directamente para evitar errores)
@@ -348,6 +676,8 @@ $ingresos_mes = 1250000;
       let html = `<thead><tr>`;
     
       // Columna Hora (Sticky)
+      // si queremos poner un ícono arriba del nombre de la columna, podríamos usar el ícono del deporte o uno genérico. Esta línea va luego del <th style..... en data.canchas.forEach(c => {....}) para que quede antes de las canchas. Por ejemplo, podríamos usar un ícono de reloj para la columna de hora:
+      //<div style="font-size:1.2rem;">${icono}</div>
       html += `<th style="min-width:80px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
 
       data.canchas.forEach(c => {
@@ -355,7 +685,6 @@ $ingresos_mes = 1250000;
 
           html += `
             <th style="min-width:120px; background:#AB47BC; color:white; font-size:0.9rem;">
-                <div style="font-size:1.2rem;">${icono}</div>
                 <div style="font-size:0.8rem; margin-top:4px;">${c.nombre_cancha}</div>
             </th>
           `;
@@ -449,66 +778,78 @@ $ingresos_mes = 1250000;
     }
     <?php endif; ?>
 
+    // Función para abrir detalle desde la planilla
     async function abrirDetalleDesdePlanilla(idReserva) {
-      console.log("🖱️ Click en Reserva ID:", idReserva);
-      
-      if (!idReserva) {
-          alert("Error: ID de reserva inválido");
-          return;
-      }
+        console.log("🖱️ Click en Reserva ID:", idReserva);
+        
+        if (!idReserva) {
+            alert("Error: ID de reserva inválido");
+            return;
+        }
 
-      try {
-          // Llamar a la API para obtener detalles completos
-          const formData = new URLSearchParams();
-          formData.append('action', 'get_detalle_reserva');
-          formData.append('id_reserva', idReserva);
-          // Nota: Tu API puede esperar id_disponibilidad, ajusta según tu endpoint real
-          // Si tu API get_detalle_reserva acepta id_reserva directo, úsalo así.
-          // Si necesita id_disponibilidad, quizás debas buscarlo primero o modificar la API.
-          // Asumiendo que tu API actual en canchaboard.php maneja esto:
-          
-          const response = await fetch('../api/canchaboard.php', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-              body: formData,
-              credentials: 'include'
-          });
+        try {
+            // 1. Llamar a la API
+            const formData = new URLSearchParams();
+            formData.append('action', 'get_detalle_reserva');
+            formData.append('id_reserva', idReserva);
+            // Nota: Si tu API espera id_disponibilidad, ajústalo aquí. 
+            // Por ahora asumimos que con id_reserva basta o que la API lo maneja.
 
-          const detalle = await response.json();
+            const response = await fetch('../api/canchaboard.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formData,
+                credentials: 'include'
+            });
 
-          if (detalle.error) throw new Error(detalle.error);
+            const detalle = await response.json();
 
-          // Guardar en variable global para usar en botones de acción (Pagar, Anular, etc.)
-          window.reservaActualSeleccionada = detalle;
+            if (detalle.error) {
+                throw new Error(detalle.error);
+            }
 
-          // Renderizar contenido en el modal
-          if (typeof mostrarDetalleReserva === 'function') {
-              mostrarDetalleReserva(detalle); // Usa tu función existente de calendario_reservas si la copiaste
-          } else {
-              // Fallback simple si no tienes la función mostrarDetalleReserva copiada
-              const container = document.getElementById('contenidoDetalle');
-              if (container) {
-                  container.innerHTML = `
-                      <h3 style="color:#071289;">Detalle Reserva #${detalle.id_reserva}</h3>
-                      <p><strong>Cancha:</strong> ${detalle.nombre_cancha || 'N/A'}</p>
-                      <p><strong>Fecha:</strong> ${detalle.fecha} ${detalle.hora_inicio}</p>
-                      <p><strong>Cliente:</strong> ${detalle.nombre_cliente || detalle.nombre_responsable || 'N/A'}</p>
-                      <p><strong>Estado Pago:</strong> ${detalle.estado_pago || 'Pendiente'}</p>
-                      <p><strong>Monto:</strong> $${detalle.monto_total || 0}</p>
-                  `;
-              }
-          }
+            console.log("✅ Detalle recibido:", detalle);
 
-          // Mostrar el modal
-          const modal = document.getElementById('modalDetalleReserva');
-          if (modal) {
-              modal.style.display = 'flex';
-          }
+            // 2. Guardar en variable global para usos posteriores (ej. Pagar)
+            window.reservaActualSeleccionada = detalle;
 
-      } catch (err) {
-          console.error("Error al cargar detalle:", err);
-          alert("No se pudo cargar el detalle de la reserva.");
-      }
+            // 3. Renderizar el contenido en el modal
+            const container = document.getElementById('contenidoDetalle');
+            if (container) {
+                // Usamos la función mostrarDetalleReserva si existe, sino un HTML básico
+                if (typeof mostrarDetalleReserva === 'function') {
+                    mostrarDetalleReserva(detalle);
+                } else {
+                    // Fallback simple si no tienes la función compleja copiada
+                    container.innerHTML = `
+                        <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
+                            <h3 style="color:#071289; margin-bottom:1rem;">Detalle Reserva #${detalle.id_reserva}</h3>
+                            <p><strong>Cancha:</strong> ${detalle.nombre_cancha || 'N/A'}</p>
+                            <p><strong>Fecha:</strong> ${detalle.fecha} ${detalle.hora_inicio?.substring(0,5)} - ${detalle.hora_fin?.substring(0,5)}</p>
+                            <p><strong>Cliente:</strong> ${detalle.nombre_cliente || detalle.nombre_responsable || 'N/A'}</p>
+                            <p><strong>Teléfono:</strong> ${detalle.telefono_cliente || 'N/A'}</p>
+                            <p><strong>Estado Pago:</strong> <span style="font-weight:bold; color:${detalle.estado_pago === 'pagado' ? 'green' : 'red'}">${detalle.estado_pago?.toUpperCase() || 'PENDIENTE'}</span></p>
+                            <p><strong>Monto Total:</strong> $${parseInt(detalle.monto_total || 0).toLocaleString()}</p>
+                            ${detalle.notas ? `<p><strong>Notas:</strong> ${detalle.notas}</p>` : ''}
+                        </div>
+                    `;
+                }
+            }
+
+            // 4. Mostrar el modal
+            const modal = document.getElementById('modalDetalleReserva');
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log("✅ Modal abierto");
+            } else {
+                console.error("❌ No se encontró el elemento #modalDetalleReserva en el DOM");
+                alert("Error: No se pudo abrir el modal de detalle.");
+            }
+
+        } catch (err) {
+            console.error("❌ Error al cargar detalle:", err);
+            alert("No se pudo cargar el detalle de la reserva: " + err.message);
+        }
     }
 
     // Función para cerrar el modal (agrégala si no la tienes)
@@ -516,5 +857,126 @@ $ingresos_mes = 1250000;
         document.getElementById('modalDetalleReserva').style.display = 'none';
     }
   </script>
+  <!-- === SUBMODAL CENTRAL DE DETALLE DE RESERVA === -->
+    <div id="modalDetalleReserva" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 600px; padding: 2rem;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999; z-index:10;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
+            
+            <!-- Aquí se inyectará el contenido dinámico -->
+            <div id="contenidoDetalle" style="color:#333; width: 100%; box-sizing: border-box;">
+                <!-- Ejemplo de contenido dinámico -->
+                <div style="margin-bottom:1rem;">
+                    <strong>Cancha:</strong> Cancha 1 - Fútbol 5
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Fecha y Hora:</strong> 25 de Junio, 18:00 - 19:00
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Cliente:</strong> Juan Pérez
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Estado:</strong> Reservada
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Precio:</strong> $15.000
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Observaciones:</strong> Traer balón propio
+                </div>
+            </div>
+            
+            <!-- Botón de Acciones dentro del modal (Opcional, o usar el menú desplegable si prefieres) -->
+            <div style="margin-top:2rem; border-top:1px solid #eee; padding-top:1rem; text-align:center;">
+                <button id="btnAccionesModal" onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">
+                    ⚙️ Opciones de Gestión
+                </button>
+                
+                <!-- Menú de acciones dentro del modal -->
+                <div id="actionMenuModal" class="action-dropdown-menu" style="display:none; position:relative; top:5px; left:0; right:0; margin:0 auto; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <button class="dropdown-item" onclick="anularReserva()">🗑️ Anular Reserva</button>
+                    <button class="dropdown-item" onclick="cancelarReserva()"> Cancelar</button>
+                    <button class="dropdown-item" onclick="cambiarCancha()">🔄 Cambiar Cancha</button>
+                    <button class="dropdown-item" onclick="enviarMensaje()">💬 Enviar Mensaje</button>
+                    <button id="btnPagarModal" class="dropdown-item btn-pay-action" style="display:none;" onclick="abrirModalPagoDesdeDetalle()">💳 Pagar Reserva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === SUBMODAL DE PAGO (ACTUALIZADO) === -->
+    <div id="modalPago" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 500px;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalPago()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
+            
+            <!-- Información Base (Solo lectura) -->
+            <div style="margin-bottom:1rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
+                <strong>Reserva ID:</strong> <span id="infoIdReserva"></span><br>
+                <strong>Monto Total Arriendo:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;"></span>
+            </div>
+            
+            <form id="formPago">
+                <!-- CAMPO MONTO EDITABLE -->
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">💰 Monto a Abonar ($)</label>
+                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
+                        style="width:100%; padding:0.8rem; border-radius:6px; border:2px solid #4CAF50; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                    <small style="color:#666; font-size:0.8rem;">* Puedes ingresar un pago parcial (ej: $7.500)</small>
+                </div>
+
+                <!-- MÉTODO DE PAGO -->
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; background:white; color:#333;">
+                        <option value="">Seleccionar...</option>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="webpay">Webpay / Tarjeta</option>
+                        <option value="efectivo">Efectivo en Recinto</option>
+                        <option value="convenio">Convenio Club</option>
+                    </select>
+                </div>
+                
+                <!-- ID TRANSACCIÓN (Opcional según método) -->
+                <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;">Comprobante / ID Transacción</label>
+                    <input type="text" name="transaccion_id" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+                </div>
+
+                <!-- CAMPO NOTAS (NUEVO) -->
+                <div class="form-group" style="margin-bottom:1.5rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem; color:#333;"> Notas del Pago</label>
+                    <textarea name="notas_pago" id="notasPago" rows="3" placeholder="Ej: Pago parcial de Juan Pérez (1/4). Faltan 3 socios." 
+                            style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; resize:vertical; font-family:sans-serif;"></textarea>
+                </div>
+                
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem;">
+                    Confirmar Registro de Pago
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTA: El panel lateral derecho (.detail-panel) ya NO es necesario. Puedes eliminarlo o dejarlo oculto. -->
+    <!-- Si lo eliminas, recuerda ajustar el grid principal para que ocupe todo el ancho o centrar la grilla. -->
+
+    <!-- Submodal para mensaje - CORREGIDO -->
+    <div id="mensajeModal" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1001;">
+        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:500px; position:relative;">
+            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer;">&times;</span>
+            <h3>Enviar Mensaje</h3>
+            <form id="mensajeForm">
+            <div class="form-group">
+                <label for="mensajeTexto">Mensaje *</label>
+                <textarea id="mensajeTexto" name="mensaje" rows="4" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:5px; color:#071289;"></textarea>
+            </div>
+            <button type="submit" class="btn-submit" style="width:100%;">Enviar Mensaje y Correo</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
