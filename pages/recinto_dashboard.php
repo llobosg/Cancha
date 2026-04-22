@@ -587,7 +587,6 @@ $ingresos_mes = 1250000;
 
     // --- Lógica Planilla ---
     // Variables Globales
-    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
     let deporteSeleccionado = 'padel'; // Valor por defecto inicial
 
     // Función para cambiar día (Anterior / Siguiente)
