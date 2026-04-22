@@ -2301,12 +2301,21 @@ $recinto = $stmt->fetch();
         try {
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaParaUsar}&deporte=${encodeURIComponent(deporte)}`;
             
+            console.log(`📡 Iniciando carga para fecha: ${fechaParaUsar} | Deporte: ${deporte}`);
+
             const response = await fetch(url, {
                 method: 'GET',
-                credentials: 'include'
+                credentials: 'include' // ✅ ESTO ES LO QUE FALTABA: Fuerza el envío de cookies
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.error(" Error 401: La sesión no se detectó en el iframe. Verifica que las cookies estén habilitadas.");
+                    // Opcional: Redirigir al login si falla persistentemente
+                    // window.location.href = '../login_recintos.php'; 
+                }
+                throw new Error(`HTTP ${response.status}`);
+            }
             
             const data = await response.json();
             
