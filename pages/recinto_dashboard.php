@@ -142,6 +142,35 @@ $ingresos_mes = 1250000;
         color: #333;
         font-weight: bold;
     }
+
+    /* Modal Detalle (Base) */
+    #modalDetalleReserva {
+        z-index: 2000; /* Nivel base */
+    }
+
+    /* Modal Pago (Debe estar ENCIMA del detalle) */
+    #modalPago {
+        z-index: 2500; /* Nivel superior */
+        display: none; /* Por defecto oculto */
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); /* Fondo oscuro */
+        backdrop-filter: blur(5px); /* Efecto borroso */
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Contenido del Modal Pago */
+    #modalPago .submodal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 90%;
+        position: relative; /* Para posicionar la X */
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        animation: fadeIn 0.3s ease-out;
+    }
   </style>
 </head>
 <body>
@@ -689,21 +718,12 @@ $ingresos_mes = 1250000;
         if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
     }
 
-    function cerrarModalDetalle() {
-        document.getElementById('modalDetalleReserva').style.display = 'none';
-    }
-
     // === FUNCIONES AUXILIARES PARA EL MENÚ DE ACCIONES ===
     function toggleActionMenuModal() {
         const menu = document.getElementById('actionMenuModal');
         if (menu) {
             menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         }
-    }
-
-    function cerrarModalDetalle() {
-        const modal = document.getElementById('modalDetalleReserva');
-        if (modal) modal.style.display = 'none';
     }
 
     function cerrarModalPago() {
@@ -733,7 +753,7 @@ $ingresos_mes = 1250000;
         if(modalMsg) modalMsg.style.display = 'none';
     }
 
-    // === FUNCIÓN PARA ABRIR MODAL DE PAGO (Ya la tenías, asegúrate que esté presente) ===
+    // Función para abrir el modal de pago DESDE el detalle
     function abrirModalPagoDesdeDetalle() {
         if (!window.reservaActualSeleccionada) return;
         
@@ -741,27 +761,30 @@ $ingresos_mes = 1250000;
         const idReserva = detalle.id_reserva;
         const montoTotal = parseFloat(detalle.monto_total);
 
-        // Llenar datos del modal de pago
+        // 1. Llenar datos
         document.getElementById('infoIdReserva').textContent = idReserva;
         document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
         document.getElementById('montoPagar').value = montoTotal;
         
-        // Resetear formulario
+        // Resetear form
         document.getElementById('formPago').reset();
         document.getElementById('montoPagar').value = montoTotal;
         document.getElementById('campoTransaccion').style.display = 'none';
         
-        // Guardar ID en dataset del form para el submit
+        // Guardar IDs para el submit
         document.getElementById('formPago').dataset.idReserva = idReserva;
         document.getElementById('formPago').dataset.montoOriginal = montoTotal;
 
-        // Ocultar menú de acciones y mostrar modal de pago
-        document.getElementById('actionMenuModal').style.display = 'none';
-        document.getElementById('modalDetalleReserva').style.display = 'none';
+        // 2. Ocultar menú de acciones si está abierto
+        const menu = document.getElementById('actionMenuModal');
+        if (menu) menu.style.display = 'none';
+
+        // 3. MOSTRAR modal de pago ENCIMA del detalle
+        // No cerramos el modalDetalle, solo ponemos el de pago encima gracias al z-index
         document.getElementById('modalPago').style.display = 'flex';
     }
 
-    // Listener para el método de pago en el modal de pago
+    // Listener para el método de pago (mostrar campo transacción)
     document.getElementById('metodoPago')?.addEventListener('change', function() {
         const campo = document.getElementById('campoTransaccion');
         const input = document.getElementById('transaccionId');
@@ -783,7 +806,6 @@ $ingresos_mes = 1250000;
         const montoPagado = parseFloat(document.getElementById('montoPagar').value);
         const metodo = document.getElementById('metodoPago').value;
         const transaccion = document.getElementById('transaccionId').value;
-        const notas = document.getElementById('notasPago').value;
 
         if (montoPagado <= 0) { alert("El monto debe ser mayor a 0"); return; }
 
@@ -795,15 +817,16 @@ $ingresos_mes = 1250000;
             formData.append('monto_total_original', montoOriginal);
             formData.append('metodo_pago', metodo);
             formData.append('transaccion_id', transaccion || '');
-            formData.append('notas_pago', notas);
 
             const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
             const data = await res.json();
 
             if (data.success) {
                 alert("✅ Pago registrado correctamente.");
-                cerrarModalPago();
-                location.reload(); // Recargar para ver cambios en la planilla
+                // Cerrar modales y recargar para ver cambios
+                document.getElementById('modalPago').style.display = 'none';
+                document.getElementById('modalDetalleReserva').style.display = 'none';
+                location.reload(); 
             } else {
                 alert("❌ Error: " + data.message);
             }
@@ -813,10 +836,10 @@ $ingresos_mes = 1250000;
         }
     });
 
-    // Función para cerrar
+    // Función para cerrar TODO (usada por la X del modal detalle)
     function cerrarModalDetalle() {
-        const modal = document.getElementById('modalDetalleReserva');
-        if (modal) modal.style.display = 'none';
+        document.getElementById('modalDetalleReserva').style.display = 'none';
+        document.getElementById('modalPago').style.display = 'none'; // Por seguridad
     }
   </script>
     <!-- === MODAL DETALLE DE RESERVA (ESTRUCTURA) === -->
@@ -834,24 +857,30 @@ $ingresos_mes = 1250000;
         </div>
     </div>
 
-    <!-- === MODAL DE PAGO (ESTRUCTURA) === -->
-    <div id="modalPago" class="submodal" style="display:none;">
-        <div class="submodal-content" style="max-width: 500px;">
-            <span class="close-modal" onclick="cerrarModalPago()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+    <!-- === SUBMODAL DE PAGO === -->
+    <div id="modalPago" class="submodal"> <!-- Quita style="display:none" si lo controlas por JS, o déjalo -->
+        <div class="submodal-content">
+            <!-- BOTÓN X PARA VOLVER AL DETALLE -->
+            <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
+            
             <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
             
+            <!-- Info Base -->
             <div style="margin-bottom:1rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
                 <strong>Reserva ID:</strong> <span id="infoIdReserva"></span><br>
                 <strong>Monto Total:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;"></span>
             </div>
             
             <form id="formPago">
-                <div class="form-group">
-                    <label>Monto a Abonar ($)</label>
-                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:6px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                <!-- Campos del formulario (Monto, Método, etc.) -->
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Monto a Abonar ($)</label>
+                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
+                        style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:6px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
                 </div>
-                <div class="form-group">
-                    <label>Método de Pago</label>
+                
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.3rem;">Método de Pago</label>
                     <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
                         <option value="">Seleccionar...</option>
                         <option value="transferencia">Transferencia</option>
@@ -859,11 +888,15 @@ $ingresos_mes = 1250000;
                         <option value="efectivo">Efectivo</option>
                     </select>
                 </div>
-                <div id="campoTransaccion" class="form-group" style="display:none;">
+
+                <div id="campoTransaccion" class="form-group" style="display:none; margin-bottom:1rem;">
                     <label>ID Transacción</label>
                     <input type="text" id="transaccionId" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
                 </div>
-                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">Confirmar Pago</button>
+
+                <button type="submit" class="btn-submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    Confirmar Pago
+                </button>
             </form>
         </div>
     </div>
