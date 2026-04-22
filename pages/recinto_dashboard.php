@@ -110,6 +110,53 @@ $ingresos_mes = 1250000;
         .quick-actions { grid-template-columns: 1fr 1fr; }
     }
 
+    /* === AJUSTES RESPONSIVE PARA LA PLANILLA === */
+    @media (max-width: 768px) {
+        /* Contenedor de la tabla */
+        .planilla-table-container {
+            max-height: 75vh; /* Un poco más de altura en móvil */
+        }
+
+        /* Tabla */
+        .planilla-table {
+            font-size: 0.75rem; /* Fuente más pequeña */
+        }
+
+        /* Columna de HORAS (Sticky Left) */
+        .planilla-table th:first-child,
+        .planilla-table td:first-child {
+            min-width: 60px !important; /* Ancho mínimo suficiente para "08:00" */
+            width: 60px !important;
+            font-size: 0.7rem;
+            padding: 4px !important;
+            white-space: nowrap; /* Evita que la hora se parta */
+            overflow: visible; /* Asegura que se vea completa */
+        }
+
+        /* Columnas de CANCHAS */
+        .planilla-table th, 
+        .planilla-table td {
+            min-width: 80px !important; /* Un poco más anchas para leer nombres cortos */
+            padding: 4px !important;
+        }
+
+        /* Encabezados de Canchas */
+        .planilla-table thead th div {
+            font-size: 0.7rem; /* Icono más pequeño */
+        }
+        .planilla-table thead th div:last-child {
+            font-size: 0.65rem; /* Nombre de cancha más pequeño */
+            white-space: normal; /* Permite que el nombre baje de línea si es largo */
+            line-height: 1.1;
+        }
+
+        /* Contenido de la celda (Nombre Cliente) */
+        .planilla-table tbody td div {
+            font-size: 0.65rem;
+            line-height: 1.1;
+        }
+    }
+
     /* Estilos específicos para la planilla de Reservas (pueden ser ajustados según el diseño final) */
     /* === MEJORAS VISUALES PLANILLA === */
 
@@ -410,9 +457,9 @@ $ingresos_mes = 1250000;
     // === INICIO CODIGO DE CALENDARIO_RESERVAS.JS INTEGRADO Y ADAPTADO PARA ESTE DASHBOARD ===
 
     // === VARIABLES GLOBALES PARA LA PLANILLA ===
-    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
-    let estadoSeleccionadoPlanilla = "";
     let reservaActualSeleccionada = null; // Para guardar datos al hacer click
+ 
+  
 
     // === FUNCIONES DE NAVEGACIÓN DE FECHA ===
     function cambiarDiaPlanilla(dias) {
@@ -433,8 +480,13 @@ $ingresos_mes = 1250000;
         cargarPlanillaReservas();
     }
 
-    // Listeners para los controles
+    // === VARIABLES GLOBALES ===
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    let estadoSeleccionadoPlanilla = ""; // Inicializar vacío
+
+    // === LISTENERS CORREGIDOS (Sin Loop) ===
     document.addEventListener('DOMContentLoaded', () => {
+        // 1. Listener Fecha
         const fechaInput = document.getElementById('fechaPlanillaInput');
         if (fechaInput) {
             fechaInput.value = fechaPlanillaActual;
@@ -443,55 +495,73 @@ $ingresos_mes = 1250000;
                 cargarPlanillaReservas();
             });
         }
-        
+
+        // 2. Listener Deporte
         const filtroDeporte = document.getElementById('filtroDeporte');
         if (filtroDeporte) {
-            filtroDeporte.addEventListener('change', cargarPlanillaReservas);
-        }
-        
-        const filtroEstado = document.getElementById('filtroEstado');
-        if (filtroEstado) {
-            filtroEstado.addEventListener('change', function() {
-                estadoSeleccionadoPlanilla = this.value;
+            filtroDeporte.addEventListener('change', function() {
+                // No necesitamos guardar deporte en variable global si la API lo lee directo del select,
+                // pero sí llamamos a cargar.
                 cargarPlanillaReservas();
             });
         }
 
-        // Carga inicial
+        // 3. Listener Estado (CORREGIDO)
+        const filtroEstado = document.getElementById('filtroEstado');
+        if (filtroEstado) {
+            filtroEstado.addEventListener('change', function() {
+                estadoSeleccionadoPlanilla = this.value; // Guardar estado seleccionado
+                console.log(`🔍 Filtro Estado cambiado a: '${estadoSeleccionadoPlanilla}'`);
+                cargarPlanillaReservas();
+            });
+        }
+
+        // 4. Carga Inicial
         cargarPlanillaReservas();
     });
 
-    // === FUNCIÓN PRINCIPAL DE CARGA ===
+    // === FUNCIÓN DE CARGA OPTIMIZADA ===
     async function cargarPlanillaReservas() {
         const deporteSelect = document.getElementById('filtroDeporte');
-        let deporte = deporteSelect ? deporteSelect.value : "todos";
+        const deporte = deporteSelect ? deporteSelect.value : "todos";
         
-        // Si viene vacío o "todos", la API debe manejarlo (asegúrate que tu API acepte 'todos' o vacío)
-        if (!deporte) deporte = "todos";
+        // Evitar llamadas duplicadas si ya está cargando (opcional, pero útil)
+        // if (window.isLoadingPlanilla) return;
+        // window.isLoadingPlanilla = true;
 
-        console.log(`📡 Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
+        console.log(`📡 Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}, Estado: ${estadoSeleccionadoPlanilla}`);
 
         try {
+            // La API debe recibir el estado también si queremos filtrar desde el backend, 
+            // O bien, la API devuelve todo y JS filtra. 
+            // NOTA: Tu API actual 'get_planilla_reservas' NO recibe estado. 
+            // Por lo tanto, el filtrado por estado debe hacerse en JS (renderizarPlanilla) 
+            // O debemos actualizar la API. 
+            
+            // OPCIÓN A: Filtrado en Frontend (Más rápido si no son miles de reservas)
+            // Pedimos todos los datos según fecha/deporte y filtramos visualmente al renderizar.
+            
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
             
             const response = await fetch(url, { credentials: 'include' });
-            
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             
-            renderizarPlanilla(data);
-            console.log("✅ Planilla cargada exitosamente");
+            // Pasamos el estado seleccionado a la función de renderizado
+            renderizarPlanilla(data, estadoSeleccionadoPlanilla);
             
         } catch (error) {
             console.error("❌ Error al cargar:", error);
             document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}</td></tr>`;
+        } finally {
+            // window.isLoadingPlanilla = false;
         }
     }
 
-    // === FUNCIÓN DE RENDERIZADO (COPIADA Y ADAPTADA) ===
-    function renderizarPlanilla(data) {
+    // === RENDERIZADO CON FILTRO DE ESTADO ===
+    function renderizarPlanilla(data, filtroEstado) {
         const table = document.getElementById('tablaPlanilla');
         if (!table) return;
 
@@ -501,58 +571,83 @@ $ingresos_mes = 1250000;
         }
 
         let html = `<thead><tr>`;
-        // Columna Hora Sticky
-        html += `<th style="min-width:80px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+        html += `<th style="min-width:60px; background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
 
-        // Headers de Canchas con Íconos
         data.canchas.forEach(c => {
             const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
             html += `
-                <th style="min-width:120px; background:#AB47BC; color:white; font-size:0.9rem;">
-                    <div style="font-size:0.8rem; margin-top:4px;">${c.nombre_cancha}</div>
+                <th style="min-width:80px; background:#AB47BC; color:white; font-size:0.8rem;">
+                    <div style="font-size:1rem;">${icono}</div>
+                    <div style="font-size:0.7rem; margin-top:2px;">${c.nombre_cancha}</div>
                 </th>
             `;
         });
         html += `</tr></thead><tbody>`;
 
-        // Iterar Slots (Horarios)
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
                 html += `<tr>`;
-                // Celda Hora
-                html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; border-right:2px solid #ccc;">${slot.label}</td>`;
+                html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; border-right:2px solid #ccc; font-size:0.75rem;">${slot.label}</td>`;
                 
-                // Celdas de Canchas
                 data.canchas.forEach(cancha => {
                     const key = `${cancha.id_cancha}_${slot.label}`;
                     const res = data.reservas[key];
                     
-                    let bgClass = '#e0e0e0'; // Gris (Disponible)
-                    let opacity = '1';
-                    let claseEstado = 'estado-disponible'; // Por defecto
+                    let bgClass = 'estado-disponible'; // Por defecto gris
                     let cellContent = '';
                     let clickEvt = '';
+                    let opacity = '1';
+                    let cumpleFiltro = true;
 
                     if (res) {
-                        // Asignar clase según estado de pago
-                        if (res.estado_pago === 'pagado') {
-                            claseEstado = 'estado-pagado';
-                        } else if (res.estado_pago === 'parcial') {
-                            claseEstado = 'estado-parcial';
-                        } else {
-                            claseEstado = 'estado-pendiente'; // Rojo suave
+                        // Determinar estado lógico
+                        let estadoLogico = '';
+                        if (res.estado_pago === 'pagado') estadoLogico = 'pagadas';
+                        else if (res.estado_pago === 'parcial') estadoLogico = 'parcial';
+                        else {
+                            // Si no está pagado, depende de la fecha
+                            const fechaRes = new Date(res.fecha + 'T00:00:00');
+                            estadoLogico = (fechaRes < hoy) ? 'no_pagadas' : 'reservada';
                         }
-                        
-                        const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 10) + '..';
-                        cellContent = `<div style="font-size:0.75rem; font-weight:bold;">${nombre}</div>`;
-                        
-                        if (res.id_reserva) {
-                            clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
+
+                        // === APLICAR FILTRO DE ESTADO ===
+                        if (filtroEstado && filtroEstado !== '') {
+                            if (filtroEstado === 'pagadas' && estadoLogico !== 'pagadas') cumpleFiltro = false;
+                            if (filtroEstado === 'parcial' && estadoLogico !== 'parcial') cumpleFiltro = false;
+                            if (filtroEstado === 'no_pagadas' && estadoLogico !== 'no_pagadas') cumpleFiltro = false;
+                            if (filtroEstado === 'reservada' && estadoLogico !== 'reservada') cumpleFiltro = false;
+                            // Puedes agregar más casos según tus opciones del select
+                        }
+
+                        if (cumpleFiltro) {
+                            // Asignar clases CSS
+                            if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
+                            else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
+                            else bgClass = 'estado-pendiente';
+
+                            const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 8) + '..';
+                            cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>`;
+                            
+                            if (res.id_reserva) {
+                                clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
+                            }
+                        } else {
+                            // Si no cumple filtro, atenuar o ocultar
+                            opacity = '0.1'; 
+                            cellContent = '';
+                            clickEvt = '';
+                        }
+                    } else {
+                        // Es disponible
+                        if (filtroEstado && filtroEstado !== 'disponible') {
+                            // Si filtramos por algo que no sea disponible, ocultamos las libres
+                            // Opcional: opacity = '0.1';
                         }
                     }
 
-                    // Renderizar celda con la nueva clase
-                    html += `<td class="${claseEstado}" style="height:45px; cursor:${clickEvt ? 'pointer' : 'default'};" ${clickEvt}>${cellContent}</td>`;
+                    html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity};" ${clickEvt}>${cellContent}</td>`;
                 });
                 html += `</tr>`;
             }
@@ -831,7 +926,8 @@ $ingresos_mes = 1250000;
                     </button>
                     <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white; overflow:hidden;">
                         <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🗑️ Anular Reserva</button>
-                        <button onclick="enviarMensaje()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">💬 Enviar Mensaje</button>
+                        <button onclick="cancelarReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">❌ Cancelar Reserva</button>
+                        <button onclick="cambiarCancha()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🔄 Cambiar Cancha</button>
                         ${detalle.estado_pago !== 'pagado' ? 
                             `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold; cursor:pointer;">💳 Pagar / Abonar</button>` 
                             : ''}
