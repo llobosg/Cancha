@@ -4,16 +4,18 @@ require_once __DIR__ . '/../includes/config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $rol_actual = $_SESSION['recinto_rol'] ?? '';
-if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, ['admin', 'asistente'])) {
+$roles_validos = ['admin', 'asistente'];
+if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_validos)) {
     header('Location: login_recintos.php'); exit;
 }
 require_once __DIR__ . '/../includes/permisos.php';
 
-// Datos Usuario y Recinto
+// Datos Usuario
 $stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
 $stmt_user->execute([$_SESSION['id_admin']]);
 $usuario_actual = $stmt_user->fetch();
 
+// Datos Recinto
 $id_recinto = $_SESSION['id_recinto'];
 $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
 $stmt_recinto->execute([$id_recinto]);
@@ -58,11 +60,10 @@ $monto_deuda = $s_deuda->fetchColumn();
         background-blend-mode: multiply; color: white; font-family: var(--font-main); min-height: 100vh; padding: 0; overflow-x: hidden;
     }
     
-    /* TOP BAR DELGADO */
+    /* TOP BAR */
     .top-bar {
         background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
-        padding: 0.5rem 1.5rem; /* Reducido */
-        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
         position: sticky; top: 0; left: 0; width: 100%; z-index: 1000; 
         box-shadow: 0 2px 8px rgba(186, 104, 200, 0.2); height: 50px;
     }
@@ -72,88 +73,72 @@ $monto_deuda = $s_deuda->fetchColumn();
     .dropdown-menu a { display: block; padding: 0.6rem 0.8rem; text-decoration: none; color: #333; font-size: 0.9rem; }
     .btn-logout { text-decoration: none; padding: 0.4rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
 
-    /* =========================================
-       LAYOUT PRINCIPAL AJUSTADO
-       ========================================= */
+    /* LAYOUT PRINCIPAL CENTRADO */
     .main-layout {
         display: grid;
-        /* Acciones (Abajo) | Planilla (Centro) | KPIs (Derecha) */
-        /* Nota: Cambiamos el orden visual con grid-area o flex order si es necesario, 
-           pero aquí mantendremos la estructura de columnas y ajustaremos alturas */
-        grid-template-columns: 200px 1fr 240px; 
-        gap: 1rem;
-        width: 99%; margin: 0 auto; padding: 0.5rem;
-        height: calc(100vh - 60px); /* Ajuste fino altura total */
-        align-items: start; /* Alineación superior */
+        /* Acciones (200px) | Planilla (Auto/Centro) | KPIs (240px) */
+        grid-template-columns: 200px auto 240px; 
+        justify-content: center; /* CLAVE: Centra la planilla en el espacio restante */
+        gap: 2rem; /* Espacio entre columnas */
+        width: 98%; margin: 0 auto; padding: 0.5rem;
+        height: calc(100vh - 60px);
+        align-items: start;
     }
+
+    /* Columna Izquierda: Acciones */
+    .actions-column { 
+        display: flex; flex-direction: column; gap: 1rem; 
+        padding-left: 1rem; /* Espacio desde el borde izquierdo */
+        margin-top: 60px; /* Alinear con KPIs */
+    }
+    .action-btn-sidebar {
+        background: white; color: #071289; border: none; padding: 0.8rem; border-radius: 8px;
+        font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;
+    }
+    .action-btn-sidebar:hover { transform: translateY(-2px); }
 
     /* Columna Central: Planilla */
     .planilla-column {
-        background: transparent; /* Flotante */
-        display: flex; flex-direction: column;
+        background: transparent; display: flex; flex-direction: column;
         height: 100%; position: relative;
+        max-width: 100%; /* Permitir que crezca */
     }
-
-    /* HEADER FILTROS: Ancho Dinámico y Sin Solapamiento */
+    
+    /* HEADER FILTROS */
     .planilla-header-controls { 
-        background: rgba(21, 101, 192, 0.85); /* Azul Pádel Semitransparente */
-        backdrop-filter: blur(10px);
-        padding: 0.8rem 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.2);
-        
-        /* ANCHO MÍNIMO Y MÁXIMO BASADO EN COLUMNAS */
-        /* 8 col * 110 + 60 hora = ~940px. 12 col * 110 + 60 = ~1380px */
-        min-width: 940px; 
-        max-width: 1380px;
-        width: fit-content; /* Se ajusta al contenido pero respeta min/max */
-        
-        display: flex; 
-        flex-wrap: nowrap; /* Evita que bajen de línea */
-        gap: 1.5rem; 
-        align-items: center; 
-        justify-content: space-between; 
-        color: white;
-        overflow-x: auto; /* Scroll si la pantalla es muy pequeña */
+        background: rgba(21, 101, 192, 0.85); backdrop-filter: blur(10px);
+        padding: 0.8rem 1.5rem; border-radius: 12px; margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2);
+        min-width: 940px; max-width: 1380px; width: fit-content;
+        display: flex; flex-wrap: nowrap; gap: 1.5rem; align-items: center; justify-content: space-between; color: white;
     }
-
     .control-group { display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
     .control-label { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
     .control-input { background: rgba(255,255,255,0.2); border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 130px; padding-right: 25px; border-radius: 4px; }
     .control-btn { background: white; color: #0D47A1; border: none; border-radius: 4px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer; }
     .control-select { background: rgba(255,255,255,0.95); border: none; border-radius: 4px; padding: 0.4rem; font-size: 0.85rem; color: #333; min-width: 110px; }
 
-    /* CONTENEDOR TABLA: ALINEADO CON HEADER */
+    /* CONTENEDOR TABLA */
     .planilla-table-container {
         flex: 1; overflow: auto; padding: 4px;
-        width: max-content !important;
-        min-width: 940px; /* Mismo mínimo que el header */
-        background-color: transparent;
+        width: max-content !important; min-width: 940px; background-color: transparent;
     }
 
-    /* Columna Derecha: KPIs (50% MÁS GRANDES y ALINEADOS) */
+    /* Columna Derecha: KPIs */
     .kpi-column {
-        display: flex; flex-direction: column; gap: 1rem; 
-        overflow-y: auto;
-        padding-top: 0; /* Alinear con el inicio de la tabla (no con el header) */
-        margin-top: 50px; /* Aproximadamente la altura del header + margen para bajar al nivel de los nombres de cancha */
+        display: flex; flex-direction: column; gap: 1rem; overflow-y: auto;
+        margin-top: 60px; /* Alinear visualmente */
+        padding-right: 1rem; /* ESPACIO DESDE EL BORDE DERECHO */
     }
-    
     .kpi-card-mini {
-        background: white; border-left: 4px solid #ccc; 
-        padding: 1rem; /* Aumentado de 0.6rem */
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        color: #333; transition: transform 0.2s;
+        background: white; border-left: 4px solid #ccc; padding: 1rem; border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); color: #333; transition: transform 0.2s;
     }
     .kpi-card-mini:hover { transform: translateX(-3px); }
-    
-    /* Textos más grandes */
-    .kpi-card-mini div:first-child { font-size: 0.8rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; line-height: 1.2; }
-    .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; word-break: break-word; }
-    .kpi-card-mini div:last-child { font-size: 0.7rem; opacity: 0.7; line-height: 1.2; }
+    .kpi-card-mini div:first-child { font-size: 0.8rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
+    .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; }
+    .kpi-card-mini div:last-child { font-size: 0.7rem; opacity: 0.7; }
 
     /* Colores KPI */
     .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
@@ -165,116 +150,38 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
     .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
 
-    /* Columna Izquierda: ACCIONES (Estilo Uniforme con KPIs) */
-    .actions-column {
-        display: flex; flex-direction: column; gap: 1rem;
-        margin-top: 50px; /* Alinear con KPIs */
-    }
-    
-    .section-divider {
-        display: flex; align-items: center; gap: 0.5rem;
-        color: white; font-weight: bold; font-size: 0.9rem;
-        margin-bottom: 0.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-        opacity: 0.9;
-    }
-    .section-divider::after {
-        content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.3);
-    }
-
-    .action-btn-sidebar {
-        background: white; color: #071289; border: none; 
-        padding: 1rem; border-radius: 8px;
-        font-weight: bold; cursor: pointer; 
-        text-align: left; display: flex; align-items: center; gap: 12px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .action-btn-sidebar:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    }
-    .action-icon { font-size: 1.2rem; }
-
-    /* Responsive Móvil */
-    @media (max-width: 1024px) {
-        .main-layout { grid-template-columns: 1fr !important; height: auto; display: block; }
-        .planilla-header-controls { min-width: 100%; width: 100%; overflow-x: auto; }
-        .kpi-column { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-        .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; }
-        .section-divider { display: none; }
-    }
-
-    /* ESTILOS DE TABLA ORGÁNICA */
-    .planilla-table {
-        border-collapse: separate;
-        border-spacing: 6px; /* Más espacio entre celdas para que "respiren" */
-        margin: 0 auto; /* Centrar la tabla dentro del contenedor */
-    }
-
-    /* Hora Sticky */
-    .planilla-table th:first-child, .planilla-table td:first-child {
-        position: sticky; left: 0; z-index: 20;
-        background: rgba(255, 255, 255, 0.9) !important; /* Blanco semitransparente */
-        backdrop-filter: blur(5px);
-        color: #333; font-weight: bold;
-        border: none; /* Sin bordes */
-        border-radius: 8px;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Sombra suave a la derecha */
-        width: 60px !important; min-width: 60px !important; max-width: 60px !important;
-        padding: 4px !important; font-size: 0.75rem; text-align: center;
-    }
-
-    /* Canchas (Celdas Flotantes) */
-    .planilla-table th, .planilla-table td {
-        padding: 4px;
-        vertical-align: middle;
-        text-align: center;
-        border: none; /* Sin bordes */
-        border-radius: 8px; /* Bordes redondeados en cada celda */
-        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    /* Headers de Tabla (Flotantes) */
-    .planilla-table thead th {
-        background: linear-gradient(135deg, #AB47BC, #8E24AA) !important;
-        color: white;
-        position: sticky; top: 0; z-index: 5;
+    /* PANEL TORNEOS (Debajo de la planilla) */
+    .torneos-panel-container {
+        grid-column: 1 / -1; /* Ocupa todo el ancho */
+        margin-top: 1rem;
+        background: rgba(255,255,255,0.95);
         border-radius: 12px;
-        height: 50px;
-        font-size: 0.75rem;
-        box-shadow: 0 4px 10px rgba(142, 36, 170, 0.3); /* Sombra lila */
-        border: 1px solid rgba(255,255,255,0.3);
-    }
-    /* Estados (Colores Vibrantes sin bordes) */
-    td.estado-pagado { 
-        background: linear-gradient(135deg, #66BB6A, #43A047) !important; 
-        color: white; 
-        box-shadow: 0 2px 5px rgba(67, 160, 71, 0.4);
-    }
-    td.estado-parcial { 
-        background: linear-gradient(135deg, #FFEE58, #FDD835) !important; 
-        color: #333; 
-        box-shadow: 0 2px 5px rgba(253, 216, 53, 0.4);
-    }
-    td.estado-pendiente { 
-        background: linear-gradient(135deg, #EF5350, #E53935) !important; 
-        color: white; 
-        box-shadow: 0 2px 5px rgba(229, 57, 53, 0.4);
-    }
-    td.estado-disponible { 
-        background: rgba(255, 255, 255, 0.1) !important; 
-        border: 1px dashed rgba(255,255,255,0.3) !important; 
-        backdrop-filter: blur(2px);
+        padding: 1.5rem;
+        color: #333;
+        display: none; /* Oculto por defecto */
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
     }
 
-    /* Hover Effect: La celda "salta" */
-    .planilla-table tbody td:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        z-index: 10;
-        position: relative;
+    /* ESTILOS TABLA */
+    .planilla-table { border-collapse: separate; border-spacing: 3px; }
+    .planilla-table th:first-child, .planilla-table td:first-child {
+        position: sticky; left: 0; z-index: 20; background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(5px);
+        color: #333; font-weight: bold; border-radius: 8px; box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        width: 60px !important; min-width: 60px !important; max-width: 60px !important; padding: 4px !important; font-size: 0.75rem; text-align: center;
     }
+    .planilla-table th, .planilla-table td {
+        padding: 4px; vertical-align: middle; text-align: center; border-radius: 8px;
+        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
+    }
+    .planilla-table thead th {
+        background: linear-gradient(135deg, #AB47BC, #8E24AA) !important; color: white; position: sticky; top: 0; z-index: 5;
+        height: 50px; font-size: 0.75rem; box-shadow: 0 4px 10px rgba(142, 36, 170, 0.3); border: 1px solid rgba(255,255,255,0.3);
+    }
+    td.estado-pagado { background: linear-gradient(135deg, #66BB6A, #43A047) !important; color: white; box-shadow: 0 2px 5px rgba(67, 160, 71, 0.4); }
+    td.estado-parcial { background: linear-gradient(135deg, #FFEE58, #FDD835) !important; color: #333; box-shadow: 0 2px 5px rgba(253, 216, 53, 0.4); }
+    td.estado-pendiente { background: linear-gradient(135deg, #EF5350, #E53935) !important; color: white; box-shadow: 0 2px 5px rgba(229, 57, 53, 0.4); }
+    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; backdrop-filter: blur(2px); }
+    .planilla-table tbody td:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; position: relative; }
 
     /* Modales */
     #modalDetalleReserva, #modalPago, #modalListaKPI {
@@ -284,35 +191,12 @@ $monto_deuda = $s_deuda->fetchColumn();
     #modalPago { z-index: 2500; }
     #modalListaKPI { z-index: 3000; }
 
-    /* RESPONSIVE MÓVIL */
     @media (max-width: 1024px) {
-        .main-layout { 
-            grid-template-columns: 1fr !important; 
-            height: auto; 
-            display: block; /* Cambiamos a bloque para ordenar verticalmente */
-        }
-        
-        /* KPIs ARRIBA Y FIJOS */
-        .kpi-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* 2 por fila */
-            gap: 0.5rem;
-            position: sticky;
-            top: 50px; /* Debajo del top bar */
-            z-index: 900;
-            background: rgba(0,0,0,0.2); /* Fondo sutil para legibilidad */
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-            backdrop-filter: blur(5px);
-        }
-        .kpi-card-mini { min-width: auto; padding: 0.5rem; margin: 0; }
-        
-        /* Planilla debajo */
-        .planilla-column { height: 70vh; }
-        
-        /* Acciones en scroll horizontal */
-        .actions-column { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
-        .action-btn-sidebar { min-width: 120px; }
+        .main-layout { grid-template-columns: 1fr !important; height: auto; display: block; }
+        .planilla-header-controls { min-width: 100%; width: 100%; overflow-x: auto; }
+        .kpi-column { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; padding-right: 0; }
+        .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; padding-left: 0; }
+        .torneos-panel-container { grid-column: auto; }
     }
 </style>
 </head>
@@ -343,28 +227,23 @@ $monto_deuda = $s_deuda->fetchColumn();
 
     <!-- COLUMNA 1: ACCIONES (Izquierda) -->
     <div class="actions-column">
-        <div class="section-divider">
-            <span>🎾 Operaciones</span>
-        </div>
+        <div style="color:white; font-weight:bold; font-size:0.9rem; margin-bottom:0.5rem; text-shadow:0 1px 2px rgba(0,0,0,0.5);">🎾 Operaciones</div>
         
         <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'">
-            <span class="action-icon">🛠️</span> Crear Canchas
+            <span>🛠️</span> Crear Canchas
         </button>
         
         <button class="action-btn-sidebar" id="btnTorneosActivos">
-            <span class="action-icon">🏆</span> Torneos Activos
+            <span>🏆</span> Ver Torneos
         </button>
-        
-        <!-- Panel Torneos Oculto -->
-        <div id="panelTorneos" style="display:none; background: white; padding: 1rem; border-radius: 8px; margin-top:0.5rem; max-height: 200px; overflow-y: auto;">
-            <h4 style="margin:0 0 0.5rem 0; color:#071289; font-size:0.9rem;">Torneos</h4>
-            <div id="listaTorneos">Cargando...</div>
-        </div>
+
+        <button class="action-btn-sidebar" onclick="window.location.href='crear_torneo.php'">
+            <span>➕</span> Crear Torneo
+        </button>
     </div>
 
     <!-- COLUMNA 2: PLANILLA (Centro) -->
     <div class="planilla-column">
-        <!-- Header Filtros -->
         <div class="planilla-header-controls">
             <div class="control-group">
                 <input type="date" id="fechaPlanillaInput" class="control-input">
@@ -394,7 +273,6 @@ $monto_deuda = $s_deuda->fetchColumn();
             </div>
         </div>
         
-        <!-- Tabla -->
         <div class="planilla-table-container">
             <table id="tablaPlanilla" class="planilla-table">
                 <!-- Se llena con JS -->
@@ -407,21 +285,21 @@ $monto_deuda = $s_deuda->fetchColumn();
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-ingresos">
             <div>Ingresos Mes</div>
-            <div>$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-            <div><?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>%</div>
+            <div>$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
+            <div><?= $var_ing >= 0 ? '▲' : '▼' ?> <?= number_format(abs($var_ing), 1) ?>%</div>
         </div>
         <?php endif; ?>
 
         <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
             <div>Pago Parcial</div>
-            <div>$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
+            <div>$<?= number_format($parcial_act, 0, ',', '.') ?></div>
             <div>Ver detalles</div>
         </div>
 
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-reserva">
             <div>En Reserva</div>
-            <div><?= $cantidad_en_reserva ?></div>
+            <div><?= $cant_reserva ?></div>
             <div>Próximas no pagadas</div>
         </div>
         <?php endif; ?>
@@ -430,6 +308,17 @@ $monto_deuda = $s_deuda->fetchColumn();
             <div>Deuda Vencida</div>
             <div>$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
             <div>Ver deudores</div>
+        </div>
+    </div>
+
+    <!-- PANEL TORNEOS (Debajo de todo, ancho completo) -->
+    <div id="panelTorneos" class="torneos-panel-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="margin:0; color:#071289;">🏆 Torneos Activos</h3>
+            <button onclick="document.getElementById('panelTorneos').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666;">&times;</button>
+        </div>
+        <div id="listaTorneos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:1rem;">
+            <p style="color:#666;">Cargando torneos...</p>
         </div>
     </div>
 
@@ -508,6 +397,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('filtroDeporte')?.addEventListener('change', cargarPlanillaReservas);
     document.getElementById('filtroEstado')?.addEventListener('change', function() { estadoSeleccionadoPlanilla = this.value; cargarPlanillaReservas(); });
+    
+    // Botón Torneos
+    document.getElementById('btnTorneosActivos')?.addEventListener('click', () => {
+        const panel = document.getElementById('panelTorneos');
+        if(panel.style.display === 'none' || panel.style.display === '') {
+            panel.style.display = 'block';
+            cargarTorneos();
+        } else {
+            panel.style.display = 'none';
+        }
+    });
+
     cargarPlanillaReservas();
 });
 
@@ -529,10 +430,11 @@ function renderizarPlanilla(data, filtroEstado) {
     if (!data.canchas || !data.canchas.length) { table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; return; }
 
     let html = `<thead><tr>`;
-    html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:black; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
+    html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:white; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
         html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; max-width:110px; padding:5px; font-size:0.7rem;">
+                    <div style="font-size:1.2rem;">${icono}</div>
                     <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
                  </th>`;
     });
@@ -541,9 +443,7 @@ function renderizarPlanilla(data, filtroEstado) {
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
-            html += `<tr>`;
-            html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; min-width:60px; max-width:60px; padding:5px; font-size:0.7rem;">${slot.label}</td>`;
-            
+            html += `<tr><td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; min-width:60px; max-width:60px; padding:5px; font-size:0.7rem;">${slot.label}</td>`;
             data.canchas.forEach(cancha => {
                 const key = `${cancha.id_cancha}_${slot.label}`;
                 const res = data.reservas[key];
@@ -674,6 +574,20 @@ async function abrirListaKPI(tipo) {
     document.getElementById('modalListaKPI').style.display = 'flex';
     document.getElementById('tituloListaKPI').textContent = tipo === 'parcial' ? 'Pagos Parciales' : 'Deuda Vencida';
     document.getElementById('cuerpoTablaKPI').innerHTML = '<tr><td colspan="8" style="text-align:center;">Datos de ejemplo</td></tr>';
+}
+
+async function cargarTorneos() {
+    const contenedor = document.getElementById('listaTorneos');
+    try {
+        // Simulación de carga si no hay API real aún
+        contenedor.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#666;">No hay torneos activos actualmente.</p>';
+        // Si tienes API:
+        // const res = await fetch('../api/get_torneos_recinto.php');
+        // const data = await res.json();
+        // ... renderizar ...
+    } catch (e) {
+        contenedor.innerHTML = '<p>Error al cargar torneos.</p>';
+    }
 }
 </script>
 </body>
