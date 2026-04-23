@@ -418,66 +418,114 @@ $monto_deuda = $s_deuda->fetchColumn();
 </div>
 
 <script>
+// === VARIABLES GLOBALES ===
 const iconosDeporte = { 1: '🎾', 2: '🎾', 3: '🏐', 10: '⚽', 11: '⚽', 'default': '🏟️' };
 let fechaPlanillaActual = new Date().toISOString().split('T')[0];
 let estadoSeleccionadoPlanilla = "";
 let reservaActualSeleccionada = null;
+let tipoListaActual = '';
 
+// === INICIALIZACIÓN ===
 document.addEventListener('DOMContentLoaded', () => {
+    // Fecha
     const fechaInput = document.getElementById('fechaPlanillaInput');
     if (fechaInput) {
         fechaInput.value = fechaPlanillaActual;
-        fechaInput.addEventListener('change', function() { fechaPlanillaActual = this.value; cargarPlanillaReservas(); });
+        fechaInput.addEventListener('change', function() { 
+            fechaPlanillaActual = this.value; 
+            cargarPlanillaReservas(); 
+        });
     }
-    document.getElementById('filtroDeporte')?.addEventListener('change', cargarPlanillaReservas);
-    document.getElementById('filtroEstado')?.addEventListener('change', function() { estadoSeleccionadoPlanilla = this.value; cargarPlanillaReservas(); });
     
-    // Botón Torneos
+    // Filtros
+    document.getElementById('filtroDeporte')?.addEventListener('change', cargarPlanillaReservas);
+    document.getElementById('filtroEstado')?.addEventListener('change', function() { 
+        estadoSeleccionadoPlanilla = this.value; 
+        cargarPlanillaReservas(); 
+    });
+
+    // Botón Torneos (si existe)
     document.getElementById('btnTorneosActivos')?.addEventListener('click', () => {
         const panel = document.getElementById('panelTorneos');
-        if(panel.style.display === 'none' || panel.style.display === '') {
-            panel.style.display = 'block';
-            cargarTorneos();
-        } else {
-            panel.style.display = 'none';
+        if(panel) {
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+            if(panel.style.display === 'block') cargarTorneos();
         }
     });
 
     cargarPlanillaReservas();
 });
 
+// === FUNCIONES DE NAVEGACIÓN FECHA ===
+function cambiarDiaPlanilla(dias) {
+    const fechaObj = new Date(fechaPlanillaActual);
+    fechaObj.setDate(fechaObj.getDate() + dias);
+    fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
+    const inputFecha = document.getElementById('fechaPlanillaInput');
+    if (inputFecha) inputFecha.value = fechaPlanillaActual;
+    cargarPlanillaReservas();
+}
+
+function irAHoyPlanilla() {
+    fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    const inputFecha = document.getElementById('fechaPlanillaInput');
+    if (inputFecha) inputFecha.value = fechaPlanillaActual;
+    cargarPlanillaReservas();
+}
+
+// === CARGA DE PLANILLA ===
 async function cargarPlanillaReservas() {
     const deporte = document.getElementById('filtroDeporte')?.value || "todos";
+    console.log(`📡 Cargando... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
+    
     try {
         const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
         const response = await fetch(url, { credentials: 'include' });
-        if (response.status === 401) { window.location.href = 'login_recintos.php'; return; }
+        
+        if (response.status === 401) {
+            showToast("Sesión expirada. Redirigiendo...", "warning");
+            setTimeout(() => window.location.href = 'login_recintos.php', 2000);
+            return;
+        }
+        
         const data = await response.json();
         if (data.error) throw new Error(data.error);
+        
         renderizarPlanilla(data, estadoSeleccionadoPlanilla);
-    } catch (error) { console.error(error); }
+    } catch (error) {
+        console.error(error);
+        document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
+    }
 }
 
+// === RENDERIZADO ===
 function renderizarPlanilla(data, filtroEstado) {
     const table = document.getElementById('tablaPlanilla');
     if (!table) return;
-    if (!data.canchas || !data.canchas.length) { table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; return; }
+    if (!data.canchas || !data.canchas.length) { 
+        table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; 
+        return; 
+    }
 
     let html = `<thead><tr>`;
-    html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:white; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
+    html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px;">Hora</th>`;
+    
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; max-width:110px; padding:5px; font-size:0.7rem;">
+        html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; font-size:0.7rem;">
                     <div style="font-size:1.2rem;">${icono}</div>
-                    <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
+                    <div style="white-space:normal;">${c.nombre_cancha}</div>
                  </th>`;
     });
     html += `</tr></thead><tbody>`;
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
+
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
-            html += `<tr><td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; min-width:60px; max-width:60px; padding:5px; font-size:0.7rem;">${slot.label}</td>`;
+            html += `<tr>`;
+            html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.7rem;">${slot.label}</td>`;
+            
             data.canchas.forEach(cancha => {
                 const key = `${cancha.id_cancha}_${slot.label}`;
                 const res = data.reservas[key];
@@ -495,21 +543,29 @@ function renderizarPlanilla(data, filtroEstado) {
                         const fechaRes = new Date(res.fecha + 'T00:00:00');
                         estadoLogico = (fechaRes < hoy) ? 'no_pagadas' : 'reservada';
                     }
+
                     if (filtroEstado && filtroEstado !== '') {
                         if (filtroEstado === 'disponible') cumpleFiltro = false;
                         else if (filtroEstado !== estadoLogico) cumpleFiltro = false;
                     }
+
                     if (cumpleFiltro) {
                         if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                         else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
                         else bgClass = 'estado-pendiente';
-                        cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${(res.nombre_cliente || 'Reserva').substring(0, 8)}</div>`;
+                        
+                        const nombre = (res.nombre_cliente || 'Reserva').substring(0, 10);
+                        cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>`;
                         if (res.id_reserva) clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
-                    } else { opacity = '0.05'; cellContent = ''; }
+                    } else {
+                        opacity = '0.05';
+                        cellContent = '';
+                    }
                 } else {
                     if (filtroEstado && filtroEstado !== 'disponible') opacity = '0.05';
                 }
-                html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity}; width:110px; min-width:110px; max-width:110px; padding:2px;" ${clickEvt}>${cellContent}</td>`;
+
+                html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity}; width:110px; min-width:110px;" ${clickEvt}>${cellContent}</td>`;
             });
             html += `</tr>`;
         }
@@ -517,11 +573,13 @@ function renderizarPlanilla(data, filtroEstado) {
     table.innerHTML = html;
 }
 
-// Funciones de Modal y Detalle
+// === DETALLE DE RESERVA (CORREGIDO) ===
 async function abrirDetalleDesdePlanilla(idReserva) {
     if (!idReserva) return;
+    
     const modal = document.getElementById('modalDetalleReserva');
     const container = document.getElementById('contenidoDetalle');
+    
     if (modal) modal.style.display = 'flex';
     if (container) container.innerHTML = '<p style="text-align:center;">Cargando...</p>';
 
@@ -529,15 +587,34 @@ async function abrirDetalleDesdePlanilla(idReserva) {
         const formData = new URLSearchParams();
         formData.append('action', 'get_detalle_reserva');
         formData.append('id_reserva', idReserva);
-        const response = await fetch('../api/canchaboard.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: formData, credentials: 'include' });
+        
+        const response = await fetch('../api/canchaboard.php', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+            body: formData, 
+            credentials: 'include' 
+        });
+        
         const detalle = await response.json();
         if (detalle.error) throw new Error(detalle.error);
+        
         window.reservaActualSeleccionada = detalle;
 
         if (container) {
             const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
             const money = (v) => '$' + parseInt(v || 0).toLocaleString();
-            container.innerHTML = `
+            
+            const montoTotal = parseFloat(detalle.monto_total || 0);
+            const montoRecaudado = parseFloat(detalle.monto_recaudacion || 0);
+            const saldoPendiente = montoTotal - montoRecaudado;
+            const esParcial = (detalle.estado_pago === 'parcial');
+            
+            let estadoColor = 'red';
+            if (detalle.estado_pago === 'pagado') estadoColor = 'green';
+            else if (detalle.estado_pago === 'parcial') estadoColor = '#F57F17';
+
+            // Construcción del HTML principal
+            let html = `
                 <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
                     <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
                         <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
@@ -550,160 +627,73 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         <div style="grid-column: span 2;"><strong>Contacto:</strong> ${val(detalle.telefono_cliente)}</div>
                     </div>
                     <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
                             <span style="color:#666; font-size:0.9rem;">Monto Total</span>
-                            <span style="font-weight:bold; font-size:1.1rem;">${money(detalle.monto_total)}</span>
+                            <span style="font-weight:bold;">${money(montoTotal)}</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
                             <span style="color:#666; font-size:0.9rem;">Abonado</span>
-                            <span style="font-weight:bold; color:#2e7d32;">${money(detalle.monto_recaudacion || 0)}</span>
+                            <span style="font-weight:bold; color:#2e7d32;">${money(montoRecaudado)}</span>
+                        </div>
+                        ${esParcial ? `
+                        <div style="display:flex; justify-content:space-between; padding-top:0.5rem; border-top:1px dashed #ccc;">
+                            <span style="color:#c62828; font-weight:bold;">Saldo Pendiente</span>
+                            <span style="font-weight:bold; color:#c62828;">${money(saldoPendiente)}</span>
+                        </div>` : ''}
+                        <div style="margin-top:0.5rem; text-align:right;">
+                            <span style="font-size:0.8rem; color:#666;">Estado: </span>
+                            <span style="font-weight:bold; color:${estadoColor};">${val(detalle.estado_pago).toUpperCase()}</span>
                         </div>
                     </div>
-                </div>
-                <div style="margin-top:1rem; text-align:center;">
-                    <button onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; width:100%;">⚙️ Opciones</button>
-                    <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white;">
-                        <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">🗑️ Anular</button>
-                        ${detalle.estado_pago !== 'pagado' ? `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold;">💳 Pagar</button>` : ''}
-                    </div>
-                </div>
-                // === SECCIÓN DE NOTAS ===
-                // Aseguramos que notas no sea null, undefined o string "null"
-                const notas = detalle.notas; 
-                console.log("Notas recibidas:", notas); // Para depurar en consola
-
-                if (notas && notas !== '' && notas !== 'null') {
-                    const bgNota = esParcial ? '#FFF3E0' : '#FFFDE7';
-                    const borderNota = esParcial ? '#FFB74D' : '#FFF59D';
-                    
-                    html += `
-                        <div style="background: ${bgNota}; padding: 0.8rem; border-radius: 6px; border-left: 4px solid ${borderNota}; margin-bottom: 1rem;">
-                            <div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; text-transform: uppercase;">
-                                📝 Historial / Notas
-                            </div>
-                            <div style="font-size: 0.9rem; color: #333; white-space: pre-wrap; font-family: sans-serif;">
-                                ${notas}
-                            </div>
-                        </div>
-                    `;
-                }
             `;
+
+            // === SECCIÓN DE NOTAS (CORREGIDA PARA EVITAR SYNTAX ERROR) ===
+            const notas = val(detalle.notas, '');
+            if (notas && notas !== 'null' && notas !== '') {
+                // Definir colores según estado
+                const bgNota = esParcial ? '#FFF3E0' : '#FFFDE7';
+                const borderNota = esParcial ? '#FFB74D' : '#FFF59D';
+                
+                // Usar concatenación simple para evitar problemas con template literals anidados complejos
+                html += '<div style="background: ' + bgNota + '; padding: 0.8rem; border-radius: 6px; border-left: 4px solid ' + borderNota + '; margin-bottom: 1rem;">';
+                html += '<div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; text-transform: uppercase;">📝 Historial / Notas</div>';
+                html += '<div style="font-size: 0.9rem; color: #333; white-space: pre-wrap; font-family: sans-serif;">' + notas + '</div>';
+                html += '</div>';
+            }
+
+            html += '</div>'; // Cierre contenedor principal
+            
+            container.innerHTML = html;
+
+            // Agregar botones de acción
+            const actionContainer = document.createElement('div');
+            actionContainer.style.marginTop = '1rem';
+            actionContainer.style.textAlign = 'center';
+            actionContainer.innerHTML = `
+                <button onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; width:100%;">⚙️ Opciones</button>
+                <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white;">
+                    <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">🗑️ Anular</button>
+                    ${detalle.estado_pago !== 'pagado' ? `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold;">💳 Pagar</button>` : ''}
+                </div>
+            `;
+            container.appendChild(actionContainer);
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error(err);
+        if (container) container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+    }
 }
 
-function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu').style.display = 'block'; }
-function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
-function cerrarModalDetalle() { document.getElementById('modalDetalleReserva').style.display = 'none'; }
-function volverAlDetalle() { document.getElementById('modalPago').style.display = 'none'; document.getElementById('modalDetalleReserva').style.display = 'flex'; }
-function cerrarModalListaKPI() { document.getElementById('modalListaKPI').style.display = 'none'; }
+// === FUNCIONES DE MODALES Y ACCIONES ===
 function toggleActionMenuModal() {
     const menu = document.getElementById('actionMenuModal');
     if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
 }
-function anularReserva() { alert("Función Anular: En desarrollo"); }
-function abrirModalPagoDesdeDetalle() {
-    if (!window.reservaActualSeleccionada) return;
-    const detalle = window.reservaActualSeleccionada;
-    document.getElementById('infoIdReserva').textContent = detalle.id_reserva;
-    document.getElementById('infoMontoTotal').textContent = '$' + parseFloat(detalle.monto_total).toLocaleString();
-    document.getElementById('montoPagar').value = detalle.monto_total;
-    document.getElementById('formPago').dataset.idReserva = detalle.id_reserva;
-    document.getElementById('formPago').dataset.montoOriginal = detalle.monto_total;
-    document.getElementById('modalDetalleReserva').style.display = 'none';
-    document.getElementById('modalPago').style.display = 'flex';
-}
-document.getElementById('metodoPago')?.addEventListener('change', function() {
-    const campo = document.getElementById('campoTransaccion');
-    if (['transferencia', 'webpay'].includes(this.value)) { campo.style.display = 'block'; } else { campo.style.display = 'none'; }
-});
-document.getElementById('formPago')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    alert("Pago simulado. Implementar backend.");
-    document.getElementById('modalPago').style.display = 'none';
-    location.reload();
-});
 
-async function abrirListaKPI(tipo) {
-    tipoListaActual = tipo;
-    const modal = document.getElementById('modalListaKPI');
-    const titulo = document.getElementById('tituloListaKPI');
-    const tbody = document.getElementById('cuerpoTablaKPI');
-    
-    modal.style.display = 'flex';
-    titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
-    titulo.style.color = '#333'; 
-    
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">Cargando datos...</td></tr>';
-
-    try {
-        const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
-        const data = await res.json();
-        
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">No hay registros para mostrar.</td></tr>';
-            return;
-        }
-
-        let html = '';
-        data.forEach(row => {
-            // CORRECCIÓN: Asegurar que sean números, si es null usa 0
-            const total = parseFloat(row.monto_total) || 0;
-            const abonado = parseFloat(row.monto_recaudacion) || 0;
-            const saldo = parseFloat(row.saldo_pendiente) || (total - abonado); // Fallback de cálculo
-            
-            const fmt = (n) => '$' + parseInt(n).toLocaleString();
-            
-            html += `
-                <tr style="border-bottom:1px solid #eee; cursor:pointer; hover:bg-gray-50; color:#333;" onclick="verDetalleDesdeLista(${row.id_reserva})">
-                    <td style="padding:10px; color:#333;">${row.fecha}</td>
-                    <td style="padding:10px; color:#333;">${row.nombre_cancha}</td>
-                    <td style="padding:10px; font-weight:bold; color:#333;">${row.nombre_cliente || 'N/A'}</td>
-                    <td style="padding:10px; color:#333;">${row.telefono_cliente || '-'}</td>
-                    <td style="padding:10px; text-align:right; color:#333;">${fmt(total)}</td>
-                    <td style="padding:10px; text-align:right; color:green;">${fmt(abonado)}</td>
-                    <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
-                    <td style="padding:10px; text-align:center;">
-                        <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
-                    </td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
-
-    } catch (err) {
-        console.error(err);
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
-    }
-}
-
-// Función puente para ver detalle desde la lista
-async function verDetalleDesdeLista(idReserva) {
-    cerrarModalListaKPI(); // Cierra la lista
-    await abrirDetalleDesdePlanilla(idReserva); // Abre el detalle de la reserva
-}
-
-function cerrarModalListaKPI() {
-    document.getElementById('modalListaKPI').style.display = 'none';
-}
-
-async function cargarTorneos() {
-    const contenedor = document.getElementById('listaTorneos');
-    try {
-        // Simulación de carga si no hay API real aún
-        contenedor.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#666;">No hay torneos activos actualmente.</p>';
-        // Si tienes API:
-        // const res = await fetch('../api/get_torneos_recinto.php');
-        // const data = await res.json();
-        // ... renderizar ...
-    } catch (e) {
-        contenedor.innerHTML = '<p>Error al cargar torneos.</p>';
-    }
-}
-    function toggleAcciones() {
-        const contenedor = document.getElementById('contenedor-acciones');
-        const icono = document.getElementById('icon-operaciones');
-        
+function toggleAcciones() {
+    const contenedor = document.getElementById('contenedor-acciones');
+    const icono = document.getElementById('icon-operaciones');
+    if (contenedor && icono) {
         if (contenedor.style.display === 'none') {
             contenedor.style.display = 'flex';
             icono.classList.add('rotated');
@@ -712,6 +702,160 @@ async function cargarTorneos() {
             icono.classList.remove('rotated');
         }
     }
+}
+
+function cerrarModalDetalle() { document.getElementById('modalDetalleReserva').style.display = 'none'; }
+function volverAlDetalle() { 
+    document.getElementById('modalPago').style.display = 'none'; 
+    document.getElementById('modalDetalleReserva').style.display = 'flex'; 
+}
+function cerrarModalListaKPI() { document.getElementById('modalListaKPI').style.display = 'none'; }
+
+function anularReserva() { alert("Función Anular: En desarrollo"); }
+
+function abrirModalPagoDesdeDetalle() {
+    if (!window.reservaActualSeleccionada) return;
+    const d = window.reservaActualSeleccionada;
+    document.getElementById('infoIdReserva').textContent = d.id_reserva;
+    document.getElementById('infoMontoTotal').textContent = '$' + parseFloat(d.monto_total).toLocaleString();
+    document.getElementById('montoPagar').value = d.monto_total;
+    document.getElementById('formPago').dataset.idReserva = d.id_reserva;
+    document.getElementById('formPago').dataset.montoOriginal = d.monto_total;
+    document.getElementById('modalDetalleReserva').style.display = 'none';
+    document.getElementById('modalPago').style.display = 'flex';
+}
+
+// Listener Método de Pago
+document.getElementById('metodoPago')?.addEventListener('change', function() {
+    const campo = document.getElementById('campoTransaccion');
+    if (['transferencia', 'webpay'].includes(this.value)) { campo.style.display = 'block'; } 
+    else { campo.style.display = 'none'; }
+});
+
+// Submit Pago
+document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const idReserva = this.dataset.idReserva;
+    const montoOriginal = parseFloat(this.dataset.montoOriginal);
+    const montoPagado = parseFloat(document.getElementById('montoPagar').value);
+    const metodo = document.getElementById('metodoPago').value;
+    const transaccion = document.getElementById('transaccionId').value;
+    const notas = document.getElementById('notasPago').value;
+
+    if (montoPagado <= 0) { showToast("Monto inválido", "error"); return; }
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'procesar_pago_parcial');
+        formData.append('id_reserva', idReserva);
+        formData.append('monto_pagado', montoPagado);
+        formData.append('monto_total_original', montoOriginal);
+        formData.append('metodo_pago', metodo);
+        formData.append('transaccion_id', transaccion || '');
+        formData.append('notas_pago', notas);
+
+        const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.success) {
+            let msg = "✅ Pago registrado.";
+            let type = "success";
+            if (montoPagado < montoOriginal) {
+                msg = `⚠️ Pago Parcial. Faltan $${(montoOriginal - montoPagado).toLocaleString()}.`;
+                type = "warning";
+            }
+            showToast(msg, type);
+            document.getElementById('modalPago').style.display = 'none';
+            document.getElementById('modalDetalleReserva').style.display = 'none';
+            cargarPlanillaReservas();
+        } else {
+            showToast("❌ Error: " + data.message, "error");
+        }
+    } catch (err) {
+        showToast("❌ Error de conexión", "error");
+    }
+});
+
+// === LISTA KPI ===
+async function abrirListaKPI(tipo) {
+    tipoListaActual = tipo;
+    const modal = document.getElementById('modalListaKPI');
+    const tbody = document.getElementById('cuerpoTablaKPI');
+    document.getElementById('tituloListaKPI').textContent = (tipo === 'parcial') ? '📋 Pagos Parciales' : '🚨 Deuda Vencida';
+    
+    modal.style.display = 'flex';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando...</td></tr>';
+
+    try {
+        const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Sin registros.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        data.forEach(row => {
+            const total = parseFloat(row.monto_total) || 0;
+            const abonado = parseFloat(row.monto_recaudacion) || 0;
+            const saldo = parseFloat(row.saldo_pendiente) || (total - abonado);
+            const fmt = (n) => '$' + parseInt(n).toLocaleString();
+            
+            html += `
+                <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="verDetalleDesdeLista(${row.id_reserva})">
+                    <td style="padding:10px;">${row.fecha}</td>
+                    <td style="padding:10px;">${row.nombre_cancha}</td>
+                    <td style="padding:10px; font-weight:bold;">${row.nombre_cliente || 'N/A'}</td>
+                    <td style="padding:10px;">${row.telefono_cliente || '-'}</td>
+                    <td style="padding:10px; text-align:right;">${fmt(total)}</td>
+                    <td style="padding:10px; text-align:right; color:green;">${fmt(abonado)}</td>
+                    <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
+                    <td style="padding:10px; text-align:center;"><span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:4px; font-size:0.7rem;">Ver</span></td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar.</td></tr>';
+    }
+}
+
+async function verDetalleDesdeLista(idReserva) {
+    cerrarModalListaKPI();
+    await abrirDetalleDesdePlanilla(idReserva);
+}
+
+// Toast System
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    const bg = type === 'success' ? '#4CAF50' : (type === 'warning' ? '#FF9800' : '#F44336');
+    toast.style.cssText = `background: ${bg}; color: white; padding: 15px 25px; border-radius: 8px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; animation: slideIn 0.3s ease-out forwards;`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+// Menú Admin
+function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu').style.display = 'block'; }
+function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
+document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
+
+// Torneos (Stub)
+async function cargarTorneos() {
+    const c = document.getElementById('listaTorneos');
+    if(c) c.innerHTML = '<p style="color:#666;">No hay torneos activos.</p>';
+}
 </script>
+
+<!-- Estilos adicionales para animaciones -->
+<style>
+@keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.rotated { transform: rotate(-180deg); }
+#modalPago label { color: #333 !important; font-weight: bold; }
+#modalPago small, #modalPago span, #modalPago div { color: #555 !important; }
+#modalPago h3 { color: #071289 !important; }
+</style>
 </body>
 </html>
