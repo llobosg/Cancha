@@ -426,12 +426,10 @@ $monto_deuda = $stmt_deuda->fetchColumn();
       <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0; max-width: 1200px; margin-left: auto; margin-right: auto;">
 
           <!-- 1. INGRESOS ESTE MES (Verde Suave) -->
-          <div class="kpi-card" style="background: #E8F5E9; border-left: 5px solid #4CAF50; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <div style="font-size: 0.9rem; color: #2E7D32; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Ingresos Este Mes</div>
-              <div style="font-size: 2rem; font-weight: 900; color: #1B5E20; margin-bottom: 0.5rem;">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-              <div style="font-size: 0.85rem; color: <?= $variacion_ingresos >= 0 ? '#2E7D32' : '#C62828' ?>; font-weight: bold;">
-                  <?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>% vs mes anterior
-              </div>
+          <div class="income-card" style="background: linear-gradient(135deg, #2E7D32, #4CAF50); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div class="income-title">Ingresos Este Mes</div>
+              <div class="income-value">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
+              <div class="income-detail">+12% vs mes anterior</div>
           </div>
 
           <!-- 2. PAGO PARCIAL (Amarillo Suave) -->
