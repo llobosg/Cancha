@@ -1,482 +1,384 @@
 <?php
-// pages/recinto_dashboard.php
-require_once __DIR__ . '/../includes/config.php';
+  // pages/recinto_dashboard.php
+  require_once __DIR__ . '/../includes/config.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+  if (session_status() === PHP_SESSION_NONE) {
+      session_start();
+  }
 
-$rol_actual = $_SESSION['recinto_rol'] ?? '';
-$roles_validos = ['admin', 'asistente'];
+  $rol_actual = $_SESSION['recinto_rol'] ?? '';
+  $roles_validos = ['admin', 'asistente'];
 
-if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_validos)) {
-    header('Location: login_recintos.php');
-    exit;
-}
+  if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_validos)) {
+      header('Location: login_recintos.php');
+      exit;
+  }
 
-require_once __DIR__ . '/../includes/permisos.php';
+  require_once __DIR__ . '/../includes/permisos.php';
 
-// Obtener datos del usuario
-$stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
-$stmt_user->execute([$_SESSION['id_admin']]);
-$usuario_actual = $stmt_user->fetch();
+  // Obtener datos del usuario
+  $stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
+  $stmt_user->execute([$_SESSION['id_admin']]);
+  $usuario_actual = $stmt_user->fetch();
 
-// Cargar datos del recinto
-$id_recinto = $_SESSION['id_recinto'];
-$stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
-$stmt_recinto->execute([$id_recinto]);
-$recinto = $stmt_recinto->fetch();
-$recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
+  // Cargar datos del recinto
+  $id_recinto = $_SESSION['id_recinto'];
+  $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
+  $stmt_recinto->execute([$id_recinto]);
+  $recinto = $stmt_recinto->fetch();
+  $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
-// Simulación de ingresos (Reemplazar con consulta real si es necesario)
-$ingresos_mes = 0; 
+  // Simulación de ingresos (Reemplazar con consulta real si es necesario)
+  $ingresos_mes = 0; 
 
-// Cargar datos del recinto
-$id_recinto = $_SESSION['id_recinto'];
-$stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
-$stmt_recinto->execute([$id_recinto]);
-$recinto = $stmt_recinto->fetch();
-$recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
+  // Cargar datos del recinto
+  $id_recinto = $_SESSION['id_recinto'];
+  $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
+  $stmt_recinto->execute([$id_recinto]);
+  $recinto = $stmt_recinto->fetch();
+  $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
-// === CÁLCULO DE KPIs FINANCIEROS Y OPERATIVOS ===
+  // === CÁLCULO DE KPIs FINANCIEROS Y OPERATIVOS ===
 
-// Fechas clave
-$hoy = date('Y-m-d');
-$primer_dia_mes_actual = date('Y-m-01');
-$primer_dia_mes_anterior = date('Y-m-01', strtotime('-1 month'));
-$ultimo_dia_mes_anterior = date('Y-m-t', strtotime('-1 month'));
+  // Fechas clave
+  $hoy = date('Y-m-d');
+  $primer_dia_mes_actual = date('Y-m-01');
+  $primer_dia_mes_anterior = date('Y-m-01', strtotime('-1 month'));
+  $ultimo_dia_mes_anterior = date('Y-m-t', strtotime('-1 month'));
 
-// Función auxiliar para ejecutar consultas de suma
-function getSumaReservas($pdo, $id_recinto, $condicion_fecha, $condicion_pago, $params = []) {
-    $sql = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
-            FROM reservas r 
-            JOIN canchas c ON r.id_cancha = c.id_cancha 
-            WHERE c.id_recinto = ? 
-            AND r.fecha $condicion_fecha 
-            AND r.estado_pago $condicion_pago 
-            AND r.estado != 'cancelada'"; // Excluir canceladas
-    
-    // Si la condición de pago requiere parámetros (ej: IN ('pagado', 'parcial'))
-    // Ajustamos la query dinámicamente si es necesario, pero para simplificar usaremos strings directos seguros
-    
-    $stmt = $pdo->prepare($sql);
-    // Merge params con id_recinto
-    $final_params = array_merge([$id_recinto], $params);
-    $stmt->execute($final_params); // Nota: La query arriba usa ? directo, ajustemos para seguridad
-    
-    // Re-escribiendo para usar PDO seguro con placeholders si fuera complejo, 
-    // pero como las condiciones son fijas, podemos inyectarlas con cuidado o usar prepare simple.
-    // Para este ejemplo, usaremos una aproximación segura simple:
-    
-    $query = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
+  // Función auxiliar para ejecutar consultas de suma
+  function getSumaReservas($pdo, $id_recinto, $condicion_fecha, $condicion_pago, $params = []) {
+      $sql = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
               FROM reservas r 
               JOIN canchas c ON r.id_cancha = c.id_cancha 
-              WHERE c.id_recinto = :id_recinto 
+              WHERE c.id_recinto = ? 
               AND r.fecha $condicion_fecha 
               AND r.estado_pago $condicion_pago 
-              AND r.estado != 'cancelada'";
-              
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([':id_recinto' => $id_recinto]);
-    return $stmt->fetchColumn();
-}
-
-// 1. INGRESOS ESTE MES (Pagados)
-$ingresos_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'pagado'");
-$ingresos_mes_anterior = getSumaReservas($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_anterior' AND '$ultimo_dia_mes_anterior'", "= 'pagado'");
-
-// Calcular % Variación
-$variacion_ingresos = 0;
-if ($ingresos_mes_anterior > 0) {
-    $variacion_ingresos = (($ingresos_mes_actual - $ingresos_mes_anterior) / $ingresos_mes_anterior) * 100;
-} elseif ($ingresos_mes_actual > 0) {
-    $variacion_ingresos = 100; // De 0 a algo es 100% crecimiento
-}
-
-// 2. PAGO PARCIAL (Acumulado del mes actual)
-$parcial_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'parcial'");
-
-// 3. EN RESERVA (Futuras, No Pagadas)
-// Fecha > hoy Y Estado Pago != pagado
-$en_reserva_query = "SELECT COUNT(*) FROM reservas r 
-                     JOIN canchas c ON r.id_cancha = c.id_cancha 
-                     WHERE c.id_recinto = :id_recinto 
-                     AND r.fecha > '$hoy' 
-                     AND r.estado_pago != 'pagado' 
-                     AND r.estado != 'cancelada'";
-$stmt_en_reserva = $pdo->prepare($en_reserva_query);
-$stmt_en_reserva->execute([':id_recinto' => $id_recinto]);
-$cantidad_en_reserva = $stmt_en_reserva->fetchColumn();
-
-// 4. DEUDA (Vencidas, No Pagadas)
-// Fecha < hoy Y Estado Pago != pagado
-$deuda_query = "SELECT COALESCE(SUM(r.monto_total), 0) as total FROM reservas r 
+              AND r.estado != 'cancelada'"; // Excluir canceladas
+      
+      // Si la condición de pago requiere parámetros (ej: IN ('pagado', 'parcial'))
+      // Ajustamos la query dinámicamente si es necesario, pero para simplificar usaremos strings directos seguros
+      
+      $stmt = $pdo->prepare($sql);
+      // Merge params con id_recinto
+      $final_params = array_merge([$id_recinto], $params);
+      $stmt->execute($final_params); // Nota: La query arriba usa ? directo, ajustemos para seguridad
+      
+      // Re-escribiendo para usar PDO seguro con placeholders si fuera complejo, 
+      // pero como las condiciones son fijas, podemos inyectarlas con cuidado o usar prepare simple.
+      // Para este ejemplo, usaremos una aproximación segura simple:
+      
+      $query = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
+                FROM reservas r 
                 JOIN canchas c ON r.id_cancha = c.id_cancha 
                 WHERE c.id_recinto = :id_recinto 
-                AND r.fecha < '$hoy' 
-                AND r.estado_pago != 'pagado' 
+                AND r.fecha $condicion_fecha 
+                AND r.estado_pago $condicion_pago 
                 AND r.estado != 'cancelada'";
-$stmt_deuda = $pdo->prepare($deuda_query);
-$stmt_deuda->execute([':id_recinto' => $id_recinto]);
-$monto_deuda = $stmt_deuda->fetchColumn();
+                
+      $stmt = $pdo->prepare($query);
+      $stmt->execute([':id_recinto' => $id_recinto]);
+      return $stmt->fetchColumn();
+  }
+
+  // 1. INGRESOS ESTE MES (Pagados)
+  $ingresos_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'pagado'");
+  $ingresos_mes_anterior = getSumaReservas($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_anterior' AND '$ultimo_dia_mes_anterior'", "= 'pagado'");
+
+  // Calcular % Variación
+  $variacion_ingresos = 0;
+  if ($ingresos_mes_anterior > 0) {
+      $variacion_ingresos = (($ingresos_mes_actual - $ingresos_mes_anterior) / $ingresos_mes_anterior) * 100;
+  } elseif ($ingresos_mes_actual > 0) {
+      $variacion_ingresos = 100; // De 0 a algo es 100% crecimiento
+  }
+
+  // 2. PAGO PARCIAL (Acumulado del mes actual)
+  $parcial_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'parcial'");
+
+  // 3. EN RESERVA (Futuras, No Pagadas)
+  // Fecha > hoy Y Estado Pago != pagado
+  $en_reserva_query = "SELECT COUNT(*) FROM reservas r 
+                      JOIN canchas c ON r.id_cancha = c.id_cancha 
+                      WHERE c.id_recinto = :id_recinto 
+                      AND r.fecha > '$hoy' 
+                      AND r.estado_pago != 'pagado' 
+                      AND r.estado != 'cancelada'";
+  $stmt_en_reserva = $pdo->prepare($en_reserva_query);
+  $stmt_en_reserva->execute([':id_recinto' => $id_recinto]);
+  $cantidad_en_reserva = $stmt_en_reserva->fetchColumn();
+
+  // 4. DEUDA (Vencidas, No Pagadas)
+  // Fecha < hoy Y Estado Pago != pagado
+  $deuda_query = "SELECT COALESCE(SUM(r.monto_total), 0) as total FROM reservas r 
+                  JOIN canchas c ON r.id_cancha = c.id_cancha 
+                  WHERE c.id_recinto = :id_recinto 
+                  AND r.fecha < '$hoy' 
+                  AND r.estado_pago != 'pagado' 
+                  AND r.estado != 'cancelada'";
+  $stmt_deuda = $pdo->prepare($deuda_query);
+  $stmt_deuda->execute([':id_recinto' => $id_recinto]);
+  $monto_deuda = $stmt_deuda->fetchColumn();
 
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
-  <style>
-    :root { --bg-primary: #071289; --accent: #4ECDC4; --gold: #FFD700; --card-bg: rgba(255, 255, 255, 0.15); --text-light: white; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      background-blend-mode: multiply;
-      color: var(--text-light);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      padding: 0; /* Sin padding global para que el top-bar pegue */
-    }
-    .container { max-width: 1400px; margin: 0 auto; padding: 1rem; }
-    
-    /* Top Bar */
-    .top-bar {
-        background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
-        padding: 1rem 2rem;
-        box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2);
-        display: flex; justify-content: space-between; align-items: center;
-        position: sticky; top: 0; left: 0; width: 100%; z-index: 1000; margin: 0;
-    }
-    .brand-logo { color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.8rem; }
-    .menu-btn { background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px; }
-    .dropdown-menu { display: none; position: absolute; right: 0; top: 120%; background: white; border: 1px solid #eee; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); animation: fadeIn 0.2s ease; }
-    .dropdown-menu a { display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; transition: 0.2s; }
-    .dropdown-menu a:hover { background-color: #f3e5f5; color: #AB47BC; }
-    .btn-logout { text-decoration: none; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
+    <style>
+      /* =========================================
+        1. VARIABLES Y RESET GLOBAL
+        ========================================= */
+      :root {
+          --bg-primary: #071289;
+          --accent: #4ECDC4;
+          --gold: #FFD700;
+          --card-bg: rgba(255, 255, 255, 0.15);
+          --text-light: white;
+          --font-main: 'Segoe UI', system-ui, sans-serif;
+      }
 
-    /* Layout General */
-    .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
-    
-    /* Tarjeta de Ingresos (Compacta y Alineada a la Derecha) */
-    .income-card {
-        background: linear-gradient(135deg, #2E7D32, #4CAF50);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
-        text-align: right;
-        /* Ancho ajustado para ~13 dígitos + símbolo + espaciado */
-        min-width: 220px; 
-        max-width: 280px; 
-        flex-shrink: 0; /* Evita que se encoja demasiado */
-        margin-left: auto; /* Fuerza alineación a la derecha en flex container */
-    }
-    .income-title { font-size: 0.85rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; }
-    .income-value { font-size: 1.8rem; font-weight: 900; line-height: 1.2; }
-    .income-detail { font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* Acciones Rápidas */
-    .quick-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; width: 100%; }
-    .action-btn { padding: 0.8rem 0.5rem; background: var(--accent); color: var(--bg-primary); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: transform 0.2s; text-align: center; }
-    .action-btn:hover { transform: translateY(-2px); }
+      body {
+          background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), 
+                      url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+          background-blend-mode: multiply;
+          color: var(--text-light);
+          font-family: var(--font-main);
+          min-height: 100vh;
+          padding: 0; /* Importante para que el Top Bar pegue arriba */
+          overflow-x: hidden;
+      }
 
-    /* Contenedor Planilla */
-    .planilla-wrapper { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 1rem; }
-    
-    /* Estilos Planilla Interna */
-    .planilla-header-controls { background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; color: white; }
-    .control-group { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px; }
-    .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 120px; }
-    .control-btn { background: white; color: #8E24AA; border: none; padding: 0.3rem 0.8rem; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
-    .control-select { background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem; border-radius: 6px; font-size: 0.85rem; }
+      /* =========================================
+        2. TOP BAR & NAVEGACIÓN
+        ========================================= */
+      .top-bar {
+          background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
+          padding: 0.8rem 1.5rem;
+          box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2);
+          display: flex; justify-content: space-between; align-items: center;
+          position: sticky; top: 0; left: 0; width: 100%; z-index: 1000;
+      }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+      .brand-logo { 
+          color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; 
+          display: flex; align-items: center; gap: 0.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .brand-logo span { font-size: 1.8rem; }
 
-    /* === ESTILOS DE TABLA Y COLUMNAS FIJAS === */
-    .planilla-table {
-        width: auto; /* IMPORTANTE: Que la tabla mida lo que midan sus columnas, no el 100% */
-        min-width: 100%; /* Pero que al menos ocupe todo el ancho disponible si hay muchas canchas */
-        border-collapse: separate; 
-        border-spacing: 4px;
-        table-layout: fixed; /* CLAVE: Respeta los anchos definidos estrictamente */
-    }
+      .menu-btn { 
+          background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; 
+          cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px; 
+      }
 
-   /* Columna de HORAS (Sticky Left) */
-    .planilla-table th:first-child,
-    .planilla-table td:first-child {
-        position: sticky;
-        left: 0;
-        z-index: 20;
-        background: #f8f9fa !important;
-        color: #333;
-        font-weight: bold;
-        border-right: 2px solid #e0e0e0;
-        border-radius: 6px;
-        
-        /* ANCHO FIJO E INVARIABLE */
-        width: 70px !important;
-        min-width: 70px !important;
-        max-width: 70px !important;
-        
-        padding: 4px !important;
-        font-size: 0.75rem;
-        text-align: center;
-    }
+      .dropdown-menu { 
+          display: none; position: absolute; right: 0; top: 120%; 
+          background: white; border: 1px solid #eee; border-radius: 12px; 
+          z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+          animation: fadeIn 0.2s ease; overflow: hidden;
+      }
+      .dropdown-menu a { 
+          display: block; padding: 0.8rem 1rem; text-decoration: none; 
+          color: #333; transition: 0.2s; font-weight: 500; 
+      }
+      .dropdown-menu a:hover { background-color: #f3e5f5; color: #AB47BC; }
 
-    /* Columnas de CANCHAS */
-    .planilla-table th, 
-    .planilla-table td {
-        /* ANCHO FIJO PARA CADA CANCHA */
-        width: 120px !important;
-        min-width: 120px !important;
-        max-width: 120px !important;
-        
-        padding: 4px;
-        vertical-align: middle;
-        text-align: center;
-    }
+      .btn-logout { 
+          text-decoration: none; padding: 0.6rem 1.2rem; 
+          background: rgba(255,255,255,0.2); color: white; 
+          border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; 
+          font-weight: bold; font-size: 0.9rem; transition: 0.2s; backdrop-filter: blur(5px);
+      }
+      .btn-logout:hover { background: rgba(255,255,255,0.3); }
 
-    /* Ajuste para Móvil */
-    @media (max-width: 768px) {
-        .planilla-table th:first-child,
-        .planilla-table td:first-child {
-            width: 60px !important;
-            min-width: 60px !important;
-            max-width: 60px !important;
-            font-size: 0.7rem;
-        }
-        /* Columnas de CANCHAS */
-        .planilla-table th, 
-        .planilla-table td {
-            width: 100px !important;
-            min-width: 100px !important; /* Un poco más anchas para leer nombres cortos */
-            max-width: 100px !important;
-        }
-        .dashboard-header { flex-direction: column; align-items: stretch; }
-        .income-card { margin-left: 0; width: 100%; max-width: 100%; text-align: center; }
-        .quick-actions { grid-template-columns: 1fr 1fr; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Contenedor con scroll horizontal si es necesario */
-        .planilla-table-container {
-            overflow-x: auto;
-            background: white;
-            border-radius: 0 0 12px 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-            max-height: 70vh;
-            padding: 4px; 
-            /* Si quieres que el fondo gris se vea a la derecha cuando sobra espacio: */
-            background-color: #f4f6f9; 
-        }
+      /* =========================================
+        3. LAYOUT PRINCIPAL (DESKTOP EXTENDIDO)
+        ========================================= */
+      .main-layout {
+          display: grid;
+          /* Acciones (200px) | Planilla (Flexible) | KPIs (240px) */
+          grid-template-columns: 200px 1fr 240px; 
+          gap: 1rem;
+          max-width: 98%; /* Ocupamos casi toda la pantalla */
+          margin: 0 auto;
+          padding: 0.5rem;
+          height: calc(100vh - 70px); /* Altura completa menos header */
+      }
 
-        /* Tabla */
-        .planilla-table {
-            font-size: 0.75rem; /* Fuente más pequeña */
-        }
+      /* Columna Izquierda: Acciones */
+      .actions-column {
+          display: flex; flex-direction: column; gap: 1rem;
+      }
+      .action-btn-sidebar {
+          background: white; color: #071289; border: none; padding: 1rem; 
+          border-radius: 12px; font-weight: bold; cursor: pointer; 
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: left; 
+          display: flex; align-items: center; gap: 10px; transition: transform 0.2s;
+      }
+      .action-btn-sidebar:hover { transform: translateY(-2px); }
 
-        /* Encabezados de Canchas */
-        .planilla-table thead th div {
-            font-size: 0.7rem; /* Icono más pequeño */
-        }
-        .planilla-table thead th div:last-child {
-            font-size: 0.65rem; /* Nombre de cancha más pequeño */
-            white-space: normal; /* Permite que el nombre baje de línea si es largo */
-            line-height: 1.1;
-        }
+      /* Columna Central: Planilla */
+      .planilla-column {
+          background: white; border-radius: 16px; 
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+          display: flex; flex-direction: column; overflow: hidden; height: 100%;
+      }
 
-        /* Contenido de la celda (Nombre Cliente) */
-        .planilla-table tbody td div {
-            font-size: 0.65rem;
-            line-height: 1.1;
-        }
-    }
+      /* Controles Internos de la Planilla */
+      .planilla-header-controls { 
+          background: linear-gradient(90deg, #CE93D8, #AB47BC); 
+          padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; 
+          gap: 0.8rem; align-items: center; justify-content: space-between; color: white; 
+      }
+      .control-group { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px; }
+      .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 120px; }
+      .control-btn { background: white; color: #8E24AA; border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer; }
+      .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.85rem; color: #333; }
 
-    /* Encabezados de Canchas */
-    .planilla-table thead th {
-        background: #AB47BC !important;
-        color: white;
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        height: 60px; /* Altura fija para headers */
-    }
+      /* Contenedor Tabla con Scroll */
+      .planilla-table-container {
+          flex: 1; overflow: auto; padding: 4px;
+          /* Ancho mínimo para ~13 canchas (13*120 + 70 hora = ~1630px) */
+          min-width: 1600px; 
+          background-color: #f4f6f9; /* Fondo gris si sobra espacio */
+      }
 
-    /* === CELDAS DE RESERVA (El toque UX) === */
-    .planilla-table tbody td {
-        transition: all 0.2s ease;
-        border-radius: 8px; /* Borde redondeado suave */
-        border: 1px solid transparent; /* Borde invisible por defecto */
-    }
+      /* Columna Derecha: KPIs Compactos */
+      .kpi-column {
+          display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; padding-right: 2px;
+      }
+      .kpi-card-mini {
+          background: white; border-left: 4px solid #ccc; padding: 0.8rem; 
+          border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;
+      }
+      .kpi-card-mini:hover { transform: translateX(-2px); }
+      .kpi-card-mini div:first-child { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; opacity: 0.8; font-weight: bold; }
+      .kpi-card-mini div:nth-child(2) { font-size: 1.3rem; font-weight: 900; line-height: 1.1; margin-bottom: 0.2rem; }
+      .kpi-card-mini div:last-child { font-size: 0.65rem; opacity: 0.7; }
 
-    /* Efecto Hover en celdas */
-    .planilla-table tbody td:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        z-index: 2;
-        position: relative;
-    }
+      /* Colores Específicos KPIs */
+      .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
+      .kpi-ingresos div:nth-child(2) { color: #1B5E20; }
+      .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; }
+      .kpi-parcial div:nth-child(2) { color: #EF6C00; }
+      .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; }
+      .kpi-reserva div:nth-child(2) { color: #0D47A1; }
+      .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
+      .kpi-deuda div:nth-child(2) { color: #B71C1C; }
 
-    /* Colores de Estado con Bordes Suaves */
-    /* Verde (Pagado) */
-    td.estado-pagado {
-        background-color: #4CAF50 !important; /* <--- CAMBIA ESTO (Verde Estándar) */
-        border: 1px solid #388E3C !important;
-        color: white; /* Texto blanco */
-    }
+      /* =========================================
+        4. ESTILOS DE LA TABLA (PLANILLA)
+        ========================================= */
+      .planilla-table {
+          width: 100%; border-collapse: separate; border-spacing: 4px; 
+          table-layout: fixed; /* Clave para anchos fijos */
+      }
 
-    /* Amarillo (Parcial) */
-    td.estado-parcial {
-        background-color: #FFEB3B !important; /* <--- CAMBIA ESTO (Amarillo Intenso) */
-        border: 1px solid #FBC02D !important;
-        color: #333; /* Texto oscuro para que se lea bien sobre amarillo */
-    }
+      /* Celda Hora (Sticky Left) */
+      .planilla-table th:first-child,
+      .planilla-table td:first-child {
+          position: sticky; left: 0; z-index: 20;
+          background: #f8f9fa !important; color: #333; font-weight: bold;
+          border-right: 2px solid #e0e0e0; border-radius: 6px;
+          width: 70px !important; min-width: 70px !important; max-width: 70px !important;
+          padding: 4px !important; font-size: 0.8rem; text-align: center;
+      }
 
-    /* Rojo (Reservada/Pendiente) */
-    td.estado-pendiente {
-        background-color: #FF5252 !important; /* <--- CAMBIA ESTO (Rojo Intenso) */
-        border: 1px solid #D32F2F !important;
-        color: white; /* Texto blanco para mejor contraste con rojo fuerte */
-    }
+      /* Celdas Canchas */
+      .planilla-table th, .planilla-table td {
+          width: 120px !important; min-width: 120px !important; max-width: 120px !important;
+          padding: 4px; vertical-align: middle; text-align: center;
+          border-radius: 8px; transition: all 0.2s ease;
+      }
 
-    /* Gris (Disponible) */
-    td.estado-disponible {
-        background-color: #FAFAFA !important;
-        border: 1px dashed #E0E0E0 !important; /* Línea punteada sutil */
-    }
+      /* Headers de Tabla */
+      .planilla-table thead th {
+          background: #AB47BC !important; color: white; position: sticky; top: 0; z-index: 5;
+          border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 60px;
+      }
 
-    /* Separación visual entre filas (Líneas de cuadrícula) */
-    .planilla-table tbody tr td {
-        border-bottom: 1px solid #f0f0f0; /* Línea horizontal muy suave */
-    }
+      /* Estados de Reserva (Colores Intensos) */
+      td.estado-pagado { background-color: #4CAF50 !important; border: 1px solid #388E3C !important; color: white; }
+      td.estado-parcial { background-color: #FFEB3B !important; border: 1px solid #FBC02D !important; color: #333; }
+      td.estado-pendiente { background-color: #FF5252 !important; border: 1px solid #D32F2F !important; color: white; }
+      td.estado-disponible { background-color: #FAFAFA !important; border: 1px dashed #E0E0E0 !important; }
 
-    /* Modal Detalle (Base) */
-    #modalDetalleReserva {
-        z-index: 2000; /* Nivel base */
-    }
+      /* Efectos Hover */
+      .planilla-table tbody td:hover { transform: scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 2; position: relative; }
 
-    /* Modal Pago (Debe estar ENCIMA del detalle) */
-    #modalPago {
-        z-index: 2500; /* Nivel superior */
-        display: none; /* Por defecto oculto */
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.6); /* Fondo oscuro */
-        backdrop-filter: blur(5px); /* Efecto borroso */
-        justify-content: center;
-        align-items: center;
-    }
+      /* =========================================
+        5. MODALES (Detalle y Pago)
+        ========================================= */
+      #modalDetalleReserva { z-index: 2000; }
+      
+      #modalPago {
+          z-index: 2500; display: none; position: fixed; top: 0; left: 0; 
+          width: 100%; height: 100%; background: rgba(0,0,0,0.6); 
+          backdrop-filter: blur(5px); justify-content: center; align-items: center;
+      }
+      #modalPago .submodal-content {
+          background: white; padding: 2rem; border-radius: 16px; max-width: 500px; 
+          width: 90%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          animation: fadeIn 0.3s ease-out;
+      }
 
-    /* Contenido del Modal Pago */
-    #modalPago .submodal-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 16px;
-        max-width: 500px;
-        width: 90%;
-        position: relative; /* Para posicionar la X */
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        animation: fadeIn 0.3s ease-out;
-    }
+      /* Modal Lista KPI */
+      #modalListaKPI {
+          display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+          background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; 
+          align-items:center; backdrop-filter: blur(4px);
+      }
 
-    /* === RESPONSIVE LAYOUT === */
-    @media (max-width: 1024px) {
-        /* En tablets/móviles grandes, apilamos: Acciones arriba, Planilla medio, KPIs abajo */
-        .main-layout {
-            grid-template-columns: 1fr !important;
-            grid-template-rows: auto 1fr auto;
-            height: auto;
-            padding: 0.5rem;
-        }
-        
-        .actions-column {
-            flex-direction: row;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-        }
-        
-        .action-btn-sidebar {
-            min-width: 140px;
-            padding: 0.8rem !important;
-            font-size: 0.9rem;
-        }
+      /* =========================================
+        6. RESPONSIVE (TABLET Y MÓVIL)
+        ========================================= */
+      
+      /* Tablet / Móvil Grande (< 1024px) */
+      @media (max-width: 1024px) {
+          .main-layout {
+              grid-template-columns: 1fr !important; /* Una sola columna */
+              grid-template-rows: auto 1fr auto;
+              height: auto; padding: 0.5rem;
+          }
+          .actions-column { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
+          .action-btn-sidebar { min-width: 140px; padding: 0.8rem !important; font-size: 0.9rem; }
+          .kpi-column { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
+          .kpi-card-mini { min-width: 140px; padding: 0.8rem !important; }
+      }
 
-        .kpi-column {
-            flex-direction: row;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-        }
+      /* Móvil Específico (< 768px) */
+      @media (max-width: 768px) {
+          /* Top Bar Ajustado */
+          .top-bar { padding: 0.8rem 1rem; width: 100%; box-sizing: border-box; }
+          .brand-logo { font-size: 1.2rem; }
+          .brand-logo span { font-size: 1.4rem; }
 
-        .kpi-card-mini {
-            min-width: 140px;
-            padding: 0.8rem !important;
-        }
-    }
+          /* KPIs en Grid 2x2 */
+          .kpi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; overflow: visible; }
+          .kpi-card-mini { min-width: auto; padding: 0.6rem; }
+          .kpi-card-mini div:first-child { font-size: 0.65rem; }
+          .kpi-card-mini div:nth-child(2) { font-size: 1.1rem; }
 
-    /* === MÓVIL ESPECÍFICO (< 768px) === */
-    @media (max-width: 768px) {
-        /* Top Bar Fix */
-        .top-bar {
-            padding: 0.8rem 1rem;
-            width: 100%;
-            box-sizing: border-box; /* Asegura que el padding no desborde */
-        }
-        
-        .brand-logo {
-            font-size: 1.2rem;
-        }
-        
-        .brand-logo span {
-            font-size: 1.4rem;
-        }
-
-        /* KPIs Compactos en Móvil */
-        .kpi-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* 2x2 Grid */
-            gap: 0.5rem;
-            overflow: visible;
-        }
-        
-        .kpi-card-mini {
-            min-width: auto;
-            padding: 0.6rem;
-        }
-        
-        .kpi-card-mini div:first-child {
-            font-size: 0.65rem;
-        }
-        
-        .kpi-card-mini div:nth-child(2) {
-            font-size: 1.1rem;
-        }
-
-        /* Planilla Móvil Optimizada */
-        .planilla-table th:first-child,
-        .planilla-table td:first-child {
-            min-width: 60px !important;
-            width: 60px !important;
-            font-size: 0.7rem;
-        }
-        
-        .planilla-table th, 
-        .planilla-table td {
-            min-width: 90px !important;
-            width: 90px !important;
-            font-size: 0.7rem;
-        }
-        
-        /* Limitar nombre de cancha a 8 chars visualmente */
-        .planilla-table th div:last-child {
-            max-width: 8ch;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-  </style>
-</head>
+          /* Planilla Compacta */
+          .planilla-table th:first-child, .planilla-table td:first-child {
+              width: 60px !important; min-width: 60px !important; max-width: 60px !important; font-size: 0.7rem;
+          }
+          .planilla-table th, .planilla-table td {
+              width: 90px !important; min-width: 90px !important; max-width: 90px !important; font-size: 0.7rem;
+          }
+          /* Truncar nombres de cancha a 8 caracteres */
+          .planilla-table th div:last-child {
+              max-width: 8ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          }
+      }
+  </style>  
+  </head>
 <body>
 
   <!-- TOP BAR -->
