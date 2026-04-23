@@ -149,7 +149,7 @@
           color: var(--text-light);
           font-family: var(--font-main);
           min-height: 100vh;
-          padding: 0; /* Importante para que el Top Bar pegue arriba */
+          padding: 0;
           overflow-x: hidden;
       }
 
@@ -241,10 +241,10 @@
       .control-btn { background: white; color: #8E24AA; border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer; }
       .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.85rem; color: #333; }
 
-      /* Contenedor Tabla con Scroll */
+      /* Contenedor Tabla con Scroll FORZADO PARA 12+ CANCHAS */
       .planilla-table-container {
           flex: 1; overflow: auto; padding: 4px;
-          /* Ancho mínimo para ~13 canchas (13*120 + 70 hora = ~1630px) */
+          /* Ancho mínimo calculado: 12 canchas * 120px + 1 hora * 70px = ~1510px. Ponemos 1600px para holgura */
           min-width: 1600px; 
           background-color: #f4f6f9; /* Fondo gris si sobra espacio */
       }
@@ -253,24 +253,44 @@
       .kpi-column {
           display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; padding-right: 2px;
       }
+      
+      /* CORRECCIÓN DE COLORES KPI */
       .kpi-card-mini {
           background: white; border-left: 4px solid #ccc; padding: 0.8rem; 
           border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;
+          color: #333; /* Texto base oscuro por seguridad */
       }
       .kpi-card-mini:hover { transform: translateX(-2px); }
-      .kpi-card-mini div:first-child { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; opacity: 0.8; font-weight: bold; }
-      .kpi-card-mini div:nth-child(2) { font-size: 1.3rem; font-weight: 900; line-height: 1.1; margin-bottom: 0.2rem; }
-      .kpi-card-mini div:last-child { font-size: 0.65rem; opacity: 0.7; }
+      
+      /* Títulos KPI */
+      .kpi-card-mini div:first-child { 
+          font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; 
+          margin-bottom: 0.2rem; opacity: 0.8; font-weight: bold; color: #555; 
+      }
+      
+      /* Cifras KPI */
+      .kpi-card-mini div:nth-child(2) { 
+          font-size: 1.3rem; font-weight: 900; line-height: 1.1; margin-bottom: 0.2rem; 
+      }
+      
+      /* Subtítulos KPI */
+      .kpi-card-mini div:last-child { 
+          font-size: 0.65rem; opacity: 0.7; color: #666; 
+      }
 
-      /* Colores Específicos KPIs */
+      /* Colores Específicos KPIs (Forzando colores de texto oscuros) */
       .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
-      .kpi-ingresos div:nth-child(2) { color: #1B5E20; }
+      .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; } /* Verde Oscuro */
+
       .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; }
-      .kpi-parcial div:nth-child(2) { color: #EF6C00; }
+      .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; } /* Naranja Oscuro */
+
       .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; }
-      .kpi-reserva div:nth-child(2) { color: #0D47A1; }
+      .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; } /* Azul Oscuro */
+
       .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
-      .kpi-deuda div:nth-child(2) { color: #B71C1C; }
+      .kpi-deuda div:nth-child(2) { color: #B71C1C !important; } /* Rojo Oscuro */
+
 
       /* =========================================
         4. ESTILOS DE LA TABLA (PLANILLA)
