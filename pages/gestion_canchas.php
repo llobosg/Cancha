@@ -1,10 +1,13 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
+session_start(); // Asegúrate que la sesión esté iniciada
 
-// Verificar autenticación de administrador de recinto
-if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+$rol_actual = $_SESSION['recinto_rol'] ?? '';
+$roles_permitidos = ['admin', 'asistente']; // Aceptamos ambos roles
+
+if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_permitidos)) {
+    error_log("❌ [GESTION CANCHAS] Acceso denegado. Rol: '$rol_actual'");
     header('Location: ../index.php');
     exit;
 }
