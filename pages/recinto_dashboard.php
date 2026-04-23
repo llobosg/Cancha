@@ -507,26 +507,6 @@
 
   <!-- Scripts -->
   <script>
-    // Mapeo de ID_Deporte a Íconos (Basado en tu tabla SQL)
-    const iconosDeporte = {
-        1: '🎾',   // Pádel
-        2: '🎾',   // Tenis (usamos misma raqueta o 🥎 si prefieres)
-        3: '🏐',   // Volley
-        4: '🏋️',   // Gimnasio
-        5: '👤',   // Clases partic.
-        6: '🏃',   // Entrenamiento
-        7: '🏊',   // Natación
-        8: '🧘',   // Pilates
-        9: '💪',   // Pesas
-        10: '⚽',  // Fútbol
-        11: '⚽',  // Futbolito
-        12: '⚽',  // Futsal
-        13: '⚽',  // Escuela Fútbol
-        14: '🏊',  // Escuela natación
-        15: '🚴',  // Ciclismo
-        'default': '🏟️' // Por defecto para cualquier otro deporte nuevo
-    };
-
     // === INICIO CODIGO DE CALENDARIO_RESERVAS.JS INTEGRADO Y ADAPTADO PARA ESTE DASHBOARD ===
 
     // === VARIABLES GLOBALES PARA LA PLANILLA ===
