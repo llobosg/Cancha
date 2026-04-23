@@ -429,7 +429,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
           <div class="income-card" style="background: linear-gradient(135deg, #2E7D32, #4CAF50); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
               <div class="income-title">Ingresos Este Mes</div>
               <div class="income-value">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-              <div class="income-detail">+12% vs mes anterior</div>
+              <div class="income-detail"><?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>% vs mes anterior</div>
           </div>
 
           <!-- 2. PAGO PARCIAL (Amarillo Suave) -->
