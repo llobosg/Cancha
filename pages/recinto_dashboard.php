@@ -379,6 +379,102 @@ $monto_deuda = $stmt_deuda->fetchColumn();
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         animation: fadeIn 0.3s ease-out;
     }
+
+    /* === RESPONSIVE LAYOUT === */
+    @media (max-width: 1024px) {
+        /* En tablets/móviles grandes, apilamos: Acciones arriba, Planilla medio, KPIs abajo */
+        .main-layout {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: auto 1fr auto;
+            height: auto;
+            padding: 0.5rem;
+        }
+        
+        .actions-column {
+            flex-direction: row;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        
+        .action-btn-sidebar {
+            min-width: 140px;
+            padding: 0.8rem !important;
+            font-size: 0.9rem;
+        }
+
+        .kpi-column {
+            flex-direction: row;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .kpi-card-mini {
+            min-width: 140px;
+            padding: 0.8rem !important;
+        }
+    }
+
+    /* === MÓVIL ESPECÍFICO (< 768px) === */
+    @media (max-width: 768px) {
+        /* Top Bar Fix */
+        .top-bar {
+            padding: 0.8rem 1rem;
+            width: 100%;
+            box-sizing: border-box; /* Asegura que el padding no desborde */
+        }
+        
+        .brand-logo {
+            font-size: 1.2rem;
+        }
+        
+        .brand-logo span {
+            font-size: 1.4rem;
+        }
+
+        /* KPIs Compactos en Móvil */
+        .kpi-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2x2 Grid */
+            gap: 0.5rem;
+            overflow: visible;
+        }
+        
+        .kpi-card-mini {
+            min-width: auto;
+            padding: 0.6rem;
+        }
+        
+        .kpi-card-mini div:first-child {
+            font-size: 0.65rem;
+        }
+        
+        .kpi-card-mini div:nth-child(2) {
+            font-size: 1.1rem;
+        }
+
+        /* Planilla Móvil Optimizada */
+        .planilla-table th:first-child,
+        .planilla-table td:first-child {
+            min-width: 60px !important;
+            width: 60px !important;
+            font-size: 0.7rem;
+        }
+        
+        .planilla-table th, 
+        .planilla-table td {
+            min-width: 90px !important;
+            width: 90px !important;
+            font-size: 0.7rem;
+        }
+        
+        /* Limitar nombre de cancha a 8 chars visualmente */
+        .planilla-table th div:last-child {
+            max-width: 8ch;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
   </style>
 </head>
 <body>
@@ -388,7 +484,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
       <a href="../index.php" class="brand-logo">CanchaSport</a>
       <div style="display: flex; align-items: center; gap: 1rem;">
           <div style="position: relative;">
-              <button class="menu-btn" onclick="toggleMenu(event)"></button>
+              <button class="menu-btn" onclick="toggleMenu(event)">⚙️</button>
               <div id="adminMenu" class="dropdown-menu">
                   <div style="padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between;">
                       <span style="font-size: 0.8rem; font-weight: bold; color: #999;">MENÚ</span>
@@ -404,128 +500,109 @@ $monto_deuda = $stmt_deuda->fetchColumn();
       </div>
   </div>
 
-  <div class="container">
-      
-      <!-- Header Dashboard: Título + Tarjeta Ingresos (Solo Admin) -->
-      <div class="dashboard-header">
-          <div>
-              <h1 style="color: white; font-size: 1.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Panel de Control</h1>
-              <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">Recinto: <?= htmlspecialchars($recinto_nombre) ?></p>
-          </div>
-          
-          <!-- Ficha de ingresos original (Solo para Admin, se reemplaza por KPIs para ambos)
-          <?php if ($rol_actual === 'admin'): ?>
-          <div class="income-card">
-              <div class="income-title">Ingresos Este Mes</div>
-              <div class="income-value">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
-              <div class="income-detail">+12% vs mes anterior</div>
-          </div>
-          <?php endif; ?> -->
+  <div class="main-layout" style="display: grid; grid-template-columns: 220px 1fr 260px; gap: 1.5rem; max-width: 1600px; margin: 0 auto; padding: 1rem; height: calc(100vh - 80px);">
 
-          <!-- SECCIÓN DE KPIs CENTRAL -->
-          <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0; max-width: 1200px; margin-left: auto; margin-right: auto;">
-
-              <?php if ($rol_actual === 'admin'): ?>
-                  <!-- 1. INGRESOS ESTE MES (Solo Admin) -->
-                  <div class="kpi-card" style="background: #E8F5E9; border-left: 5px solid #4CAF50; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                      <div style="font-size: 0.9rem; color: #2E7D32; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Ingresos Este Mes</div>
-                      <div style="font-size: 2rem; font-weight: 900; color: #1B5E20; margin-bottom: 0.5rem;">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-                      <div style="font-size: 0.85rem; color: <?= $variacion_ingresos >= 0 ? '#2E7D32' : '#C62828' ?>; font-weight: bold;">
-                          <?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>% vs mes anterior
-                      </div>
-                  </div>
-              <?php endif; ?>
-
-              <!-- 2. PAGO PARCIAL (Admin y Asistente) -->
-              <div class="kpi-card" onclick="abrirListaKPI('parcial')" style="cursor: pointer; background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
-                  <div style="font-size: 0.9rem; color: #F57F17; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Pago Parcial (Mes)</div>
-                  <div style="font-size: 2rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
-                  <div style="font-size: 0.85rem; color: #F57F17;">Click para ver detalles</div>
-              </div>
-
-              <?php if ($rol_actual === 'admin'): ?>
-                  <!-- 3. EN RESERVA (Solo Admin) -->
-                  <div class="kpi-card" style="background: #E3F2FD; border-left: 5px solid #2196F3; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                      <div style="font-size: 0.9rem; color: #1565C0; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">En Reserva (Futuro)</div>
-                      <div style="font-size: 2rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
-                      <div style="font-size: 0.85rem; color: #1565C0;">Reservas no pagadas próximas</div>
-                  </div>
-              <?php endif; ?>
-
-              <!-- 4. DEUDA VENCIDA (Admin y Asistente) -->
-              <div class="kpi-card" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
-                  <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
-                  <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-                  <div style="font-size: 0.85rem; color: #C62828;">Click para ver deudores</div>
-              </div>
-
-          </div>
-
-      </div>
-
-      <!-- Acciones Rápidas (Solo Asistente) -->
-      <?php if ($rol_actual === 'asistente'): ?>
-        <div class="quick-actions">
-            <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
-            <button class="action-btn" id="btnTorneosActivos">Torneos Activos </button>
-            <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual 📝</button>
-        </div>
-
-        <!-- === CONTENEDOR DE LA PLANILLA === -->
-        <div class="planilla-wrapper" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 2rem;">
+    <!-- COLUMNA 1: ACCIONES RÁPIDAS (Solo visible si hay acciones o para Asistente) -->
+    <div class="actions-column" style="display: flex; flex-direction: column; gap: 1rem;">
+        
+        <?php if ($rol_actual === 'asistente'): ?>
+            <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'" style="background: white; color: #071289; border: none; padding: 1rem; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: left; display: flex; align-items: center; gap: 10px;">
+                <span>🎾</span> Crear Canchas
+            </button>
             
-            <!-- Controles Superiores -->
-            <div style="background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; color: white;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px;">
-                    <span style="font-size:0.8rem; font-weight:600;">Fecha:</span>
-                    <input type="date" id="fechaPlanillaInput" style="background: transparent; border: none; outline: none; color: white; font-weight: bold; width: 130px;">
-                    <button onclick="irAHoyPlanilla()" style="background: white; color: #8E24AA; border: none; padding: 0.3rem 0.8rem; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Hoy</button>
-                    <button onclick="cambiarDiaPlanilla(-1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&lt;</button>
-                    <button onclick="cambiarDiaPlanilla(1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&gt;</button>
-                </div>
-                
-                <div style="display: flex; gap: 0.5rem;">
-                    <select id="filtroDeporte" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
-                        <option value="todos" selected>Todos los deportes</option>
-                        <option value="futbol">Fútbol</option>
-                        <option value="padel">Pádel</option> 
-                        <option value="tenis">Tenis</option>
-                        <option value="voleyball">Voleyball</option>
-                        <!-- Agrega más según tus IDs -->
-                    </select>
-                    <select id="filtroEstado" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
-                        <option value="">Todos los estados</option>
-                        <option value="pagadas">Pagadas</option>
-                        <option value="parcial">Pago Parcial</option>
-                        <option value="no_pagadas">No Pagadas</option>
-                        <option value="reservada">Reservadas</option>
-                    </select>
-                </div>
-            </div>
+            <button class="action-btn-sidebar" id="btnTorneosActivos" style="background: white; color: #071289; border: none; padding: 1rem; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: left; display: flex; align-items: center; gap: 10px;">
+                <span>🏆</span> Torneos Activos
+            </button>
 
-            <!-- Tabla -->
-            <div style="overflow-x: auto; max-height: 65vh;">
-                <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.85rem;">
-                    <!-- Se llena con JS -->
-                </table>
+            <button class="action-btn-sidebar" onclick="alert('Reserva Manual')" style="background: white; color: #071289; border: none; padding: 1rem; border-radius: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: left; display: flex; align-items: center; gap: 10px;">
+                <span>📝</span> Reserva Manual
+            </button>
+        <?php endif; ?>
+
+        <!-- Panel Torneos (Oculto por defecto) -->
+        <div id="panelTorneos" style="display:none; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-height: 300px; overflow-y: auto;">
+            <h4 style="margin:0 0 1rem 0; color:#071289;">Torneos</h4>
+            <div id="listaTorneos">Cargando...</div>
+        </div>
+    </div>
+
+    <!-- COLUMNA 2: PLANILLA DE RESERVAS (Centro, ocupa todo el alto) -->
+    <div class="planilla-column" style="background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+        
+        <!-- Controles Planilla (Header Interno) -->
+        <div style="background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; justify-content: space-between; color: white;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="date" id="fechaPlanillaInput" style="background: rgba(255,255,255,0.2); border: none; border-radius: 6px; padding: 0.4rem; color: white; font-weight: bold;">
+                <button onclick="irAHoyPlanilla()" style="background: white; color: #8E24AA; border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer;">Hoy</button>
+                <button onclick="cambiarDiaPlanilla(-1)" style="background: rgba(255,255,255,0.3); border: none; border-radius: 50%; width: 28px; height: 28px; color: white; cursor: pointer;">&lt;</button>
+                <button onclick="cambiarDiaPlanilla(1)" style="background: rgba(255,255,255,0.3); border: none; border-radius: 50%; width: 28px; height: 28px; color: white; cursor: pointer;">&gt;</button>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem;">
+                <select id="filtroDeporte" style="background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.85rem;">
+                    <option value="todos">Todos</option>
+                    <option value="padel">Pádel</option>
+                    <option value="futbol">Fútbol</option>
+                    <option value="tenis">Tenis</option>
+                </select>
+                <select id="filtroEstado" style="background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.85rem;">
+                    <option value="">Estados</option>
+                    <option value="pagadas">Pagadas</option>
+                    <option value="parcial">Parcial</option>
+                    <option value="no_pagadas">No Pagadas</option>
+                </select>
             </div>
         </div>
 
+        <!-- Tabla Scrollable -->
+        <div class="planilla-table-container" style="flex: 1; overflow: auto; padding: 4px;">
+            <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed;">
+                <!-- Se llena con JS -->
+            </table>
+        </div>
+    </div>
+
+    <!-- COLUMNA 3: KPIs FINANCIEROS (Derecha, Vertical) -->
+    <div class="kpi-column" style="display: flex; flex-direction: column; gap: 1rem; overflow-y: auto;">
         
-        
-        <!-- Panel Torneos (Oculto por defecto, se muestra con botón) -->
-        <div id="panelTorneos" class="planilla-wrapper" style="display: none; margin-bottom: 1.5rem; background: rgba(255,255,255,0.95);">
-            <div style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #071289;">🏆 Torneos Americanos Activos</h3>
-                <button onclick="document.getElementById('panelTorneos').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
-            </div>
-            <div id="listaTorneos" style="padding: 1rem;">
-                <p style="color:#666;">Cargando torneos...</p>
+        <?php if ($rol_actual === 'admin'): ?>
+        <!-- 1. Ingresos -->
+        <div class="kpi-card-mini" style="background: #E8F5E9; border-left: 4px solid #4CAF50; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 0.75rem; color: #2E7D32; font-weight: bold; text-transform: uppercase;">Ingresos Mes</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #1B5E20;">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
+            <div style="font-size: 0.7rem; color: <?= $variacion_ingresos >= 0 ? '#2E7D32' : '#C62828' ?>;">
+                <?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>%
             </div>
         </div>
-      <?php endif; ?>
+        <?php endif; ?>
 
+        <!-- 2. Pago Parcial (Click) -->
+        <div class="kpi-card-mini" onclick="abrirListaKPI('parcial')" style="cursor: pointer; background: #FFFDE7; border-left: 4px solid #FBC02D; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;">
+            <div style="font-size: 0.75rem; color: #F57F17; font-weight: bold; text-transform: uppercase;">Pago Parcial</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
+            <div style="font-size: 0.7rem; color: #F57F17;">Ver detalles</div>
+        </div>
+
+        <?php if ($rol_actual === 'admin'): ?>
+        <!-- 3. En Reserva -->
+        <div class="kpi-card-mini" style="background: #E3F2FD; border-left: 4px solid #2196F3; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 0.75rem; color: #1565C0; font-weight: bold; text-transform: uppercase;">En Reserva</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
+            <div style="font-size: 0.7rem; color: #1565C0;">Próximas no pagadas</div>
+        </div>
+        <?php endif; ?>
+
+        <!-- 4. Deuda Vencida (Click) -->
+        <div class="kpi-card-mini" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 4px solid #EF5350; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;">
+            <div style="font-size: 0.75rem; color: #C62828; font-weight: bold; text-transform: uppercase;">Deuda Vencida</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
+            <div style="font-size: 0.7rem; color: #C62828;">Ver deudores</div>
+        </div>
+
+    </div>
   </div>
+
+  <!-- MODALES (Lista KPI, Detalle, Pago, etc.) van aquí fuera del grid -->
 
   <!-- Scripts -->
   <script>
