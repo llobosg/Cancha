@@ -1334,11 +1334,12 @@
     });
 
     // Funciones auxiliares de cierre
-    function cerrarModalDetalle() {
-        document.getElementById('modalDetalleReserva').style.display = 'none';
-    }
     function cerrarModalPago() {
         document.getElementById('modalPago').style.display = 'none';
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modalDetalleReserva').style.display = 'none';
     }
 
     // === FUNCIONES PARA MODAL DE LISTA KPI ===
