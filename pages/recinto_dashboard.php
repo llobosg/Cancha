@@ -34,7 +34,6 @@ function getSuma($pdo, $id, $fecha_cond, $pago_cond) {
 $ingresos_act = getSuma($pdo, $id_recinto, ">= '$primer_dia_mes'", "= 'pagado'");
 $ingresos_ant = getSuma($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_ant' AND '$ultimo_dia_mes_ant'", "= 'pagado'");
 $var_ing = ($ingresos_ant > 0) ? (($ingresos_act - $ingresos_ant) / $ingresos_ant) * 100 : (($ingresos_act > 0) ? 100 : 0);
-
 $parcial_act = getSuma($pdo, $id_recinto, ">= '$primer_dia_mes'", "= 'parcial'");
 
 $q_res = "SELECT COUNT(*) FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id AND r.fecha > '$hoy' AND r.estado_pago != 'pagado' AND r.estado != 'cancelada'";
@@ -58,33 +57,36 @@ $monto_deuda = $s_deuda->fetchColumn();
         background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
         background-blend-mode: multiply; color: white; font-family: var(--font-main); min-height: 100vh; padding: 0; overflow-x: hidden;
     }
-    /* TOP BAR */
+    
+    /* TOP BAR DELGADO */
     .top-bar {
         background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
-        padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
-        position: sticky; top: 0; left: 0; width: 100%; z-index: 1000; box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2);
+        padding: 0.5rem 1.5rem; /* Reducido */
+        display: flex; justify-content: space-between; align-items: center;
+        position: sticky; top: 0; left: 0; width: 100%; z-index: 1000; 
+        box-shadow: 0 2px 8px rgba(186, 104, 200, 0.2); height: 50px;
     }
-    .brand-logo { color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.8rem; }
-    .menu-btn { background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px; }
-    .dropdown-menu { display: none; position: absolute; right: 0; top: 120%; background: white; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    .dropdown-menu a { display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; }
-    .btn-logout { text-decoration: none; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; }
+    .brand-logo { color: white; font-weight: 900; font-size: 1.3rem; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+    .menu-btn { background: rgba(255,255,255,0.2); border: none; font-size: 1.5rem; cursor: pointer; color: white; padding: 0.2rem 0.6rem; border-radius: 6px; }
+    .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; background: white; border-radius: 8px; z-index: 1001; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .dropdown-menu a { display: block; padding: 0.6rem 0.8rem; text-decoration: none; color: #333; font-size: 0.9rem; }
+    .btn-logout { text-decoration: none; padding: 0.4rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
 
-    /* LAYOUT PRINCIPAL: 3 COLUMNAS */
+    /* LAYOUT PRINCIPAL */
     .main-layout {
         display: grid;
-        /* Acciones (160px) | Planilla (Flexible) | KPIs (140px - MUY ANGOSTOS) */
-        grid-template-columns: 160px 1fr 140px; 
+        /* Acciones (160px) | Planilla (Flexible) | KPIs (160px) */
+        grid-template-columns: 160px 1fr 160px; 
         gap: 1rem;
         width: 99%; margin: 0 auto; padding: 0.5rem;
-        height: calc(100vh - 70px);
+        height: calc(100vh - 50px); /* Ajustado a nueva altura topbar */
     }
 
     /* Columna Izquierda: Acciones */
-    .actions-column { display: flex; flex-direction: column; gap: 1rem; }
+    .actions-column { display: flex; flex-direction: column; gap: 0.8rem; }
     .action-btn-sidebar {
-        background: white; color: #071289; border: none; padding: 0.8rem; border-radius: 8px;
-        font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;
+        background: white; color: #071289; border: none; padding: 0.7rem; border-radius: 8px;
+        font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
     }
 
     /* Columna Central: Planilla */
@@ -92,25 +94,41 @@ $monto_deuda = $s_deuda->fetchColumn();
         background: white; border-radius: 12px; display: flex; flex-direction: column;
         overflow: hidden; height: 100%; position: relative;
     }
+    
+    /* HEADER FILTROS AZUL PADEL */
     .planilla-header-controls { 
-        background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 0.6rem 1rem;
-        display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; color: white; 
+        background: linear-gradient(90deg, #1565C0, #0D47A1); /* Azul Pádel */
+        padding: 0.5rem 1rem;
+        display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; color: white; 
+        height: 50px; /* Igual que top bar */
     }
-    .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 100px; }
-    .control-btn { background: white; color: #8E24AA; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; }
-    .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; }
+    .control-group { display: flex; align-items: center; gap: 0.5rem; }
+    .control-label { font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
+    
+    /* Input Fecha Corregido */
+    .control-input { 
+        background: rgba(255,255,255,0.2); border: none; outline: none; color: white; 
+        font-weight: bold; text-align: center; width: 130px; padding-right: 25px; /* Espacio para ícono */
+        border-radius: 4px; font-size: 0.85rem;
+    }
+    .control-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+    
+    .control-btn { background: white; color: #0D47A1; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+    .control-select { background: rgba(255,255,255,0.95); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; min-width: 100px; }
 
-    /* CONTENEDOR TABLA: SCROLL HORIZONTAL FORZADO */
+    /* CONTENEDOR TABLA: SIN ESPACIO EXTRA */
     .planilla-table-container {
         flex: 1; overflow: auto; padding: 4px;
-        min-width: 1400px !important; /* Fuerza ancho mínimo para 12+ canchas */
-        width: max-content !important; /* La tabla se expande */
+        /* Width max-content asegura que la tabla mida exactamente lo que necesitan sus columnas */
+        width: max-content !important; 
+        min-width: 100%; /* Pero al menos ocupa el ancho del contenedor */
         background-color: #f4f6f9;
     }
 
-    /* Columna Derecha: KPIs (ANGOSTOS) */
+    /* Columna Derecha: KPIs (Con aire a la derecha) */
     .kpi-column {
         display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
+        padding-right: 0.5rem; /* Aire entre KPIs y borde derecho */
     }
     .kpi-card-mini {
         background: white; border-left: 3px solid #ccc; padding: 0.5rem; border-radius: 6px;
@@ -131,29 +149,20 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
     .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
 
-    /* ESTILOS DE TABLA (CRÍTICO) */
-    .planilla-table {
-        border-collapse: separate; border-spacing: 3px; 
-    }
-    /* Celdas generales */
-    .planilla-table th, .planilla-table td {
-        padding: 2px; vertical-align: middle; text-align: center; border-radius: 4px;
-        /* Anchos fijos inline en JS, pero aquí un respaldo */
-        min-width: 100px; 
-    }
-    /* Hora Sticky */
+    /* ESTILOS DE TABLA */
+    .planilla-table { border-collapse: separate; border-spacing: 3px; }
     .planilla-table th:first-child, .planilla-table td:first-child {
-        position: sticky; left: 0; z-index: 20;
-        background: #f8f9fa !important; color: #333; font-weight: bold;
-        border-right: 2px solid #e0e0e0;
-        min-width: 60px !important; max-width: 60px !important; width: 60px !important;
+        position: sticky; left: 0; z-index: 20; background: #f8f9fa !important; color: #333; font-weight: bold;
+        border-right: 2px solid #e0e0e0; min-width: 60px !important; max-width: 60px !important; width: 60px !important;
+        padding: 2px !important; font-size: 0.7rem; text-align: center;
     }
-    /* Headers */
+    .planilla-table th, .planilla-table td {
+        padding: 2px; vertical-align: middle; text-align: center; border-radius: 4px; min-width: 100px;
+    }
     .planilla-table thead th {
         background: #AB47BC !important; color: white; position: sticky; top: 0; z-index: 5;
-        height: 40px; font-size: 0.7rem;
+        height: 40px; font-size: 0.7rem; min-width: 110px !important; max-width: 110px !important; width: 110px !important;
     }
-    /* Estados */
     td.estado-pagado { background-color: #4CAF50 !important; color: white; }
     td.estado-parcial { background-color: #FFEB3B !important; color: #333; }
     td.estado-pendiente { background-color: #FF5252 !important; color: white; }
@@ -167,18 +176,35 @@ $monto_deuda = $s_deuda->fetchColumn();
     #modalPago { z-index: 2500; }
     #modalListaKPI { z-index: 3000; }
 
-    /* Responsive */
+    /* RESPONSIVE MÓVIL */
     @media (max-width: 1024px) {
-        .main-layout { grid-template-columns: 1fr !important; height: auto; }
-        .actions-column { flex-direction: row; overflow-x: auto; }
-        .kpi-column { flex-direction: row; overflow-x: auto; }
-        .kpi-card-mini { min-width: 120px; }
-    }
-    @media (max-width: 768px) {
-        .top-bar { padding: 0.6rem 1rem; }
-        .brand-logo { font-size: 1.1rem; }
-        .kpi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
-        .kpi-card-mini { min-width: auto; padding: 0.5rem; }
+        .main-layout { 
+            grid-template-columns: 1fr !important; 
+            height: auto; 
+            display: block; /* Cambiamos a bloque para ordenar verticalmente */
+        }
+        
+        /* KPIs ARRIBA Y FIJOS */
+        .kpi-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2 por fila */
+            gap: 0.5rem;
+            position: sticky;
+            top: 50px; /* Debajo del top bar */
+            z-index: 900;
+            background: rgba(0,0,0,0.2); /* Fondo sutil para legibilidad */
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            backdrop-filter: blur(5px);
+        }
+        .kpi-card-mini { min-width: auto; padding: 0.5rem; margin: 0; }
+        
+        /* Planilla debajo */
+        .planilla-column { height: 70vh; }
+        
+        /* Acciones en scroll horizontal */
+        .actions-column { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+        .action-btn-sidebar { min-width: 120px; }
     }
 </style>
 </head>
@@ -191,8 +217,8 @@ $monto_deuda = $s_deuda->fetchColumn();
         <div style="position: relative;">
             <button class="menu-btn" onclick="toggleMenu(event)">⚙️</button>
             <div id="adminMenu" class="dropdown-menu">
-                <div style="padding: 0.8rem 1rem; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between;">
-                    <span style="font-size: 0.8rem; font-weight: bold; color: #999;">MENÚ</span>
+                <div style="padding: 0.6rem 0.8rem; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between;">
+                    <span style="font-size: 0.75rem; font-weight: bold; color: #999;">MENÚ</span>
                     <span onclick="closeMenu()" style="cursor: pointer;">&times;</span>
                 </div>
                 <?php if ($rol_actual === 'admin'): ?>
@@ -205,7 +231,6 @@ $monto_deuda = $s_deuda->fetchColumn();
     </div>
 </div>
 
-<!-- LAYOUT PRINCIPAL -->
 <div class="main-layout">
 
     <!-- COLUMNA 1: ACCIONES -->
@@ -215,34 +240,40 @@ $monto_deuda = $s_deuda->fetchColumn();
             <button class="action-btn-sidebar" id="btnTorneosActivos"><span>🏆</span> Torneos Activos</button>
             <button class="action-btn-sidebar" onclick="alert('Reserva Manual')"><span>📝</span> Reserva Manual</button>
         <?php endif; ?>
-        <div id="panelTorneos" style="display:none; background: white; padding: 1rem; border-radius: 12px; max-height: 300px; overflow-y: auto;">
-            <h4 style="margin:0 0 1rem 0; color:#071289;">Torneos</h4>
-            <div id="listaTorneos">Cargando...</div>
+        <div id="panelTorneos" style="display:none; background: white; padding: 0.8rem; border-radius: 8px; max-height: 200px; overflow-y: auto; color:#333;">
+            <h4 style="margin:0 0 0.5rem 0; color:#071289; font-size:0.9rem;">Torneos</h4>
+            <div id="listaTorneos" style="font-size:0.8rem;">Cargando...</div>
         </div>
     </div>
 
     <!-- COLUMNA 2: PLANILLA -->
     <div class="planilla-column">
         <div class="planilla-header-controls">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
                 <input type="date" id="fechaPlanillaInput" class="control-input">
                 <button onclick="irAHoyPlanilla()" class="control-btn">Hoy</button>
                 <button onclick="cambiarDiaPlanilla(-1)" class="control-btn">&lt;</button>
                 <button onclick="cambiarDiaPlanilla(1)" class="control-btn">&gt;</button>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <select id="filtroDeporte" class="control-select">
-                    <option value="todos">Todos</option>
-                    <option value="padel">Pádel</option>
-                    <option value="futbol">Fútbol</option>
-                    <option value="tenis">Tenis</option>
-                </select>
-                <select id="filtroEstado" class="control-select">
-                    <option value="">Estados</option>
-                    <option value="pagadas">Pagadas</option>
-                    <option value="parcial">Parcial</option>
-                    <option value="no_pagadas">No Pagadas</option>
-                </select>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div class="control-group">
+                    <span class="control-label">Deportes:</span>
+                    <select id="filtroDeporte" class="control-select">
+                        <option value="todos">Todos</option>
+                        <option value="padel">Pádel</option>
+                        <option value="futbol">Fútbol</option>
+                        <option value="tenis">Tenis</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Estados:</span>
+                    <select id="filtroEstado" class="control-select">
+                        <option value="">Todos</option>
+                        <option value="pagadas">Pagadas</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="no_pagadas">No Pagadas</option>
+                    </select>
+                </div>
             </div>
         </div>
         
@@ -378,12 +409,10 @@ function renderizarPlanilla(data, filtroEstado) {
     if (!table) return;
     if (!data.canchas || !data.canchas.length) { table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; return; }
 
-    // HEADER: Forzamos estilos inline para asegurar visibilidad
     let html = `<thead><tr>`;
     html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:white; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        // Ancho fijo de 110px por cancha
         html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; max-width:110px; padding:5px; font-size:0.7rem;">
                     <div style="font-size:1.2rem;">${icono}</div>
                     <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
@@ -395,7 +424,6 @@ function renderizarPlanilla(data, filtroEstado) {
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
             html += `<tr>`;
-            // Celda Hora
             html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; min-width:60px; max-width:60px; padding:5px; font-size:0.7rem;">${slot.label}</td>`;
             
             data.canchas.forEach(cancha => {
@@ -429,7 +457,6 @@ function renderizarPlanilla(data, filtroEstado) {
                 } else {
                     if (filtroEstado && filtroEstado !== 'disponible') opacity = '0.05';
                 }
-                // Celda Cancha: Ancho fijo inline
                 html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity}; width:110px; min-width:110px; max-width:110px; padding:2px;" ${clickEvt}>${cellContent}</td>`;
             });
             html += `</tr>`;
