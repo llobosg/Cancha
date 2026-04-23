@@ -1,95 +1,64 @@
 <?php
 // pages/recinto_dashboard.php
 require_once __DIR__ . '/../includes/config.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $rol_actual = $_SESSION['recinto_rol'] ?? '';
-$roles_validos = ['admin', 'asistente'];
-
-if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_validos)) {
-    header('Location: login_recintos.php');
-    exit;
+if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, ['admin', 'asistente'])) {
+    header('Location: login_recintos.php'); exit;
 }
-
 require_once __DIR__ . '/../includes/permisos.php';
 
-// Obtener datos del usuario
+// Datos Usuario y Recinto
 $stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
 $stmt_user->execute([$_SESSION['id_admin']]);
 $usuario_actual = $stmt_user->fetch();
 
-// Cargar datos del recinto
 $id_recinto = $_SESSION['id_recinto'];
 $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
 $stmt_recinto->execute([$id_recinto]);
 $recinto = $stmt_recinto->fetch();
 $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
-// === CÁLCULO DE KPIs FINANCIEROS Y OPERATIVOS ===
+// === CÁLCULO KPIs ===
 $hoy = date('Y-m-d');
-$primer_dia_mes_actual = date('Y-m-01');
-$primer_dia_mes_anterior = date('Y-m-01', strtotime('-1 month'));
-$ultimo_dia_mes_anterior = date('Y-m-t', strtotime('-1 month'));
+$primer_dia_mes = date('Y-m-01');
+$primer_dia_mes_ant = date('Y-m-01', strtotime('-1 month'));
+$ultimo_dia_mes_ant = date('Y-m-t', strtotime('-1 month'));
 
-function getSumaReservas($pdo, $id_recinto, $condicion_fecha, $condicion_pago) {
-    $query = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
-              FROM reservas r 
-              JOIN canchas c ON r.id_cancha = c.id_cancha 
-              WHERE c.id_recinto = :id_recinto 
-              AND r.fecha $condicion_fecha 
-              AND r.estado_pago $condicion_pago 
-              AND r.estado != 'cancelada'";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([':id_recinto' => $id_recinto]);
-    return $stmt->fetchColumn();
+function getSuma($pdo, $id, $fecha_cond, $pago_cond) {
+    $q = "SELECT COALESCE(SUM(r.monto_total), 0) FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id AND r.fecha $fecha_cond AND r.estado_pago $pago_cond AND r.estado != 'cancelada'";
+    $s = $pdo->prepare($q); $s->execute([':id' => $id]); return $s->fetchColumn();
 }
 
-$ingresos_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'pagado'");
-$ingresos_mes_anterior = getSumaReservas($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_anterior' AND '$ultimo_dia_mes_anterior'", "= 'pagado'");
+$ingresos_act = getSuma($pdo, $id_recinto, ">= '$primer_dia_mes'", "= 'pagado'");
+$ingresos_ant = getSuma($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_ant' AND '$ultimo_dia_mes_ant'", "= 'pagado'");
+$var_ing = ($ingresos_ant > 0) ? (($ingresos_act - $ingresos_ant) / $ingresos_ant) * 100 : (($ingresos_act > 0) ? 100 : 0);
 
-$variacion_ingresos = 0;
-if ($ingresos_mes_anterior > 0) {
-    $variacion_ingresos = (($ingresos_mes_actual - $ingresos_mes_anterior) / $ingresos_mes_anterior) * 100;
-} elseif ($ingresos_mes_actual > 0) {
-    $variacion_ingresos = 100;
-}
+$parcial_act = getSuma($pdo, $id_recinto, ">= '$primer_dia_mes'", "= 'parcial'");
 
-$parcial_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'parcial'");
+$q_res = "SELECT COUNT(*) FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id AND r.fecha > '$hoy' AND r.estado_pago != 'pagado' AND r.estado != 'cancelada'";
+$s_res = $pdo->prepare($q_res); $s_res->execute([':id' => $id_recinto]);
+$cant_reserva = $s_res->fetchColumn();
 
-$en_reserva_query = "SELECT COUNT(*) FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id_recinto AND r.fecha > '$hoy' AND r.estado_pago != 'pagado' AND r.estado != 'cancelada'";
-$stmt_en_reserva = $pdo->prepare($en_reserva_query);
-$stmt_en_reserva->execute([':id_recinto' => $id_recinto]);
-$cantidad_en_reserva = $stmt_en_reserva->fetchColumn();
-
-$deuda_query = "SELECT COALESCE(SUM(r.monto_total), 0) as total FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id_recinto AND r.fecha < '$hoy' AND r.estado_pago != 'pagado' AND r.estado != 'cancelada'";
-$stmt_deuda = $pdo->prepare($deuda_query);
-$stmt_deuda->execute([':id_recinto' => $id_recinto]);
-$monto_deuda = $stmt_deuda->fetchColumn();
+$q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0) FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id AND r.fecha < '$hoy' AND r.estado_pago != 'pagado' AND r.estado != 'cancelada'";
+$s_deuda = $pdo->prepare($q_deuda); $s_deuda->execute([':id' => $id_recinto]);
+$monto_deuda = $s_deuda->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
+<title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?></title>
 <style>
-    /* =========================================
-       1. RESET Y BASE
-       ========================================= */
-    :root { --bg-primary: #071289; --accent: #4ECDC4; --font-main: 'Segoe UI', sans-serif; }
+    :root { --bg-primary: #071289; --font-main: 'Segoe UI', sans-serif; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-        background-blend-mode: multiply;
-        color: white; font-family: var(--font-main); min-height: 100vh; padding: 0; overflow-x: hidden;
+        background-blend-mode: multiply; color: white; font-family: var(--font-main); min-height: 100vh; padding: 0; overflow-x: hidden;
     }
-
-    /* =========================================
-       2. TOP BAR
-       ========================================= */
+    /* TOP BAR */
     .top-bar {
         background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
         padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
@@ -101,13 +70,11 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     .dropdown-menu a { display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; }
     .btn-logout { text-decoration: none; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; }
 
-    /* =========================================
-       3. LAYOUT PRINCIPAL (FORZADO)
-       ========================================= */
+    /* LAYOUT PRINCIPAL: 3 COLUMNAS */
     .main-layout {
         display: grid;
-        /* Acciones (180px) | Planilla (Flexible) | KPIs (180px - Angostos) */
-        grid-template-columns: 180px 1fr 180px; 
+        /* Acciones (160px) | Planilla (Flexible) | KPIs (140px - MUY ANGOSTOS) */
+        grid-template-columns: 160px 1fr 140px; 
         gap: 1rem;
         width: 99%; margin: 0 auto; padding: 0.5rem;
         height: calc(100vh - 70px);
@@ -125,8 +92,6 @@ $monto_deuda = $stmt_deuda->fetchColumn();
         background: white; border-radius: 12px; display: flex; flex-direction: column;
         overflow: hidden; height: 100%; position: relative;
     }
-
-    /* Controles Superiores Planilla */
     .planilla-header-controls { 
         background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 0.6rem 1rem;
         display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; color: white; 
@@ -135,26 +100,26 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     .control-btn { background: white; color: #8E24AA; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; }
     .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; }
 
-    /* CONTENEDOR TABLA: ANCHO FORZADO PARA 12 CANCHAS */
+    /* CONTENEDOR TABLA: SCROLL HORIZONTAL FORZADO */
     .planilla-table-container {
         flex: 1; overflow: auto; padding: 4px;
-        min-width: 1400px !important; /* Fuerza el ancho mínimo */
-        width: max-content !important; /* La tabla ocupa lo que necesita */
+        min-width: 1400px !important; /* Fuerza ancho mínimo para 12+ canchas */
+        width: max-content !important; /* La tabla se expande */
         background-color: #f4f6f9;
     }
 
-    /* Columna Derecha: KPIs (Angostos) */
+    /* Columna Derecha: KPIs (ANGOSTOS) */
     .kpi-column {
         display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
     }
     .kpi-card-mini {
-        background: white; border-left: 3px solid #ccc; padding: 0.6rem; border-radius: 6px;
+        background: white; border-left: 3px solid #ccc; padding: 0.5rem; border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: #333; transition: transform 0.2s;
     }
     .kpi-card-mini:hover { transform: translateX(-2px); }
-    .kpi-card-mini div:first-child { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
-    .kpi-card-mini div:nth-child(2) { font-size: 1.1rem; font-weight: 900; line-height: 1; margin: 0.1rem 0; }
-    .kpi-card-mini div:last-child { font-size: 0.6rem; opacity: 0.7; }
+    .kpi-card-mini div:first-child { font-size: 0.6rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; line-height: 1.1; }
+    .kpi-card-mini div:nth-child(2) { font-size: 1rem; font-weight: 900; line-height: 1.1; margin: 0.2rem 0; word-break: break-word; }
+    .kpi-card-mini div:last-child { font-size: 0.55rem; opacity: 0.7; line-height: 1.1; }
 
     /* Colores KPI */
     .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
@@ -166,42 +131,43 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
     .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
 
-    /* =========================================
-       4. ESTILOS DE TABLA
-       ========================================= */
+    /* ESTILOS DE TABLA (CRÍTICO) */
     .planilla-table {
-        width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed;
+        border-collapse: separate; border-spacing: 3px; 
+    }
+    /* Celdas generales */
+    .planilla-table th, .planilla-table td {
+        padding: 2px; vertical-align: middle; text-align: center; border-radius: 4px;
+        /* Anchos fijos inline en JS, pero aquí un respaldo */
+        min-width: 100px; 
     }
     /* Hora Sticky */
     .planilla-table th:first-child, .planilla-table td:first-child {
         position: sticky; left: 0; z-index: 20;
         background: #f8f9fa !important; color: #333; font-weight: bold;
-        border-right: 2px solid #e0e0e0; border-radius: 4px;
-        width: 60px !important; min-width: 60px !important; max-width: 60px !important;
-        padding: 2px !important; font-size: 0.7rem; text-align: center;
+        border-right: 2px solid #e0e0e0;
+        min-width: 60px !important; max-width: 60px !important; width: 60px !important;
     }
-    /* Canchas */
-    .planilla-table th, .planilla-table td {
-        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
-        padding: 2px; vertical-align: middle; text-align: center; border-radius: 6px;
-    }
+    /* Headers */
     .planilla-table thead th {
         background: #AB47BC !important; color: white; position: sticky; top: 0; z-index: 5;
-        border-radius: 6px; height: 50px; font-size: 0.75rem;
+        height: 40px; font-size: 0.7rem;
     }
     /* Estados */
-    td.estado-pagado { background-color: #4CAF50 !important; border: 1px solid #388E3C !important; color: white; }
-    td.estado-parcial { background-color: #FFEB3B !important; border: 1px solid #FBC02D !important; color: #333; }
-    td.estado-pendiente { background-color: #FF5252 !important; border: 1px solid #D32F2F !important; color: white; }
+    td.estado-pagado { background-color: #4CAF50 !important; color: white; }
+    td.estado-parcial { background-color: #FFEB3B !important; color: #333; }
+    td.estado-pendiente { background-color: #FF5252 !important; color: white; }
     td.estado-disponible { background-color: #FAFAFA !important; border: 1px dashed #E0E0E0 !important; }
 
-    /* =========================================
-       5. MODALES & RESPONSIVE
-       ========================================= */
-    #modalDetalleReserva { z-index: 2000; }
-    #modalPago { z-index: 2500; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); justify-content: center; align-items: center; }
-    #modalListaKPI { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+    /* Modales */
+    #modalDetalleReserva, #modalPago, #modalListaKPI {
+        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);
+    }
+    #modalPago { z-index: 2500; }
+    #modalListaKPI { z-index: 3000; }
 
+    /* Responsive */
     @media (max-width: 1024px) {
         .main-layout { grid-template-columns: 1fr !important; height: auto; }
         .actions-column { flex-direction: row; overflow-x: auto; }
@@ -213,8 +179,6 @@ $monto_deuda = $stmt_deuda->fetchColumn();
         .brand-logo { font-size: 1.1rem; }
         .kpi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
         .kpi-card-mini { min-width: auto; padding: 0.5rem; }
-        .planilla-table th:first-child, .planilla-table td:first-child { width: 50px !important; min-width: 50px !important; font-size: 0.65rem; }
-        .planilla-table th, .planilla-table td { width: 85px !important; min-width: 85px !important; font-size: 0.65rem; }
     }
 </style>
 </head>
@@ -241,24 +205,17 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     </div>
 </div>
 
-<!-- LAYOUT PRINCIPAL (Sin estilos inline que contradigan CSS) -->
+<!-- LAYOUT PRINCIPAL -->
 <div class="main-layout">
 
     <!-- COLUMNA 1: ACCIONES -->
     <div class="actions-column">
         <?php if ($rol_actual === 'asistente'): ?>
-            <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'">
-                <span>🎾</span> Crear Canchas
-            </button>
-            <button class="action-btn-sidebar" id="btnTorneosActivos">
-                <span>🏆</span> Torneos Activos
-            </button>
-            <button class="action-btn-sidebar" onclick="alert('Reserva Manual')">
-                <span>📝</span> Reserva Manual
-            </button>
+            <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'"><span>🎾</span> Crear Canchas</button>
+            <button class="action-btn-sidebar" id="btnTorneosActivos"><span>🏆</span> Torneos Activos</button>
+            <button class="action-btn-sidebar" onclick="alert('Reserva Manual')"><span>📝</span> Reserva Manual</button>
         <?php endif; ?>
-        
-        <div id="panelTorneos" style="display:none; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-height: 300px; overflow-y: auto;">
+        <div id="panelTorneos" style="display:none; background: white; padding: 1rem; border-radius: 12px; max-height: 300px; overflow-y: auto;">
             <h4 style="margin:0 0 1rem 0; color:#071289;">Torneos</h4>
             <div id="listaTorneos">Cargando...</div>
         </div>
@@ -301,21 +258,21 @@ $monto_deuda = $stmt_deuda->fetchColumn();
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-ingresos">
             <div>Ingresos Mes</div>
-            <div>$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-            <div><?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>%</div>
+            <div>$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
+            <div><?= $var_ing >= 0 ? '▲' : '▼' ?> <?= number_format(abs($var_ing), 1) ?>%</div>
         </div>
         <?php endif; ?>
 
         <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
             <div>Pago Parcial</div>
-            <div>$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
+            <div>$<?= number_format($parcial_act, 0, ',', '.') ?></div>
             <div>Ver detalles</div>
         </div>
 
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-reserva">
             <div>En Reserva</div>
-            <div><?= $cantidad_en_reserva ?></div>
+            <div><?= $cant_reserva ?></div>
             <div>Próximas no pagadas</div>
         </div>
         <?php endif; ?>
@@ -329,7 +286,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
 </div>
 
 <!-- MODALES (Detalle, Pago, Lista KPI) -->
-<div id="modalDetalleReserva" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
+<div id="modalDetalleReserva">
     <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
         <span onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
         <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center;">📋 Detalle de Reserva</h3>
@@ -337,7 +294,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     </div>
 </div>
 
-<div id="modalPago" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(5px);">
+<div id="modalPago">
     <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative;">
         <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
         <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
@@ -372,7 +329,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     </div>
 </div>
 
-<div id="modalListaKPI" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
+<div id="modalListaKPI">
     <div style="background:white; padding:0; border-radius:16px; max-width:900px; width:95%; max-height:90vh; display:flex; flex-direction:column;">
         <div style="padding:1.5rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; border-radius:16px 16px 0 0;">
             <h3 id="tituloListaKPI" style="margin:0; color:#333;">Lista</h3>
@@ -421,19 +378,26 @@ function renderizarPlanilla(data, filtroEstado) {
     if (!table) return;
     if (!data.canchas || !data.canchas.length) { table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; return; }
 
-    // Header con anchos forzados inline para asegurar visibilidad
+    // HEADER: Forzamos estilos inline para asegurar visibilidad
     let html = `<thead><tr>`;
-    html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px;">Hora</th>`;
+    html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:white; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px;"><div style="font-size:1rem;">${icono}</div><div style="font-size:0.7rem;">${c.nombre_cancha}</div></th>`;
+        // Ancho fijo de 110px por cancha
+        html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; max-width:110px; padding:5px; font-size:0.7rem;">
+                    <div style="font-size:1.2rem;">${icono}</div>
+                    <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
+                 </th>`;
     });
     html += `</tr></thead><tbody>`;
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
-            html += `<tr><td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px;">${slot.label}</td>`;
+            html += `<tr>`;
+            // Celda Hora
+            html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; min-width:60px; max-width:60px; padding:5px; font-size:0.7rem;">${slot.label}</td>`;
+            
             data.canchas.forEach(cancha => {
                 const key = `${cancha.id_cancha}_${slot.label}`;
                 const res = data.reservas[key];
@@ -459,14 +423,14 @@ function renderizarPlanilla(data, filtroEstado) {
                         if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                         else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
                         else bgClass = 'estado-pendiente';
-                        cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${(res.nombre_cliente || 'Reserva').substring(0, 10)}</div>`;
+                        cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${(res.nombre_cliente || 'Reserva').substring(0, 8)}</div>`;
                         if (res.id_reserva) clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
                     } else { opacity = '0.05'; cellContent = ''; }
                 } else {
                     if (filtroEstado && filtroEstado !== 'disponible') opacity = '0.05';
                 }
-                // Ancho forzado inline en cada celda
-                html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity}; width:110px; min-width:110px;" ${clickEvt}>${cellContent}</td>`;
+                // Celda Cancha: Ancho fijo inline
+                html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity}; width:110px; min-width:110px; max-width:110px; padding:2px;" ${clickEvt}>${cellContent}</td>`;
             });
             html += `</tr>`;
         }
@@ -491,7 +455,6 @@ async function abrirDetalleDesdePlanilla(idReserva) {
         if (detalle.error) throw new Error(detalle.error);
         window.reservaActualSeleccionada = detalle;
 
-        // Renderizado simple para prueba
         if (container) {
             const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
             const money = (v) => '$' + parseInt(v || 0).toLocaleString();
@@ -565,7 +528,6 @@ document.getElementById('formPago')?.addEventListener('submit', async function(e
 async function abrirListaKPI(tipo) {
     document.getElementById('modalListaKPI').style.display = 'flex';
     document.getElementById('tituloListaKPI').textContent = tipo === 'parcial' ? 'Pagos Parciales' : 'Deuda Vencida';
-    // Aquí iría la llamada fetch a la API para llenar la tabla
     document.getElementById('cuerpoTablaKPI').innerHTML = '<tr><td colspan="8" style="text-align:center;">Datos de ejemplo</td></tr>';
 }
 </script>
