@@ -72,89 +72,88 @@ $monto_deuda = $s_deuda->fetchColumn();
     .dropdown-menu a { display: block; padding: 0.6rem 0.8rem; text-decoration: none; color: #333; font-size: 0.9rem; }
     .btn-logout { text-decoration: none; padding: 0.4rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
 
-    /* LAYOUT PRINCIPAL */
+    /* =========================================
+       LAYOUT PRINCIPAL AJUSTADO
+       ========================================= */
     .main-layout {
         display: grid;
-        /* Acciones (160px) | Planilla (Flexible) | KPIs (160px) */
-        grid-template-columns: 160px 1fr 160px; 
+        /* Acciones (Abajo) | Planilla (Centro) | KPIs (Derecha) */
+        /* Nota: Cambiamos el orden visual con grid-area o flex order si es necesario, 
+           pero aquí mantendremos la estructura de columnas y ajustaremos alturas */
+        grid-template-columns: 200px 1fr 240px; 
         gap: 1rem;
         width: 99%; margin: 0 auto; padding: 0.5rem;
-        height: calc(100vh - 50px); /* Ajustado a nueva altura topbar */
+        height: calc(100vh - 60px); /* Ajuste fino altura total */
+        align-items: start; /* Alineación superior */
     }
 
-    /* Columna Izquierda: Acciones */
-    .actions-column { display: flex; flex-direction: column; gap: 0.8rem; }
-    .action-btn-sidebar {
-        background: white; color: #071289; border: none; padding: 0.7rem; border-radius: 8px;
-        font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
-    }
-
-   /* Columna Central: Planilla (FLOTANTE Y TRANSPARENTE) */
+    /* Columna Central: Planilla */
     .planilla-column {
-        background: transparent; /* ADIÓS FONDO BLANCO */
-        border-radius: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: visible; /* Permitir que flote */
-        height: 100%;
-        position: relative;
-        justify-content: flex-start; /* Alinear arriba */
-        align-items: center; /* CENTRAR HORIZONTALMENTE EL CONTENIDO */
+        background: transparent; /* Flotante */
+        display: flex; flex-direction: column;
+        height: 100%; position: relative;
     }
 
-    
-   /* Controles Superiores (También flotantes) */
+    /* HEADER FILTROS: Ancho Dinámico y Sin Solapamiento */
     .planilla-header-controls { 
-        background: rgba(21, 101, 192, 0.85); /* Azul Pádel semitransparente */
-        backdrop-filter: blur(10px); /* Efecto vidrio */
-        padding: 0.6rem 1.5rem;
-        border-radius: 50px; /* Bordes muy redondeados */
+        background: rgba(21, 101, 192, 0.85); /* Azul Pádel Semitransparente */
+        backdrop-filter: blur(10px);
+        padding: 0.8rem 1.5rem;
+        border-radius: 12px;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Sombra para dar profundidad */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         border: 1px solid rgba(255,255,255,0.2);
-        width: fit-content; /* Que el header mida lo que necesita */
-        max-width: 95%;
+        
+        /* ANCHO MÍNIMO Y MÁXIMO BASADO EN COLUMNAS */
+        /* 8 col * 110 + 60 hora = ~940px. 12 col * 110 + 60 = ~1380px */
+        min-width: 940px; 
+        max-width: 1380px;
+        width: fit-content; /* Se ajusta al contenido pero respeta min/max */
+        
+        display: flex; 
+        flex-wrap: nowrap; /* Evita que bajen de línea */
+        gap: 1.5rem; 
+        align-items: center; 
+        justify-content: space-between; 
+        color: white;
+        overflow-x: auto; /* Scroll si la pantalla es muy pequeña */
     }
-    .control-group { display: flex; align-items: center; gap: 0.5rem; }
-    .control-label { font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
-    
-    /* Input Fecha Corregido */
-    .control-input { 
-        background: rgba(255,255,255,0.2); border: none; outline: none; color: white; 
-        font-weight: bold; text-align: center; width: 130px; padding-right: 25px; /* Espacio para ícono */
-        border-radius: 4px; font-size: 0.85rem;
-    }
-    .control-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
-    
-    .control-btn { background: white; color: #0D47A1; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
-    .control-select { background: rgba(255,255,255,0.95); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; min-width: 100px; }
 
-    /* CONTENEDOR TABLA: SIN FONDO, SIN BORDES RÍGIDOS */
+    .control-group { display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+    .control-label { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
+    .control-input { background: rgba(255,255,255,0.2); border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 130px; padding-right: 25px; border-radius: 4px; }
+    .control-btn { background: white; color: #0D47A1; border: none; border-radius: 4px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer; }
+    .control-select { background: rgba(255,255,255,0.95); border: none; border-radius: 4px; padding: 0.4rem; font-size: 0.85rem; color: #333; min-width: 110px; }
+
+    /* CONTENEDOR TABLA: ALINEADO CON HEADER */
     .planilla-table-container {
-        flex: 1;
-        overflow: auto;
-        padding: 10px;
-        width: fit-content; /* IMPORTANTE: El contenedor mide lo que mide la tabla */
-        max-width: 98%;
-        /* Sin background-color ni min-width fijo de 1400px */
-        /* Scroll suave */
-        scrollbar-width: thin;
-        scrollbar-color: rgba(255,255,255,0.5) transparent;
+        flex: 1; overflow: auto; padding: 4px;
+        width: max-content !important;
+        min-width: 940px; /* Mismo mínimo que el header */
+        background-color: transparent;
     }
 
-    /* Columna Derecha: KPIs (Con aire a la derecha) */
+    /* Columna Derecha: KPIs (50% MÁS GRANDES y ALINEADOS) */
     .kpi-column {
-        display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
-        padding-right: 0.5rem; /* Aire entre KPIs y borde derecho */
+        display: flex; flex-direction: column; gap: 1rem; 
+        overflow-y: auto;
+        padding-top: 0; /* Alinear con el inicio de la tabla (no con el header) */
+        margin-top: 50px; /* Aproximadamente la altura del header + margen para bajar al nivel de los nombres de cancha */
     }
+    
     .kpi-card-mini {
-        background: white; border-left: 3px solid #ccc; padding: 0.5rem; border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: #333; transition: transform 0.2s;
+        background: white; border-left: 4px solid #ccc; 
+        padding: 1rem; /* Aumentado de 0.6rem */
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        color: #333; transition: transform 0.2s;
     }
-    .kpi-card-mini:hover { transform: translateX(-2px); }
-    .kpi-card-mini div:first-child { font-size: 0.6rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; line-height: 1.1; }
-    .kpi-card-mini div:nth-child(2) { font-size: 1rem; font-weight: 900; line-height: 1.1; margin: 0.2rem 0; word-break: break-word; }
-    .kpi-card-mini div:last-child { font-size: 0.55rem; opacity: 0.7; line-height: 1.1; }
+    .kpi-card-mini:hover { transform: translateX(-3px); }
+    
+    /* Textos más grandes */
+    .kpi-card-mini div:first-child { font-size: 0.8rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; line-height: 1.2; }
+    .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; word-break: break-word; }
+    .kpi-card-mini div:last-child { font-size: 0.7rem; opacity: 0.7; line-height: 1.2; }
 
     /* Colores KPI */
     .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
@@ -165,6 +164,45 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; }
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
     .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
+
+    /* Columna Izquierda: ACCIONES (Estilo Uniforme con KPIs) */
+    .actions-column {
+        display: flex; flex-direction: column; gap: 1rem;
+        margin-top: 50px; /* Alinear con KPIs */
+    }
+    
+    .section-divider {
+        display: flex; align-items: center; gap: 0.5rem;
+        color: white; font-weight: bold; font-size: 0.9rem;
+        margin-bottom: 0.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        opacity: 0.9;
+    }
+    .section-divider::after {
+        content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.3);
+    }
+
+    .action-btn-sidebar {
+        background: white; color: #071289; border: none; 
+        padding: 1rem; border-radius: 8px;
+        font-weight: bold; cursor: pointer; 
+        text-align: left; display: flex; align-items: center; gap: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .action-btn-sidebar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    .action-icon { font-size: 1.2rem; }
+
+    /* Responsive Móvil */
+    @media (max-width: 1024px) {
+        .main-layout { grid-template-columns: 1fr !important; height: auto; display: block; }
+        .planilla-header-controls { min-width: 100%; width: 100%; overflow-x: auto; }
+        .kpi-column { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+        .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; }
+        .section-divider { display: none; }
+    }
 
     /* ESTILOS DE TABLA ORGÁNICA */
     .planilla-table {
@@ -229,7 +267,7 @@ $monto_deuda = $s_deuda->fetchColumn();
         border: 1px dashed rgba(255,255,255,0.3) !important; 
         backdrop-filter: blur(2px);
     }
-    
+
     /* Hover Effect: La celda "salta" */
     .planilla-table tbody td:hover {
         transform: translateY(-3px) scale(1.05);
@@ -303,50 +341,60 @@ $monto_deuda = $s_deuda->fetchColumn();
 
 <div class="main-layout">
 
-    <!-- COLUMNA 1: ACCIONES -->
+    <!-- COLUMNA 1: ACCIONES (Izquierda) -->
     <div class="actions-column">
-        <?php if ($rol_actual === 'asistente'): ?>
-            <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'"><span>🎾</span> Crear Canchas</button>
-            <button class="action-btn-sidebar" id="btnTorneosActivos"><span>🏆</span> Torneos Activos</button>
-            <button class="action-btn-sidebar" onclick="alert('Reserva Manual')"><span>📝</span> Reserva Manual</button>
-        <?php endif; ?>
-        <div id="panelTorneos" style="display:none; background: white; padding: 0.8rem; border-radius: 8px; max-height: 200px; overflow-y: auto; color:#333;">
+        <div class="section-divider">
+            <span>🎾 Operaciones</span>
+        </div>
+        
+        <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'">
+            <span class="action-icon">🛠️</span> Crear Canchas
+        </button>
+        
+        <button class="action-btn-sidebar" id="btnTorneosActivos">
+            <span class="action-icon">🏆</span> Torneos Activos
+        </button>
+        
+        <!-- Panel Torneos Oculto -->
+        <div id="panelTorneos" style="display:none; background: white; padding: 1rem; border-radius: 8px; margin-top:0.5rem; max-height: 200px; overflow-y: auto;">
             <h4 style="margin:0 0 0.5rem 0; color:#071289; font-size:0.9rem;">Torneos</h4>
-            <div id="listaTorneos" style="font-size:0.8rem;">Cargando...</div>
+            <div id="listaTorneos">Cargando...</div>
         </div>
     </div>
 
-    <!-- COLUMNA 2: PLANILLA -->
+    <!-- COLUMNA 2: PLANILLA (Centro) -->
     <div class="planilla-column">
+        <!-- Header Filtros -->
         <div class="planilla-header-controls">
-            <div style="display: flex; align-items: center; gap: 0.8rem;">
+            <div class="control-group">
                 <input type="date" id="fechaPlanillaInput" class="control-input">
                 <button onclick="irAHoyPlanilla()" class="control-btn">Hoy</button>
                 <button onclick="cambiarDiaPlanilla(-1)" class="control-btn">&lt;</button>
                 <button onclick="cambiarDiaPlanilla(1)" class="control-btn">&gt;</button>
             </div>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <div class="control-group">
-                    <span class="control-label">Deportes:</span>
-                    <select id="filtroDeporte" class="control-select">
-                        <option value="todos">Todos</option>
-                        <option value="padel">Pádel</option>
-                        <option value="futbol">Fútbol</option>
-                        <option value="tenis">Tenis</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <span class="control-label">Estados:</span>
-                    <select id="filtroEstado" class="control-select">
-                        <option value="">Todos</option>
-                        <option value="pagadas">Pagadas</option>
-                        <option value="parcial">Parcial</option>
-                        <option value="no_pagadas">No Pagadas</option>
-                    </select>
-                </div>
+            
+            <div class="control-group">
+                <span class="control-label">Deportes:</span>
+                <select id="filtroDeporte" class="control-select">
+                    <option value="todos">Todos</option>
+                    <option value="padel">Pádel</option>
+                    <option value="futbol">Fútbol</option>
+                    <option value="tenis">Tenis</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <span class="control-label">Estado:</span>
+                <select id="filtroEstado" class="control-select">
+                    <option value="">Todos</option>
+                    <option value="pagadas">Pagadas</option>
+                    <option value="parcial">Parcial</option>
+                    <option value="no_pagadas">No Pagadas</option>
+                </select>
             </div>
         </div>
         
+        <!-- Tabla -->
         <div class="planilla-table-container">
             <table id="tablaPlanilla" class="planilla-table">
                 <!-- Se llena con JS -->
@@ -354,26 +402,26 @@ $monto_deuda = $s_deuda->fetchColumn();
         </div>
     </div>
 
-    <!-- COLUMNA 3: KPIs -->
+    <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-ingresos">
             <div>Ingresos Mes</div>
-            <div>$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
-            <div><?= $var_ing >= 0 ? '▲' : '▼' ?> <?= number_format(abs($var_ing), 1) ?>%</div>
+            <div>$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
+            <div><?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>%</div>
         </div>
         <?php endif; ?>
 
         <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
             <div>Pago Parcial</div>
-            <div>$<?= number_format($parcial_act, 0, ',', '.') ?></div>
+            <div>$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
             <div>Ver detalles</div>
         </div>
 
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-reserva">
             <div>En Reserva</div>
-            <div><?= $cant_reserva ?></div>
+            <div><?= $cantidad_en_reserva ?></div>
             <div>Próximas no pagadas</div>
         </div>
         <?php endif; ?>
@@ -384,6 +432,7 @@ $monto_deuda = $s_deuda->fetchColumn();
             <div>Ver deudores</div>
         </div>
     </div>
+
 </div>
 
 <!-- MODALES (Detalle, Pago, Lista KPI) -->
@@ -480,11 +529,10 @@ function renderizarPlanilla(data, filtroEstado) {
     if (!data.canchas || !data.canchas.length) { table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; return; }
 
     let html = `<thead><tr>`;
-    html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:white; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
+    html += `<th style="position:sticky; left:0; z-index:20; background:#AB47BC; color:black; width:60px; min-width:60px; max-width:60px; padding:5px;">Hora</th>`;
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
         html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; max-width:110px; padding:5px; font-size:0.7rem;">
-                    <div style="font-size:1.2rem;">${icono}</div>
                     <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
                  </th>`;
     });
