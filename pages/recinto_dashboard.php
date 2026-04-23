@@ -129,26 +129,14 @@
     <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
     <style>
       /* =========================================
-        1. VARIABLES Y RESET
+        1. RESET Y BASE
         ========================================= */
-      :root {
-          --bg-primary: #071289;
-          --accent: #4ECDC4;
-          --gold: #FFD700;
-          --font-main: 'Segoe UI', system-ui, sans-serif;
-      }
-
+      :root { --bg-primary: #071289; --accent: #4ECDC4; --font-main: 'Segoe UI', sans-serif; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-
       body {
-          background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), 
-                      url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+          background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
           background-blend-mode: multiply;
-          color: white;
-          font-family: var(--font-main);
-          min-height: 100vh;
-          padding: 0;
-          overflow-x: hidden; /* Evita scroll horizontal en el body */
+          color: white; font-family: var(--font-main); min-height: 100vh; padding: 0; overflow-x: hidden;
       }
 
       /* =========================================
@@ -156,101 +144,72 @@
         ========================================= */
       .top-bar {
           background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
-          padding: 0.8rem 1.5rem;
-          box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2);
-          display: flex; justify-content: space-between; align-items: center;
-          position: sticky; top: 0; left: 0; width: 100%; z-index: 1000;
+          padding: 0.8rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
+          position: sticky; top: 0; left: 0; width: 100%; z-index: 1000; box-shadow: 0 4px 12px rgba(186, 104, 200, 0.2);
       }
-      .brand-logo { 
-          color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; 
-          display: flex; align-items: center; gap: 0.8rem; 
-      }
-      .menu-btn { 
-          background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; 
-          cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px; 
-      }
-      .dropdown-menu { 
-          display: none; position: absolute; right: 0; top: 120%; 
-          background: white; border: 1px solid #eee; border-radius: 12px; 
-          z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-      }
-      .dropdown-menu a { 
-          display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; 
-      }
-      .btn-logout { 
-          text-decoration: none; padding: 0.6rem 1.2rem; 
-          background: rgba(255,255,255,0.2); color: white; 
-          border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; 
-      }
+      .brand-logo { color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.8rem; }
+      .menu-btn { background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px; }
+      .dropdown-menu { display: none; position: absolute; right: 0; top: 120%; background: white; border-radius: 12px; z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+      .dropdown-menu a { display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; }
+      .btn-logout { text-decoration: none; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; }
 
       /* =========================================
-        3. LAYOUT PRINCIPAL (FORZADO)
+        3. LAYOUT PRINCIPAL (FORZADO PARA 12 CANCHAS)
         ========================================= */
       .main-layout {
           display: grid;
-          /* Acciones (180px) | Planilla (Flexible) | KPIs (180px - Reducidos) */
+          /* Acciones (180px) | Planilla (AUTO/FLEX) | KPIs (180px) */
           grid-template-columns: 180px 1fr 180px; 
           gap: 1rem;
-          width: 99%; /* Ocupar casi todo el ancho */
-          margin: 0 auto;
-          padding: 0.5rem;
+          width: 99%; margin: 0 auto; padding: 0.5rem;
           height: calc(100vh - 70px);
       }
 
       /* Columna Izquierda: Acciones */
       .actions-column { display: flex; flex-direction: column; gap: 1rem; }
       .action-btn-sidebar {
-          background: white; color: #071289; border: none; padding: 0.8rem; 
-          border-radius: 8px; font-weight: bold; cursor: pointer; 
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: left; font-size: 0.9rem;
+          background: white; color: #071289; border: none; padding: 0.8rem; border-radius: 8px;
+          font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;
       }
 
-      /* Columna Central: Planilla */
+      /* Columna Central: Planilla (EL CONTENEDOR CLAVE) */
       .planilla-column {
-          background: white; border-radius: 12px; 
-          box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-          display: flex; flex-direction: column; overflow: hidden; height: 100%;
+          background: white; border-radius: 12px; display: flex; flex-direction: column;
+          overflow: hidden; height: 100%; position: relative;
       }
 
-      /* Controles Planilla */
+      /* Controles Superiores Planilla */
       .planilla-header-controls { 
-          background: linear-gradient(90deg, #CE93D8, #AB47BC); 
-          padding: 0.6rem 1rem; display: flex; flex-wrap: wrap; 
-          gap: 0.5rem; align-items: center; justify-content: space-between; color: white; 
+          background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 0.6rem 1rem;
+          display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; color: white; 
       }
       .control-group { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.3rem 0.8rem; border-radius: 15px; }
       .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 100px; }
-      .control-btn { background: white; color: #8E24AA; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+      .control-btn { background: white; color: #8E24AA; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; }
       .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; }
 
-      /* CONTENEDOR TABLA: AQUÍ ESTÁ LA CLAVE PARA LAS 12 CANCHAS */
+      /* TABLA CONTAINER: AQUÍ ESTÁ LA MAGIA PARA LAS 12 CANCHAS */
       .planilla-table-container {
           flex: 1; overflow: auto; padding: 4px;
-          /* Cálculo: 12 canchas * 110px + 1 hora * 60px = 1380px. Ponemos 1400px de mínimo */
-          min-width: 1400px; 
+          /* FORZAMOS ANCHO MÍNIMO PARA QUE QUEPAN 12 CANCHAS + HORA */
+          /* 12 canchas * 110px + 1 hora * 60px = 1380px. Ponemos 1400px para seguridad */
+          min-width: 1400px !important; 
+          width: max-content !important; /* Importante: que la tabla mida lo que mide su contenido */
           background-color: #f4f6f9;
       }
 
-      /* Columna Derecha: KPIs (ANGOSTADOS 50%) */
+      /* Columna Derecha: KPIs (ANGOSTOS) */
       .kpi-column {
           display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
       }
-      
       .kpi-card-mini {
-          background: white; border-left: 3px solid #ccc; padding: 0.6rem; /* Padding reducido */
-          border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-          color: #333;
+          background: white; border-left: 3px solid #ccc; padding: 0.6rem; border-radius: 6px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: #333; transition: transform 0.2s;
       }
-      
-      .kpi-card-mini div:first-child { 
-          font-size: 0.65rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; margin-bottom: 0.1rem; 
-      }
-      .kpi-card-mini div:nth-child(2) { 
-          font-size: 1.1rem; font-weight: 900; line-height: 1; margin-bottom: 0.1rem; 
-      }
-      .kpi-card-mini div:last-child { 
-          font-size: 0.6rem; opacity: 0.7; 
-      }
+      .kpi-card-mini:hover { transform: translateX(-2px); }
+      .kpi-card-mini div:first-child { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
+      .kpi-card-mini div:nth-child(2) { font-size: 1.1rem; font-weight: 900; line-height: 1; margin: 0.1rem 0; }
+      .kpi-card-mini div:last-child { font-size: 0.6rem; opacity: 0.7; }
 
       /* Colores KPI */
       .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
@@ -263,11 +222,10 @@
       .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
 
       /* =========================================
-        4. TABLA PLANILLA (AJUSTE FINO)
+        4. ESTILOS DE TABLA (SOBREESCRITURA FUERTE)
         ========================================= */
       .planilla-table {
-          width: 100%; border-collapse: separate; border-spacing: 3px; 
-          table-layout: fixed; 
+          width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed;
       }
 
       /* Hora Sticky */
@@ -280,11 +238,10 @@
           padding: 2px !important; font-size: 0.7rem; text-align: center;
       }
 
-      /* Canchas (Reducidas para que quepan 12) */
+      /* Canchas (Ancho Fijo Reducido para que quepan 12) */
       .planilla-table th, .planilla-table td {
           width: 110px !important; min-width: 110px !important; max-width: 110px !important;
-          padding: 2px; vertical-align: middle; text-align: center;
-          border-radius: 6px; transition: all 0.2s ease;
+          padding: 2px; vertical-align: middle; text-align: center; border-radius: 6px;
       }
 
       .planilla-table thead th {
@@ -306,48 +263,33 @@
         ========================================= */
       #modalDetalleReserva { z-index: 2000; }
       #modalPago {
-          z-index: 2500; display: none; position: fixed; top: 0; left: 0; 
-          width: 100%; height: 100%; background: rgba(0,0,0,0.6); 
-          backdrop-filter: blur(5px); justify-content: center; align-items: center;
+          z-index: 2500; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+          background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); justify-content: center; align-items: center;
       }
       #modalPago .submodal-content {
-          background: white; padding: 1.5rem; border-radius: 12px; max-width: 450px; 
-          width: 90%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          background: white; padding: 1.5rem; border-radius: 12px; max-width: 450px; width: 90%; position: relative;
       }
       #modalListaKPI {
-          display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-          background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; 
-          align-items:center; backdrop-filter: blur(4px);
+          display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
+          z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(4px);
       }
 
       /* =========================================
         6. RESPONSIVE
         ========================================= */
       @media (max-width: 1024px) {
-          .main-layout {
-              grid-template-columns: 1fr !important;
-              height: auto;
-          }
+          .main-layout { grid-template-columns: 1fr !important; height: auto; }
           .actions-column { flex-direction: row; overflow-x: auto; }
           .kpi-column { flex-direction: row; overflow-x: auto; }
           .kpi-card-mini { min-width: 120px; }
       }
-
       @media (max-width: 768px) {
           .top-bar { padding: 0.6rem 1rem; }
           .brand-logo { font-size: 1.1rem; }
-          
-          /* KPIs en Grid 2x2 Móvil */
           .kpi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
           .kpi-card-mini { min-width: auto; padding: 0.5rem; }
-          
-          /* Tabla Móvil Compacta */
-          .planilla-table th:first-child, .planilla-table td:first-child {
-              width: 50px !important; min-width: 50px !important; font-size: 0.65rem;
-          }
-          .planilla-table th, .planilla-table td {
-              width: 85px !important; min-width: 85px !important; font-size: 0.65rem;
-          }
+          .planilla-table th:first-child, .planilla-table td:first-child { width: 50px !important; min-width: 50px !important; font-size: 0.65rem; }
+          .planilla-table th, .planilla-table td { width: 85px !important; min-width: 85px !important; font-size: 0.65rem; }
       }
   </style>
   </head>
@@ -430,7 +372,7 @@
 
         <!-- Tabla Scrollable -->
         <div class="planilla-table-container" style="flex: 1; overflow: auto; padding: 4px;">
-            <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed;">
+            <table id="tablaPlanilla" class="planilla-table"; border-collapse: separate; border-spacing: 4px; table-layout: fixed;">
                 <!-- Se llena con JS -->
             </table>
         </div>
@@ -977,11 +919,11 @@
                         ⚙️ Opciones de Gestión
                     </button>
                     <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white; overflow:hidden;">
-                        <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🗑️ Anular Reserva</button>
-                        <button onclick="cancelarReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">❌ Cancelar Reserva</button>
-                        <button onclick="cambiarCancha()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🔄 Cambiar Cancha</button>
+                        <button onclick="anularReserva()" style="padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🗑️ Anular Reserva</button>
+                        <button onclick="cancelarReserva()" style="padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">❌ Cancelar Reserva</button>
+                        <button onclick="cambiarCancha()" style="padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🔄 Cambiar Cancha</button>
                         ${detalle.estado_pago !== 'pagado' ? 
-                            `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold; cursor:pointer;">💳 Pagar / Abonar</button>` 
+                            `<button onclick="abrirModalPagoDesdeDetalle()" style="padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold; cursor:pointer;">💳 Pagar / Abonar</button>` 
                             : ''}
                     </div>
                 `;
