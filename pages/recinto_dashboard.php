@@ -413,44 +413,48 @@ $monto_deuda = $stmt_deuda->fetchColumn();
               <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">Recinto: <?= htmlspecialchars($recinto_nombre) ?></p>
           </div>
           
+          <!-- Ficha de ingresos original (Solo para Admin, se reemplaza por KPIs para ambos)
           <?php if ($rol_actual === 'admin'): ?>
           <div class="income-card">
               <div class="income-title">Ingresos Este Mes</div>
               <div class="income-value">$<?= number_format($ingresos_mes, 0, ',', '.') ?></div>
               <div class="income-detail">+12% vs mes anterior</div>
           </div>
-          <?php endif; ?>
-      </div>
+          <?php endif; ?> -->
 
-      <!-- SECCIÓN DE KPIs CENTRAL -->
-      <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0; max-width: 1200px; margin-left: auto; margin-right: auto;">
+          <!-- SECCIÓN DE KPIs CENTRAL -->
+          <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0; max-width: 1200px; margin-left: auto; margin-right: auto;">
 
-          <!-- 1. INGRESOS ESTE MES (Verde Suave) -->
-          <div class="income-card" style="background: linear-gradient(135deg, #2E7D32, #4CAF50); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <div class="income-title">Ingresos Este Mes</div>
-              <div class="income-value">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-              <div class="income-detail"><?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>% vs mes anterior</div>
-          </div>
+              <!-- 1. INGRESOS ESTE MES (Verde Suave) -->
+              <div class="kpi-card" style="background: #E8F5E9; border-left: 5px solid #4CAF50; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                  <div style="font-size: 0.9rem; color: #2E7D32; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Ingresos Este Mes</div>
+                  <div style="font-size: 2rem; font-weight: 900; color: #1B5E20; margin-bottom: 0.5rem;">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
+                  <div style="font-size: 0.85rem; color: <?= $variacion_ingresos >= 0 ? '#2E7D32' : '#C62828' ?>; font-weight: bold;">
+                      <?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>% vs mes anterior
+                  </div>
+              </div>
 
-          <!-- 2. PAGO PARCIAL (Amarillo Suave) -->
-          <div class="kpi-card" style="background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <div style="font-size: 0.9rem; color: #F57F17; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Pago Parcial (Mes)</div>
-              <div style="font-size: 2rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
-              <div style="font-size: 0.85rem; color: #F57F17;">Montos pendientes de cierre</div>
-          </div>
+              <!-- 2. PAGO PARCIAL (Amarillo Suave) -->
+              <div class="kpi-card" style="background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                  <div style="font-size: 0.9rem; color: #F57F17; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Pago Parcial (Mes)</div>
+                  <div style="font-size: 2rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
+                  <div style="font-size: 0.85rem; color: #F57F17;">Montos pendientes de cierre</div>
+              </div>
 
-          <!-- 3. EN RESERVA (Azul Suave) -->
-          <div class="kpi-card" style="background: #E3F2FD; border-left: 5px solid #2196F3; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <div style="font-size: 0.9rem; color: #1565C0; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">En Reserva (Futuro)</div>
-              <div style="font-size: 2rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
-              <div style="font-size: 0.85rem; color: #1565C0;">Reservas no pagadas próximas</div>
-          </div>
+              <!-- 3. EN RESERVA (Azul Suave) -->
+              <div class="kpi-card" style="background: #E3F2FD; border-left: 5px solid #2196F3; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                  <div style="font-size: 0.9rem; color: #1565C0; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">En Reserva (Futuro)</div>
+                  <div style="font-size: 2rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
+                  <div style="font-size: 0.85rem; color: #1565C0;">Reservas no pagadas próximas</div>
+              </div>
 
-          <!-- 4. DEUDA (Rojo Suave) -->
-          <div class="kpi-card" style="background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
-              <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-              <div style="font-size: 0.85rem; color: #C62828;">Reservas pasadas sin pago</div>
+              <!-- 4. DEUDA (Rojo Suave) -->
+              <div class="kpi-card" style="background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                  <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
+                  <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
+                  <div style="font-size: 0.85rem; color: #C62828;">Reservas pasadas sin pago</div>
+              </div>
+
           </div>
 
       </div>
