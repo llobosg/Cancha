@@ -105,13 +105,14 @@ $ingresos_mes = 1250000;
 
     /* === ESTILOS DE TABLA Y COLUMNAS FIJAS === */
     .planilla-table {
-        width: 100%;
-        border-collapse: separate; /* Importante para bordes redondeados */
+        width: auto; /* IMPORTANTE: Que la tabla mida lo que midan sus columnas, no el 100% */
+        min-width: 100%; /* Pero que al menos ocupe todo el ancho disponible si hay muchas canchas */
+        border-collapse: separate; 
         border-spacing: 4px;
-        table-layout: fixed; /* CLAVE: Respeta los anchos definidos */
+        table-layout: fixed; /* CLAVE: Respeta los anchos definidos estrictamente */
     }
 
-    /* Columna de HORAS (Sticky Left) */
+   /* Columna de HORAS (Sticky Left) */
     .planilla-table th:first-child,
     .planilla-table td:first-child {
         position: sticky;
@@ -122,10 +123,12 @@ $ingresos_mes = 1250000;
         font-weight: bold;
         border-right: 2px solid #e0e0e0;
         border-radius: 6px;
-        /* Ancho fijo e inamovible */
+        
+        /* ANCHO FIJO E INVARIABLE */
+        width: 70px !important;
         min-width: 70px !important;
         max-width: 70px !important;
-        width: 70px !important;
+        
         padding: 4px !important;
         font-size: 0.75rem;
         text-align: center;
@@ -134,38 +137,46 @@ $ingresos_mes = 1250000;
     /* Columnas de CANCHAS */
     .planilla-table th, 
     .planilla-table td {
-        /* Ancho base para canchas. Si hay pocas, no se estirarán demasiado gracias a max-width */
-        min-width: 100px;
-        max-width: 140px;
-        width: 120px; /* Ancho preferido */
+        /* ANCHO FIJO PARA CADA CANCHA */
+        width: 120px !important;
+        min-width: 120px !important;
+        max-width: 120px !important;
+        
         padding: 4px;
         vertical-align: middle;
+        text-align: center;
     }
 
     /* Ajuste para Móvil */
     @media (max-width: 768px) {
         .planilla-table th:first-child,
         .planilla-table td:first-child {
+            width: 60px !important;
             min-width: 60px !important;
             max-width: 60px !important;
-            width: 60px !important;
             font-size: 0.7rem;
-            white-space: nowrap; /* Evita que la hora se parta */
-            overflow: visible; /* Asegura que se vea completa */
-            padding: 4px !important;
         }
-         /* Columnas de CANCHAS */
+        /* Columnas de CANCHAS */
         .planilla-table th, 
         .planilla-table td {
-            min-width: 80px !important; /* Un poco más anchas para leer nombres cortos */
-            padding: 4px !important;
+            width: 100px !important;
+            min-width: 100px !important; /* Un poco más anchas para leer nombres cortos */
+            max-width: 100px !important;
         }
         .dashboard-header { flex-direction: column; align-items: stretch; }
         .income-card { margin-left: 0; width: 100%; max-width: 100%; text-align: center; }
         .quick-actions { grid-template-columns: 1fr 1fr; }
 
+        /* Contenedor con scroll horizontal si es necesario */
         .planilla-table-container {
-            max-height: 75vh; /* Un poco más de altura en móvil */
+            overflow-x: auto;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            max-height: 70vh;
+            padding: 4px; 
+            /* Si quieres que el fondo gris se vea a la derecha cuando sobra espacio: */
+            background-color: #f4f6f9; 
         }
 
         /* Tabla */
@@ -197,8 +208,9 @@ $ingresos_mes = 1250000;
         position: sticky;
         top: 0;
         z-index: 5;
-        border-radius: 8px; /* Bordes redondeados en headers */
+        border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: 60px; /* Altura fija para headers */
     }
 
     /* === CELDAS DE RESERVA (El toque UX) === */
