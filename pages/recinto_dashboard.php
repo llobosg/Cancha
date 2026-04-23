@@ -29,7 +29,97 @@ $recinto = $stmt_recinto->fetch();
 $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
 // Simulación de ingresos (Reemplazar con consulta real si es necesario)
-$ingresos_mes = 1250000; 
+$ingresos_mes = 0; 
+
+// Cargar datos del recinto
+$id_recinto = $_SESSION['id_recinto'];
+$stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
+$stmt_recinto->execute([$id_recinto]);
+$recinto = $stmt_recinto->fetch();
+$recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
+
+// === CÁLCULO DE KPIs FINANCIEROS Y OPERATIVOS ===
+
+// Fechas clave
+$hoy = date('Y-m-d');
+$primer_dia_mes_actual = date('Y-m-01');
+$primer_dia_mes_anterior = date('Y-m-01', strtotime('-1 month'));
+$ultimo_dia_mes_anterior = date('Y-m-t', strtotime('-1 month'));
+
+// Función auxiliar para ejecutar consultas de suma
+function getSumaReservas($pdo, $id_recinto, $condicion_fecha, $condicion_pago, $params = []) {
+    $sql = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
+            FROM reservas r 
+            JOIN canchas c ON r.id_cancha = c.id_cancha 
+            WHERE c.id_recinto = ? 
+            AND r.fecha $condicion_fecha 
+            AND r.estado_pago $condicion_pago 
+            AND r.estado != 'cancelada'"; // Excluir canceladas
+    
+    // Si la condición de pago requiere parámetros (ej: IN ('pagado', 'parcial'))
+    // Ajustamos la query dinámicamente si es necesario, pero para simplificar usaremos strings directos seguros
+    
+    $stmt = $pdo->prepare($sql);
+    // Merge params con id_recinto
+    $final_params = array_merge([$id_recinto], $params);
+    $stmt->execute($final_params); // Nota: La query arriba usa ? directo, ajustemos para seguridad
+    
+    // Re-escribiendo para usar PDO seguro con placeholders si fuera complejo, 
+    // pero como las condiciones son fijas, podemos inyectarlas con cuidado o usar prepare simple.
+    // Para este ejemplo, usaremos una aproximación segura simple:
+    
+    $query = "SELECT COALESCE(SUM(r.monto_total), 0) as total 
+              FROM reservas r 
+              JOIN canchas c ON r.id_cancha = c.id_cancha 
+              WHERE c.id_recinto = :id_recinto 
+              AND r.fecha $condicion_fecha 
+              AND r.estado_pago $condicion_pago 
+              AND r.estado != 'cancelada'";
+              
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([':id_recinto' => $id_recinto]);
+    return $stmt->fetchColumn();
+}
+
+// 1. INGRESOS ESTE MES (Pagados)
+$ingresos_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'pagado'");
+$ingresos_mes_anterior = getSumaReservas($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_anterior' AND '$ultimo_dia_mes_anterior'", "= 'pagado'");
+
+// Calcular % Variación
+$variacion_ingresos = 0;
+if ($ingresos_mes_anterior > 0) {
+    $variacion_ingresos = (($ingresos_mes_actual - $ingresos_mes_anterior) / $ingresos_mes_anterior) * 100;
+} elseif ($ingresos_mes_actual > 0) {
+    $variacion_ingresos = 100; // De 0 a algo es 100% crecimiento
+}
+
+// 2. PAGO PARCIAL (Acumulado del mes actual)
+$parcial_mes_actual = getSumaReservas($pdo, $id_recinto, ">= '$primer_dia_mes_actual'", "= 'parcial'");
+
+// 3. EN RESERVA (Futuras, No Pagadas)
+// Fecha > hoy Y Estado Pago != pagado
+$en_reserva_query = "SELECT COUNT(*) FROM reservas r 
+                     JOIN canchas c ON r.id_cancha = c.id_cancha 
+                     WHERE c.id_recinto = :id_recinto 
+                     AND r.fecha > '$hoy' 
+                     AND r.estado_pago != 'pagado' 
+                     AND r.estado != 'cancelada'";
+$stmt_en_reserva = $pdo->prepare($en_reserva_query);
+$stmt_en_reserva->execute([':id_recinto' => $id_recinto]);
+$cantidad_en_reserva = $stmt_en_reserva->fetchColumn();
+
+// 4. DEUDA (Vencidas, No Pagadas)
+// Fecha < hoy Y Estado Pago != pagado
+$deuda_query = "SELECT COALESCE(SUM(r.monto_total), 0) as total FROM reservas r 
+                JOIN canchas c ON r.id_cancha = c.id_cancha 
+                WHERE c.id_recinto = :id_recinto 
+                AND r.fecha < '$hoy' 
+                AND r.estado_pago != 'pagado' 
+                AND r.estado != 'cancelada'";
+$stmt_deuda = $pdo->prepare($deuda_query);
+$stmt_deuda->execute([':id_recinto' => $id_recinto]);
+$monto_deuda = $stmt_deuda->fetchColumn();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -330,6 +420,41 @@ $ingresos_mes = 1250000;
               <div class="income-detail">+12% vs mes anterior</div>
           </div>
           <?php endif; ?>
+      </div>
+
+      <!-- SECCIÓN DE KPIs CENTRAL -->
+      <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0; max-width: 1200px; margin-left: auto; margin-right: auto;">
+
+          <!-- 1. INGRESOS ESTE MES (Verde Suave) -->
+          <div class="kpi-card" style="background: #E8F5E9; border-left: 5px solid #4CAF50; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="font-size: 0.9rem; color: #2E7D32; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Ingresos Este Mes</div>
+              <div style="font-size: 2rem; font-weight: 900; color: #1B5E20; margin-bottom: 0.5rem;">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
+              <div style="font-size: 0.85rem; color: <?= $variacion_ingresos >= 0 ? '#2E7D32' : '#C62828' ?>; font-weight: bold;">
+                  <?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>% vs mes anterior
+              </div>
+          </div>
+
+          <!-- 2. PAGO PARCIAL (Amarillo Suave) -->
+          <div class="kpi-card" style="background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="font-size: 0.9rem; color: #F57F17; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Pago Parcial (Mes)</div>
+              <div style="font-size: 2rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
+              <div style="font-size: 0.85rem; color: #F57F17;">Montos pendientes de cierre</div>
+          </div>
+
+          <!-- 3. EN RESERVA (Azul Suave) -->
+          <div class="kpi-card" style="background: #E3F2FD; border-left: 5px solid #2196F3; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="font-size: 0.9rem; color: #1565C0; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">En Reserva (Futuro)</div>
+              <div style="font-size: 2rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
+              <div style="font-size: 0.85rem; color: #1565C0;">Reservas no pagadas próximas</div>
+          </div>
+
+          <!-- 4. DEUDA (Rojo Suave) -->
+          <div class="kpi-card" style="background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
+              <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
+              <div style="font-size: 0.85rem; color: #C62828;">Reservas pasadas sin pago</div>
+          </div>
+
       </div>
 
       <!-- Acciones Rápidas (Solo Asistente) -->
