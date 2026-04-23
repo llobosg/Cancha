@@ -372,7 +372,7 @@
 
         <!-- Tabla Scrollable -->
         <div class="planilla-table-container" style="flex: 1; overflow: auto; padding: 4px;">
-            <table id="tablaPlanilla" class="planilla-table"; border-collapse: separate; border-spacing: 4px; table-layout: fixed;">
+            <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed;">
                 <!-- Se llena con JS -->
             </table>
         </div>
@@ -919,11 +919,11 @@
                         ⚙️ Opciones de Gestión
                     </button>
                     <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white; overflow:hidden;">
-                        <button onclick="anularReserva()" style="padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🗑️ Anular Reserva</button>
-                        <button onclick="cancelarReserva()" style="padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">❌ Cancelar Reserva</button>
-                        <button onclick="cambiarCancha()" style="padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🔄 Cambiar Cancha</button>
+                        <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🗑️ Anular Reserva</button>
+                        <button onclick="cancelarReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">❌ Cancelar Reserva</button>
+                        <button onclick="cambiarCancha()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee; cursor:pointer;">🔄 Cambiar Cancha</button>
                         ${detalle.estado_pago !== 'pagado' ? 
-                            `<button onclick="abrirModalPagoDesdeDetalle()" style="padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold; cursor:pointer;">💳 Pagar / Abonar</button>` 
+                            `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold; cursor:pointer;">💳 Pagar / Abonar</button>` 
                             : ''}
                     </div>
                 `;
