@@ -434,25 +434,25 @@ $monto_deuda = $stmt_deuda->fetchColumn();
                   </div>
               </div>
 
-              <!-- 2. PAGO PARCIAL (Amarillo Suave) -->
-              <div class="kpi-card" style="background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <!-- 2. PAGO PARCIAL (Clickeable) -->
+              <div class="kpi-card" onclick="abrirListaKPI('parcial')" style="cursor: pointer; background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
                   <div style="font-size: 0.9rem; color: #F57F17; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Pago Parcial (Mes)</div>
                   <div style="font-size: 2rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
-                  <div style="font-size: 0.85rem; color: #F57F17;">Montos pendientes de cierre</div>
+                  <div style="font-size: 0.85rem; color: #F57F17;">Click para ver detalles</div>
               </div>
 
               <!-- 3. EN RESERVA (Azul Suave) -->
               <div class="kpi-card" style="background: #E3F2FD; border-left: 5px solid #2196F3; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                   <div style="font-size: 0.9rem; color: #1565C0; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">En Reserva (Futuro)</div>
                   <div style="font-size: 2rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
-                  <div style="font-size: 0.85rem; color: #1565C0;">Reservas no pagadas próximas</div>
+                  <div style="font-size: 0.85rem; color: #1565C0;">Reservas vigentes</div>
               </div>
 
-              <!-- 4. DEUDA (Rojo Suave) -->
-              <div class="kpi-card" style="background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <!-- 4. DEUDA (Clickeable) -->
+              <div class="kpi-card" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
                   <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
                   <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-                  <div style="font-size: 0.85rem; color: #C62828;">Reservas pasadas sin pago</div>
+                  <div style="font-size: 0.85rem; color: #C62828;">Click para ver deudores</div>
               </div>
 
           </div>
@@ -1374,6 +1374,114 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     function cerrarModalPago() {
         document.getElementById('modalPago').style.display = 'none';
     }
-    </script>
+
+    // === FUNCIONES PARA MODAL DE LISTA KPI ===
+
+    let tipoListaActual = ''; // Para saber si estamos viendo 'deuda' o 'parcial'
+
+    async function abrirListaKPI(tipo) {
+        tipoListaActual = tipo;
+        const modal = document.getElementById('modalListaKPI');
+        const titulo = document.getElementById('tituloListaKPI');
+        const tbody = document.getElementById('cuerpoTablaKPI');
+        
+        modal.style.display = 'flex';
+        titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando datos...</td></tr>';
+
+        try {
+            const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">No hay registros para mostrar.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.forEach(row => {
+                const saldo = parseFloat(row.saldo_pendiente);
+                // Formato de moneda
+                const fmt = (n) => '$' + parseInt(n).toLocaleString();
+                
+                html += `
+                    <tr style="border-bottom:1px solid #eee; cursor:pointer; hover:bg-gray-50;" onclick="verDetalleDesdeLista(${row.id_reserva})">
+                        <td style="padding:10px;">${row.fecha}</td>
+                        <td style="padding:10px;">${row.nombre_cancha}</td>
+                        <td style="padding:10px; font-weight:bold;">${row.nombre_cliente || 'N/A'}</td>
+                        <td style="padding:10px;">${row.telefono_cliente || '-'}</td>
+                        <td style="padding:10px; text-align:right;">${fmt(row.monto_total)}</td>
+                        <td style="padding:10px; text-align:right; color:green;">${fmt(row.monto_recaudacion)}</td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
+                        <td style="padding:10px; text-align:center;">
+                            <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
+        }
+    }
+
+    function cerrarModalListaKPI() {
+        document.getElementById('modalListaKPI').style.display = 'none';
+    }
+
+    // Función puente: Cierra la lista y abre el detalle de la reserva
+    async function verDetalleDesdeLista(idReserva) {
+        // 1. Cerrar modal de lista
+        cerrarModalListaKPI();
+        
+        // 2. Llamar a la función existente que abre el detalle
+        // Asegúrate que esta función ya exista en tu código (la que usamos antes)
+        await abrirDetalleDesdePlanilla(idReserva);
+    }
+
+    // Cerrar modal si se hace click fuera del contenido
+    window.onclick = function(event) {
+        const modalLista = document.getElementById('modalListaKPI');
+        if (event.target == modalLista) {
+            cerrarModalListaKPI();
+        }
+        // ... (tu lógica existente para otros modales)
+    }
+  </script>
+      <!-- === MODAL LISTA DEUDORES / PARCIALES === -->
+      <div id="modalListaKPI" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
+          <div style="background:white; padding:0; border-radius:16px; max-width:900px; width:95%; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+              
+              <!-- Header del Modal -->
+              <div style="padding:1.5rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; border-radius:16px 16px 0 0;">
+                  <h3 id="tituloListaKPI" style="margin:0; color:#333; font-size:1.3rem;">Lista</h3>
+                  <span onclick="cerrarModalListaKPI()" style="font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
+              </div>
+
+              <!-- Tabla Scrollable -->
+              <div style="overflow-y:auto; padding:1rem; flex:1;">
+                  <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                      <thead>
+                          <tr style="background:#f1f1f1; text-align:left;">
+                              <th style="padding:10px;">Fecha</th>
+                              <th style="padding:10px;">Cancha</th>
+                              <th style="padding:10px;">Socio/Cliente</th>
+                              <th style="padding:10px;">Teléfono</th>
+                              <th style="padding:10px; text-align:right;">Total</th>
+                              <th style="padding:10px; text-align:right;">Abonado</th>
+                              <th style="padding:10px; text-align:right; color:#c62828;">Saldo</th>
+                              <th style="padding:10px;">Acción</th>
+                          </tr>
+                      </thead>
+                      <tbody id="cuerpoTablaKPI">
+                          <!-- Se llena con JS -->
+                          <tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando...</td></tr>
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
 </body>
 </html>

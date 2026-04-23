@@ -86,6 +86,11 @@
                 
                 echo json_encode(getPlanillaReservas($pdo, $id_recinto, $fecha, $deporte));
                 break;
+
+            case 'get_lista_kpi':
+                $tipo = $_GET['tipo'] ?? ''; // 'parcial' o 'deuda'
+                echo json_encode(getListaKPI($pdo, $id_recinto, $tipo));
+                break;
                 
             default:
                 throw new Exception('Acción no válida: ' . $action);
@@ -538,5 +543,51 @@
             'reservas' => $reservas_map,
             'fecha' => $fecha
         ];
+    }
+
+    function getListaKPI($pdo, $id_recinto, $tipo) {
+        $hoy = date('Y-m-d');
+        $primer_dia_mes = date('Y-m-01');
+        
+        if ($tipo === 'parcial') {
+            // Pagos parciales del mes actual
+            $sql = "SELECT r.id_reserva, r.fecha, r.hora_inicio, c.nombre_cancha, 
+                        r.nombre_cliente, r.telefono_cliente, 
+                        r.monto_total, r.monto_recaudacion, 
+                        (r.monto_total - r.monto_recaudacion) as saldo_pendiente,
+                        r.notas
+                    FROM reservas r
+                    JOIN canchas c ON r.id_cancha = c.id_cancha
+                    WHERE c.id_recinto = :id_recinto
+                    AND r.estado_pago = 'parcial'
+                    AND r.fecha >= :fecha_inicio
+                    AND r.estado != 'cancelada'
+                    ORDER BY r.fecha DESC";
+                    
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':id_recinto' => $id_recinto, ':fecha_inicio' => $primer_dia_mes]);
+            
+        } elseif ($tipo === 'deuda') {
+            // Deudas vencidas (fecha < hoy y no pagado total)
+            $sql = "SELECT r.id_reserva, r.fecha, r.hora_inicio, c.nombre_cancha, 
+                        r.nombre_cliente, r.telefono_cliente, 
+                        r.monto_total, r.monto_recaudacion, 
+                        (r.monto_total - r.monto_recaudacion) as saldo_pendiente,
+                        r.notas
+                    FROM reservas r
+                    JOIN canchas c ON r.id_cancha = c.id_cancha
+                    WHERE c.id_recinto = :id_recinto
+                    AND r.fecha < :hoy
+                    AND r.estado_pago != 'pagado'
+                    AND r.estado != 'cancelada'
+                    ORDER BY r.fecha ASC"; // Las más antiguas primero
+                    
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':id_recinto' => $id_recinto, ':hoy' => $hoy]);
+        } else {
+            return [];
+        }
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 ?>
