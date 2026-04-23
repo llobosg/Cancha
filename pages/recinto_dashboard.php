@@ -535,7 +535,6 @@ function renderizarPlanilla(data, filtroEstado) {
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
         html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; font-size:0.7rem;">
-                    <div style="font-size:1.2rem;">${icono}</div>
                     <div style="white-space:normal;">${c.nombre_cancha}</div>
                  </th>`;
     });
