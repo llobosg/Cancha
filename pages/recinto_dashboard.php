@@ -219,23 +219,23 @@ $ingresos_mes = 1250000;
     /* Colores de Estado con Bordes Suaves */
     /* Verde (Pagado) */
     td.estado-pagado {
-        background-color: #E8F5E9 !important;
-        border: 1px solid #C8E6C9 !important;
-        color: #2E7D32;
+        background-color: #4CAF50 !important; /* <--- CAMBIA ESTO (Verde Estándar) */
+        border: 1px solid #388E3C !important;
+        color: white; /* Texto blanco */
     }
 
     /* Amarillo (Parcial) */
     td.estado-parcial {
-        background-color: #FFFDE7 !important;
-        border: 1px solid #FFF9C4 !important;
-        color: #F57F17;
+        background-color: #FFEB3B !important; /* <--- CAMBIA ESTO (Amarillo Intenso) */
+        border: 1px solid #FBC02D !important;
+        color: #333; /* Texto oscuro para que se lea bien sobre amarillo */
     }
 
-    /* Rojo (Pendiente/No Pagado) */
+    /* Rojo (Reservada/Pendiente) */
     td.estado-pendiente {
-        background-color: #FFEBEE !important;
-        border: 1px solid #FFCDD2 !important;
-        color: #C62828;
+        background-color: #FF5252 !important; /* <--- CAMBIA ESTO (Rojo Intenso) */
+        border: 1px solid #D32F2F !important;
+        color: white; /* Texto blanco para mejor contraste con rojo fuerte */
     }
 
     /* Gris (Disponible) */
