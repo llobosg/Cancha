@@ -1380,52 +1380,56 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     let tipoListaActual = ''; // Para saber si estamos viendo 'deuda' o 'parcial'
 
     async function abrirListaKPI(tipo) {
-        tipoListaActual = tipo;
-        const modal = document.getElementById('modalListaKPI');
-        const titulo = document.getElementById('tituloListaKPI');
-        const tbody = document.getElementById('cuerpoTablaKPI');
-        
-        modal.style.display = 'flex';
-        titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando datos...</td></tr>';
+      tipoListaActual = tipo;
+      const modal = document.getElementById('modalListaKPI');
+      const titulo = document.getElementById('tituloListaKPI');
+      const tbody = document.getElementById('cuerpoTablaKPI');
+      
+      modal.style.display = 'flex';
+      titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
+      // Título con color oscuro por defecto
+      titulo.style.color = '#333'; 
+      
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">Cargando datos...</td></tr>';
 
-        try {
-            const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
-            const data = await res.json();
-            
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">No hay registros para mostrar.</td></tr>';
-                return;
-            }
+      try {
+          const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
+          const data = await res.json();
+          
+          if (data.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">No hay registros para mostrar.</td></tr>';
+              return;
+          }
 
-            let html = '';
-            data.forEach(row => {
-                const saldo = parseFloat(row.saldo_pendiente);
-                // Formato de moneda
-                const fmt = (n) => '$' + parseInt(n).toLocaleString();
-                
-                html += `
-                    <tr style="border-bottom:1px solid #eee; cursor:pointer; hover:bg-gray-50;" onclick="verDetalleDesdeLista(${row.id_reserva})">
-                        <td style="padding:10px;">${row.fecha}</td>
-                        <td style="padding:10px;">${row.nombre_cancha}</td>
-                        <td style="padding:10px; font-weight:bold;">${row.nombre_cliente || 'N/A'}</td>
-                        <td style="padding:10px;">${row.telefono_cliente || '-'}</td>
-                        <td style="padding:10px; text-align:right;">${fmt(row.monto_total)}</td>
-                        <td style="padding:10px; text-align:right; color:green;">${fmt(row.monto_recaudacion)}</td>
-                        <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
-                        <td style="padding:10px; text-align:center;">
-                            <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
+          let html = '';
+          data.forEach(row => {
+              const saldo = parseFloat(row.saldo_pendiente);
+              // Formato de moneda
+              const fmt = (n) => '$' + parseInt(n).toLocaleString();
+              
+              // AQUÍ ESTÁ EL CAMBIO: color:#333 en el TR y en los TD específicos si es necesario
+              html += `
+                  <tr style="border-bottom:1px solid #eee; cursor:pointer; hover:bg-gray-50; color:#333;" onclick="verDetalleDesdeLista(${row.id_reserva})">
+                      <td style="padding:10px; color:#333;">${row.fecha}</td>
+                      <td style="padding:10px; color:#333;">${row.nombre_cancha}</td>
+                      <td style="padding:10px; font-weight:bold; color:#333;">${row.nombre_cliente || 'N/A'}</td>
+                      <td style="padding:10px; color:#333;">${row.telefono_cliente || '-'}</td>
+                      <td style="padding:10px; text-align:right; color:#333;">${fmt(row.monto_total)}</td>
+                      <td style="padding:10px; text-align:right; color:green;">${fmt(row.monto_recaudacion)}</td>
+                      <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
+                      <td style="padding:10px; text-align:center;">
+                          <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
+                      </td>
+                  </tr>
+              `;
+          });
+          tbody.innerHTML = html;
 
-        } catch (err) {
-            console.error(err);
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
-        }
-    }
+      } catch (err) {
+          console.error(err);
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
+      }
+  }
 
     function cerrarModalListaKPI() {
         document.getElementById('modalListaKPI').style.display = 'none';
