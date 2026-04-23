@@ -425,6 +425,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
           <!-- SECCIÓN DE KPIs CENTRAL -->
           <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0; max-width: 1200px; margin-left: auto; margin-right: auto;">
 
+          <?php if ($rol_actual === 'admin'): ?>
               <!-- 1. INGRESOS ESTE MES (Verde Suave) -->
               <div class="kpi-card" style="background: #E8F5E9; border-left: 5px solid #4CAF50; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                   <div style="font-size: 0.9rem; color: #2E7D32; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Ingresos Este Mes</div>
@@ -434,7 +435,16 @@ $monto_deuda = $stmt_deuda->fetchColumn();
                   </div>
               </div>
 
-              <!-- 2. PAGO PARCIAL (Clickeable) -->
+              <!-- 4. DEUDA (Clickeable) -->
+              <div class="kpi-card" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
+                  <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
+                  <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
+                  <div style="font-size: 0.85rem; color: #C62828;">Click para ver deudores</div>
+              </div>
+          <?php endif; ?>
+
+          <?php if ($rol_actual === 'asistente'): ?> 
+           <!-- 2. PAGO PARCIAL (Clickeable) -->
               <div class="kpi-card" onclick="abrirListaKPI('parcial')" style="cursor: pointer; background: #FFFDE7; border-left: 5px solid #FBC02D; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
                   <div style="font-size: 0.9rem; color: #F57F17; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Pago Parcial (Mes)</div>
                   <div style="font-size: 2rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
@@ -446,14 +456,10 @@ $monto_deuda = $stmt_deuda->fetchColumn();
                   <div style="font-size: 0.9rem; color: #1565C0; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">En Reserva (Futuro)</div>
                   <div style="font-size: 2rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
                   <div style="font-size: 0.85rem; color: #1565C0;">Reservas vigentes</div>
-              </div>
+              </div>   
+          <?php endif; ?>
 
-              <!-- 4. DEUDA (Clickeable) -->
-              <div class="kpi-card" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 5px solid #EF5350; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s;">
-                  <div style="font-size: 0.9rem; color: #C62828; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem;">Deuda Vencida</div>
-                  <div style="font-size: 2rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-                  <div style="font-size: 0.85rem; color: #C62828;">Click para ver deudores</div>
-              </div>
+            
 
           </div>
 
@@ -461,62 +467,62 @@ $monto_deuda = $stmt_deuda->fetchColumn();
 
       <!-- Acciones Rápidas (Solo Asistente) -->
       <?php if ($rol_actual === 'asistente'): ?>
-      <div class="quick-actions">
-          <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
-          <button class="action-btn" id="btnTorneosActivos">Torneos Activos </button>
-          <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual 📝</button>
-      </div>
+        <div class="quick-actions">
+            <button class="action-btn" id="btnGestionCancha">Crear Canchas 🎾</button>
+            <button class="action-btn" id="btnTorneosActivos">Torneos Activos </button>
+            <button class="action-btn" onclick="alert('Función en desarrollo: Reserva Manual')">Reserva Manual 📝</button>
+        </div>
 
-      <!-- === CONTENEDOR DE LA PLANILLA === -->
-      <div class="planilla-wrapper" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 2rem;">
-          
-          <!-- Controles Superiores -->
-          <div style="background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; color: white;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px;">
-                  <span style="font-size:0.8rem; font-weight:600;">Fecha:</span>
-                  <input type="date" id="fechaPlanillaInput" style="background: transparent; border: none; outline: none; color: white; font-weight: bold; width: 130px;">
-                  <button onclick="irAHoyPlanilla()" style="background: white; color: #8E24AA; border: none; padding: 0.3rem 0.8rem; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Hoy</button>
-                  <button onclick="cambiarDiaPlanilla(-1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&lt;</button>
-                  <button onclick="cambiarDiaPlanilla(1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&gt;</button>
-              </div>
-              
-              <div style="display: flex; gap: 0.5rem;">
-                  <select id="filtroDeporte" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
-                      <option value="todos">Todos los deportes</option>
-                      <option value="padel">Pádel</option>
-                      <option value="futbol">Fútbol</option>
-                      <option value="tenis">Tenis</option>
-                      <!-- Agrega más según tus IDs -->
-                  </select>
-                  <select id="filtroEstado" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
-                      <option value="">Todos los estados</option>
-                      <option value="pagadas">Pagadas</option>
-                      <option value="parcial">Pago Parcial</option>
-                      <option value="no_pagadas">No Pagadas</option>
-                  </select>
-              </div>
-          </div>
+        <!-- === CONTENEDOR DE LA PLANILLA === -->
+        <div class="planilla-wrapper" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 2rem;">
+            
+            <!-- Controles Superiores -->
+            <div style="background: linear-gradient(90deg, #CE93D8, #AB47BC); padding: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; color: white;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px;">
+                    <span style="font-size:0.8rem; font-weight:600;">Fecha:</span>
+                    <input type="date" id="fechaPlanillaInput" style="background: transparent; border: none; outline: none; color: white; font-weight: bold; width: 130px;">
+                    <button onclick="irAHoyPlanilla()" style="background: white; color: #8E24AA; border: none; padding: 0.3rem 0.8rem; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Hoy</button>
+                    <button onclick="cambiarDiaPlanilla(-1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&lt;</button>
+                    <button onclick="cambiarDiaPlanilla(1)" style="background: rgba(255,255,255,0.9); border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">&gt;</button>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="filtroDeporte" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
+                        <option value="todos">Todos los deportes</option>
+                        <option value="padel">Pádel</option>
+                        <option value="futbol">Fútbol</option>
+                        <option value="tenis">Tenis</option>
+                        <!-- Agrega más según tus IDs -->
+                    </select>
+                    <select id="filtroEstado" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
+                        <option value="">Todos los estados</option>
+                        <option value="pagadas">Pagadas</option>
+                        <option value="parcial">Pago Parcial</option>
+                        <option value="no_pagadas">No Pagadas</option>
+                    </select>
+                </div>
+            </div>
 
-          <!-- Tabla -->
-          <div style="overflow-x: auto; max-height: 65vh;">
-              <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.85rem;">
-                  <!-- Se llena con JS -->
-              </table>
-          </div>
-      </div>
+            <!-- Tabla -->
+            <div style="overflow-x: auto; max-height: 65vh;">
+                <table id="tablaPlanilla" class="planilla-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.85rem;">
+                    <!-- Se llena con JS -->
+                </table>
+            </div>
+        </div>
 
-      
-      
-      <!-- Panel Torneos (Oculto por defecto, se muestra con botón) -->
-      <div id="panelTorneos" class="planilla-wrapper" style="display: none; margin-bottom: 1.5rem; background: rgba(255,255,255,0.95);">
-          <div style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-              <h3 style="margin: 0; color: #071289;">🏆 Torneos Americanos Activos</h3>
-              <button onclick="document.getElementById('panelTorneos').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
-          </div>
-          <div id="listaTorneos" style="padding: 1rem;">
-              <p style="color:#666;">Cargando torneos...</p>
-          </div>
-      </div>
+        
+        
+        <!-- Panel Torneos (Oculto por defecto, se muestra con botón) -->
+        <div id="panelTorneos" class="planilla-wrapper" style="display: none; margin-bottom: 1.5rem; background: rgba(255,255,255,0.95);">
+            <div style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #071289;">🏆 Torneos Americanos Activos</h3>
+                <button onclick="document.getElementById('panelTorneos').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+            </div>
+            <div id="listaTorneos" style="padding: 1rem;">
+                <p style="color:#666;">Cargando torneos...</p>
+            </div>
+        </div>
       <?php endif; ?>
 
       <!-- PLANILLA DE RESERVAS (Visible para Ambos) -->
@@ -1380,56 +1386,56 @@ $monto_deuda = $stmt_deuda->fetchColumn();
     let tipoListaActual = ''; // Para saber si estamos viendo 'deuda' o 'parcial'
 
     async function abrirListaKPI(tipo) {
-      tipoListaActual = tipo;
-      const modal = document.getElementById('modalListaKPI');
-      const titulo = document.getElementById('tituloListaKPI');
-      const tbody = document.getElementById('cuerpoTablaKPI');
-      
-      modal.style.display = 'flex';
-      titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
-      // Título con color oscuro por defecto
-      titulo.style.color = '#333'; 
-      
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">Cargando datos...</td></tr>';
+        tipoListaActual = tipo;
+        const modal = document.getElementById('modalListaKPI');
+        const titulo = document.getElementById('tituloListaKPI');
+        const tbody = document.getElementById('cuerpoTablaKPI');
+        
+        modal.style.display = 'flex';
+        titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
+        // Título con color oscuro por defecto
+        titulo.style.color = '#333'; 
+        
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">Cargando datos...</td></tr>';
 
-      try {
-          const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
-          const data = await res.json();
-          
-          if (data.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">No hay registros para mostrar.</td></tr>';
-              return;
-          }
+        try {
+            const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">No hay registros para mostrar.</td></tr>';
+                return;
+            }
 
-          let html = '';
-          data.forEach(row => {
-              const saldo = parseFloat(row.saldo_pendiente);
-              // Formato de moneda
-              const fmt = (n) => '$' + parseInt(n).toLocaleString();
-              
-              // AQUÍ ESTÁ EL CAMBIO: color:#333 en el TR y en los TD específicos si es necesario
-              html += `
-                  <tr style="border-bottom:1px solid #eee; cursor:pointer; hover:bg-gray-50; color:#333;" onclick="verDetalleDesdeLista(${row.id_reserva})">
-                      <td style="padding:10px; color:#333;">${row.fecha}</td>
-                      <td style="padding:10px; color:#333;">${row.nombre_cancha}</td>
-                      <td style="padding:10px; font-weight:bold; color:#333;">${row.nombre_cliente || 'N/A'}</td>
-                      <td style="padding:10px; color:#333;">${row.telefono_cliente || '-'}</td>
-                      <td style="padding:10px; text-align:right; color:#333;">${fmt(row.monto_total)}</td>
-                      <td style="padding:10px; text-align:right; color:green;">${fmt(row.monto_recaudacion)}</td>
-                      <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
-                      <td style="padding:10px; text-align:center;">
-                          <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
-                      </td>
-                  </tr>
-              `;
-          });
-          tbody.innerHTML = html;
+            let html = '';
+            data.forEach(row => {
+                const saldo = parseFloat(row.saldo_pendiente);
+                // Formato de moneda
+                const fmt = (n) => '$' + parseInt(n).toLocaleString();
+                
+                // AQUÍ ESTÁ EL CAMBIO: color:#333 en el TR y en los TD específicos si es necesario
+                html += `
+                    <tr style="border-bottom:1px solid #eee; cursor:pointer; hover:bg-gray-50; color:#333;" onclick="verDetalleDesdeLista(${row.id_reserva})">
+                        <td style="padding:10px; color:#333;">${row.fecha}</td>
+                        <td style="padding:10px; color:#333;">${row.nombre_cancha}</td>
+                        <td style="padding:10px; font-weight:bold; color:#333;">${row.nombre_cliente || 'N/A'}</td>
+                        <td style="padding:10px; color:#333;">${row.telefono_cliente || '-'}</td>
+                        <td style="padding:10px; text-align:right; color:#333;">${fmt(row.monto_total)}</td>
+                        <td style="padding:10px; text-align:right; color:green;">${fmt(row.monto_recaudacion)}</td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
+                        <td style="padding:10px; text-align:center;">
+                            <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
 
-      } catch (err) {
-          console.error(err);
-          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
-      }
-  }
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
+        }
+    }
 
     function cerrarModalListaKPI() {
         document.getElementById('modalListaKPI').style.display = 'none';
