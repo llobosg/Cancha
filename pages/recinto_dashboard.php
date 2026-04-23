@@ -129,14 +129,12 @@
     <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
     <style>
       /* =========================================
-        1. VARIABLES Y RESET GLOBAL
+        1. VARIABLES Y RESET
         ========================================= */
       :root {
           --bg-primary: #071289;
           --accent: #4ECDC4;
           --gold: #FFD700;
-          --card-bg: rgba(255, 255, 255, 0.15);
-          --text-light: white;
           --font-main: 'Segoe UI', system-ui, sans-serif;
       }
 
@@ -146,15 +144,15 @@
           background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), 
                       url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
           background-blend-mode: multiply;
-          color: var(--text-light);
+          color: white;
           font-family: var(--font-main);
           min-height: 100vh;
           padding: 0;
-          overflow-x: hidden;
+          overflow-x: hidden; /* Evita scroll horizontal en el body */
       }
 
       /* =========================================
-        2. TOP BAR & NAVEGACIÓN
+        2. TOP BAR
         ========================================= */
       .top-bar {
           background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
@@ -163,192 +161,159 @@
           display: flex; justify-content: space-between; align-items: center;
           position: sticky; top: 0; left: 0; width: 100%; z-index: 1000;
       }
-
       .brand-logo { 
           color: white; font-weight: 900; font-size: 1.5rem; text-decoration: none; 
-          display: flex; align-items: center; gap: 0.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          display: flex; align-items: center; gap: 0.8rem; 
       }
-      .brand-logo span { font-size: 1.8rem; }
-
       .menu-btn { 
           background: rgba(255,255,255,0.2); border: none; font-size: 1.8rem; 
           cursor: pointer; color: white; padding: 0.4rem 0.8rem; border-radius: 8px; 
       }
-
       .dropdown-menu { 
           display: none; position: absolute; right: 0; top: 120%; 
           background: white; border: 1px solid #eee; border-radius: 12px; 
           z-index: 1001; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-          animation: fadeIn 0.2s ease; overflow: hidden;
       }
       .dropdown-menu a { 
-          display: block; padding: 0.8rem 1rem; text-decoration: none; 
-          color: #333; transition: 0.2s; font-weight: 500; 
+          display: block; padding: 0.8rem 1rem; text-decoration: none; color: #333; 
       }
-      .dropdown-menu a:hover { background-color: #f3e5f5; color: #AB47BC; }
-
       .btn-logout { 
           text-decoration: none; padding: 0.6rem 1.2rem; 
           background: rgba(255,255,255,0.2); color: white; 
-          border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; 
-          font-weight: bold; font-size: 0.9rem; transition: 0.2s; backdrop-filter: blur(5px);
+          border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; font-weight: bold; 
       }
-      .btn-logout:hover { background: rgba(255,255,255,0.3); }
-
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
       /* =========================================
-        3. LAYOUT PRINCIPAL (DESKTOP EXTENDIDO)
+        3. LAYOUT PRINCIPAL (FORZADO)
         ========================================= */
       .main-layout {
           display: grid;
-          /* Acciones (200px) | Planilla (Flexible) | KPIs (240px) */
-          grid-template-columns: 200px 1fr 240px; 
+          /* Acciones (180px) | Planilla (Flexible) | KPIs (180px - Reducidos) */
+          grid-template-columns: 180px 1fr 180px; 
           gap: 1rem;
-          max-width: 98%; /* Ocupamos casi toda la pantalla */
+          width: 99%; /* Ocupar casi todo el ancho */
           margin: 0 auto;
           padding: 0.5rem;
-          height: calc(100vh - 70px); /* Altura completa menos header */
+          height: calc(100vh - 70px);
       }
 
       /* Columna Izquierda: Acciones */
-      .actions-column {
-          display: flex; flex-direction: column; gap: 1rem;
-      }
+      .actions-column { display: flex; flex-direction: column; gap: 1rem; }
       .action-btn-sidebar {
-          background: white; color: #071289; border: none; padding: 1rem; 
-          border-radius: 12px; font-weight: bold; cursor: pointer; 
-          box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: left; 
-          display: flex; align-items: center; gap: 10px; transition: transform 0.2s;
+          background: white; color: #071289; border: none; padding: 0.8rem; 
+          border-radius: 8px; font-weight: bold; cursor: pointer; 
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: left; font-size: 0.9rem;
       }
-      .action-btn-sidebar:hover { transform: translateY(-2px); }
 
       /* Columna Central: Planilla */
       .planilla-column {
-          background: white; border-radius: 16px; 
+          background: white; border-radius: 12px; 
           box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
           display: flex; flex-direction: column; overflow: hidden; height: 100%;
       }
 
-      /* Controles Internos de la Planilla */
+      /* Controles Planilla */
       .planilla-header-controls { 
           background: linear-gradient(90deg, #CE93D8, #AB47BC); 
-          padding: 0.8rem 1rem; display: flex; flex-wrap: wrap; 
-          gap: 0.8rem; align-items: center; justify-content: space-between; color: white; 
+          padding: 0.6rem 1rem; display: flex; flex-wrap: wrap; 
+          gap: 0.5rem; align-items: center; justify-content: space-between; color: white; 
       }
-      .control-group { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.4rem 1rem; border-radius: 20px; }
-      .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 120px; }
-      .control-btn { background: white; color: #8E24AA; border: none; border-radius: 6px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer; }
-      .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.85rem; color: #333; }
+      .control-group { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.25); padding: 0.3rem 0.8rem; border-radius: 15px; }
+      .control-input { background: transparent; border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 100px; }
+      .control-btn { background: white; color: #8E24AA; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+      .control-select { background: rgba(255,255,255,0.9); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; }
 
-      /* Contenedor Tabla con Scroll FORZADO PARA 12+ CANCHAS */
+      /* CONTENEDOR TABLA: AQUÍ ESTÁ LA CLAVE PARA LAS 12 CANCHAS */
       .planilla-table-container {
           flex: 1; overflow: auto; padding: 4px;
-          /* Ancho mínimo calculado: 12 canchas * 120px + 1 hora * 70px = ~1510px. Ponemos 1600px para holgura */
-          min-width: 1600px; 
-          background-color: #f4f6f9; /* Fondo gris si sobra espacio */
+          /* Cálculo: 12 canchas * 110px + 1 hora * 60px = 1380px. Ponemos 1400px de mínimo */
+          min-width: 1400px; 
+          background-color: #f4f6f9;
       }
 
-      /* Columna Derecha: KPIs Compactos */
+      /* Columna Derecha: KPIs (ANGOSTADOS 50%) */
       .kpi-column {
-          display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; padding-right: 2px;
+          display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
       }
       
-      /* CORRECCIÓN DE COLORES KPI */
       .kpi-card-mini {
-          background: white; border-left: 4px solid #ccc; padding: 0.8rem; 
-          border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;
-          color: #333; /* Texto base oscuro por seguridad */
+          background: white; border-left: 3px solid #ccc; padding: 0.6rem; /* Padding reducido */
+          border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          color: #333;
       }
-      .kpi-card-mini:hover { transform: translateX(-2px); }
       
-      /* Títulos KPI */
       .kpi-card-mini div:first-child { 
-          font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; 
-          margin-bottom: 0.2rem; opacity: 0.8; font-weight: bold; color: #555; 
+          font-size: 0.65rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; margin-bottom: 0.1rem; 
       }
-      
-      /* Cifras KPI */
       .kpi-card-mini div:nth-child(2) { 
-          font-size: 1.3rem; font-weight: 900; line-height: 1.1; margin-bottom: 0.2rem; 
+          font-size: 1.1rem; font-weight: 900; line-height: 1; margin-bottom: 0.1rem; 
       }
-      
-      /* Subtítulos KPI */
       .kpi-card-mini div:last-child { 
-          font-size: 0.65rem; opacity: 0.7; color: #666; 
+          font-size: 0.6rem; opacity: 0.7; 
       }
 
-      /* Colores Específicos KPIs (Forzando colores de texto oscuros) */
+      /* Colores KPI */
       .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
-      .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; } /* Verde Oscuro */
-
+      .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; }
       .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; }
-      .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; } /* Naranja Oscuro */
-
+      .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; }
       .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; }
-      .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; } /* Azul Oscuro */
-
+      .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; }
       .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
-      .kpi-deuda div:nth-child(2) { color: #B71C1C !important; } /* Rojo Oscuro */
-
+      .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
 
       /* =========================================
-        4. ESTILOS DE LA TABLA (PLANILLA)
+        4. TABLA PLANILLA (AJUSTE FINO)
         ========================================= */
       .planilla-table {
-          width: 100%; border-collapse: separate; border-spacing: 4px; 
-          table-layout: fixed; /* Clave para anchos fijos */
+          width: 100%; border-collapse: separate; border-spacing: 3px; 
+          table-layout: fixed; 
       }
 
-      /* Celda Hora (Sticky Left) */
+      /* Hora Sticky */
       .planilla-table th:first-child,
       .planilla-table td:first-child {
           position: sticky; left: 0; z-index: 20;
           background: #f8f9fa !important; color: #333; font-weight: bold;
-          border-right: 2px solid #e0e0e0; border-radius: 6px;
-          width: 70px !important; min-width: 70px !important; max-width: 70px !important;
-          padding: 4px !important; font-size: 0.8rem; text-align: center;
+          border-right: 2px solid #e0e0e0; border-radius: 4px;
+          width: 60px !important; min-width: 60px !important; max-width: 60px !important;
+          padding: 2px !important; font-size: 0.7rem; text-align: center;
       }
 
-      /* Celdas Canchas */
+      /* Canchas (Reducidas para que quepan 12) */
       .planilla-table th, .planilla-table td {
-          width: 120px !important; min-width: 120px !important; max-width: 120px !important;
-          padding: 4px; vertical-align: middle; text-align: center;
-          border-radius: 8px; transition: all 0.2s ease;
+          width: 110px !important; min-width: 110px !important; max-width: 110px !important;
+          padding: 2px; vertical-align: middle; text-align: center;
+          border-radius: 6px; transition: all 0.2s ease;
       }
 
-      /* Headers de Tabla */
       .planilla-table thead th {
           background: #AB47BC !important; color: white; position: sticky; top: 0; z-index: 5;
-          border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 60px;
+          border-radius: 6px; height: 50px; font-size: 0.75rem;
       }
 
-      /* Estados de Reserva (Colores Intensos) */
+      /* Estados */
       td.estado-pagado { background-color: #4CAF50 !important; border: 1px solid #388E3C !important; color: white; }
       td.estado-parcial { background-color: #FFEB3B !important; border: 1px solid #FBC02D !important; color: #333; }
       td.estado-pendiente { background-color: #FF5252 !important; border: 1px solid #D32F2F !important; color: white; }
       td.estado-disponible { background-color: #FAFAFA !important; border: 1px dashed #E0E0E0 !important; }
 
-      /* Efectos Hover */
-      .planilla-table tbody td:hover { transform: scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 2; position: relative; }
+      /* Hover */
+      .planilla-table tbody td:hover { transform: scale(1.02); box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 2; position: relative; }
 
       /* =========================================
-        5. MODALES (Detalle y Pago)
+        5. MODALES
         ========================================= */
       #modalDetalleReserva { z-index: 2000; }
-      
       #modalPago {
           z-index: 2500; display: none; position: fixed; top: 0; left: 0; 
           width: 100%; height: 100%; background: rgba(0,0,0,0.6); 
           backdrop-filter: blur(5px); justify-content: center; align-items: center;
       }
       #modalPago .submodal-content {
-          background: white; padding: 2rem; border-radius: 16px; max-width: 500px; 
+          background: white; padding: 1.5rem; border-radius: 12px; max-width: 450px; 
           width: 90%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-          animation: fadeIn 0.3s ease-out;
       }
-
-      /* Modal Lista KPI */
       #modalListaKPI {
           display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
           background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; 
@@ -356,48 +321,35 @@
       }
 
       /* =========================================
-        6. RESPONSIVE (TABLET Y MÓVIL)
+        6. RESPONSIVE
         ========================================= */
-      
-      /* Tablet / Móvil Grande (< 1024px) */
       @media (max-width: 1024px) {
           .main-layout {
-              grid-template-columns: 1fr !important; /* Una sola columna */
-              grid-template-rows: auto 1fr auto;
-              height: auto; padding: 0.5rem;
+              grid-template-columns: 1fr !important;
+              height: auto;
           }
-          .actions-column { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
-          .action-btn-sidebar { min-width: 140px; padding: 0.8rem !important; font-size: 0.9rem; }
-          .kpi-column { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
-          .kpi-card-mini { min-width: 140px; padding: 0.8rem !important; }
+          .actions-column { flex-direction: row; overflow-x: auto; }
+          .kpi-column { flex-direction: row; overflow-x: auto; }
+          .kpi-card-mini { min-width: 120px; }
       }
 
-      /* Móvil Específico (< 768px) */
       @media (max-width: 768px) {
-          /* Top Bar Ajustado */
-          .top-bar { padding: 0.8rem 1rem; width: 100%; box-sizing: border-box; }
-          .brand-logo { font-size: 1.2rem; }
-          .brand-logo span { font-size: 1.4rem; }
-
-          /* KPIs en Grid 2x2 */
-          .kpi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; overflow: visible; }
-          .kpi-card-mini { min-width: auto; padding: 0.6rem; }
-          .kpi-card-mini div:first-child { font-size: 0.65rem; }
-          .kpi-card-mini div:nth-child(2) { font-size: 1.1rem; }
-
-          /* Planilla Compacta */
+          .top-bar { padding: 0.6rem 1rem; }
+          .brand-logo { font-size: 1.1rem; }
+          
+          /* KPIs en Grid 2x2 Móvil */
+          .kpi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+          .kpi-card-mini { min-width: auto; padding: 0.5rem; }
+          
+          /* Tabla Móvil Compacta */
           .planilla-table th:first-child, .planilla-table td:first-child {
-              width: 60px !important; min-width: 60px !important; max-width: 60px !important; font-size: 0.7rem;
+              width: 50px !important; min-width: 50px !important; font-size: 0.65rem;
           }
           .planilla-table th, .planilla-table td {
-              width: 90px !important; min-width: 90px !important; max-width: 90px !important; font-size: 0.7rem;
-          }
-          /* Truncar nombres de cancha a 8 caracteres */
-          .planilla-table th div:last-child {
-              max-width: 8ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+              width: 85px !important; min-width: 85px !important; font-size: 0.65rem;
           }
       }
-  </style>  
+  </style>
   </head>
 <body>
 
