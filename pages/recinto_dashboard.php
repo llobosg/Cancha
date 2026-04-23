@@ -310,7 +310,7 @@ $ingresos_mes = 1250000;
                   <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenu()">⚙️ Mi Perfil</a>
               </div>
           </div>
-          <a href="recinto.logout.php" class="btn-logout">Salir</a>
+          <a href="recinto_logout.php" class="btn-logout">Salir</a>
       </div>
   </div>
 
