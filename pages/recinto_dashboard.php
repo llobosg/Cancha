@@ -129,8 +129,8 @@
     <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?> | CanchaSport</title>
     <style>
       /* =========================================
-        1. RESET Y BASE
-        ========================================= */
+      1. RESET Y BASE
+      ========================================= */
       :root { --bg-primary: #071289; --accent: #4ECDC4; --font-main: 'Segoe UI', sans-serif; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
@@ -416,7 +416,94 @@
     </div>
   </div>
 
-  <!-- MODALES (Lista KPI, Detalle, Pago, etc.) van aquí fuera del grid -->
+  <!-- === MODAL DETALLE DE RESERVA (ESTRUCTURA) === -->
+    <div id="modalDetalleReserva" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
+        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
+            <!-- Botón Cerrar X -->
+            <span class="close-modal" onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
+            
+            <!-- AQUÍ LA FUNCIÓN JS INYECTARÁ LOS DATOS Y BOTONES -->
+            <div id="contenidoDetalle" style="color:#333; width: 100%; box-sizing: border-box;">
+                <p style="text-align:center;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- === SUBMODAL DE PAGO COMPLETO === -->
+    <div id="modalPago" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(5px);">
+        <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            
+            <!-- Botón X para VOLVER AL DETALLE -->
+            <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-weight:bold;">💳 Registrar Pago</h3>
+            
+            <!-- Info Base -->
+            <div style="margin-bottom:1.5rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:1rem; border-radius:8px; text-align:center; border:1px solid #eee;">
+                <div style="margin-bottom:0.5rem;"><strong>Reserva ID:</strong> <span id="infoIdReserva">...</span></div>
+                <div><strong>Monto Total:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289; font-size:1.1rem;">$0</span></div>
+            </div>
+            
+            <form id="formPago">
+                <!-- Monto Editable -->
+                <div style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">💰 Monto a Abonar ($)</label>
+                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
+                        style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:8px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right; box-sizing:border-box;">
+                    <small style="color:#666; font-size:0.8rem; display:block; margin-top:0.3rem;">* Ingresa el monto total o un pago parcial.</small>
+                </div>
+
+                <!-- Método de Pago -->
+                <div style="margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">Método de Pago</label>
+                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc; background:white; color:#333; box-sizing:border-box;">
+                        <option value="">Seleccionar...</option>
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="webpay">Webpay / Tarjeta</option>
+                        <option value="efectivo">Efectivo en Recinto</option>
+                        <option value="convenio">Convenio Club</option>
+                    </select>
+                </div>
+                
+                <!-- ID Transacción (Condicional) -->
+                <div id="campoTransaccion" style="display:none; margin-bottom:1rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">Nº Comprobante / ID Transacción</label>
+                    <input type="text" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc; box-sizing:border-box;">
+                </div>
+
+                <!-- Notas / Comentarios -->
+                <div style="margin-bottom:1.5rem;">
+                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">📝 Notas del Pago</label>
+                    <textarea id="notasPago" rows="3" placeholder="Ej: Pago parcial de Juan Pérez (1/4). Faltan 3 socios." 
+                            style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc; resize:vertical; font-family:sans-serif; box-sizing:border-box;"></textarea>
+                </div>
+                
+                <button type="submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:1rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem; transition:0.2s;">
+                    Confirmar Registro de Pago
+                </button>
+            </form>
+        </div>
+    </div>
+
+     <!-- Modal para enviar mensaje -->
+     <div id="mensajeModal" class="submodal" style="display:none;">
+        <div class="submodal-content" style="max-width: 400px;">
+            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💬 Enviar Mensaje</h3>
+            
+            <form id="formMensaje">
+                <div class="form-group">
+                    <label>Mensaje para el cliente</label>
+                    <textarea id="mensajeCliente" rows="4" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;" placeholder="Escribe tu mensaje aquí..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit" style="width:100%; background:#071289; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">Enviar Mensaje</button>
+            </form>
+        </div>
+    </div>
+    <!-- === SISTEMA DE TOAST NOTIFICATIONS === -->
+    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
 
   <!-- Scripts -->
   <script>
@@ -443,7 +530,10 @@
     // === INICIO CODIGO DE CALENDARIO_RESERVAS.JS INTEGRADO Y ADAPTADO PARA ESTE DASHBOARD ===
 
     // === VARIABLES GLOBALES PARA LA PLANILLA ===
-    let reservaActualSeleccionada = null; // Para guardar datos al hacer click
+    const iconosDeporte = { 1: '🎾', 2: '🎾', 3: '🏐', 10: '⚽', 11: '⚽', 'default': '🏟️' };
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    let estadoSeleccionadoPlanilla = "";
+    let reservaActualSeleccionada = null;
  
   
 
@@ -465,10 +555,6 @@
         if (inputFecha) inputFecha.value = fechaPlanillaActual;
         cargarPlanillaReservas();
     }
-
-    // === VARIABLES GLOBALES ===
-    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
-    let estadoSeleccionadoPlanilla = ""; // Inicializar vacío
 
     // === LISTENERS CORREGIDOS (Sin Loop) ===
     document.addEventListener('DOMContentLoaded', () => {
@@ -508,290 +594,71 @@
 
     // === FUNCIÓN DE CARGA OPTIMIZADA ===
     async function cargarPlanillaReservas() {
-        const deporteSelect = document.getElementById('filtroDeporte');
-        const deporte = deporteSelect ? deporteSelect.value : "todos";
-        
-        // Evitar llamadas duplicadas si ya está cargando (opcional, pero útil)
-        // if (window.isLoadingPlanilla) return;
-        // window.isLoadingPlanilla = true;
-
-        console.log(`📡 Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}, Estado: ${estadoSeleccionadoPlanilla}`);
-
+        const deporte = document.getElementById('filtroDeporte')?.value || "todos";
         try {
-            // La API debe recibir el estado también si queremos filtrar desde el backend, 
-            // O bien, la API devuelve todo y JS filtra. 
-            // NOTA: Tu API actual 'get_planilla_reservas' NO recibe estado. 
-            // Por lo tanto, el filtrado por estado debe hacerse en JS (renderizarPlanilla) 
-            // O debemos actualizar la API. 
-            
-            // OPCIÓN A: Filtrado en Frontend (Más rápido si no son miles de reservas)
-            // Pedimos todos los datos según fecha/deporte y filtramos visualmente al renderizar.
-            
             const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
-            
             const response = await fetch(url, { credentials: 'include' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
+            if (response.status === 401) { window.location.href = 'login_recintos.php'; return; }
             const data = await response.json();
             if (data.error) throw new Error(data.error);
-            
-            // Pasamos el estado seleccionado a la función de renderizado
             renderizarPlanilla(data, estadoSeleccionadoPlanilla);
-            
-        } catch (error) {
-            console.error("❌ Error al cargar:", error);
-            document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}</td></tr>`;
-        } finally {
-            // window.isLoadingPlanilla = false;
-        }
+        } catch (error) { console.error(error); }
     }
 
     // === RENDERIZADO CON FILTRO DE ESTADO CORREGIDO ===
     function renderizarPlanilla(data, filtroEstado) {
-        const table = document.getElementById('tablaPlanilla');
-        if (!table) return;
+      const table = document.getElementById('tablaPlanilla');
+      if (!table) return;
+      if (!data.canchas || !data.canchas.length) { table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; return; }
 
-        if (!data.canchas || !data.canchas.length) {
-            table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas para esta selección.</td></tr>';
-            return;
-        }
+      let html = `<thead><tr><th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+      data.canchas.forEach(c => {
+          const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
+          html += `<th style="background:#AB47BC; color:white;"><div style="font-size:1rem;">${icono}</div><div style="font-size:0.7rem;">${c.nombre_cancha}</div></th>`;
+      });
+      html += `</tr></thead><tbody>`;
 
-        let html = `<thead><tr>`;
-        // Header Hora
-        html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20;">Hora</th>`;
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      data.slots.forEach(slot => {
+          if (slot.is_label_row) {
+              html += `<tr><td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1;">${slot.label}</td>`;
+              data.canchas.forEach(cancha => {
+                  const key = `${cancha.id_cancha}_${slot.label}`;
+                  const res = data.reservas[key];
+                  let bgClass = 'estado-disponible';
+                  let cellContent = '';
+                  let clickEvt = '';
+                  let opacity = '1';
+                  let cumpleFiltro = true;
 
-        // Headers Canchas
-        data.canchas.forEach(c => {
-            const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-            html += `
-                <th style="background:#AB47BC; color:white; font-size:0.8rem;">
-                    <div style="font-size:0.7rem; margin-top:2px; white-space:normal;">${c.nombre_cancha}</div>
-                </th>
-            `;
-        });
-        html += `</tr></thead><tbody>`;
-
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-
-        data.slots.forEach(slot => {
-            if (slot.is_label_row) {
-                html += `<tr>`;
-                // Celda Hora
-                html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; border-right:2px solid #ccc; font-size:0.75rem;">${slot.label}</td>`;
-                
-                data.canchas.forEach(cancha => {
-                    const key = `${cancha.id_cancha}_${slot.label}`;
-                    const res = data.reservas[key];
-                    
-                    let bgClass = 'estado-disponible';
-                    let cellContent = '';
-                    let clickEvt = '';
-                    let opacity = '1';
-                    let cumpleFiltro = true;
-
-                    if (res) {
-                        // 1. Determinar Estado Lógico Real
-                        let estadoLogico = '';
-                        if (res.estado_pago === 'pagado') estadoLogico = 'pagadas';
-                        else if (res.estado_pago === 'parcial') estadoLogico = 'parcial';
-                        else {
-                            // Si no está pagado, depende de la fecha
-                            const fechaRes = new Date(res.fecha + 'T00:00:00');
-                            estadoLogico = (fechaRes < hoy) ? 'no_pagadas' : 'reservada';
-                        }
-
-                        // 2. Aplicar Filtro de Estado
-                        if (filtroEstado && filtroEstado !== '') {
-                            // Si el filtro es 'disponible', ocultamos las reservadas
-                            if (filtroEstado === 'disponible') cumpleFiltro = false;
-                            // Si el filtro es específico, debe coincidir
-                            else if (filtroEstado !== estadoLogico) cumpleFiltro = false;
-                        }
-
-                        // 3. Definir apariencia si cumple filtro
-                        if (cumpleFiltro) {
-                            if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
-                            else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
-                            else bgClass = 'estado-pendiente';
-
-                            const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15); // Limitar a 15 caracteres
-                            cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>`;
-                            
-                            if (res.id_reserva) {
-                                clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
-                            }
-                        } else {
-                            // NO CUMPLE FILTRO: Atenuar y vaciar
-                            opacity = '0.05'; // Casi invisible
-                            cellContent = '';
-                            clickEvt = '';
-                        }
-                    } else {
-                        // Es Disponible
-                        if (filtroEstado && filtroEstado !== 'disponible' && filtroEstado !== '') {
-                            // Si filtramos por algo que no sea disponible, ocultamos las libres
-                            opacity = '0.05';
-                        }
-                    }
-
-                    html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity};" ${clickEvt}>${cellContent}</td>`;
-                });
-                html += `</tr>`;
-            }
-        });
-
-        html += `</tbody>`;
-        table.innerHTML = html;
-    }
-    // === FIN CODIGO DE CALENDARIO_RESERVAS.JS INTEGRADO ===
-
-
-    // --- Lógica Menú ---
-    function toggleMenu(e) { e.stopPropagation(); const m = document.getElementById('adminMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
-    function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
-    document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
-
-    // --- Lógica Botones Asistente ---
-    <?php if ($rol_actual === 'asistente'): ?>
-    document.getElementById('btnGestionCancha')?.addEventListener('click', () => window.location.href = 'gestion_canchas.php');
-    document.getElementById('btnTorneosActivos')?.addEventListener('click', () => {
-        const panel = document.getElementById('panelTorneos');
-        if(panel.style.display === 'none') {
-            panel.style.display = 'block';
-            cargarTorneos(); // Cargar solo cuando se abre
-        } else {
-            panel.style.display = 'none';
-        }
-    });
-    <?php endif; ?>
-
-    // --- Lógica Planilla ---
-    // Variables Globales
-    let deporteSeleccionado = 'padel'; // Valor por defecto inicial
-
-    // Función para cambiar día (Anterior / Siguiente)
-    function cambiarDiaPlanilla(dias) {
-        const fechaObj = new Date(fechaPlanillaActual);
-        fechaObj.setDate(fechaObj.getDate() + dias);
-        
-        // Actualizar variable global
-        fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
-        
-        // Actualizar visualmente el input date
-        const inputFecha = document.getElementById('fechaPlanillaInput');
-        if (inputFecha) inputFecha.value = fechaPlanillaActual;
-        
-        console.log(`🔄 Cambiando fecha a: ${fechaPlanillaActual} | Deporte: ${deporteSeleccionado}`);
-        
-        // Cargar con los datos correctos
-        cargarPlanillaReservas();
-    }
-
-    // Función Ir a Hoy
-    function irAHoyPlanilla() {
-        fechaPlanillaActual = new Date().toISOString().split('T')[0];
-        document.getElementById('fechaPlanillaInput').value = fechaPlanillaActual;
-        cargarPlanillaReservas();
-    }
-
-    // Listener para cambio manual de fecha
-    document.getElementById('fechaPlanillaInput')?.addEventListener('change', function() {
-        fechaPlanillaActual = this.value;
-        cargarPlanillaReservas();
-    });
-
-    // Listener para cambio de deporte (Actualiza la variable global)
-    document.getElementById('filtroDeporte')?.addEventListener('change', function() {
-        deporteSeleccionado = this.value || 'todos'; // Si es vacío, usa todos o deja vacío según prefieras
-        console.log(` Deporte cambiado a: ${deporteSeleccionado}`);
-        cargarPlanillaReservas();
-    });
-
-    
-
-    // Función Principal de Carga
-    async function cargarPlanillaReservas() {
-        const deporteSelect = document.getElementById('filtroDeporte');
-        const deporte = deporteSelect ? deporteSelect.value : "todos";
-        
-        console.log(`📡 Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
-
-        try {
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
-            
-            const response = await fetch(url, { credentials: 'include' });
-            
-            // === DETECCIÓN DE SESIÓN EXPIRADA ===
-            if (response.status === 401) {
-                console.warn("⚠️ Sesión expirada. Redirigiendo al login...");
-                showToast("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.", "warning");
-                
-                // Esperar 2 segundos para que el usuario lea el mensaje y redirigir
-                setTimeout(() => {
-                    window.location.href = 'login_recintos.php';
-                }, 2000);
-                return; // Detener la ejecución
-            }
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-            
-            renderizarPlanilla(data, estadoSeleccionadoPlanilla);
-            console.log("✅ Planilla cargada exitosamente");
-            
-        } catch (error) {
-            console.error("❌ Error al cargar:", error);
-            // Solo mostrar error si NO es un 401 (porque el 401 ya redirige)
-            if (error.message !== 'Acceso no autorizado') {
-                document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}</td></tr>`;
-            }
-        }
-    }
-
-    // Función auxiliar por si la API no trae slots (ajusta horas según tu recinto)
-    function generarSlotsBase() {
-        const slots = [];
-        for (let h = 8; h <= 23; h++) {
-            const hora = h.toString().padStart(2, '0') + ':00';
-            slots.push({ label: hora, is_label_row: true });
-        }
-        return slots;
-    }
-
-    // Cargar planilla al inicio
-    document.addEventListener('DOMContentLoaded', cargarPlanillaReservas);
-
-    // --- Función Cargar Torneos (Solo Asistente) ---
-    <?php if ($rol_actual === 'asistente'): ?>
-    async function cargarTorneos() {
-        const contenedor = document.getElementById('listaTorneos');
-        try {
-            const res = await fetch('../api/get_torneos_recinto.php');
-            const data = await res.json();
-            if (data.error || data.length === 0) {
-                contenedor.innerHTML = '<p>No hay torneos activos.</p>';
-                return;
-            }
-            let html = '<div style="display:flex; flex-direction:column; gap:0.8rem;">';
-            data.forEach(t => {
-                html += `<div style="background:#f8f9fa; padding:1rem; border-radius:8px; border-left:4px solid #AB47BC;">
-                    <strong>${t.nombre}</strong><br>
-                    <small>${t.estado} | ${t.parejas_inscritas}/${t.num_parejas_max} parejas</small>
-                </div>`;
-            });
-            html += '</div>';
-            contenedor.innerHTML = html;
-        } catch (e) {
-            contenedor.innerHTML = '<p>Error al cargar torneos.</p>';
-        }
-    }
-    <?php endif; ?>
-
-    // Función para cerrar el modal (agrégala si no la tienes)
-    function cerrarModalDetalleReserva() {
-        document.getElementById('modalDetalleReserva').style.display = 'none';
+                  if (res) {
+                      let estadoLogico = '';
+                      if (res.estado_pago === 'pagado') estadoLogico = 'pagadas';
+                      else if (res.estado_pago === 'parcial') estadoLogico = 'parcial';
+                      else {
+                          const fechaRes = new Date(res.fecha + 'T00:00:00');
+                          estadoLogico = (fechaRes < hoy) ? 'no_pagadas' : 'reservada';
+                      }
+                      if (filtroEstado && filtroEstado !== '') {
+                          if (filtroEstado === 'disponible') cumpleFiltro = false;
+                          else if (filtroEstado !== estadoLogico) cumpleFiltro = false;
+                      }
+                      if (cumpleFiltro) {
+                          if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
+                          else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
+                          else bgClass = 'estado-pendiente';
+                          cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${(res.nombre_cliente || 'Reserva').substring(0, 10)}</div>`;
+                          if (res.id_reserva) clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
+                      } else { opacity = '0.05'; cellContent = ''; }
+                  } else {
+                      if (filtroEstado && filtroEstado !== 'disponible') opacity = '0.05';
+                  }
+                  html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity};" ${clickEvt}>${cellContent}</td>`;
+              });
+              html += `</tr>`;
+          }
+      });
+      table.innerHTML = html;
     }
 
     // === FUNCIÓN ÚNICA PARA ABRIR DETALLE CON NOTAS Y ACCIONES ===
@@ -936,12 +803,105 @@
         }
     }
 
-    // Función auxiliar para el menú de acciones
-    function toggleActionMenuModal() {
-        const menu = document.getElementById('actionMenuModal');
-        if (menu) {
-            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    // --- Lógica Menú ---
+    function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu').style.display = 'block'; }
+    function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
+    function cerrarModalDetalle() { document.getElementById('modalDetalleReserva').style.display = 'none'; }
+    function volverAlDetalle() { document.getElementById('modalPago').style.display = 'none'; document.getElementById('modalDetalleReserva').style.display = 'flex'; }
+    function cerrarModalListaKPI() { document.getElementById('modalListaKPI').style.display = 'none'; }
+    document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
+
+    // --- Lógica Botones Asistente ---
+    <?php if ($rol_actual === 'asistente'): ?>
+    document.getElementById('btnGestionCancha')?.addEventListener('click', () => window.location.href = 'gestion_canchas.php');
+    document.getElementById('btnTorneosActivos')?.addEventListener('click', () => {
+        const panel = document.getElementById('panelTorneos');
+        if(panel.style.display === 'none') {
+            panel.style.display = 'block';
+            cargarTorneos(); // Cargar solo cuando se abre
+        } else {
+            panel.style.display = 'none';
         }
+    });
+    <?php endif; ?>
+
+    // --- Lógica Planilla ---
+    // Variables Globales
+    let deporteSeleccionado = 'padel'; // Valor por defecto inicial
+
+    // Función para cambiar día (Anterior / Siguiente)
+    function cambiarDiaPlanilla(dias) {
+        const fechaObj = new Date(fechaPlanillaActual);
+        fechaObj.setDate(fechaObj.getDate() + dias);
+        
+        // Actualizar variable global
+        fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
+        
+        // Actualizar visualmente el input date
+        const inputFecha = document.getElementById('fechaPlanillaInput');
+        if (inputFecha) inputFecha.value = fechaPlanillaActual;
+        
+        console.log(`🔄 Cambiando fecha a: ${fechaPlanillaActual} | Deporte: ${deporteSeleccionado}`);
+        
+        // Cargar con los datos correctos
+        cargarPlanillaReservas();
+    }
+
+    // Listener para cambio manual de fecha
+    document.getElementById('fechaPlanillaInput')?.addEventListener('change', function() {
+        fechaPlanillaActual = this.value;
+        cargarPlanillaReservas();
+    });
+
+    // Listener para cambio de deporte (Actualiza la variable global)
+    document.getElementById('filtroDeporte')?.addEventListener('change', function() {
+        deporteSeleccionado = this.value || 'todos'; // Si es vacío, usa todos o deja vacío según prefieras
+        console.log(` Deporte cambiado a: ${deporteSeleccionado}`);
+        cargarPlanillaReservas();
+    });
+
+    // Cargar planilla al inicio
+    document.addEventListener('DOMContentLoaded', cargarPlanillaReservas);
+
+    // Función auxiliar por si la API no trae slots (ajusta horas según tu recinto)
+    function generarSlotsBase() {
+        const slots = [];
+        for (let h = 8; h <= 23; h++) {
+            const hora = h.toString().padStart(2, '0') + ':00';
+            slots.push({ label: hora, is_label_row: true });
+        }
+        return slots;
+    }
+
+    // --- Función Cargar Torneos (Solo Asistente) ---
+    <?php if ($rol_actual === 'asistente'): ?>
+    async function cargarTorneos() {
+        const contenedor = document.getElementById('listaTorneos');
+        try {
+            const res = await fetch('../api/get_torneos_recinto.php');
+            const data = await res.json();
+            if (data.error || data.length === 0) {
+                contenedor.innerHTML = '<p>No hay torneos activos.</p>';
+                return;
+            }
+            let html = '<div style="display:flex; flex-direction:column; gap:0.8rem;">';
+            data.forEach(t => {
+                html += `<div style="background:#f8f9fa; padding:1rem; border-radius:8px; border-left:4px solid #AB47BC;">
+                    <strong>${t.nombre}</strong><br>
+                    <small>${t.estado} | ${t.parejas_inscritas}/${t.num_parejas_max} parejas</small>
+                </div>`;
+            });
+            html += '</div>';
+            contenedor.innerHTML = html;
+        } catch (e) {
+            contenedor.innerHTML = '<p>Error al cargar torneos.</p>';
+        }
+    }
+    <?php endif; ?>
+
+    // Función para cerrar el modal (agrégala si no la tienes)
+    function cerrarModalDetalleReserva() {
+        document.getElementById('modalDetalleReserva').style.display = 'none';
     }
 
     // === FUNCIONES AUXILIARES PARA EL MENÚ DE ACCIONES ===
@@ -974,97 +934,6 @@
         if(modalMsg) modalMsg.style.display = 'none';
     }
 
-  </script>
-    <!-- === MODAL DETALLE DE RESERVA (ESTRUCTURA) === -->
-    <div id="modalDetalleReserva" class="submodal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);">
-        <div class="submodal-content" style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
-            <!-- Botón Cerrar X -->
-            <span class="close-modal" onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
-            
-            <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center; font-size:1.5rem;">📋 Detalle de Reserva</h3>
-            
-            <!-- AQUÍ LA FUNCIÓN JS INYECTARÁ LOS DATOS Y BOTONES -->
-            <div id="contenidoDetalle" style="color:#333; width: 100%; box-sizing: border-box;">
-                <p style="text-align:center;">Cargando...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- === SUBMODAL DE PAGO COMPLETO === -->
-    <div id="modalPago" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter: blur(5px);">
-        <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            
-            <!-- Botón X para VOLVER AL DETALLE -->
-            <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
-            
-            <h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-weight:bold;">💳 Registrar Pago</h3>
-            
-            <!-- Info Base -->
-            <div style="margin-bottom:1.5rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:1rem; border-radius:8px; text-align:center; border:1px solid #eee;">
-                <div style="margin-bottom:0.5rem;"><strong>Reserva ID:</strong> <span id="infoIdReserva">...</span></div>
-                <div><strong>Monto Total:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289; font-size:1.1rem;">$0</span></div>
-            </div>
-            
-            <form id="formPago">
-                <!-- Monto Editable -->
-                <div style="margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">💰 Monto a Abonar ($)</label>
-                    <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
-                        style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:8px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right; box-sizing:border-box;">
-                    <small style="color:#666; font-size:0.8rem; display:block; margin-top:0.3rem;">* Ingresa el monto total o un pago parcial.</small>
-                </div>
-
-                <!-- Método de Pago -->
-                <div style="margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">Método de Pago</label>
-                    <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc; background:white; color:#333; box-sizing:border-box;">
-                        <option value="">Seleccionar...</option>
-                        <option value="transferencia">Transferencia Bancaria</option>
-                        <option value="webpay">Webpay / Tarjeta</option>
-                        <option value="efectivo">Efectivo en Recinto</option>
-                        <option value="convenio">Convenio Club</option>
-                    </select>
-                </div>
-                
-                <!-- ID Transacción (Condicional) -->
-                <div id="campoTransaccion" style="display:none; margin-bottom:1rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">Nº Comprobante / ID Transacción</label>
-                    <input type="text" id="transaccionId" placeholder="Ej: 123456789" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc; box-sizing:border-box;">
-                </div>
-
-                <!-- Notas / Comentarios -->
-                <div style="margin-bottom:1.5rem;">
-                    <label style="font-weight:bold; display:block; margin-bottom:0.4rem; color:#333;">📝 Notas del Pago</label>
-                    <textarea id="notasPago" rows="3" placeholder="Ej: Pago parcial de Juan Pérez (1/4). Faltan 3 socios." 
-                            style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc; resize:vertical; font-family:sans-serif; box-sizing:border-box;"></textarea>
-                </div>
-                
-                <button type="submit" style="width:100%; background:#4CAF50; color:white; border:none; padding:1rem; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1rem; transition:0.2s;">
-                    Confirmar Registro de Pago
-                </button>
-            </form>
-        </div>
-    </div>
-
-     <!-- Modal para enviar mensaje -->
-     <div id="mensajeModal" class="submodal" style="display:none;">
-        <div class="submodal-content" style="max-width: 400px;">
-            <span class="close-modal" onclick="closeMensajeModal()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
-            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💬 Enviar Mensaje</h3>
-            
-            <form id="formMensaje">
-                <div class="form-group">
-                    <label>Mensaje para el cliente</label>
-                    <textarea id="mensajeCliente" rows="4" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc;" placeholder="Escribe tu mensaje aquí..."></textarea>
-                </div>
-                <button type="submit" class="btn-submit" style="width:100%; background:#071289; color:white; border:none; padding:0.8rem; border-radius:8px; font-weight:bold; cursor:pointer;">Enviar Mensaje</button>
-            </form>
-        </div>
-    </div>
-    <!-- === SISTEMA DE TOAST NOTIFICATIONS === -->
-    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
-
-    <script>
     // Función para mostrar Toast
     function showToast(message, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -1111,12 +980,6 @@
     document.head.appendChild(style);
 
     // === FUNCIONES DE MODALES Y PAGO ===
-
-    // Volver al detalle desde el modal de pago
-    function volverAlDetalle() {
-        document.getElementById('modalPago').style.display = 'none';
-        document.getElementById('modalDetalleReserva').style.display = 'flex';
-    }
 
     // Abrir modal de pago desde el detalle
     function abrirModalPagoDesdeDetalle() {
@@ -1232,10 +1095,6 @@
         document.getElementById('modalPago').style.display = 'none';
     }
 
-    function cerrarModalDetalle() {
-        document.getElementById('modalDetalleReserva').style.display = 'none';
-    }
-
     // === FUNCIONES PARA MODAL DE LISTA KPI ===
 
     let tipoListaActual = ''; // Para saber si estamos viendo 'deuda' o 'parcial'
@@ -1290,10 +1149,6 @@
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
         }
-    }
-
-    function cerrarModalListaKPI() {
-        document.getElementById('modalListaKPI').style.display = 'none';
     }
 
     // Función puente: Cierra la lista y abre el detalle de la reserva
