@@ -198,6 +198,33 @@ $monto_deuda = $s_deuda->fetchColumn();
         .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; padding-left: 0; }
         .torneos-panel-container { grid-column: auto; }
     }
+    /* Estilos específicos para el Modal de Pago */
+    #modalPago label {
+        color: #333 !important; /* Forzar color oscuro */
+        font-weight: bold;
+    }
+    #modalPago small, 
+    #modalPago span,
+    #modalPago div {
+        color: #555 !important; /* Gris oscuro para textos secundarios */
+    }
+    #modalPago h3 {
+        color: #071289 !important; /* Azul para el título */
+    }
+        .section-divider {
+        display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+        color: white; font-weight: bold; font-size: 0.9rem;
+        margin-bottom: 0.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        opacity: 0.9; padding: 0.5rem; border-radius: 6px;
+        transition: background 0.2s;
+    }
+    .section-divider:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    /* Animación para la flechita */
+    .rotated {
+        transform: rotate(-180deg);
+    }
 </style>
 </head>
 <body>
@@ -225,21 +252,28 @@ $monto_deuda = $s_deuda->fetchColumn();
 
 <div class="main-layout">
 
-    <!-- COLUMNA 1: ACCIONES (Izquierda) -->
+    <!-- COLUMNA 1: ACCIONES (Izquierda - Ocultas por defecto) -->
     <div class="actions-column">
-        <div style="color:white; font-weight:bold; font-size:0.9rem; margin-bottom:0.5rem; text-shadow:0 1px 2px rgba(0,0,0,0.5);">🎾 Operaciones</div>
+        <!-- Título Clickable -->
+        <div class="section-divider" onclick="toggleAcciones()" style="cursor: pointer; user-select: none;">
+            <span>🎾 Operaciones</span>
+            <span id="icon-operaciones" style="font-size: 0.8rem; transition: transform 0.3s;">▼</span>
+        </div>
         
-        <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'">
-            <span>🛠️</span> Crear Canchas
-        </button>
-        
-        <button class="action-btn-sidebar" id="btnTorneosActivos">
-            <span>🏆</span> Ver Torneos
-        </button>
+        <!-- Contenedor de Botones (Oculto inicialmente) -->
+        <div id="contenedor-acciones" style="display: none; flex-direction: column; gap: 1rem;">
+            <button class="action-btn-sidebar" onclick="window.location.href='gestion_canchas.php'">
+                <span>🛠️</span> Crear Canchas
+            </button>
+            
+            <button class="action-btn-sidebar" id="btnTorneosActivos">
+                <span>🏆</span> Ver Torneos
+            </button>
 
-        <button class="action-btn-sidebar" onclick="window.location.href='crear_torneo.php'">
-            <span>➕</span> Crear Torneo
-        </button>
+            <button class="action-btn-sidebar" onclick="window.location.href='crear_torneo.php'">
+                <span>➕</span> Crear Torneo
+            </button>
+        </div>
     </div>
 
     <!-- COLUMNA 2: PLANILLA (Centro) -->
@@ -533,6 +567,26 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         ${detalle.estado_pago !== 'pagado' ? `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold;">💳 Pagar</button>` : ''}
                     </div>
                 </div>
+                // === SECCIÓN DE NOTAS ===
+                // Aseguramos que notas no sea null, undefined o string "null"
+                const notas = detalle.notas; 
+                console.log("Notas recibidas:", notas); // Para depurar en consola
+
+                if (notas && notas !== '' && notas !== 'null') {
+                    const bgNota = esParcial ? '#FFF3E0' : '#FFFDE7';
+                    const borderNota = esParcial ? '#FFB74D' : '#FFF59D';
+                    
+                    html += `
+                        <div style="background: ${bgNota}; padding: 0.8rem; border-radius: 6px; border-left: 4px solid ${borderNota}; margin-bottom: 1rem;">
+                            <div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; text-transform: uppercase;">
+                                📝 Historial / Notas
+                            </div>
+                            <div style="font-size: 0.9rem; color: #333; white-space: pre-wrap; font-family: sans-serif;">
+                                ${notas}
+                            </div>
+                        </div>
+                    `;
+                }
             `;
         }
     } catch (err) { console.error(err); }
@@ -571,7 +625,7 @@ document.getElementById('formPago')?.addEventListener('submit', async function(e
 });
 
 async function abrirListaKPI(tipo) {
-    tipoListaActual = tipo; // Guardamos el tipo globalmente si lo necesitas luego
+    tipoListaActual = tipo;
     const modal = document.getElementById('modalListaKPI');
     const titulo = document.getElementById('tituloListaKPI');
     const tbody = document.getElementById('cuerpoTablaKPI');
@@ -580,15 +634,10 @@ async function abrirListaKPI(tipo) {
     titulo.textContent = (tipo === 'parcial') ? '📋 Pagos Parciales del Mes' : '🚨 Deuda Vencida';
     titulo.style.color = '#333'; 
     
-    // Mostrar estado de carga
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#666;">Cargando datos...</td></tr>';
 
     try {
-        // Llamada a la API
         const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
-        
-        if (!res.ok) throw new Error("Error en la respuesta del servidor");
-        
         const data = await res.json();
         
         if (data.length === 0) {
@@ -598,7 +647,11 @@ async function abrirListaKPI(tipo) {
 
         let html = '';
         data.forEach(row => {
-            const saldo = parseFloat(row.saldo_pendiente);
+            // CORRECCIÓN: Asegurar que sean números, si es null usa 0
+            const total = parseFloat(row.monto_total) || 0;
+            const abonado = parseFloat(row.monto_recaudacion) || 0;
+            const saldo = parseFloat(row.saldo_pendiente) || (total - abonado); // Fallback de cálculo
+            
             const fmt = (n) => '$' + parseInt(n).toLocaleString();
             
             html += `
@@ -607,8 +660,8 @@ async function abrirListaKPI(tipo) {
                     <td style="padding:10px; color:#333;">${row.nombre_cancha}</td>
                     <td style="padding:10px; font-weight:bold; color:#333;">${row.nombre_cliente || 'N/A'}</td>
                     <td style="padding:10px; color:#333;">${row.telefono_cliente || '-'}</td>
-                    <td style="padding:10px; text-align:right; color:#333;">${fmt(row.monto_total)}</td>
-                    <td style="padding:10px; text-align:right; color:green;">${fmt(row.monto_recaudacion)}</td>
+                    <td style="padding:10px; text-align:right; color:#333;">${fmt(total)}</td>
+                    <td style="padding:10px; text-align:right; color:green;">${fmt(abonado)}</td>
                     <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
                     <td style="padding:10px; text-align:center;">
                         <span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:0.75rem;">Ver Detalle</span>
@@ -620,7 +673,7 @@ async function abrirListaKPI(tipo) {
 
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos. Verifica la consola.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar datos.</td></tr>';
     }
 }
 
@@ -647,6 +700,18 @@ async function cargarTorneos() {
         contenedor.innerHTML = '<p>Error al cargar torneos.</p>';
     }
 }
+    function toggleAcciones() {
+        const contenedor = document.getElementById('contenedor-acciones');
+        const icono = document.getElementById('icon-operaciones');
+        
+        if (contenedor.style.display === 'none') {
+            contenedor.style.display = 'flex';
+            icono.classList.add('rotated');
+        } else {
+            contenedor.style.display = 'none';
+            icono.classList.remove('rotated');
+        }
+    }
 </script>
 </body>
 </html>
