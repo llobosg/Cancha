@@ -566,7 +566,6 @@ $ingresos_mes = 1250000;
             const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
             html += `
                 <th style="background:#AB47BC; color:white; font-size:0.8rem;">
-                    <div style="font-size:1rem;">${icono}</div>
                     <div style="font-size:0.7rem; margin-top:2px; white-space:normal;">${c.nombre_cancha}</div>
                 </th>
             `;
@@ -616,7 +615,7 @@ $ingresos_mes = 1250000;
                             else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
                             else bgClass = 'estado-pendiente';
 
-                            const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 8) + '..';
+                            const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15); // Limitar a 15 caracteres
                             cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>`;
                             
                             if (res.id_reserva) {
@@ -713,36 +712,42 @@ $ingresos_mes = 1250000;
 
     // Función Principal de Carga
     async function cargarPlanillaReservas() {
-        // 1. Obtener deporte de la variable global (no del select directamente para evitar errores)
-        // Pero sincronizamos por si el usuario cambió el select manualmente
-        const selectDeporte = document.getElementById('filtroDeporte');
-        if (selectDeporte && selectDeporte.value) {
-            deporteSeleccionado = selectDeporte.value;
-      }
+        const deporteSelect = document.getElementById('filtroDeporte');
+        const deporte = deporteSelect ? deporteSelect.value : "todos";
         
-        // Si sigue vacío tras todo, usamos el default
-        if (!deporteSeleccionado) deporteSeleccionado = 'todos';
-
-        console.log(` Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporteSeleccionado}`);
+        console.log(`📡 Cargando planilla... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
 
         try {
-            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporteSeleccionado)}`;
+            const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
             
             const response = await fetch(url, { credentials: 'include' });
             
+            // === DETECCIÓN DE SESIÓN EXPIRADA ===
+            if (response.status === 401) {
+                console.warn("⚠️ Sesión expirada. Redirigiendo al login...");
+                showToast("Tu sesión ha expirado. Por favor, inicia sesión nuevamente.", "warning");
+                
+                // Esperar 2 segundos para que el usuario lea el mensaje y redirigir
+                setTimeout(() => {
+                    window.location.href = 'login_recintos.php';
+                }, 2000);
+                return; // Detener la ejecución
+            }
+
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const data = await response.json();
-            
             if (data.error) throw new Error(data.error);
             
-            // Pasar el estado global al renderizado
-            renderizarPlanilla(data, estadoSeleccionadoPlanilla); 
+            renderizarPlanilla(data, estadoSeleccionadoPlanilla);
             console.log("✅ Planilla cargada exitosamente");
             
         } catch (error) {
-            console.error("❌ Error cargando planilla:", error);
-            document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
+            console.error("❌ Error al cargar:", error);
+            // Solo mostrar error si NO es un 401 (porque el 401 ya redirige)
+            if (error.message !== 'Acceso no autorizado') {
+                document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}</td></tr>`;
+            }
         }
     }
 
