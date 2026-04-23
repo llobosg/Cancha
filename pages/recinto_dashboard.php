@@ -225,6 +225,28 @@ $monto_deuda = $s_deuda->fetchColumn();
     .rotated {
         transform: rotate(-180deg);
     }
+    /* === CORRECCIÓN COLOR TEXTO MODAL LISTA KPI === */
+    #modalListaKPI {
+        color: #333 !important; /* Fuerza color oscuro en todo el modal */
+    }
+    
+    #modalListaKPI h3, 
+    #modalListaKPI th, 
+    #modalListaKPI td, 
+    #modalListaKPI span, 
+    #modalListaKPI div {
+        color: #333 !important; /* Asegura que hijos también sean oscuros */
+    }
+    
+    /* Excepción para el botón de cerrar (la X) */
+    #modalListaKPI span[onclick="cerrarModalListaKPI()"] {
+        color: #999 !important;
+    }
+    
+    /* Excepción para el saldo pendiente (que debe ser rojo) */
+    #modalListaKPI td:last-child:nth-last-child(2) { 
+        color: #c62828 !important; 
+    }
 </style>
 </head>
 <body>
