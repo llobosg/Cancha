@@ -469,36 +469,34 @@
         
         <?php if ($rol_actual === 'admin'): ?>
         <!-- 1. Ingresos -->
-        <div class="kpi-card-mini" style="background: #E8F5E9; border-left: 4px solid #4CAF50; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="font-size: 0.75rem; color: #2E7D32; font-weight: bold; text-transform: uppercase;">Ingresos Mes</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: #1B5E20;">$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
-            <div style="font-size: 0.7rem; color: <?= $variacion_ingresos >= 0 ? '#2E7D32' : '#C62828' ?>;">
-                <?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>%
-            </div>
+        <div class="kpi-card-mini kpi-ingresos">
+            <div>Ingresos Mes</div>
+            <div>$<?= number_format($ingresos_mes_actual, 0, ',', '.') ?></div>
+            <div><?= $variacion_ingresos >= 0 ? '▲' : '▼' ?> <?= number_format(abs($variacion_ingresos), 1) ?>%</div>
         </div>
         <?php endif; ?>
 
-        <!-- 2. Pago Parcial (Click) -->
-        <div class="kpi-card-mini" onclick="abrirListaKPI('parcial')" style="cursor: pointer; background: #FFFDE7; border-left: 4px solid #FBC02D; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;">
-            <div style="font-size: 0.75rem; color: #F57F17; font-weight: bold; text-transform: uppercase;">Pago Parcial</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: #EF6C00;">$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
-            <div style="font-size: 0.7rem; color: #F57F17;">Ver detalles</div>
+        <!-- 2. Parcial -->
+        <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
+            <div>Pago Parcial</div>
+            <div>$<?= number_format($parcial_mes_actual, 0, ',', '.') ?></div>
+            <div>Ver detalles</div>
         </div>
 
         <?php if ($rol_actual === 'admin'): ?>
         <!-- 3. En Reserva -->
-        <div class="kpi-card-mini" style="background: #E3F2FD; border-left: 4px solid #2196F3; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="font-size: 0.75rem; color: #1565C0; font-weight: bold; text-transform: uppercase;">En Reserva</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: #0D47A1;"><?= $cantidad_en_reserva ?></div>
-            <div style="font-size: 0.7rem; color: #1565C0;">Próximas no pagadas</div>
+        <div class="kpi-card-mini kpi-reserva">
+            <div>En Reserva</div>
+            <div><?= $cantidad_en_reserva ?></div>
+            <div>Próximas no pagadas</div>
         </div>
         <?php endif; ?>
 
         <!-- 4. Deuda Vencida (Click) -->
-        <div class="kpi-card-mini" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 4px solid #EF5350; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;">
-            <div style="font-size: 0.75rem; color: #C62828; font-weight: bold; text-transform: uppercase;">Deuda Vencida</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: #B71C1C;">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-            <div style="font-size: 0.7rem; color: #C62828;">Ver deudores</div>
+        <div class="kpi-card-mini kpi-deuda" onclick="abrirListaKPI('deuda')" style="cursor: pointer; background: #FFEBEE; border-left: 4px solid #EF5350; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s;">
+            <div>Deuda Vencida</div>
+            <div>$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
+            <div>Ver deudores</div>
         </div>
 
     </div>
