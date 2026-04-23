@@ -486,10 +486,11 @@ $monto_deuda = $stmt_deuda->fetchColumn();
                 
                 <div style="display: flex; gap: 0.5rem;">
                     <select id="filtroDeporte" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
-                        <option value="todos">Todos los deportes</option>
-                        <option value="padel">Pádel</option>
+                        <option value="todos" selected>Todos los deportes</option>
                         <option value="futbol">Fútbol</option>
+                        <option value="padel">Pádel</option> 
                         <option value="tenis">Tenis</option>
+                        <option value="voleyball">Voleyball</option>
                         <!-- Agrega más según tus IDs -->
                     </select>
                     <select id="filtroEstado" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.5rem; border-radius: 6px;">
@@ -497,6 +498,7 @@ $monto_deuda = $stmt_deuda->fetchColumn();
                         <option value="pagadas">Pagadas</option>
                         <option value="parcial">Pago Parcial</option>
                         <option value="no_pagadas">No Pagadas</option>
+                        <option value="reservada">Reservadas</option>
                     </select>
                 </div>
             </div>
@@ -522,43 +524,6 @@ $monto_deuda = $stmt_deuda->fetchColumn();
             </div>
         </div>
       <?php endif; ?>
-
-      <!-- PLANILLA DE RESERVAS (Visible para Ambos) -->
-      <div class="planilla-wrapper">
-          <!-- Controles Planilla -->
-          <div class="planilla-header-controls">
-              <div class="control-group">
-                  <span style="font-size:0.8rem; font-weight:600;">Fecha:</span>
-                  <input type="date" id="fechaPlanillaInput" class="control-input" value="<?= date('Y-m-d') ?>">
-                  <button onclick="irAHoyPlanilla()" class="control-btn">Hoy</button>
-                  <button onclick="cambiarDiaPlanilla(-1)" class="control-btn">&lt;</button>
-                  <button onclick="cambiarDiaPlanilla(1)" class="control-btn">&gt;</button>
-              </div>
-              <div class="control-group">
-                  <select id="filtroDeporte" class="control-select">
-                      <option value="todos" selected>Todos los deportes</option>
-                      <option value="futbol">Fútbol</option>
-                      <option value="padel">Pádel</option> 
-                      <option value="tenis">Tenis</option>
-                      <option value="voleyball">Voleyball</option>
-                  </select>
-                  <select id="filtroEstado" class="control-select">
-                      <option value="">Todos los estados</option>
-                      <option value="pagadas">Pagadas</option>
-                      <option value="parcial">Pago Parcial</option>
-                      <option value="no_pagadas">No Pagadas</option>
-                      <option value="reservada">Reservadas</option>
-                  </select>
-              </div>
-          </div>
-          
-          <!-- Tabla -->
-          <div class="planilla-table-container">
-              <table id="tablaPlanilla" class="planilla-table">
-                  <!-- Se llena con JS -->
-              </table>
-          </div>
-      </div>
 
   </div>
 
