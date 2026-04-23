@@ -89,18 +89,31 @@ $monto_deuda = $s_deuda->fetchColumn();
         font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
     }
 
-    /* Columna Central: Planilla */
+   /* Columna Central: Planilla (FLOTANTE Y TRANSPARENTE) */
     .planilla-column {
-        background: white; border-radius: 12px; display: flex; flex-direction: column;
-        overflow: hidden; height: 100%; position: relative;
+        background: transparent; /* ADIÓS FONDO BLANCO */
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: visible; /* Permitir que flote */
+        height: 100%;
+        position: relative;
+        justify-content: flex-start; /* Alinear arriba */
+        align-items: center; /* CENTRAR HORIZONTALMENTE EL CONTENIDO */
     }
+
     
-    /* HEADER FILTROS AZUL PADEL */
+   /* Controles Superiores (También flotantes) */
     .planilla-header-controls { 
-        background: linear-gradient(90deg, #1565C0, #0D47A1); /* Azul Pádel */
-        padding: 0.5rem 1rem;
-        display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; color: white; 
-        height: 50px; /* Igual que top bar */
+        background: rgba(21, 101, 192, 0.85); /* Azul Pádel semitransparente */
+        backdrop-filter: blur(10px); /* Efecto vidrio */
+        padding: 0.6rem 1.5rem;
+        border-radius: 50px; /* Bordes muy redondeados */
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Sombra para dar profundidad */
+        border: 1px solid rgba(255,255,255,0.2);
+        width: fit-content; /* Que el header mida lo que necesita */
+        max-width: 95%;
     }
     .control-group { display: flex; align-items: center; gap: 0.5rem; }
     .control-label { font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
@@ -116,13 +129,17 @@ $monto_deuda = $s_deuda->fetchColumn();
     .control-btn { background: white; color: #0D47A1; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
     .control-select { background: rgba(255,255,255,0.95); border: none; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; color: #333; min-width: 100px; }
 
-    /* CONTENEDOR TABLA: SIN ESPACIO EXTRA */
+    /* CONTENEDOR TABLA: SIN FONDO, SIN BORDES RÍGIDOS */
     .planilla-table-container {
-        flex: 1; overflow: auto; padding: 4px;
-        /* Width max-content asegura que la tabla mida exactamente lo que necesitan sus columnas */
-        width: max-content !important; 
-        min-width: 100%; /* Pero al menos ocupa el ancho del contenedor */
-        background-color: #f4f6f9;
+        flex: 1;
+        overflow: auto;
+        padding: 10px;
+        width: fit-content; /* IMPORTANTE: El contenedor mide lo que mide la tabla */
+        max-width: 98%;
+        /* Sin background-color ni min-width fijo de 1400px */
+        /* Scroll suave */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.5) transparent;
     }
 
     /* Columna Derecha: KPIs (Con aire a la derecha) */
@@ -149,24 +166,77 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
     .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
 
-    /* ESTILOS DE TABLA */
-    .planilla-table { border-collapse: separate; border-spacing: 3px; }
+    /* ESTILOS DE TABLA ORGÁNICA */
+    .planilla-table {
+        border-collapse: separate;
+        border-spacing: 6px; /* Más espacio entre celdas para que "respiren" */
+        margin: 0 auto; /* Centrar la tabla dentro del contenedor */
+    }
+
+    /* Hora Sticky */
     .planilla-table th:first-child, .planilla-table td:first-child {
-        position: sticky; left: 0; z-index: 20; background: #f8f9fa !important; color: #333; font-weight: bold;
-        border-right: 2px solid #e0e0e0; min-width: 60px !important; max-width: 60px !important; width: 60px !important;
-        padding: 2px !important; font-size: 0.7rem; text-align: center;
+        position: sticky; left: 0; z-index: 20;
+        background: rgba(255, 255, 255, 0.9) !important; /* Blanco semitransparente */
+        backdrop-filter: blur(5px);
+        color: #333; font-weight: bold;
+        border: none; /* Sin bordes */
+        border-radius: 8px;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Sombra suave a la derecha */
+        width: 60px !important; min-width: 60px !important; max-width: 60px !important;
+        padding: 4px !important; font-size: 0.75rem; text-align: center;
     }
+
+    /* Canchas (Celdas Flotantes) */
     .planilla-table th, .planilla-table td {
-        padding: 2px; vertical-align: middle; text-align: center; border-radius: 4px; min-width: 100px;
+        padding: 4px;
+        vertical-align: middle;
+        text-align: center;
+        border: none; /* Sin bordes */
+        border-radius: 8px; /* Bordes redondeados en cada celda */
+        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
+    /* Headers de Tabla (Flotantes) */
     .planilla-table thead th {
-        background: #AB47BC !important; color: white; position: sticky; top: 0; z-index: 5;
-        height: 40px; font-size: 0.7rem; min-width: 110px !important; max-width: 110px !important; width: 110px !important;
+        background: linear-gradient(135deg, #AB47BC, #8E24AA) !important;
+        color: white;
+        position: sticky; top: 0; z-index: 5;
+        border-radius: 12px;
+        height: 50px;
+        font-size: 0.75rem;
+        box-shadow: 0 4px 10px rgba(142, 36, 170, 0.3); /* Sombra lila */
+        border: 1px solid rgba(255,255,255,0.3);
     }
-    td.estado-pagado { background-color: #4CAF50 !important; color: white; }
-    td.estado-parcial { background-color: #FFEB3B !important; color: #333; }
-    td.estado-pendiente { background-color: #FF5252 !important; color: white; }
-    td.estado-disponible { background-color: #FAFAFA !important; border: 1px dashed #E0E0E0 !important; }
+    /* Estados (Colores Vibrantes sin bordes) */
+    td.estado-pagado { 
+        background: linear-gradient(135deg, #66BB6A, #43A047) !important; 
+        color: white; 
+        box-shadow: 0 2px 5px rgba(67, 160, 71, 0.4);
+    }
+    td.estado-parcial { 
+        background: linear-gradient(135deg, #FFEE58, #FDD835) !important; 
+        color: #333; 
+        box-shadow: 0 2px 5px rgba(253, 216, 53, 0.4);
+    }
+    td.estado-pendiente { 
+        background: linear-gradient(135deg, #EF5350, #E53935) !important; 
+        color: white; 
+        box-shadow: 0 2px 5px rgba(229, 57, 53, 0.4);
+    }
+    td.estado-disponible { 
+        background: rgba(255, 255, 255, 0.1) !important; 
+        border: 1px dashed rgba(255,255,255,0.3) !important; 
+        backdrop-filter: blur(2px);
+    }
+    
+    /* Hover Effect: La celda "salta" */
+    .planilla-table tbody td:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        z-index: 10;
+        position: relative;
+    }
 
     /* Modales */
     #modalDetalleReserva, #modalPago, #modalListaKPI {
