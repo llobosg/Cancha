@@ -721,10 +721,38 @@ $deportes = [
     // Variables globales para la reserva actual
     let reservaActual = null;
 
-    // Función para mostrar el modal de reserva inteligente
+        // Función para mostrar el modal de reserva inteligente ADAPTADO A BLOQUES DINÁMICOS
     function mostrarModalReservaInteligente(item) {
         reservaActual = item;
         
+        // Determinar si la cancha permite bloques variables (ej. Pádel)
+        // Asumimos que si id_deporte es 'padel' o duracion_bloque > 60, mostramos opciones
+        const esPadel = (item.id_deporte === 'padel' || item.duracion_bloque >= 90);
+        const duracionBase = item.duracion_bloque || 60;
+
+        let htmlOpcionesDuracion = '';
+        
+        if (esPadel) {
+            htmlOpcionesDuracion = `
+                <div class="form-group" style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                    <label style="color: #333; font-weight: bold; display: block; margin-bottom: 8px;">⏱️ Duración de la Reserva:</label>
+                    <div style="display: flex; gap: 15px;">
+                        <label style="color: #333; cursor: pointer;">
+                            <input type="radio" name="duracion_reserva" value="60" onchange="actualizarPrecioModal(${item.valor_arriendo}, 60)"> 
+                            60 min
+                        </label>
+                        <label style="color: #333; cursor: pointer;">
+                            <input type="radio" name="duracion_reserva" value="90" checked onchange="actualizarPrecioModal(${item.valor_arriendo}, 90)"> 
+                            90 min (Recomendado)
+                        </label>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Para fútbol u otros, ocultamos la opción o la dejamos fija en 60
+            htmlOpcionesDuracion = `<input type="hidden" name="duracion_reserva" value="${duracionBase}">`;
+        }
+
         const modal = document.createElement('div');
         modal.className = 'modal-reserva-inteligente';
         modal.id = 'modalReservaInteligente';
@@ -732,8 +760,14 @@ $deportes = [
             <div class="modal-reserva-inteligente-content">
                 <h3 style="margin-top: 0; color: #333;">Reservar Cancha: ${item.nro_cancha}</h3>
                 <p><strong>Recinto:</strong> ${item.recinto_nombre}</p>
-                <p><strong>Hora:</strong> ${formatFechaEspanol(item.fecha)}, ${item.hora_inicio.substring(0, 5)} - ${item.hora_fin.substring(0, 5)}</p>
-                <p><strong>Valor:</strong> $${parseInt(item.valor_arriendo).toLocaleString('es-CL')}</p>
+                <p><strong>Hora Inicio:</strong> ${formatFechaEspanol(item.fecha)}, ${item.hora_inicio.substring(0, 5)}</p>
+                
+                <!-- Contenedor de Precio Dinámico -->
+                <p id="precio-display" style="font-size: 1.2rem; font-weight: bold; color: #2E7D32;">
+                    <strong>Valor:</strong> $${parseInt(item.valor_arriendo).toLocaleString('es-CL')}
+                </p>
+
+                ${htmlOpcionesDuracion}
                 
                 <div class="opcion-reserva" onclick="seleccionarOpcion('simple')">
                     <input type="radio" id="reservaSimple" name="tipoReserva" value="simple" checked>
@@ -744,7 +778,7 @@ $deportes = [
                     <input type="radio" id="reservaPatron" name="tipoReserva" value="patron">
                     <label style="color: #333;" for="reservaPatron">Crear patrón de reserva recurrente</label>
                     
-                    <div id="panelPatron" class="panel-patron">
+                    <div id="panelPatron" class="panel-patron" style="display:none;">
                         <div style="margin-bottom: 10px;">
                             <label style="color: #2b0646ff;" ><strong>Frecuencia:</strong></label><br>
                             <select id="frecuenciaPatron" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
@@ -801,6 +835,84 @@ $deportes = [
         });
         
         actualizarPreview();
+    }
+
+    // Función auxiliar para actualizar precio según duración seleccionada
+    function actualizarPrecioModal(valorBase, minutos) {
+        // Lógica simple: si son 90 min, multiplicamos por 1.5 (ajusta según tu regla de negocio)
+        let factor = 1;
+        if (minutos == 90) factor = 1.5; 
+        if (minutos == 120) factor = 2;
+
+        const nuevoValor = valorBase * factor;
+        document.getElementById('precio-display').innerHTML = `<strong>Valor:</strong> $${parseInt(nuevoValor).toLocaleString('es-CL')}`;
+    }
+
+    // Modificar confirmarReservaInteligente para enviar la duración
+    function confirmarReservaInteligente() {
+      const tipoReserva = document.getElementById('reservaPatron').checked ? 'patron' : 'simple';
+      
+      // Obtener duración seleccionada (default 60 si no existe el radio button)
+      const duracionRadio = document.querySelector('input[name="duracion_reserva"]:checked');
+      const duracionMinutos = duracionRadio ? parseInt(duracionRadio.value) : (reservaActual.duracion_bloque || 60);
+
+      // Calcular hora_fin real basada en la duración
+      const horaInicioStr = reservaActual.hora_inicio; // "HH:MM:SS"
+      const [h, m, s] = horaInicioStr.split(':').map(Number);
+      const fechaInicio = new Date();
+      fechaInicio.setHours(h, m, s);
+      const fechaFin = new Date(fechaInicio.getTime() + duracionMinutos * 60000);
+      
+      const horaFinStr = fechaFin.toTimeString().substring(0, 8); // "HH:MM:SS"
+
+      let tipoPatronAPI = 'simple';
+      if (tipoReserva === 'patron') {
+          const frecuencia = document.getElementById('frecuenciaPatron').value;
+          if (frecuencia === 'semanal') tipoPatronAPI = 'semanal';
+          else if (frecuencia === 'quincenal') tipoPatronAPI = 'semanal'; // Ajusta según tu backend
+          else if (frecuencia === 'mensual') tipoPatronAPI = 'mensual';
+      }
+      
+      const montoRecaudacion = document.getElementById('monto_recaudacion')?.value || '';
+      const jugadoresEsperados = document.getElementById('jugadores_esperados')?.value || '';
+      
+      const datos = {
+            id_cancha: reservaActual.id_cancha,
+            fecha_base: reservaActual.fecha,
+            hora_inicio: reservaActual.hora_inicio,
+            hora_fin: horaFinStr, // <-- HORA FIN CALCULADA DINÁMICAMENTE
+            duracion_minutos: duracionMinutos, // <-- DURACIÓN EXPLÍCITA
+            tipo_patron: tipoPatronAPI,
+            monto_recaudacion: montoRecaudacion,
+            jugadores_esperados: jugadoresEsperados,
+            club_id: '<?= $_SESSION['club_id'] ?? "" ?>'
+      };
+      
+      if (tipoReserva === 'patron') {
+          datos.fecha_desde = document.getElementById('fechaDesdePatron').value;
+          datos.fecha_hasta = document.getElementById('fechaHastaPatron').value;
+      }
+      
+      // Enviar a la API
+      fetch('../api/crear_reserva_recurrente.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(datos)
+      })
+      .then(response => response.json())
+      .then(data => {
+          cerrarModalReserva();
+          if (data.success) {
+              mostrarToast('✅ ' + data.message + ` (${data.total_reservas} reservas creadas)`);
+              cargarDisponibilidad(); // Recargar planilla
+          } else {
+              mostrarToast('❌ ' + data.message);
+          }
+      })
+      .catch(error => {
+          cerrarModalReserva();
+          mostrarToast('❌ Error al crear la reserva: ' + error.message);
+      });
     }
 
     function seleccionarOpcion(tipo) {
