@@ -232,6 +232,24 @@ $monto_deuda = $s_deuda->fetchColumn();
     @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.03); } 100% { transform:scale(1); } }
     .planilla-table td { animation: fadeInUp 0.3s ease-out; }
     .planilla-table td.estado-ocupado:hover { animation: pulse 1.5s infinite; }
+
+    /* === DRAG & DROP VISUAL FEEDBACK === */
+    .cell-reserva { cursor: grab; transition: transform 0.2s, opacity 0.2s; }
+    .cell-reserva:active { cursor: grabbing; }
+    .dragging { opacity: 0.4; border: 2px dashed #333; transform: scale(0.95); }
+
+    .drop-target { 
+        background: #FFCDD2 !important; /* Rojo suave para destino */
+        box-shadow: 0 0 12px rgba(255, 82, 82, 0.6); 
+        transform: scale(1.03); 
+        z-index: 5; position: relative;
+        transition: all 0.2s ease;
+    }
+    .drop-zone { transition: all 0.2s ease; }
+
+    /* Animación suave al soltar */
+    @keyframes dropSuccess { 0% { transform: scale(1.03); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
+    .drop-anim { animation: dropSuccess 0.3s ease-out; }
 </style>
 </head>
 <body>
@@ -513,8 +531,6 @@ function renderizarPlanilla(data, filtroEstado) {
         return;
     }
 
-    console.log(`📊 Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
-
     let html = `<thead><tr>`;
     html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
@@ -527,9 +543,8 @@ function renderizarPlanilla(data, filtroEstado) {
     });
     html += `</tr></thead><tbody>`;
 
-    const hoy = new Date(); hoy.setHours(0,0,0,0);
-    const ahora = new Date(); // Para bloqueo de pasado
-    let skipCells = {}; // Controla rowspan por columna
+    const ahora = new Date();
+    let skipCells = {};
     let celdasPintadas = 0;
 
     data.slots.forEach(slot => {
@@ -538,7 +553,6 @@ function renderizarPlanilla(data, filtroEstado) {
             html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
 
             data.canchas.forEach((cancha, idxCancha) => {
-                // Saltar celda si está cubierta por rowspan anterior
                 if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
                     skipCells[idxCancha]--;
                     return;
@@ -548,12 +562,10 @@ function renderizarPlanilla(data, filtroEstado) {
                 const res = data.reservas[key];
 
                 if (res) {
-                    // === CELDA RESERVADA ===
-                    let bgClass = 'estado-pendiente'; // Rojo por defecto
+                    let bgClass = 'estado-pendiente';
                     if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                     else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
 
-                    // Calcular duración exacta y rowspan (cada fila = 30 min)
                     const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
                     const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
                     const duracionMin = hFin - hIni;
@@ -562,22 +574,31 @@ function renderizarPlanilla(data, filtroEstado) {
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
                     const nombre = (res.nombre_cliente || 'Reserva').substring(0, 10);
-                    html += `<td class="${bgClass}" rowspan="${rowspan}" style="height:${rowspan * 40}px; vertical-align:middle; cursor:pointer;" onclick="abrirDetalleDesdePlanilla(${res.id_reserva})">
+                    // 🎯 DRAG & DROP ATRIBUTO
+                    html += `<td class="${bgClass} cell-reserva" 
+                                draggable="true" 
+                                ondragstart="dragReserva(event, ${res.id_reserva})" 
+                                data-reserva-id="${res.id_reserva}"
+                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
+                                onclick="abrirDetalleDesdePlanilla(${res.id_reserva})">
                                 <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                              </td>`;
                     celdasPintadas++;
-                    console.log(`🔴 Reserva pintada: ${cancha.nombre_cancha} | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
                 } else {
-                    // === CELDA DISPONIBLE ===
-                    // Verificar si es fecha/hora pasada o igual a ahora
                     const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
                     const esPasado = slotFecha <= ahora;
-
+                    
                     if (esPasado) {
-                        html += `<td class="estado-disponible" style="opacity:0.3; cursor:not-allowed;" title="Horario no disponible"></td>`;
+                        html += `<td class="estado-disponible" style="opacity:0.3; cursor:not-allowed;"></td>`;
                     } else {
-                        html += `<td class="estado-disponible" onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                        // 🎯 ZONA DE DROP CON EVENTOS
+                        html += `<td class="estado-disponible drop-zone" 
+                                    ondragover="event.preventDefault()" 
+                                    ondragenter="highlightDrop(event)" 
+                                    ondragleave="unhighlightDrop(event)" 
+                                    ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                     }
                 }
             });
@@ -586,7 +607,63 @@ function renderizarPlanilla(data, filtroEstado) {
     });
     html += `</tbody>`;
     table.innerHTML = html;
-    console.log(`✅ Renderizado completo. Celdas reservadas: ${celdasPintadas}`);
+}
+
+let draggedReservaId = null;
+
+function dragReserva(e, id) {
+    draggedReservaId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    e.target.classList.add('dragging');
+}
+
+document.addEventListener('dragend', (e) => {
+    e.target.classList.remove('dragging');
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+});
+
+function highlightDrop(e) {
+    e.preventDefault();
+    if (e.target.classList.contains('drop-zone')) {
+        e.target.classList.add('drop-target');
+    }
+}
+
+function unhighlightDrop(e) {
+    if (e.target.classList.contains('drop-zone')) {
+        e.target.classList.remove('drop-target');
+    }
+}
+
+async function dropReserva(e, canchaId, hora) {
+    e.preventDefault();
+    unhighlightDrop(e);
+    
+    if (!draggedReservaId || !canchaId || !hora) return;
+    
+    const targetCell = e.target;
+    targetCell.classList.add('drop-anim'); // Animación al soltar
+
+    if (confirm(`🔄 ¿Mover reserva a las ${hora} en Cancha ID ${canchaId}?`)) {
+        try {
+            const res = await fetch('../api/mover_reserva.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id_reserva: draggedReservaId,
+                    id_cancha: canchaId,
+                    hora_inicio: hora + ':00'
+                })
+            });
+            const data = await res.json();
+            showToast(data.success ? '✅ Reserva movida y correo enviado' : '❌ ' + data.message, data.success ? 'success' : 'error');
+            if (data.success) cargarPlanillaReservas();
+        } catch (err) {
+            showToast('❌ Error al mover reserva', 'error');
+        }
+    }
+    draggedReservaId = null;
 }
 
 // === DETALLE DE RESERVA (CORREGIDO) ===
@@ -890,32 +967,45 @@ function buscarSocioAdmin(query) {
 
 document.getElementById('formReservaManual')?.addEventListener('submit', async(e) => {
   e.preventDefault();
+  
+  const canchaId = document.getElementById('admin_cancha_id').value;
+  const fecha = document.getElementById('admin_fecha').value;
+  const horaInicio = document.getElementById('admin_hora').value;
+  const duracion = parseInt(document.querySelector('input[name="duracion_manual"]:checked')?.value || 60);
+  
+  // Calcular hora fin exacta
+  const [h, m] = horaInicio.split(':').map(Number);
+  const finMin = m + duracion;
+  const finH = h + Math.floor(finMin / 60);
+  const finM = finMin % 60;
+  const horaFin = `${String(finH).padStart(2,'0')}:${String(finM).padStart(2,'0')}:00`;
+
   const data = {
-    id_cancha: document.getElementById('admin_cancha_id').value,
-    fecha: document.getElementById('admin_fecha').value,
-    hora_inicio: document.getElementById('admin_hora').value,
+    id_cancha: canchaId,
+    fecha: fecha,
+    hora_inicio: horaInicio,
+    hora_fin: horaFin,
+    duracion_minutos: duracion,
     id_socio: document.getElementById('admin_socio_id').value || null,
     nombre_cliente: document.getElementById('admin_nombre').value,
     email_cliente: document.getElementById('admin_email').value,
     celular_cliente: document.getElementById('admin_celular').value
   };
   
-  const res = await fetch('../api/admin/manual_booking.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-  const result = await res.json();
-  cerrarModalReservaAdmin();
-  if (result.success && result.id_reserva) {
-    // Enviar confirmación por correo
-    fetch('../api/send_booking_confirmation.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({id_reserva: result.id_reserva})
-    }).catch(e => console.warn('No se pudo enviar correo de confirmación', e));
-    
-    showToast('✅ Reserva creada y correo enviado', 'success');
-    } else {
-    showToast('❌ Error: ' + result.message, 'error');
-    }
-    cargarPlanillaReservas();
+  try {
+    const res = await fetch('../api/admin/manual_booking.php', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body:JSON.stringify(data) 
+    });
+    const result = await res.json();
+    cerrarModalReservaAdmin();
+    showToast(result.success ? '✅ Reserva creada y correo enviado' : '❌ '+result.message, result.success?'success':'error');
+    if(result.success) cargarPlanillaReservas();
+  } catch(err) {
+    cerrarModalReservaAdmin();
+    showToast('❌ Error de red', 'error');
+  }
 });
 
 // === DRAG & DROP PARA MOVER RESERVAS ===
@@ -1079,6 +1169,18 @@ function cerrarModalReservaAdmin() {
                 <input type="text" id="admin_nombre" placeholder="Nombre completo" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
                 <input type="email" id="admin_email" placeholder="Email" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
                 <input type="text" id="admin_celular" placeholder="Celular (+569...)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+
+            <div style="margin: 1rem 0; background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #071289;">
+            <label style="font-weight:bold; color:#333; display:block; margin-bottom:6px;">⏱️ Duración a reservar:</label>
+            <div style="display:flex; gap:15px;">
+                <label style="cursor:pointer; color:#333;">
+                <input type="radio" name="duracion_manual" value="60" checked style="margin-right:5px;"> 60 min
+                </label>
+                <label style="cursor:pointer; color:#333;">
+                <input type="radio" name="duracion_manual" value="90" style="margin-right:5px;"> 90 min
+                </label>
+            </div>
             </div>
             
             <button type="submit" onclick="event.preventDefault(); alert('Funcionalidad de guardado en desarrollo. Integra tu API aquí.')" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Reserva</button>
