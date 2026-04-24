@@ -11,8 +11,8 @@ try {
         session_start();
     }
     
-    $id_socio = $_POST['id_socio'] ?? ($_SESSION['id_socio'] ?? ($_COOKIE['cancha_id_socio'] ?? null));
-    $club_id = $_POST['club_id'] ?? ($_SESSION['club_id'] ?? ($_COOKIE['cancha_club_id'] ?? null));
+    // Validación básica de sesión
+    $id_socio = $_POST['id_socio'] ?? ($_SESSION['id_socio'] ?? null);
     
     if (!$id_socio) {
         throw new Exception('Acceso no autorizado', 401);
@@ -24,109 +24,22 @@ try {
         throw new Exception('Error de conexión a la base de datos', 500);
     }
     
-    // ✅ Validar socio usando socio_club (no socios.id_club)
-    if ($club_id) {
-        $stmt = $pdo->prepare("
-            SELECT s.id_socio 
-            FROM socios s
-            JOIN socio_club sc ON s.id_socio = sc.id_socio
-            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
-        ");
-        $stmt->execute([$id_socio, $club_id]);
-        if (!$stmt->fetch()) {
-            throw new Exception('Socio no pertenece al club', 403);
-        }
-    } else {
-        // Socio individual: solo verificar que exista
-        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE id_socio = ?");
-        $stmt->execute([$id_socio]);
-        if (!$stmt->fetch()) {
-            throw new Exception('Socio no válido', 401);
-        }
-    }
-
-    // Calcular rango de fechas y horarios
-    $fecha_inicio = date('Y-m-d');
-    $fecha_fin = date('Y-m-d', strtotime('+7 days'));
-    $hora_actual = date('H:i:s');
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
     
-    $rango = $_POST['rango'] ?? 'semana';
-    
-    switch ($rango) {
-        case 'hoy':
-            $fecha_inicio = date('Y-m-d');
-            $fecha_fin = date('Y-m-d');
-            $filtrar_hora = true;
+    switch ($action) {
+        case 'get_disponibilidad':
+            handleGetDisponibilidad($pdo, $_POST);
             break;
-        case 'mañana':
-            $fecha_inicio = date('Y-m-d', strtotime('+1 day'));
-            $fecha_fin = date('Y-m-d', strtotime('+1 day'));
-            $filtrar_hora = false;
-            break;
-        case 'mes':
-            $fecha_inicio = date('Y-m-d');
-            $fecha_fin = date('Y-m-d', strtotime('+30 days'));
-            $filtrar_hora = false;
-            break;
+            
         default:
-            $fecha_inicio = date('Y-m-d');
-            $fecha_fin = date('Y-m-d', strtotime('+7 days'));
-            $filtrar_hora = false;
-            break;
+            throw new Exception('Acción no válida: ' . $action);
     }
-
-    // Construir consulta base
-    $sql = "
-        SELECT 
-            dc.id_disponibilidad,
-            dc.id_cancha,
-            c.nombre_cancha as nro_cancha,
-            c.id_deporte,
-            c.valor_arriendo,
-            dc.fecha,
-            dc.hora_inicio,
-            dc.hora_fin,
-            r.nombre as recinto_nombre,
-            dc.estado
-        FROM disponibilidad_canchas dc
-        JOIN canchas c ON dc.id_cancha = c.id_cancha
-        JOIN recintos_deportivos r ON c.id_recinto = r.id_recinto
-        WHERE dc.fecha BETWEEN ? AND ?
-          AND dc.estado = 'disponible'
-    ";
-    
-    $params = [$fecha_inicio, $fecha_fin];
-    
-    if ($filtrar_hora) {
-        $sql .= " AND dc.hora_inicio > ?";
-        $params[] = $hora_actual;
-    }
-    
-    // Filtros adicionales
-    if (!empty($_POST['deporte'])) {
-        $sql .= " AND c.id_deporte = ?";
-        $params[] = $_POST['deporte'];
-    }
-    
-    if (!empty($_POST['recinto'])) {
-        $sql .= " AND r.id_recinto = ?";
-        $params[] = $_POST['recinto'];
-    }
-    
-    $sql .= " ORDER BY dc.fecha, dc.hora_inicio";
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $disponibilidad = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo json_encode($disponibilidad);
     
 } catch (Exception $e) {
     if (ob_get_level() > 0) {
         ob_clean();
     }
     error_log("API Reservas Error: " . $e->getMessage());
-    // ✅ Asegurar que el código sea entero
     $code = is_numeric($e->getCode()) ? (int)$e->getCode() : 500;
     http_response_code($code);
     echo json_encode(['error' => $e->getMessage()]);
@@ -134,5 +47,64 @@ try {
 
 if (ob_get_level() > 0) {
     ob_end_flush();
+}
+
+// === FUNCIÓN PARA OBTENER DISPONIBILIDAD (PLANILLA) ===
+function handleGetDisponibilidad($pdo, $post) {
+    $deporte = $post['deporte'] ?? '';
+    $recinto = $post['recinto'] ?? '';
+    $fecha = $post['fecha'] ?? date('Y-m-d');
+    
+    // 1. Obtener Canchas Disponibles según filtros
+    $sql_canchas = "SELECT c.id_cancha, c.nro_cancha, c.nombre_cancha, c.id_deporte, c.valor_arriendo, c.duracion_bloque, r.nombre as recinto_nombre 
+                    FROM canchas c 
+                    JOIN recintos_deportivos r ON c.id_recinto = r.id_recinto 
+                    WHERE c.activa = 1 AND r.email_verified = 1";
+    
+    $params_canchas = [];
+    
+    if (!empty($deporte)) {
+        $sql_canchas .= " AND c.id_deporte = :deporte";
+        $params_canchas[':deporte'] = $deporte;
+    }
+    
+    if (!empty($recinto)) {
+        $sql_canchas .= " AND c.id_recinto = :recinto";
+        $params_canchas[':recinto'] = $recinto;
+    }
+    
+    $stmt_canchas = $pdo->prepare($sql_canchas);
+    $stmt_canchas->execute($params_canchas);
+    $canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (empty($canchas)) {
+        echo json_encode(['canchas' => [], 'reservas' => []]);
+        return;
+    }
+    
+    // 2. Obtener RESERVAS CONFIRMADAS solo para la FECHA seleccionada y esas canchas
+    $ids_canchas = array_column($canchas, 'id_cancha');
+    
+    // Crear placeholders para IN (?, ?, ...)
+    $placeholders = implode(',', array_fill(0, count($ids_canchas), '?'));
+    
+    $sql_reservas = "SELECT id_cancha, hora_inicio, hora_fin, estado, estado_pago, id_reserva 
+                     FROM reservas 
+                     WHERE fecha = ? 
+                     AND id_cancha IN ($placeholders) 
+                     AND estado != 'cancelada'";
+    
+    // Unir fecha con IDs de canchas para los parámetros
+    $params_reservas = array_merge([$fecha], $ids_canchas);
+    
+    $stmt_reservas = $pdo->prepare($sql_reservas);
+    $stmt_reservas->execute($params_reservas);
+    $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
+    
+    // 3. Devolver estructura separada para facilitar el renderizado JS
+    echo json_encode([
+        'canchas' => $canchas,
+        'reservas' => $reservas
+    ]);
 }
 ?>
