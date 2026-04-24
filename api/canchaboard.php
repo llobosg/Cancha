@@ -31,37 +31,50 @@
                 break;
 
             case 'get_detalle_reserva':
-                // Intentar obtener id_disponibilidad primero
-                $id_disponibilidad = (int)($_POST['id_disponibilidad'] ?? 0);
-                
-                // Si no hay id_disponibilidad, buscar por id_reserva
-                if (!$id_disponibilidad) {
-                    $id_reserva_alt = (int)($_POST['id_reserva'] ?? 0);
-                    
-                    if ($id_reserva_alt) {
-                        // Buscar el id_disponibilidad asociado a esta reserva en la fecha/hora correspondiente
-                        // O simplemente llamar a una función que busque directo por reserva
-                        // Para simplificar, vamos a modificar la llamada a la función getDetalleReserva
-                        // para que acepte buscar por ID de reserva si la disponibilidad es 0.
-                        
-                        // Opción A: Buscar el ID de disponibilidad primero (más robusto)
-                        $stmt_find_disp = $pdo->prepare("SELECT id_disponibilidad FROM disponibilidad_canchas WHERE id_reserva = ? LIMIT 1");
-                        $stmt_find_disp->execute([$id_reserva_alt]);
-                        $disp_data = $stmt_find_disp->fetch();
-                        
-                        if ($disp_data) {
-                            $id_disponibilidad = (int)$disp_data['id_disponibilidad'];
-                        } else {
-                            // Si no hay registro en disponibilidad (raro), lanzamos error o manejamos例外
-                            throw new Exception('No se encontró disponibilidad asociada a esta reserva');
-                        }
-                    } else {
-                        throw new Exception('ID de disponibilidad o ID de reserva requerido');
-                    }
+                // Validar sesión y recinto
+                error_log("[DEBUG] get_detalle_reserva: id_reserva=$id_reserva, id_recinto=$id_recinto");
+                if (session_status() === PHP_SESSION_NONE) session_start();
+                if (!isset($_SESSION['id_recinto'])) {
+                    http_response_code(401);
+                    echo json_encode(['error' => 'Sesión no válida']);
+                    exit;
                 }
-
-                // Ahora sí llamamos a la función con el ID válido
-                echo json_encode(getDetalleReserva($pdo, $id_disponibilidad, $id_recinto));
+                
+                $id_reserva = (int)($_POST['id_reserva'] ?? 0);
+                $id_recinto = (int)$_SESSION['id_recinto'];
+                
+                if (!$id_reserva) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'ID de reserva requerido']);
+                    exit;
+                }
+                
+                // Consulta SEGURA: validar que la reserva pertenece a este recinto
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        r.*, 
+                        c.nombre_cancha, 
+                        c.id_deporte,
+                        rec.nombre as recinto_nombre
+                    FROM reservas r
+                    JOIN canchas c ON r.id_cancha = c.id_cancha
+                    JOIN recintos_deportivos rec ON c.id_recinto = rec.id_recinto
+                    WHERE r.id_reserva = ? 
+                    AND c.id_recinto = ?
+                    AND r.estado != 'cancelada'
+                ");
+                $stmt->execute([$id_reserva, $id_recinto]);
+                $detalle = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$detalle) {
+                    // Log para depuración (solo en desarrollo)
+                    error_log("[API] Reserva $id_reserva no encontrada para recinto $id_recinto");
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Reserva no encontrada o no pertenece a este recinto']);
+                    exit;
+                }
+                
+                echo json_encode($detalle);
                 break;
                 
             case 'filtrar_reservas':

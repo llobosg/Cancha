@@ -269,6 +269,31 @@ $monto_deuda = $s_deuda->fetchColumn();
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 15;
     }
+    /* === DRAG & DROP - FORZAR ESTILOS === */
+    td.cell-reserva.dragging {
+        opacity: 0.4 !important;
+        border: 3px dashed #333 !important;
+        transform: scale(0.96) !important;
+        background: rgba(255,255,255,0.3) !important;
+        pointer-events: none !important; /* CLAVE: permite que los eventos pasen a las celdas de abajo */
+        z-index: 9999 !important;
+        transition: all 0.15s ease !important;
+    }
+
+    td.drop-target {
+        background: #FFCDD2 !important;
+        box-shadow: inset 0 0 0 3px #EF5350 !important;
+        transform: scale(1.04) !important;
+        z-index: 10 !important;
+    }
+
+    td.coord-highlight {
+        background: #FFF8E1 !important;
+        font-weight: 900 !important;
+        transform: scale(1.12) !important;
+        border: 2px solid #FFA000 !important;
+        z-index: 20 !important;
+    }
 </style>
 </head>
 <body>
@@ -596,10 +621,10 @@ function renderizarPlanilla(data, filtroEstado) {
                     // ✅ AGREGADOS: draggable, ondragstart, ondragend
                     html += `<td class="${bgClass} cell-reserva" 
                                 draggable="true" 
-                                ondragstart="dragStart(event, ${res.id_reserva})" 
+                                ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
                                 style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
-                                onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva) || 0})">
+                                onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
                                 <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                             </td>`;
@@ -625,28 +650,33 @@ function renderizarPlanilla(data, filtroEstado) {
     table.innerHTML = html;
 }
 
-// === 🎯 DRAG & DROP ÚNICO Y CORREGIDO ===
+// === 🎯 DRAG & DROP - VERSIÓN DEBUG ===
 let draggedReservaId = null;
 
 function dragStart(e, id) {
     draggedReservaId = id;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
+    
+    // Forzar clase visual inmediatamente
     e.target.classList.add('dragging');
-    console.log(`🎯 Drag start: Reserva ID ${id}`);
+    console.log(`🎯 Drag START: ID=${id}, Element=`, e.target);
 }
 
 function dragEnd(e) {
+    console.log(`🎯 Drag END`);
     e.target.classList.remove('dragging');
     limpiarHighlights();
     draggedReservaId = null;
 }
 
 function dragOver(e) {
-    e.preventDefault();
+    e.preventDefault(); // CRÍTICO: permite el drop
     const td = e.target.closest('td.estado-disponible');
-    limpiarHighlights();
+    
     if (td) {
+        console.log(`🎯 Drag OVER: celda disponible`, td);
+        limpiarHighlights();
         td.classList.add('drop-target');
         highlightCoordinates(td);
     }
@@ -657,37 +687,44 @@ function highlightCoordinates(td) {
     if (!row) return;
     const colIndex = Array.from(row.children).indexOf(td);
     
-    // Resaltar Hora (primera columna)
+    // Resaltar Hora
     const timeCell = row.querySelector('td:first-child');
-    if (timeCell) timeCell.classList.add('coord-highlight');
+    if (timeCell) {
+        timeCell.classList.add('coord-highlight');
+        console.log(`✨ Highlight Hora:`, timeCell.textContent.trim());
+    }
     
-    // Resaltar Cancha (header correspondiente)
+    // Resaltar Cancha (header)
     const headerRow = document.querySelector('#tablaPlanilla thead tr');
     if (headerRow && headerRow.children[colIndex]) {
         headerRow.children[colIndex].classList.add('coord-highlight');
+        console.log(`✨ Highlight Cancha:`, headerRow.children[colIndex].textContent.trim());
     }
 }
 
 function limpiarHighlights() {
-    document.querySelectorAll('.drop-target, .coord-highlight, .highlight').forEach(el => {
-        el.classList.remove('drop-target', 'coord-highlight', 'highlight');
+    document.querySelectorAll('.drop-target, .coord-highlight').forEach(el => {
+        el.classList.remove('drop-target', 'coord-highlight');
     });
 }
 
 async function dropReserva(e, canchaId, hora) {
     e.preventDefault();
-    const targetCell = e.target.closest('td');
-    if (targetCell) targetCell.classList.add('drop-anim');
-    limpiarHighlights();
+    console.log(`🎯 Drop: canchaId=${canchaId}, hora=${hora}, draggedId=${draggedReservaId}`);
     
+    const targetCell = e.target.closest('td');
+    if (targetCell) {
+        targetCell.classList.add('drop-anim');
+        setTimeout(() => targetCell.classList.remove('drop-anim'), 300);
+    }
+    
+    limpiarHighlights();
     if (!draggedReservaId) {
         console.warn('⚠️ No hay reserva arrastrada');
         return;
     }
 
-    console.log(`🔄 Moviendo reserva ${draggedReservaId} → Cancha ${canchaId} @ ${hora}`);
-
-    if (confirm(`📅 ¿Mover reserva a las ${hora} en Cancha ID ${canchaId}?`)) {
+    if (confirm(`📅 ¿Mover reserva ID ${draggedReservaId} a las ${hora} en Cancha ${canchaId}?`)) {
         try {
             const res = await fetch('../api/mover_reserva.php', {
                 method: 'POST',
@@ -700,12 +737,12 @@ async function dropReserva(e, canchaId, hora) {
                 })
             });
             const data = await res.json();
-            showToast(data.success ? '✅ Reserva movida correctamente' : '❌ ' + data.message, 
+            showToast(data.success ? '✅ Reserva movida' : '❌ ' + data.message, 
                      data.success ? 'success' : 'error');
             if (data.success) cargarPlanillaReservas();
         } catch (err) {
-            console.error('❌ Error en dropReserva:', err);
-            showToast('❌ Error de conexión al mover', 'error');
+            console.error('❌ Error en drop:', err);
+            showToast('❌ Error de conexión', 'error');
         }
     }
     draggedReservaId = null;
