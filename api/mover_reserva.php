@@ -94,7 +94,7 @@ try {
         // Verificar que la clase y método existen antes de llamar
         if (class_exists('BrevoMailer') && method_exists('BrevoMailer', 'enviarActualizacionConDatos')) {
             error_log("[Mover Reserva] 📧 Enviando correo con BrevoMailer...");
-            BrevoMailer::enviarActualizacionConDatos($pdo, $actualizada, $cambios);
+            BrevoMailer::enviarActualizacionConDatos($pdo, $actualizada, $original);
         } else {
             error_log("[Mover Reserva] ⚠️ BrevoMailer o método no encontrado. Saltando correo.");
         }

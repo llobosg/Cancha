@@ -587,70 +587,6 @@ function limpiarHighlights() {
     });
 }
 
-// Listener GLOBAL para drop
-document.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // Evitar conflictos con onclick
-    
-    const td = e.target.closest('td.estado-disponible');
-    if (!td || !draggedReservaId) return;
-    
-    td.classList.add('drop-anim');
-    setTimeout(() => td.classList.remove('drop-anim'), 300);
-    limpiarHighlights();
-    
-    // Extraer datos de la celda destino
-    const row = td.closest('tr');
-    const horaLabel = row?.querySelector('td:first-child')?.textContent?.trim();
-    const colIndex = Array.from(row.children).indexOf(td);
-    const headerRow = document.querySelector('#tablaPlanilla thead tr');
-    
-    // Obtener ID de cancha desde data attribute o índice
-    // Asegúrate de que tu renderPlanilla agregue data-cancha-id a los th
-    let canchaId = null;
-    if (headerRow && headerRow.children[colIndex]) {
-        canchaId = headerRow.children[colIndex].dataset.canchaId || 
-                   td.dataset.canchaId; // Fallback si lo agregas al td
-    }
-    
-    // Si no tienes data-cancha-id, usa un mapeo temporal
-    if (!canchaId) {
-        const canchasData = window.currentCanchasData || [];
-        if (canchasData[colIndex]) canchaId = canchasData[colIndex].id_cancha;
-    }
-
-    console.log(`🔄 Drop: ID=${draggedReservaId} → Cancha=${canchaId} @ ${horaLabel}`);
-
-    if (canchaId && horaLabel) {
-        if (confirm(`📅 ¿Mover reserva a las ${horaLabel} en Cancha ID ${canchaId}?`)) {
-            try {
-                const res = await fetch('../api/mover_reserva.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id_reserva: draggedReservaId,
-                        id_cancha: canchaId,
-                        hora_inicio: horaLabel + ':00',
-                        fecha: fechaPlanillaActual
-                    })
-                });
-                const data = await res.json();
-                showToast(data.success ? '✅ Reserva movida' : '❌ ' + data.message, 
-                         data.success ? 'success' : 'error');
-                if (data.success) cargarPlanillaReservas();
-            } catch (err) {
-                console.error('❌ Error en drop:', err);
-                showToast('❌ Error de conexión', 'error');
-            }
-        }
-    } else {
-        console.warn('⚠️ No se pudieron determinar cancha/hora destino');
-    }
-    
-    draggedReservaId = null;
-    draggedElement = null;
-});
-
 function dragOver(e) {
     e.preventDefault(); // CRÍTICO: permite el drop
     const td = e.target.closest('td.estado-disponible');
@@ -666,6 +602,10 @@ function dragOver(e) {
 async function dropReserva(e, canchaId, hora) {
     e.preventDefault();
     console.log(`🎯 Drop: canchaId=${canchaId}, hora=${hora}, draggedId=${draggedReservaId}`);
+    
+    e.stopPropagation(); // 🔑 EVITA QUE EL EVENTO BUBBLEE A OTROS LISTENERS
+    if (!draggedReservaId) return;
+
     
     const targetCell = e.target.closest('td');
     if (targetCell) {
