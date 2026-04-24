@@ -86,7 +86,8 @@ $deportes = [
     .planilla-table thead th {
         background: #f8f9fa !important; color: #333; position: sticky; top: 0; z-index: 5;
         border-bottom: 2px solid #AB47BC; border-right: 1px solid #eee;
-        height: 60px; font-size: 0.8rem; font-weight: 600; vertical-align: bottom;
+        height: 60px; font-size: 0.8rem; font-weight: 600; vertical-align: middle;
+        padding: 5px;
     }
 
     /* Celdas Generales (Líneas tenues) */
@@ -117,18 +118,38 @@ $deportes = [
         font-size: 0.75rem; line-height: 1.2;
     }
 
-    /* Controles en Header de Tabla (Fecha) */
+    /* Controles en Header de Tabla (Fecha) - CORREGIDO */
     .table-header-controls {
-        display: flex; align-items: center; gap: 8px; justify-content: center;
+        display: flex; 
+        align-items: center; 
+        justify-content: flex-start; /* Alineación izquierda pero con padding */
+        gap: 6px; 
+        width: 100%;
+        padding-left: 10px; /* MOVER 10 CARACTERES A LA DERECHA */
     }
     .date-nav-btn {
-        background: none; border: 1px solid #ddd; border-radius: 4px;
-        color: #555; cursor: pointer; padding: 2px 6px; font-size: 0.8rem;
+        background: white; 
+        border: 1px solid #ddd; 
+        border-radius: 4px;
+        color: #555; 
+        cursor: pointer; 
+        padding: 4px 8px; 
+        font-size: 0.9rem;
+        line-height: 1;
+        min-width: 30px;
     }
-    .date-nav-btn:hover { background: #f0f0f0; }
+    .date-nav-btn:hover { background: #f0f0f0; border-color: #ccc; }
+    
     .input-fecha-header {
-        border: 1px solid #ddd; border-radius: 4px; padding: 2px;
-        font-family: inherit; font-size: 0.8rem; color: #333; width: 110px; text-align: center;
+        border: 1px solid #ddd; 
+        border-radius: 4px; 
+        padding: 4px;
+        font-family: inherit; 
+        font-size: 0.8rem; 
+        color: #333; 
+        width: 120px; /* Ancho fijo suficiente */
+        text-align: center;
+        background: white;
     }
     
     /* Modal */
@@ -159,7 +180,7 @@ $deportes = [
 <body>
 
 <div class="header">
-    <div class="brand-logo">🎾 Reservar Cancha</div>
+    <div class="brand-logo">🎾⚽ Reservar Cancha</div>
     <a href="dashboard_socio.php" style="color: white; text-decoration: none;">← Volver</a>
 </div>
 
@@ -238,20 +259,27 @@ $deportes = [
         const deporte = document.getElementById('filtroDeporte').value;
         const recinto = document.getElementById('filtroRecinto').value;
         
+        console.log("Aplicando filtros:", { deporte, recinto, fecha: fechaPlanillaActual });
+
         document.getElementById('tablaBody').innerHTML = '<tr><td colspan="100%" style="padding:2rem; text-align:center;">Cargando...</td></tr>';
+        document.getElementById('tablaHeader').innerHTML = '<th>Hora</th>'; // Reset temporal
 
         try {
             const formData = new FormData();
             formData.append('deporte', deporte);
             formData.append('recinto', recinto);
-            formData.append('fecha', fechaPlanillaActual); // Enviar fecha seleccionada
+            formData.append('fecha', fechaPlanillaActual);
             formData.append('id_socio', <?= $id_socio ?>);
 
             const res = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
                 method: 'POST', body: formData, credentials: 'include'
             });
             
+            if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+            
             const data = await res.json();
+            console.log("Datos recibidos de API:", data); // DEBUG CRÍTICO
+            
             if(data.error) throw new Error(data.error);
             
             renderizarPlanillaSocio(data);
@@ -266,39 +294,52 @@ $deportes = [
         const thead = document.getElementById('tablaHeader');
         const tbody = document.getElementById('tablaBody');
         
-        // 1. Identificar Canchas Únicas
-        const canchas = [...new Map(data.map(item => [item.id_cancha, item])).values()]
-            .sort((a,b) => a.nro_cancha.localeCompare(b.nro_cancha));
-        
-        if(canchas.length === 0) {
+        // 1. Identificar Canchas Únicas CORREGIDO
+        if (!data || data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
             thead.innerHTML = '';
             return;
         }
 
-        // 2. Construir Header con Controles de Fecha
-        let htmlHead = `<th style="background:#f8f9fa; position:sticky; left:0; z-index:11; border-right:1px solid #eee; height:60px;">
-            <div class="table-header-controls" style="flex-direction:column; gap:4px;">
-                <div style="display:flex; gap:5px;">
-                    <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
-                    <input type="date" class="input-fecha-header" value="${fechaPlanillaActual}" onchange="actualizarFechaInput(this.value)">
-                    <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
-                </div>
-                <button class="date-nav-btn" style="font-size:0.7rem;" onclick="irAHoy()">Hoy</button>
+        // Usar Map para obtener canchas únicas basadas en id_cancha
+        const canchasMap = new Map();
+        data.forEach(item => {
+            if (!canchasMap.has(item.id_cancha)) {
+                canchasMap.set(item.id_cancha, item);
+            }
+        });
+        
+        const canchas = Array.from(canchasMap.values()).sort((a,b) => a.nro_cancha.localeCompare(b.nro_cancha));
+        
+        console.log("Canchas identificadas:", canchas.length); // DEBUG
+
+        if(canchas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas para estos filtros.</td></tr>';
+            thead.innerHTML = '';
+            return;
+        }
+
+        // 2. Construir Header con Controles de Fecha CORREGIDOS (Padding Left)
+        let htmlHead = `<th style="background:#f8f9fa; position:sticky; left:0; z-index:11; border-right:1px solid #eee; height:60px; vertical-align:middle;">
+            <div class="table-header-controls">
+                <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
+                <input type="date" class="input-fecha-header" value="${fechaPlanillaActual}" onchange="actualizarFechaInput(this.value)">
+                <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
+                <button class="date-nav-btn" style="font-size:0.7rem; padding:2px 4px;" onclick="irAHoy()">Hoy</button>
             </div>
         </th>`;
         
         canchas.forEach(c => {
             const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-            htmlHead += `<th>${icono}<br>${c.nro_cancha}</th>`;
+            htmlHead += `<th>${icono}<br><span style="font-weight:normal; font-size:0.7rem;">${c.nro_cancha}</span></th>`;
         });
         thead.innerHTML = htmlHead;
 
-        // 3. Generar Filas cada 30 Minutos (Para soportar Rowspan de 90min)
+        // 3. Generar Filas cada 30 Minutos
         let htmlBody = '';
         let horaActualMinutos = 7 * 60; // 07:00
         const finDiaMinutos = 23 * 60;  // 23:00
-        let skipCells = {}; // Mapa para saltar celdas ocupadas por rowspan
+        let skipCells = {}; 
 
         while (horaActualMinutos < finDiaMinutos) {
             const h = Math.floor(horaActualMinutos / 60);
@@ -307,8 +348,7 @@ $deportes = [
             const esMediaHora = (m === 30);
             
             htmlBody += `<tr>`;
-            // Columna Hora: Solo mostrar texto si es hora en punto
-            htmlBody += `<td style="${esMediaHora ? 'border-bottom:none; color:#ccc;' : ''}">${esMediaHora ? '' : timeLabel}</td>`;
+            htmlBody += `<td style="${esMediaHora ? 'border-bottom:none; color:#ccc; font-size:0.7rem;' : ''}">${esMediaHora ? '' : timeLabel}</td>`;
 
             canchas.forEach((cancha, indexCancha) => {
                 // Verificar si esta celda está saltada por un rowspan anterior
@@ -321,7 +361,7 @@ $deportes = [
                 const reservaInicio = data.find(d => 
                     d.id_cancha == cancha.id_cancha && 
                     d.hora_inicio.substring(0,5) == timeLabel &&
-                    d.estado !== 'disponible' // Si está disponible, no es reserva
+                    d.estado !== 'disponible' 
                 );
 
                 if (reservaInicio) {
@@ -333,13 +373,12 @@ $deportes = [
                     
                     if (rowspan > 1) skipCells[indexCancha] = rowspan - 1;
 
-                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan * 40}px;">
-                        <div>${reservaInicio.hora_inicio.substring(0,5)} - ${reservaInicio.hora_fin.substring(0,5)}</div>
-                        <div style="font-size:0.65rem; opacity:0.8;">Ocupado</div>
+                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan * 40}px; vertical-align:middle;">
+                        <div style="font-weight:bold;">${reservaInicio.hora_inicio.substring(0,5)} - ${reservaInicio.hora_fin.substring(0,5)}</div>
+                        <div style="font-size:0.65rem; opacity:0.9;">Ocupado</div>
                     </td>`;
                 } else {
-                    // Disponible: Buscar si existe un slot disponible explícito o asumir libre
-                    // Para simplificar, si no hay reserva empezando aquí, está libre.
+                    // Disponible
                     htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${cancha.id_cancha}", "${timeLabel}", "${cancha.nro_cancha}", "${cancha.recinto_nombre}", "${cancha.id_deporte}", "${cancha.valor_arriendo}")'></td>`;
                 }
             });
@@ -357,10 +396,14 @@ $deportes = [
         fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
         aplicarFiltros();
     }
+    
     function irAHoy() {
         fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        const inputs = document.querySelectorAll('.input-fecha-header');
+        inputs.forEach(input => input.value = fechaPlanillaActual);
         aplicarFiltros();
     }
+    
     function actualizarFechaInput(val) {
         fechaPlanillaActual = val;
         aplicarFiltros();
