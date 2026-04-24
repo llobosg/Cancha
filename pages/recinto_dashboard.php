@@ -479,7 +479,7 @@ function renderizarPlanilla(data, filtroEstado) {
 
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
-                    const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 10);
+                    const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
                     // ✅ AGREGADOS: draggable, ondragstart, ondragend
                     html += `<td class="${bgClass} cell-reserva" 
