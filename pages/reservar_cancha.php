@@ -1,44 +1,19 @@
 <?php
-// 1. Cargar configuración
+// pages/reservar_cancha.php
 require_once __DIR__ . '/../includes/config.php';
 
-// 2. Restaurar sesión desde cookie si existe
-if (isset($_COOKIE['cancha_session_id'])) {
-    session_id($_COOKIE['cancha_session_id']);
-}
-
-// 3. Configurar y arrancar sesión
-session_name('CANCHASPORT_SESSION');
+// Sesión
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 86400,
-        'path' => '/',
-        'domain' => '',
-        'secure' => isset($_SERVER['HTTPS']),
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
+    session_name('CANCHASPORT_SESSION');
     session_start();
 }
 
-// Validación mejorada con múltiples capas
 if (!isset($_SESSION['id_socio'])) {
-    // Intentar con cookie
-    if (isset($_COOKIE['cancha_id_socio']) && is_numeric($_COOKIE['cancha_id_socio'])) {
-        $_SESSION['id_socio'] = (int)$_COOKIE['cancha_id_socio'];
-    }
-    // Si aún no hay id_socio, redirigir
-    if (!isset($_SESSION['id_socio'])) {
-        header('Location: ../index.php');
-        exit;
-    }
+    header('Location: ../index.php');
+    exit;
 }
 
 $id_socio = (int)$_SESSION['id_socio'];
-
-require_once __DIR__ . '/../includes/config.php';
-
-// Verificar que el socio exista (sin club)
 $stmt = $pdo->prepare("SELECT id_socio, nombre, alias, email, celular FROM socios WHERE id_socio = ?");
 $stmt->execute([$id_socio]);
 $usuario_data = $stmt->fetch();
@@ -48,1032 +23,374 @@ if (!$usuario_data) {
     exit;
 }
 
-// === OBTENER RECINTOS DISPONIBLES ===
-$recintos = [];
-
-// Obtener recintos deportivos disponibles
-$stmt_recintos = $pdo->prepare("
-    SELECT id_recinto, nombre 
-    FROM recintos_deportivos 
-    WHERE email_verified = 1
-    ORDER BY nombre
-");
+// Obtener Recintos
+$stmt_recintos = $pdo->prepare("SELECT id_recinto, nombre FROM recintos_deportivos WHERE email_verified = 1 ORDER BY nombre");
 $stmt_recintos->execute();
 $recintos = $stmt_recintos->fetchAll();
 
-// Deportes disponibles
 $deportes = [
-    'futbol' => 'Fútbol',
-    'futbolito' => 'Futbolito', 
-    'futsal' => 'Futsal',
-    'tenis' => 'Tenis',
-    'padel' => 'Pádel',
-    'voleyball' => 'Voleyball',
-    'otro' => 'Quincho/Otro'
+    'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
+    'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Voleyball', 'otro' => 'Otros'
 ];
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reservar Cancha | Cancha</title>
-  <link rel="stylesheet" href="../styles.css">
-  <style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reservar Cancha | CanchaSport</title>
+<style>
+    :root { --bg-primary: #071289; --accent: #4ECDC4; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: linear-gradient(rgba(0, 20, 10, 0.40), rgba(0, 30, 15, 0.50)),
-                 url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-      background-blend-mode: multiply;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      color: white;
+        background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
+        background-blend-mode: multiply; color: white; font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: 2rem;
     }
     
-    .dashboard-container {
-      display: grid;
-      grid-template-columns: 4fr 1fr;
-      gap: 1rem;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 1rem;
-    }
-    
+    /* Header */
     .header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 60px;
-      background: rgba(0, 51, 102, 0.95);
-      backdrop-filter: blur(10px);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 1.5rem;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        background: rgba(0, 51, 102, 0.95); backdrop-filter: blur(10px);
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.8rem 1.5rem; position: sticky; top: 0; z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
+    .brand-logo { color: #FFD700; font-weight: 900; font-size: 1.3rem; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
     
-    .main-title-section {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+    /* Contenedor Principal */
+    .main-container { max-width: 1400px; margin: 1rem auto; padding: 0 1rem; }
     
-    .logo-corporativo {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      background: #FFD700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-    }
-    
-    .main-title {
-      color: #FFD700;
-      font-size: 1.5rem;
-      margin: 0;
-    }
-    
+    /* Filtros */
     .controls-section {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      padding: 0.5rem;
-      background: rgba(255,255,255,0.1);
-      border-radius: 8px;
-      position: sticky;
-      top: 70px;
-      z-index: 999;
+        display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;
+        padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 12px;
+        backdrop-filter: blur(5px); align-items: center;
     }
-    
     .control-select {
-      background: white;
-      padding: 0.3rem;
-      border-radius: 4px;
-      color: #071289;
-      border: none;
+        background: white; padding: 0.5rem; border-radius: 6px; color: #071289; border: none; font-weight: bold; min-width: 150px;
     }
     
-    .reservas-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 1rem;
-      overflow-y: auto;
-      padding-right: 0.5rem;
+    /* Planilla de Reservas (Tabla) */
+    .planilla-wrapper {
+        background: white; border-radius: 12px; overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); color: #333;
+    }
+    .planilla-scroll { overflow-x: auto; max-height: 70vh; }
+    
+    .planilla-table {
+        width: 100%; border-collapse: separate; border-spacing: 2px;
+        table-layout: fixed; min-width: 800px;
     }
     
-    .reserva-card {
-      background: white;
-      border-radius: 12px;
-      padding: 1rem;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      position: relative;
-      overflow: hidden;
+    /* Headers */
+    .planilla-table th {
+        background: #AB47BC; color: white; padding: 10px;
+        position: sticky; top: 0; z-index: 10; font-size: 0.85rem;
+    }
+    .planilla-table th:first-child {
+        left: 0; z-index: 11; background: #8E24AA; width: 70px; min-width: 70px;
     }
     
-    .reserva-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    /* Celdas */
+    .planilla-table td {
+        background: #f8f9fa; padding: 8px; text-align: center;
+        border: 1px solid #eee; font-size: 0.8rem; height: 40px;
+        cursor: pointer; transition: 0.2s;
+    }
+    .planilla-table td:first-child {
+        background: #e3f2fd; font-weight: bold; color: #071289;
+        position: sticky; left: 0; z-index: 5;
     }
     
-    .reserva-card.selected {
-      border: 3px solid #071289;
+    /* Estados */
+    td.slot-disponible:hover { background: #E8F5E9; border-color: #4CAF50; }
+    td.slot-ocupado { background: #FFEBEE; color: #C62828; cursor: not-allowed; opacity: 0.7; }
+    td.slot-seleccionado { background: #FFFDE7; border: 2px solid #FBC02D; }
+    
+    /* Modal */
+    .modal-reserva-inteligente {
+        display: none; position: fixed; z-index: 2000; left: 0; top: 0;
+        width: 100%; height: 100%; background-color: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px); justify-content: center; align-items: center;
+    }
+    .modal-reserva-inteligente-content {
+        background-color: white; padding: 2rem; border-radius: 16px;
+        width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     
-    .deporte-icon {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
+    /* Botones y Form */
+    .btn-primary { background: #071289; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 1rem; }
+    .btn-secondary { background: #ccc; color: #333; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 0.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #333; }
+    .form-group input, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; }
     
-    .cancha-nombre {
-      font-weight: bold;
-      color: #071289;
-      margin-bottom: 0.3rem;
-    }
-    
-    .fecha-hora {
-      font-size: 0.9rem;
-      color: #666;
-      margin-bottom: 0.5rem;
-    }
-    
-    .estado-indicator {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-    
-    .estado-disponible { background: #FFD700; }
-    .estado-reservada { background: #9C27B0; }
-    .estado-ocupada { background: #4CAF50; }
-    .estado-cancelada { background: #F44336; }
-    
-    .detail-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      position: sticky;
-      top: 120px;
-      align-self: flex-start;
-      height: fit-content;
-      max-height: calc(100vh - 140px);
-    }
-    
-    .detail-section {
-      background: white;
-      padding: 1rem;
-      border-radius: 12px;
-      width: 100%;
-      overflow-y: auto;
-      max-height: 350px;
-    }
-    
-    .actions-section {
-      background: white;
-      padding: 1rem;
-      border-radius: 12px;
-      width: 100%;
-      overflow-y: auto;
-      max-height: 320px;
-    }
-    
-    .detail-title {
-      color: #071289;
-      margin-bottom: 1rem;
-      font-size: 1.2rem;
-    }
-    
-    .detail-item {
-      margin-bottom: 0.5rem;
-    }
-    
-    .detail-label {
-      font-weight: bold;
-      color: #333;
-    }
-    
-    .action-btn {
-      padding: 0.5rem;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.2s;
-      color: #333;
-    }
-    
-    .action-btn:hover {
-      background: rgba(255,255,255,0.2);
-      color: #000;
-    }
-    
-    .btn-reservar {
-      background: #00cc66;
-      color: white !important;
-    }
-    
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      z-index: 10000;
-      transform: translateX(120%);
-      transition: transform 0.3s ease-in-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    
-    .toast.show {
-      transform: translateX(0);
-    }
-    
-    .toast.success {
-      background: linear-gradient(135deg, #4CAF50, #2E7D32);
-    }
-    
-    .toast.error {
-      background: linear-gradient(135deg, #F44336, #C62828);
-    }
-    
-    .toast.warning {
-      background: linear-gradient(135deg, #FF9800, #EF6C00);
-    }
-    
-    .toast.info {
-      background: linear-gradient(135deg, #2196F3, #1565C0);
-    }
-    
-    @media (max-width: 768px) {
-      .dashboard-container {
-        grid-template-columns: 1fr;
-        padding-top: 80px;
-      }
-      
-      .reservas-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      }
-      
-      .detail-panel {
-        position: static;
-        top: auto;
-        align-self: auto;
-      }
-    }
-  .modal-reserva-inteligente {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-  }
-
-  .modal-reserva-inteligente-content {
-      background-color: white;
-      margin: 5% auto;
-      padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 80vh;
-      overflow-y: auto;
-  }
-
-  .opcion-reserva {
-      margin: 15px 0;
-      padding: 15px;
-      border: 2px solid #e9ecef;
-      border-radius: 8px;
-      cursor: pointer;
-  }
-
-  .opcion-reserva input[type="radio"] {
-      margin-right: 10px;
-  }
-
-  .opcion-reserva:hover {
-      border-color: #007bff;
-  }
-
-  .panel-patron {
-      display: none;
-      margin-top: 15px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border-left: 4px solid #007bff;
-  }
-
-  .preview-patron {
-      margin-top: 10px;
-      padding: 10px;
-      background: #e9f7ef;
-      border-radius: 6px;
-      font-size: 0.9em;
-  }
-
-  .btn-primary {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-  }
-
-  .btn-primary:hover {
-      background: #0056b3;
-  }
-  </style>
+    /* Toast */
+    .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; z-index: 3000; transform: translateX(120%); transition: transform 0.3s; }
+    .toast.show { transform: translateX(0); }
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #F44336; }
+</style>
 </head>
 <body>
-  <div class="header">
-    <div class="main-title-section">
-      <div class="logo-corporativo">⚽</div>
-      <h1 class="main-title">Reservar Cancha</h1>
-    </div>
-    <div>
-      <a href="dashboard_socio.php?id_club=<?= htmlspecialchars($_SESSION['current_club'] ?? '') ?>" style="color: #ffcc00; text-decoration: none;">← Dashboard</a>
-    </div>
-  </div>
-  
-  <div class="dashboard-container" style="margin-top: 70px;">
-    <div>
-      <div class="controls-section">
+
+<div class="header">
+    <div class="brand-logo">🎾 Reservar Cancha</div>
+    <a href="dashboard_socio.php" style="color: white; text-decoration: none;">← Volver</a>
+</div>
+
+<div class="main-container">
+    <!-- Filtros -->
+    <div class="controls-section">
         <select class="control-select" id="filtroDeporte">
-          <option value="">Todos los deportes</option>
-          <?php foreach ($deportes as $key => $value): ?>
-            <option value="<?= $key ?>"><?= $value ?></option>
-          <?php endforeach; ?>
+            <option value="">Todos los deportes</option>
+            <?php foreach ($deportes as $key => $value): ?>
+                <option value="<?= $key ?>"><?= $value ?></option>
+            <?php endforeach; ?>
         </select>
         
         <select class="control-select" id="filtroRecinto">
-          <option value="">Todos los recintos</option>
-          <?php foreach ($recintos as $recinto): ?>
-            <option value="<?= $recinto['id_recinto'] ?>"><?= htmlspecialchars($recinto['nombre']) ?></option>
-          <?php endforeach; ?>
+            <option value="">Todos los recintos</option>
+            <?php foreach ($recintos as $recinto): ?>
+                <option value="<?= $recinto['id_recinto'] ?>"><?= htmlspecialchars($recinto['nombre']) ?></option>
+            <?php endforeach; ?>
         </select>
         
         <select class="control-select" id="filtroFecha">
             <option value="hoy">Hoy</option>
-            <option value="mañana">Mañana</option>
-            <option value="semana" selected>Semana</option>
-            <option value="mes">Mes</option>
+            <option value="manana">Mañana</option>
+            <option value="semana" selected>Esta Semana</option>
         </select>
-      </div>
-      
-      <div class="reservas-grid" id="reservasGrid">
-        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
-          Cargando disponibilidad...
-        </div>
-      </div>
+        
+        <button onclick="aplicarFiltros()" style="background:#4ECDC4; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold; color:#071289;">🔍 Buscar</button>
     </div>
-    
-    <div class="detail-panel">
-      <div class="detail-section" id="detalleReserva">
-        <h3 class="detail-title">📋 Detalle de Reserva</h3>
-        <div id="detalleContent">
-          <p>Selecciona una cancha disponible para ver detalles</p>
+
+    <!-- Planilla -->
+    <div class="planilla-wrapper">
+        <div class="planilla-scroll">
+            <table class="planilla-table" id="tablaReservas">
+                <thead>
+                    <tr id="tablaHeader">
+                        <th>Hora</th>
+                        <!-- Se llena con JS -->
+                    </tr>
+                </thead>
+                <tbody id="tablaBody">
+                    <tr><td colspan="100%" style="padding:2rem; text-align:center;">Selecciona filtros para ver disponibilidad</td></tr>
+                </tbody>
+            </table>
         </div>
-      </div>
-      
-      <div class="actions-section">
-        <h3 class="detail-title">🎯 Acciones</h3>
-        <div class="actions-grid">
-          <button class="action-btn btn-reservar" onclick="reservarCancha()">
-            📅 Confirmar Reserva
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
 
-  <script>
-    // Datos del usuario - INYECCIÓN SEGURA
-    const userData = <?= json_encode([
-        'club' => $usuario_data['nombre_club'] ?? '',
-        'responsable' => $usuario_data['alias'] ?? '',
-        'correo' => $usuario_data['email'] ?? '',
-        'telefono' => $usuario_data['celular'] ?? ''
-    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-
-    // Sistema de Toast Notifications
-    function showToast(message, type = 'info') {
-        const existingToast = document.querySelector('.toast');
-        if (existingToast) {
-            existingToast.remove();
-        }
+<!-- Modal Reserva Inteligente -->
+<div id="modalReservaInteligente" class="modal-reserva-inteligente">
+    <div class="modal-reserva-inteligente-content">
+        <h3 style="margin-top:0; color:#071289;">Confirmar Reserva</h3>
+        <p id="modalInfo" style="margin-bottom:1rem; color:#555;"></p>
         
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.add('show');
-        }, 100);
-        
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 300);
-        }, 3000);
-    }
+        <div id="opcionesDuracion" class="form-group" style="background:#f0f4f8; padding:10px; border-radius:6px;">
+            <label>⏱️ Duración:</label>
+            <div style="display:flex; gap:15px;">
+                <label><input type="radio" name="duracion" value="60" onchange="actualizarPrecioModal(60)"> 60 min</label>
+                <label><input type="radio" name="duracion" value="90" checked onchange="actualizarPrecioModal(90)"> 90 min</label>
+            </div>
+        </div>
 
-    function validarReservaSeleccionada() {
-        if (!reservaSeleccionada) {
-            showToast('⚠️ Debes seleccionar una cancha disponible primero', 'warning');
-            return false;
-        }
-        return true;
-    }
+        <div class="form-group">
+            <label>Valor Estimado:</label>
+            <div id="precioDisplay" style="font-size:1.5rem; font-weight:bold; color:#2E7D32;">$0</div>
+        </div>
 
-    // Funciones principales
-    let reservaSeleccionada = null;
-    let reservasData = [];
+        <button onclick="confirmarReservaInteligente()" class="btn-primary">✅ Confirmar Reserva</button>
+        <button onclick="cerrarModalReserva()" class="btn-secondary">Cancelar</button>
+    </div>
+</div>
 
-    async function cargarDisponibilidad(filtros = {}) {
+<script>
+    let reservaActual = null;
+    let slotsData = []; // Almacenará la estructura de la planilla
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+        aplicarFiltros();
+    });
+
+    async function aplicarFiltros() {
+        const deporte = document.getElementById('filtroDeporte').value;
+        const recinto = document.getElementById('filtroRecinto').value;
+        const rango = document.getElementById('filtroFecha').value;
+
+        document.getElementById('tablaBody').innerHTML = '<tr><td colspan="100%" style="padding:2rem; text-align:center;">Cargando...</td></tr>';
+
         try {
             const formData = new FormData();
-            formData.append('deporte', filtros.deporte || '');
-            formData.append('recinto', filtros.recinto || '');
-            formData.append('rango', filtros.rango || 'semana');
-            
-            // ✅ ENVIAR DATOS DE SESIÓN EN CADA SOLICITUD
-            formData.append('id_socio', '<?= $_SESSION['id_socio'] ?? '' ?>');
-            formData.append('club_id', '<?= $_SESSION['club_id'] ?? '' ?>');
-            
-            const response = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
+            formData.append('deporte', deporte);
+            formData.append('recinto', recinto);
+            formData.append('rango', rango);
+            formData.append('id_socio', <?= $id_socio ?>);
+
+            const res = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
+                method: 'POST', body: formData, credentials: 'include'
             });
             
-            const data = await response.json();
+            const data = await res.json();
+            if(data.error) throw new Error(data.error);
             
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            reservasData = data;
-            renderizarDisponibilidad(reservasData);
-            
+            renderizarPlanilla(data);
         } catch (error) {
-            console.error('Error al cargar disponibilidad:', error);
-            document.getElementById('reservasGrid').innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">
-                    Error: ${error.message}
-                </div>
-            `;
+            console.error(error);
+            document.getElementById('tablaBody').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
         }
     }
 
-    // Función para establecer rango inicial
-    function establecerRangoInicial() {
-        // Establecer el valor del select a "hoy"
-        document.getElementById('filtroFecha').value = 'hoy';
+    function renderizarPlanilla(data) {
+        const thead = document.getElementById('tablaHeader');
+        const tbody = document.getElementById('tablaBody');
         
-        // Aplicar los filtros inmediatamente
-        aplicarFiltros();
-    }
-
-    // Ejecutar al cargar la página
-    document.addEventListener('DOMContentLoaded', function() {
-        // Asegurar que el DOM esté listo
-        setTimeout(function() {
-            establecerRangoInicial();
-        }, 100);
+        // 1. Identificar Canchas Únicas en los datos
+        const canchas = [...new Map(data.map(item => [item.id_cancha, item])).values()]
+            .sort((a,b) => a.nro_cancha.localeCompare(b.nro_cancha));
         
-        // Event listeners para los filtros
-        document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
-        document.getElementById('filtroRecinto').addEventListener('change', aplicarFiltros);
-        document.getElementById('filtroFecha').addEventListener('change', aplicarFiltros);
-    });
-
-    function renderizarDisponibilidad(disponibilidad) {
-        const grid = document.getElementById('reservasGrid');
-        
-        if (disponibilidad.length === 0) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: white;">No hay canchas disponibles en el período seleccionado</div>';
+        if(canchas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles con estos filtros.</td></tr>';
             return;
         }
-        
-        // Agrupar por fecha
-        const porFecha = {};
-        disponibilidad.forEach(item => {
-            const fecha = item.fecha;
-            if (!porFecha[fecha]) {
-                porFecha[fecha] = [];
-            }
-            porFecha[fecha].push(item);
+
+        // 2. Construir Header
+        let htmlHead = '<th>Hora</th>';
+        canchas.forEach(c => {
+            htmlHead += `<th>${c.nro_cancha}<br><small style="font-weight:normal;">${c.recinto_nombre}</small></th>`;
         });
-        
-        grid.innerHTML = '';
-        
-        Object.keys(porFecha).sort().forEach(fecha => {
-            const fechaDiv = document.createElement('div');
-            fechaDiv.style.gridColumn = '1/-1';
-            fechaDiv.style.marginTop = '1.5rem';
-            fechaDiv.style.paddingBottom = '0.5rem';
-            fechaDiv.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
-            fechaDiv.style.color = '#FFD700';
-            fechaDiv.style.fontWeight = 'bold';
+        thead.innerHTML = htmlHead;
+
+        // 3. Generar Slots de Tiempo (De 07:00 a 23:00 cada 30 min)
+        // Nota: Idealmente esto viene del backend, pero lo generamos frontend para la vista de grilla
+        let htmlBody = '';
+        let horaActual = 7 * 60; // 07:00 en minutos
+        const horaFinDia = 23 * 60; // 23:00
+
+        while(horaActual < horaFinDia) {
+            const h = Math.floor(horaActual / 60).toString().padStart(2,'0');
+            const m = (horaActual % 60).toString().padStart(2,'0');
+            const timeLabel = `${h}:${m}`;
             
-            // ✅ Formato dd-mm-yyyy y día correcto usando la fecha del servidor
-            const partes = fecha.split('-'); // YYYY-MM-DD
-            const fechaFormateada = `${partes[2]}-${partes[1]}-${partes[0]}`; // DD-MM-YYYY
+            htmlBody += `<tr><td>${timeLabel}</td>`;
             
-            // Crear fecha en UTC para evitar problemas de zona horaria
-            const fechaUTC = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2]));
-            const nombreDia = fechaUTC.toLocaleDateString('es-ES', { 
-                weekday: 'long',
-                timeZone: 'UTC'
+            canchas.forEach(cancha => {
+                // Buscar si hay disponibilidad exacta para esta cancha y hora
+                // Nota: La API debe devolver items con hora_inicio coincidente
+                const slot = data.find(d => 
+                    d.id_cancha == cancha.id_cancha && 
+                    d.hora_inicio.substring(0,5) == timeLabel
+                );
+
+                if(slot && slot.estado === 'disponible') {
+                    htmlBody += `<td class="slot-disponible" onclick='seleccionarSlot(${JSON.stringify(slot).replace(/'/g, "&#39;")})'>Disponible</td>`;
+                } else {
+                    htmlBody += `<td class="slot-ocupado">Ocupado</td>`;
+                }
             });
             
-            fechaDiv.textContent = `${fechaFormateada} (${nombreDia})`;
-            
-            grid.appendChild(fechaDiv);
-            
-            porFecha[fecha].forEach(item => {
-                if (item.estado !== 'disponible') return;
-                
-                const card = document.createElement('div');
-                card.className = 'reserva-card';
-                card.onclick = () => selectDisponibilidad(item);
-                
-                const iconos = {
-                    'futbol': '⚽', 'futbolito': '⚽', 'futsal': '⚽',
-                    'tenis': '🎾', 'padel': '🎾', 'voleyball': '🏐',
-                    'otro': '🏟️'
-                };
-                
-                // Formatear valor con separador de miles
-                const valorFormateado = parseInt(item.valor_arriendo).toLocaleString('es-CL');
-                
-                card.innerHTML = `
-                    <div class="deporte-icon">${iconos[item.id_deporte] || '🏟️'}</div>
-                    <div class="cancha-nombre">${item.nro_cancha || 'Sin nombre'}</div>
-                    <div class="fecha-hora">
-                        ${item.hora_inicio.substring(0, 5)}<br>
-                        <small style="color: #aaa; font-size: 0.8rem;">${item.recinto_nombre}</small>
-                    </div>
-                    <div class="estado-indicator estado-disponible"></div>
-                    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
-                        $${valorFormateado}
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-        });
-    }
-    
-    function selectDisponibilidad(item) {
-        // Mostrar modal de reserva inteligente en lugar del comportamiento anterior
-        mostrarModalReservaInteligente(item);
+            htmlBody += `</tr>`;
+            horaActual += 30; // Avanzar 30 min
+        }
+        tbody.innerHTML = htmlBody;
     }
 
-    function mostrarDetalleDisponibilidad(item) {
-        const fechaHora = new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + item.hora_inicio.substring(0, 5);
+    function seleccionarSlot(slot) {
+        reservaActual = slot;
+        const modal = document.getElementById('modalReservaInteligente');
         
-        document.getElementById('detalleContent').innerHTML = `
-            <div class="detail-item">
-                <span class="detail-label">Club:</span> 
-                <span>${userData.club}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Responsable:</span> 
-                <span>${userData.responsable}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Correo:</span> 
-                <span>${userData.correo}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Teléfono:</span> 
-                <span>${userData.telefono || 'N/A'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Cancha:</span> 
-                <span>${item.nro_cancha}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Recinto:</span> 
-                <span>${item.recinto_nombre}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Deporte:</span> 
-                <span>${item.id_deporte}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Fecha/Hora:</span> 
-                <span>${fechaHora}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Valor:</span> 
-                <span>$${item.valor_arriendo}</span>
-            </div>
+        // Configurar Modal
+        document.getElementById('modalInfo').innerHTML = `
+            <strong>Cancha:</strong> ${slot.nro_cancha} (${slot.recinto_nombre})<br>
+            <strong>Fecha:</strong> ${slot.fecha}<br>
+            <strong>Hora Inicio:</strong> ${slot.hora_inicio.substring(0,5)}
         `;
-    }
-
-    function reservarCancha() {
-        if (!validarReservaSeleccionada()) return;
-        alert('Funcionalidad de reserva en desarrollo');
-    }
-
-    document.getElementById('filtroDeporte').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroRecinto').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroFecha').addEventListener('change', aplicarFiltros);
-
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarDisponibilidad({ rango: 'semana' });
-    });
-
-    function aplicarFiltros() {
-        const filtros = {
-            deporte: document.getElementById('filtroDeporte').value || '',
-            recinto: document.getElementById('filtroRecinto').value || '',
-            rango: document.getElementById('filtroFecha').value
-        };
         
-        console.log('Filtros enviados:', filtros);
-        cargarDisponibilidad(filtros);
-    }
-
-    // Variables globales para la reserva actual
-    let reservaActual = null;
-
-        // Función para mostrar el modal de reserva inteligente ADAPTADO A BLOQUES DINÁMICOS
-    function mostrarModalReservaInteligente(item) {
-        reservaActual = item;
+        // Mostrar/Ocultar opción duración según deporte
+        const esPadel = (slot.id_deporte === 'padel');
+        document.getElementById('opcionesDuracion').style.display = esPadel ? 'block' : 'none';
         
-        // Determinar si la cancha permite bloques variables (ej. Pádel)
-        // Asumimos que si id_deporte es 'padel' o duracion_bloque > 60, mostramos opciones
-        const esPadel = (item.id_deporte === 'padel' || item.duracion_bloque >= 90);
-        const duracionBase = item.duracion_bloque || 60;
-
-        let htmlOpcionesDuracion = '';
-        
-        if (esPadel) {
-            htmlOpcionesDuracion = `
-                <div class="form-group" style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                    <label style="color: #333; font-weight: bold; display: block; margin-bottom: 8px;">⏱️ Duración de la Reserva:</label>
-                    <div style="display: flex; gap: 15px;">
-                        <label style="color: #333; cursor: pointer;">
-                            <input type="radio" name="duracion_reserva" value="60" onchange="actualizarPrecioModal(${item.valor_arriendo}, 60)"> 
-                            60 min
-                        </label>
-                        <label style="color: #333; cursor: pointer;">
-                            <input type="radio" name="duracion_reserva" value="90" checked onchange="actualizarPrecioModal(${item.valor_arriendo}, 90)"> 
-                            90 min (Recomendado)
-                        </label>
-                    </div>
-                </div>
-            `;
+        // Default selección
+        if(esPadel) {
+            document.querySelector('input[name="duracion"][value="90"]').checked = true;
+            actualizarPrecioModal(90);
         } else {
-            // Para fútbol u otros, ocultamos la opción o la dejamos fija en 60
-            htmlOpcionesDuracion = `<input type="hidden" name="duracion_reserva" value="${duracionBase}">`;
+            document.querySelector('input[name="duracion"][value="60"]').checked = true;
+            actualizarPrecioModal(60);
         }
 
-        const modal = document.createElement('div');
-        modal.className = 'modal-reserva-inteligente';
-        modal.id = 'modalReservaInteligente';
-        modal.innerHTML = `
-            <div class="modal-reserva-inteligente-content">
-                <h3 style="margin-top: 0; color: #333;">Reservar Cancha: ${item.nro_cancha}</h3>
-                <p><strong>Recinto:</strong> ${item.recinto_nombre}</p>
-                <p><strong>Hora Inicio:</strong> ${formatFechaEspanol(item.fecha)}, ${item.hora_inicio.substring(0, 5)}</p>
-                
-                <!-- Contenedor de Precio Dinámico -->
-                <p id="precio-display" style="font-size: 1.2rem; font-weight: bold; color: #2E7D32;">
-                    <strong>Valor:</strong> $${parseInt(item.valor_arriendo).toLocaleString('es-CL')}
-                </p>
-
-                ${htmlOpcionesDuracion}
-                
-                <div class="opcion-reserva" onclick="seleccionarOpcion('simple')">
-                    <input type="radio" id="reservaSimple" name="tipoReserva" value="simple" checked>
-                    <label style="color: #333;" for="reservaSimple">Reservar sólo esta fecha y hora</label>
-                </div>
-                
-                <div class="opcion-reserva" onclick="seleccionarOpcion('patron')">
-                    <input type="radio" id="reservaPatron" name="tipoReserva" value="patron">
-                    <label style="color: #333;" for="reservaPatron">Crear patrón de reserva recurrente</label>
-                    
-                    <div id="panelPatron" class="panel-patron" style="display:none;">
-                        <div style="margin-bottom: 10px;">
-                            <label style="color: #2b0646ff;" ><strong>Frecuencia:</strong></label><br>
-                            <select id="frecuenciaPatron" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option style="color: #333;" value="semanal">Semanal (mismo día)</option>
-                                <option style="color: #333;" value="quincenal">Quincenal</option>
-                                <option style="color: #333;" value="mensual">Mensual (mismo día del mes)</option>
-                            </select>
-                        </div>
-                        
-                        <div style="margin-bottom: 10px;">
-                            <label style="color: #2b0646ff;"><strong>Rango de fechas:</strong></label><br>
-                            <input type="date" id="fechaDesdePatron" style="width: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${item.fecha}">
-                            <span style="display: inline-block; width: 8%; text-align: center;">→</span>
-                            <input type="date" id="fechaHastaPatron" style="width: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${sumarDias(item.fecha, 30)}">
-                        </div>
-                        
-                        <div id="previewPatron" class="preview-patron">
-                            <!-- Preview dinámico -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- === OPCIÓN DE RECAUDACIÓN (solo para responsables) === -->
-                <?php if (isset($usuario_data['es_responsable']) && $usuario_data['es_responsable'] == 1): ?>
-                <div class="form-group">
-                  <label for="monto_recaudacion">Monto total a recaudar ($)</label>
-                  <input type="number" id="monto_recaudacion" name="monto_recaudacion" min="0" step="100" placeholder="Ej: 49000">
-                </div>
-
-                <div class="form-group">
-                  <label for="jugadores_esperados">Cupos disponibles</label>
-                  <input type="number" id="jugadores_esperados" name="jugadores_esperados" min="1" max="30" placeholder="Ej: 14">
-                </div>
-                <?php endif; ?>
-                
-                <div style="margin-top: 20px; text-align: right;">
-                    <button onclick="cerrarModalReserva()" style="margin-right: 10px; padding: 10px 20px; border: 1px solid #ccc; border-radius: 6px; background: white; cursor: pointer;">Cancelar</button>
-                    <button onclick="confirmarReservaInteligente()" class="btn-primary">Confirmar Reserva</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.style.display = 'block';
-        
-        // Agregar eventos
-        document.getElementById('reservaPatron').addEventListener('change', function() {
-            document.getElementById('panelPatron').style.display = this.checked ? 'block' : 'none';
-            if (this.checked) actualizarPreview();
-        });
-        
-        ['frecuenciaPatron', 'fechaDesdePatron', 'fechaHastaPatron'].forEach(id => {
-            document.getElementById(id).addEventListener('change', actualizarPreview);
-        });
-        
-        actualizarPreview();
+        modal.style.display = 'flex';
     }
 
-    // Función auxiliar para actualizar precio según duración seleccionada
-    function actualizarPrecioModal(valorBase, minutos) {
-        // Lógica simple: si son 90 min, multiplicamos por 1.5 (ajusta según tu regla de negocio)
-        let factor = 1;
-        if (minutos == 90) factor = 1.5; 
-        if (minutos == 120) factor = 2;
-
-        const nuevoValor = valorBase * factor;
-        document.getElementById('precio-display').innerHTML = `<strong>Valor:</strong> $${parseInt(nuevoValor).toLocaleString('es-CL')}`;
-    }
-
-    // Modificar confirmarReservaInteligente para enviar la duración
-    function confirmarReservaInteligente() {
-      const tipoReserva = document.getElementById('reservaPatron').checked ? 'patron' : 'simple';
-      
-      // Obtener duración seleccionada (default 60 si no existe el radio button)
-      const duracionRadio = document.querySelector('input[name="duracion_reserva"]:checked');
-      const duracionMinutos = duracionRadio ? parseInt(duracionRadio.value) : (reservaActual.duracion_bloque || 60);
-
-      // Calcular hora_fin real basada en la duración
-      const horaInicioStr = reservaActual.hora_inicio; // "HH:MM:SS"
-      const [h, m, s] = horaInicioStr.split(':').map(Number);
-      const fechaInicio = new Date();
-      fechaInicio.setHours(h, m, s);
-      const fechaFin = new Date(fechaInicio.getTime() + duracionMinutos * 60000);
-      
-      const horaFinStr = fechaFin.toTimeString().substring(0, 8); // "HH:MM:SS"
-
-      let tipoPatronAPI = 'simple';
-      if (tipoReserva === 'patron') {
-          const frecuencia = document.getElementById('frecuenciaPatron').value;
-          if (frecuencia === 'semanal') tipoPatronAPI = 'semanal';
-          else if (frecuencia === 'quincenal') tipoPatronAPI = 'semanal'; // Ajusta según tu backend
-          else if (frecuencia === 'mensual') tipoPatronAPI = 'mensual';
-      }
-      
-      const montoRecaudacion = document.getElementById('monto_recaudacion')?.value || '';
-      const jugadoresEsperados = document.getElementById('jugadores_esperados')?.value || '';
-      
-      const datos = {
-            id_cancha: reservaActual.id_cancha,
-            fecha_base: reservaActual.fecha,
-            hora_inicio: reservaActual.hora_inicio,
-            hora_fin: horaFinStr, // <-- HORA FIN CALCULADA DINÁMICAMENTE
-            duracion_minutos: duracionMinutos, // <-- DURACIÓN EXPLÍCITA
-            tipo_patron: tipoPatronAPI,
-            monto_recaudacion: montoRecaudacion,
-            jugadores_esperados: jugadoresEsperados,
-            club_id: '<?= $_SESSION['club_id'] ?? "" ?>'
-      };
-      
-      if (tipoReserva === 'patron') {
-          datos.fecha_desde = document.getElementById('fechaDesdePatron').value;
-          datos.fecha_hasta = document.getElementById('fechaHastaPatron').value;
-      }
-      
-      // Enviar a la API
-      fetch('../api/crear_reserva_recurrente.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams(datos)
-      })
-      .then(response => response.json())
-      .then(data => {
-          cerrarModalReserva();
-          if (data.success) {
-              mostrarToast('✅ ' + data.message + ` (${data.total_reservas} reservas creadas)`);
-              cargarDisponibilidad(); // Recargar planilla
-          } else {
-              mostrarToast('❌ ' + data.message);
-          }
-      })
-      .catch(error => {
-          cerrarModalReserva();
-          mostrarToast('❌ Error al crear la reserva: ' + error.message);
-      });
-    }
-
-    function seleccionarOpcion(tipo) {
-        document.getElementById('reservaSimple').checked = (tipo === 'simple');
-        document.getElementById('reservaPatron').checked = (tipo === 'patron');
-        document.getElementById('panelPatron').style.display = (tipo === 'patron') ? 'block' : 'none';
-        if (tipo === 'patron') actualizarPreview();
+    function actualizarPrecioModal(minutos) {
+        if(!reservaActual) return;
+        // Lógica simple de precio: Base * (minutos/60)
+        // Ajusta esto según tu regla de negocio real
+        const precioBase = parseFloat(reservaActual.valor_arriendo);
+        const factor = minutos / 60;
+        const total = precioBase * factor;
+        
+        document.getElementById('precioDisplay').textContent = '$' + Math.round(total).toLocaleString('es-CL');
     }
 
     function cerrarModalReserva() {
-        const modal = document.getElementById('modalReservaInteligente');
-        if (modal) modal.remove();
+        document.getElementById('modalReservaInteligente').style.display = 'none';
     }
 
     function confirmarReservaInteligente() {
-      const tipoReserva = document.getElementById('reservaPatron').checked ? 'patron' : 'simple';
-      
-      let tipoPatronAPI = 'simple';
-      if (tipoReserva === 'patron') {
-          const frecuencia = document.getElementById('frecuenciaPatron').value;
-          if (frecuencia === 'semanal') tipoPatronAPI = 'semanal';
-          else if (frecuencia === 'quincenal') tipoPatronAPI = 'semanal';
-          else if (frecuencia === 'mensual') tipoPatronAPI = 'mensual';
-      }
-      
-      // === OBTENER CAMPOS DE RECAUDACIÓN ===
-      const montoRecaudacion = document.getElementById('monto_recaudacion')?.value || '';
-      const jugadoresEsperados = document.getElementById('jugadores_esperados')?.value || '';
-      
-      const datos = {
+        if(!reservaActual) return;
+
+        const duracion = parseInt(document.querySelector('input[name="duracion"]:checked').value);
+        
+        // Calcular Hora Fin
+        const [h, m] = reservaActual.hora_inicio.substring(0,5).split(':').map(Number);
+        const fechaInicio = new Date();
+        fechaInicio.setHours(h, m, 0);
+        const fechaFin = new Date(fechaInicio.getTime() + duracion * 60000);
+        const horaFinStr = fechaFin.toTimeString().substring(0,8);
+
+        const datos = {
             id_cancha: reservaActual.id_cancha,
             fecha_base: reservaActual.fecha,
             hora_inicio: reservaActual.hora_inicio,
-            hora_fin: reservaActual.hora_fin,
-            tipo_patron: tipoPatronAPI,
-            monto_recaudacion: montoRecaudacion,
-            jugadores_esperados: jugadoresEsperados,
-            club_id: '<?= $_SESSION['club_id'] ?? "" ?>'  // ← ¡Clave!
-      };
-      
-      if (tipoReserva === 'patron') {
-          datos.fecha_desde = document.getElementById('fechaDesdePatron').value;
-          datos.fecha_hasta = document.getElementById('fechaHastaPatron').value;
-      }
-      
-      // Enviar a la API
-      fetch('../api/crear_reserva_recurrente.php', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams(datos)
-      })
-      .then(response => response.json())
-      .then(data => {
-          cerrarModalReserva();
-          if (data.success) {
-              mostrarToast('✅ ' + data.message + ` (${data.total_reservas} reservas creadas)`);
-              cargarDisponibilidad();
-          } else {
-              mostrarToast('❌ ' + data.message);
-          }
-      })
-      .catch(error => {
-          cerrarModalReserva();
-          mostrarToast('❌ Error al crear la reserva: ' + error.message);
-      });
-  }
+            hora_fin: horaFinStr, // Importante: Hora Fin calculada
+            duracion_minutos: duracion,
+            tipo_patron: 'simple',
+            club_id: '<?= $_SESSION['club_id'] ?? "" ?>'
+        };
 
-    function actualizarPreview() {
-        const frecuencia = document.getElementById('frecuenciaPatron').value;
-        const desde = document.getElementById('fechaDesdePatron').value;
-        const hasta = document.getElementById('fechaHastaPatron').value;
-        const fechaBase = reservaActual.fecha; // La fecha base seleccionada
-        
-        // Función para generar fechas reales (igual que el backend)
-        function generarFechasReales(tipo, desde, hasta, fechaBase) {
-            const fechas = [];
-            const fechaActual = new Date(desde);
-            const fechaFin = new Date(hasta);
-            const fechaBaseObj = new Date(fechaBase);
-            const diaBase = fechaBaseObj.getDay(); // 0=domingo, 6=sábado
-            
-            // Ajustar: JavaScript getDay() vs PHP format('N')
-            // PHP: 1=lunes, 7=domingo
-            // JS: 0=domingo, 6=sábado
-            const diaBasePHP = diaBase === 0 ? 7 : diaBase;
-            
-            // Incluir fecha base si está en rango
-            if (fechaBaseObj >= new Date(desde) && fechaBaseObj <= fechaFin) {
-                if (tipo === 'semanal') {
-                    const diaFechaBase = fechaBaseObj.getDay();
-                    const diaFechaBasePHP = diaFechaBase === 0 ? 7 : diaFechaBase;
-                    if (diaFechaBasePHP === diaBasePHP) {
-                        fechas.push(fechaBase);
-                    }
-                } else {
-                    fechas.push(fechaBase);
-                }
+        fetch('../api/crear_reserva_recurrente.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(datos)
+        })
+        .then(r => r.json())
+        .then(data => {
+            cerrarModalReserva();
+            if(data.success) {
+                showToast('✅ Reserva creada con éxito', 'success');
+                aplicarFiltros(); // Recargar planilla
+            } else {
+                showToast('❌ ' + data.message, 'error');
             }
-            
-            if (tipo === 'semanal') {
-                // Encontrar primer día coincidente
-                let fechaTemp = new Date(desde);
-                while (fechaTemp <= fechaFin) {
-                    const diaActual = fechaTemp.getDay();
-                    const diaActualPHP = diaActual === 0 ? 7 : diaActual;
-                    if (diaActualPHP === diaBasePHP) {
-                        const fechaStr = fechaTemp.toISOString().split('T')[0];
-                        if (!fechas.includes(fechaStr)) {
-                            fechas.push(fechaStr);
-                        }
-                    }
-                    fechaTemp.setDate(fechaTemp.getDate() + 1);
-                }
-                
-            } else if (tipo === 'quincenal') {
-                let fechaTemp = new Date(desde);
-                while (fechaTemp <= fechaFin) {
-                    fechas.push(fechaTemp.toISOString().split('T')[0]);
-                    fechaTemp.setDate(fechaTemp.getDate() + 15);
-                }
-                
-            } else if (tipo === 'mensual') {
-                let fechaTemp = new Date(desde);
-                while (fechaTemp <= fechaFin) {
-                    fechas.push(fechaTemp.toISOString().split('T')[0]);
-                    fechaTemp.setMonth(fechaTemp.getMonth() + 1);
-                }
-            }
-            
-            // Eliminar duplicados
-            return [...new Set(fechas)].sort();
-        }
-        
-        // Generar fechas reales
-        const fechasReales = generarFechasReales(frecuencia, desde, hasta, fechaBase);
-        const ocurrencias = fechasReales.length;
-        const valorTotal = ocurrencias * parseInt(reservaActual.valor_arriendo);
-        
-        document.getElementById('previewPatron').innerHTML = 
-            `<div style="color: #4a0e75ff;">📅 Se reservarán <strong>${ocurrencias}</strong> arriendos de cancha<br>
-            💰 Total estimado: $${valorTotal.toLocaleString('es-CL')}</div>`;
+        })
+        .catch(err => {
+            cerrarModalReserva();
+            showToast('❌ Error de conexión', 'error');
+        });
     }
 
-    // Funciones auxiliares
-    function formatFechaEspanol(fecha) {
-        const partes = fecha.split('-');
-        return `${partes[2]}-${partes[1]}-${partes[0]}`;
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.classList.add('show'), 100);
+        setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
     }
-
-    function sumarDias(fecha, dias) {
-        const date = new Date(fecha);
-        date.setDate(date.getDate() + dias);
-        return date.toISOString().split('T')[0];
-    }
-
-    function mostrarToast(mensaje) {
-        // Implementa tu sistema de toast notifications
-        alert(mensaje); // Temporal
-    }
-  </script>
+</script>
 </body>
 </html>
