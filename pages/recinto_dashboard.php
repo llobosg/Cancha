@@ -505,7 +505,6 @@ function renderizarPlanilla(data, filtroEstado) {
                                     data-cancha-id="${cancha.id_cancha}"
                                     onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                     } else {
-                        // ✅ AGREGADOS: ondragover, ondrop
                         html += `<td class="estado-disponible drop-zone" 
                                     ondragover="dragOver(event)" 
                                     ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
