@@ -1008,15 +1008,6 @@ document.getElementById('formReservaManual')?.addEventListener('submit', async(e
   }
 });
 
-// === DRAG & DROP PARA MOVER RESERVAS ===
-let draggedReservaId = null;
-
-function dragReserva(e, id) {
-    draggedReservaId = id;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-}
-
 // Permitir drop en celdas disponibles
 document.addEventListener('dragover', (e) => {
     if (e.target.classList.contains('estado-disponible')) {
