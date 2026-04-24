@@ -863,7 +863,7 @@ async function cargarTorneos() {
     const c = document.getElementById('listaTorneos');
     if(c) c.innerHTML = '<p style="color:#666;">No hay torneos activos.</p>';
 }
-let debounceTimer;
+
 function buscarSocioAdmin(query) {
   clearTimeout(debounceTimer);
   if(query.length < 2) { document.getElementById('searchResultsAdmin').style.display='none'; return; }
