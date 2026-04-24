@@ -289,17 +289,12 @@ $deportes = [
         }
     }
 
-    // === RENDERIZADO ADAPTADO A NUEVA ESTRUCTURA DE API (CORREGIDO) ===
+        // === RENDERIZADO CON DEPURACIÓN Y NORMALIZACIÓN DE HORAS ===
     function renderizarPlanillaSocio(data) {
         const thead = document.getElementById('tablaHeader');
         const tbody = document.getElementById('tablaBody');
         
-        console.log("Datos recibidos:", data); // Para depurar
-
-        // 1. Extraer arrays del objeto devuelto por la API
-        // Si la API falló o devolvió algo inesperado, protegemos el código
         if (!data || !data.canchas || !Array.isArray(data.canchas)) {
-            console.error("Formato de datos incorrecto:", data);
             tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem; color:red;">Error al cargar datos.</td></tr>';
             thead.innerHTML = '';
             return;
@@ -308,15 +303,15 @@ $deportes = [
         const canchas = data.canchas;
         const reservas = Array.isArray(data.reservas) ? data.reservas : [];
 
+        console.log(`🎨 Renderizando: ${canchas.length} canchas, ${reservas.length} reservas`);
+
         if (canchas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
             thead.innerHTML = '';
             return;
         }
 
-        console.log("Renderizando:", canchas.length, "canchas y", reservas.length, "reservas");
-
-        // 2. Construir Header con Controles de Fecha
+        // 1. Construir Header
         let htmlHead = `<th style="background:#f8f9fa; position:sticky; left:0; z-index:11; border-right:1px solid #eee; height:60px; vertical-align:middle;">
             <div class="table-header-controls">
                 <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
@@ -332,40 +327,53 @@ $deportes = [
         });
         thead.innerHTML = htmlHead;
 
-        // 3. Generar Filas cada 30 Minutos
+        // 2. Generar Filas cada 30 Minutos
         let htmlBody = '';
         let horaActualMinutos = 7 * 60; // 07:00
         const finDiaMinutos = 23 * 60;  // 23:00
         let skipCells = {}; 
+        let reservasPintadas = 0;
 
         while (horaActualMinutos < finDiaMinutos) {
             const h = Math.floor(horaActualMinutos / 60);
             const m = horaActualMinutos % 60;
+            // Formato HH:MM para comparar
             const timeLabel = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
             const esMediaHora = (m === 30);
             
             htmlBody += `<tr>`;
+            // Mostrar etiqueta de hora solo en horas en punto
             htmlBody += `<td style="${esMediaHora ? 'border-bottom:none; color:#ccc; font-size:0.7rem;' : ''}">${esMediaHora ? '' : timeLabel}</td>`;
 
             canchas.forEach((cancha, indexCancha) => {
-                // Verificar rowspan
+                // Verificar si esta celda está saltada por un rowspan anterior
                 if (skipCells[indexCancha] && skipCells[indexCancha] > 0) {
                     skipCells[indexCancha]--;
                     return; 
                 }
 
-                // Buscar reserva OCUPADA que empiece en este slot exacto
-                const reservaInicio = reservas.find(r => 
-                    r.id_cancha == cancha.id_cancha && 
-                    r.hora_inicio.substring(0,5) === timeLabel
-                );
+                // === BUSCAR RESERVA QUE EMPIECE EN ESTE SLOT EXACTO ===
+                // Normalizamos hora_inicio de la BD a HH:MM para comparar
+                const reservaInicio = reservas.find(r => {
+                    if (r.id_cancha != cancha.id_cancha) return false;
+                    if (!r.hora_inicio) return false;
+                    // Extraer HH:MM de la hora de la BD (puede venir HH:MM:SS)
+                    const horaBD = r.hora_inicio.substring(0, 5);
+                    return horaBD === timeLabel;
+                });
 
                 if (reservaInicio) {
-                    // Calcular duración
+                    reservasPintadas++;
+                    
+                    // Calcular duración en minutos
                     const hIni = parseInt(reservaInicio.hora_inicio.substring(0,2)) * 60 + parseInt(reservaInicio.hora_inicio.substring(3,5));
                     const hFin = parseInt(reservaInicio.hora_fin.substring(0,2)) * 60 + parseInt(reservaInicio.hora_fin.substring(3,5));
                     const duracionMinutos = hFin - hIni;
+                    
+                    // Rowspan: Duración / 30. Mínimo 1.
                     const rowspan = Math.max(1, Math.round(duracionMinutos / 30));
+                    
+                    console.log(`✅ Reserva encontrada: ${reservaInicio.hora_inicio} - ${reservaInicio.hora_fin} | Duración: ${duracionMinutos}min | Rowspan: ${rowspan}`);
                     
                     if (rowspan > 1) skipCells[indexCancha] = rowspan - 1;
 
@@ -374,7 +382,7 @@ $deportes = [
                         <div style="font-size:0.65rem; opacity:0.9;">Ocupado</div>
                     </td>`;
                 } else {
-                    // Disponible
+                    // Disponible: Pasar timeLabel correcto al modal
                     htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${cancha.id_cancha}", "${timeLabel}", "${cancha.nro_cancha}", "${cancha.recinto_nombre}", "${cancha.id_deporte}", "${cancha.valor_arriendo}")'></td>`;
                 }
             });
@@ -382,6 +390,8 @@ $deportes = [
             htmlBody += `</tr>`;
             horaActualMinutos += 30;
         }
+        
+        console.log(`📊 Reservas pintadas: ${reservasPintadas}`);
         tbody.innerHTML = htmlBody;
     }
 
@@ -405,8 +415,9 @@ $deportes = [
         aplicarFiltros();
     }
 
-    // Selección de Slot
     function seleccionarSlot(idCancha, hora, nroCancha, recinto, deporte, valor) {
+        console.log(`🖱️ Click en celda: Cancha=${nroCancha}, Hora recibida=${hora}, Fecha=${fechaPlanillaActual}`);
+        
         reservaActual = {
             id_cancha: idCancha,
             nro_cancha: nroCancha,
@@ -414,7 +425,7 @@ $deportes = [
             id_deporte: deporte,
             valor_arriendo: valor,
             fecha: fechaPlanillaActual,
-            hora_inicio: hora
+            hora_inicio: hora // Esta es la hora que se pasó desde el renderizado
         };
 
         const modal = document.getElementById('modalReservaInteligente');

@@ -88,11 +88,14 @@ function handleGetDisponibilidad($pdo, $post) {
     // Crear placeholders para IN (?, ?, ...)
     $placeholders = implode(',', array_fill(0, count($ids_canchas), '?'));
     
-    $sql_reservas = "SELECT id_cancha, hora_inicio, hora_fin, estado, estado_pago, id_reserva 
-                     FROM reservas 
-                     WHERE fecha = ? 
-                     AND id_cancha IN ($placeholders) 
-                     AND estado != 'cancelada'";
+    $sql_reservas = "SELECT id_cancha, 
+                            TIME_FORMAT(hora_inicio, '%H:%i:%s') as hora_inicio, 
+                            TIME_FORMAT(hora_fin, '%H:%i:%s') as hora_fin, 
+                            estado, estado_pago, id_reserva 
+                    FROM reservas 
+                    WHERE fecha = ? 
+                    AND id_cancha IN ($placeholders) 
+                    AND estado != 'cancelada'";
     
     // Unir fecha con IDs de canchas para los parámetros
     $params_reservas = array_merge([$fecha], $ids_canchas);
