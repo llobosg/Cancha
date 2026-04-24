@@ -289,36 +289,32 @@ $deportes = [
         }
     }
 
-    // === RENDERIZADO UNIFICADO PARA SOCIO ===
+    // === RENDERIZADO ADAPTADO A NUEVA ESTRUCTURA DE API (CORREGIDO) ===
     function renderizarPlanillaSocio(data) {
         const thead = document.getElementById('tablaHeader');
         const tbody = document.getElementById('tablaBody');
         
-        console.log("Iniciando renderizado con", data.length, "registros");
+        console.log("Datos recibidos:", data); // Para depurar
 
-        // 1. Identificar Canchas Únicas
-        if (!data || data.length === 0) {
+        // 1. Extraer arrays del objeto devuelto por la API
+        // Si la API falló o devolvió algo inesperado, protegemos el código
+        if (!data || !data.canchas || !Array.isArray(data.canchas)) {
+            console.error("Formato de datos incorrecto:", data);
+            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem; color:red;">Error al cargar datos.</td></tr>';
+            thead.innerHTML = '';
+            return;
+        }
+
+        const canchas = data.canchas;
+        const reservas = Array.isArray(data.reservas) ? data.reservas : [];
+
+        if (canchas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
             thead.innerHTML = '';
             return;
         }
 
-        // Usar Map para obtener canchas únicas basadas en id_cancha
-        const canchasMap = new Map();
-        data.forEach(item => {
-            // Solo agregamos si tiene id_cancha y nro_cancha
-            if (item.id_cancha && !canchasMap.has(item.id_cancha)) {
-                canchasMap.set(item.id_cancha, item);
-            }
-        });
-        
-        const canchas = Array.from(canchasMap.values()).sort((a,b) => a.nro_cancha.localeCompare(b.nro_cancha));
-        
-        console.log("Canchas únicas identificadas:", canchas.length);
-        if(canchas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">Error identificando canchas.</td></tr>';
-            return;
-        }
+        console.log("Renderizando:", canchas.length, "canchas y", reservas.length, "reservas");
 
         // 2. Construir Header con Controles de Fecha
         let htmlHead = `<th style="background:#f8f9fa; position:sticky; left:0; z-index:11; border-right:1px solid #eee; height:60px; vertical-align:middle;">
@@ -342,13 +338,9 @@ $deportes = [
         const finDiaMinutos = 23 * 60;  // 23:00
         let skipCells = {}; 
 
-        // Contador para debug
-        let reservasPintadas = 0;
-
         while (horaActualMinutos < finDiaMinutos) {
             const h = Math.floor(horaActualMinutos / 60);
             const m = horaActualMinutos % 60;
-            // Formato HH:MM para comparar con la API
             const timeLabel = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
             const esMediaHora = (m === 30);
             
@@ -356,32 +348,23 @@ $deportes = [
             htmlBody += `<td style="${esMediaHora ? 'border-bottom:none; color:#ccc; font-size:0.7rem;' : ''}">${esMediaHora ? '' : timeLabel}</td>`;
 
             canchas.forEach((cancha, indexCancha) => {
-                // Verificar si esta celda está saltada por un rowspan anterior
+                // Verificar rowspan
                 if (skipCells[indexCancha] && skipCells[indexCancha] > 0) {
                     skipCells[indexCancha]--;
                     return; 
                 }
 
-                // BUSCAR RESERVA:
-                // Buscamos cualquier registro en 'data' que coincida con ID_Cancha y HORA_INICIO
-                // Normalizamos hora_inicio a HH:MM para asegurar match
-                const reservaInicio = data.find(d => {
-                    if (d.id_cancha != cancha.id_cancha) return false;
-                    if (!d.hora_inicio) return false;
-                    // Extraer HH:MM de la hora de la BD (puede venir HH:MM:SS)
-                    const horaBD = d.hora_inicio.substring(0, 5);
-                    return horaBD === timeLabel;
-                });
+                // Buscar reserva OCUPADA que empiece en este slot exacto
+                const reservaInicio = reservas.find(r => 
+                    r.id_cancha == cancha.id_cancha && 
+                    r.hora_inicio.substring(0,5) === timeLabel
+                );
 
                 if (reservaInicio) {
-                    reservasPintadas++;
-                    // Calcular duración en slots de 30 min
+                    // Calcular duración
                     const hIni = parseInt(reservaInicio.hora_inicio.substring(0,2)) * 60 + parseInt(reservaInicio.hora_inicio.substring(3,5));
                     const hFin = parseInt(reservaInicio.hora_fin.substring(0,2)) * 60 + parseInt(reservaInicio.hora_fin.substring(3,5));
                     const duracionMinutos = hFin - hIni;
-                    
-                    // Rowspan: Duración / 30. Mínimo 1.
-                    // Si dura 90 min -> 90/30 = 3 filas.
                     const rowspan = Math.max(1, Math.round(duracionMinutos / 30));
                     
                     if (rowspan > 1) skipCells[indexCancha] = rowspan - 1;
@@ -392,7 +375,6 @@ $deportes = [
                     </td>`;
                 } else {
                     // Disponible
-                    // Pasamos los datos necesarios para el modal
                     htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${cancha.id_cancha}", "${timeLabel}", "${cancha.nro_cancha}", "${cancha.recinto_nombre}", "${cancha.id_deporte}", "${cancha.valor_arriendo}")'></td>`;
                 }
             });
@@ -400,8 +382,6 @@ $deportes = [
             htmlBody += `</tr>`;
             horaActualMinutos += 30;
         }
-        
-        console.log("Reservas pintadas en planilla:", reservasPintadas);
         tbody.innerHTML = htmlBody;
     }
 
