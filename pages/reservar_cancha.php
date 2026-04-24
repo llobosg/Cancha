@@ -59,7 +59,7 @@ $deportes = [
     /* Contenedor Principal */
     .main-container { max-width: 98%; margin: 1rem auto; padding: 0 1rem; }
     
-    /* Filtros */
+    /* Filtros Externos (Deporte/Recinto) */
     .controls-section {
         display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;
         padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 12px;
@@ -76,41 +76,59 @@ $deportes = [
     }
     .planilla-scroll { overflow-x: auto; max-height: 75vh; }
     
+    /* === ESTILOS DE TABLA REFINADOS === */
     .planilla-table {
-        width: 100%; border-collapse: separate; border-spacing: 2px;
-        table-layout: fixed; min-width: 800px;
+        width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed;
+        background: white;
     }
     
-    /* Headers */
-    .planilla-table th {
-        background: #AB47BC; color: white; padding: 12px;
-        position: sticky; top: 0; z-index: 10; font-size: 0.9rem;
-        text-align: center; border-bottom: 2px solid #8E24AA;
+    /* Headers de Canchas */
+    .planilla-table thead th {
+        background: #f8f9fa !important; color: #333; position: sticky; top: 0; z-index: 5;
+        border-bottom: 2px solid #AB47BC; border-right: 1px solid #eee;
+        height: 60px; font-size: 0.8rem; font-weight: 600; vertical-align: bottom;
     }
-    .planilla-table th:first-child {
-        left: 0; z-index: 11; background: #8E24AA; width: 70px; min-width: 70px;
-    }
-    
-    /* Celdas */
+
+    /* Celdas Generales (Líneas tenues) */
     .planilla-table td {
-        background: #FAFAFA; padding: 0; text-align: center;
-        border: 1px solid #eee; font-size: 0.8rem; height: 50px; /* Altura base */
-        cursor: pointer; transition: 0.2s; vertical-align: middle;
+        padding: 0; vertical-align: middle; text-align: center;
+        border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;
+        transition: all 0.2s ease; height: 40px; /* Altura base por slot de 30min */
     }
+
+    /* Hora Sticky (Sin Bold, Líneas Suaves) */
+    .planilla-table th:first-child,
     .planilla-table td:first-child {
-        background: #e3f2fd; font-weight: bold; color: #071289;
-        position: sticky; left: 0; z-index: 5; font-size: 0.9rem;
+        position: sticky; left: 0; z-index: 20;
+        background: #fff !important; color: #555; font-weight: normal;
+        border-right: 1px solid #eee; border-bottom: 1px solid #eee;
+        width: 60px !important; min-width: 60px !important; max-width: 60px !important;
+        padding: 4px !important; font-size: 0.8rem; text-align: center;
     }
     
     /* Estados Visuales */
-    td.slot-disponible:hover { background: #E8F5E9; border: 2px solid #4CAF50; }
-    
-    td.slot-ocupado { 
-        background: #FF5252 !important; 
-        color: white !important; 
-        cursor: not-allowed; 
-        font-weight: bold;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    td.estado-disponible { 
+        background-color: #ffffff !important; cursor: pointer;
+    }
+    td.estado-disponible:hover { background-color: #f9fbe7 !important; } 
+
+    td.estado-ocupado { 
+        background-color: #FF5252 !important; color: white !important;
+        font-size: 0.75rem; line-height: 1.2;
+    }
+
+    /* Controles en Header de Tabla (Fecha) */
+    .table-header-controls {
+        display: flex; align-items: center; gap: 8px; justify-content: center;
+    }
+    .date-nav-btn {
+        background: none; border: 1px solid #ddd; border-radius: 4px;
+        color: #555; cursor: pointer; padding: 2px 6px; font-size: 0.8rem;
+    }
+    .date-nav-btn:hover { background: #f0f0f0; }
+    .input-fecha-header {
+        border: 1px solid #ddd; border-radius: 4px; padding: 2px;
+        font-family: inherit; font-size: 0.8rem; color: #333; width: 110px; text-align: center;
     }
     
     /* Modal */
@@ -146,7 +164,7 @@ $deportes = [
 </div>
 
 <div class="main-container">
-    <!-- Filtros -->
+    <!-- Filtros Externos -->
     <div class="controls-section">
         <select class="control-select" id="filtroDeporte">
             <option value="">Todos los deportes</option>
@@ -162,13 +180,7 @@ $deportes = [
             <?php endforeach; ?>
         </select>
         
-        <select class="control-select" id="filtroFecha">
-            <option value="hoy">Hoy</option>
-            <option value="manana">Mañana</option>
-            <option value="semana" selected>Esta Semana</option>
-        </select>
-        
-        <button onclick="aplicarFiltros()" style="background:#4ECDC4; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold; color:#071289;">🔍 Buscar</button>
+        <button onclick="aplicarFiltros()" style="background:#4ECDC4; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold; color:#071289;">🔍 Actualizar</button>
     </div>
 
     <!-- Planilla -->
@@ -177,12 +189,11 @@ $deportes = [
             <table class="planilla-table" id="tablaReservas">
                 <thead>
                     <tr id="tablaHeader">
-                        <th>Hora</th>
-                        <!-- Se llena con JS -->
+                        <!-- Header se llena con JS incluyendo controles de fecha -->
                     </tr>
                 </thead>
                 <tbody id="tablaBody">
-                    <tr><td colspan="100%" style="padding:2rem; text-align:center;">Selecciona filtros para ver disponibilidad</td></tr>
+                    <tr><td colspan="100%" style="padding:2rem; text-align:center;">Cargando disponibilidad...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -215,7 +226,8 @@ $deportes = [
 
 <script>
     let reservaActual = null;
-    let slotsData = []; 
+    let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    let iconosDeporte = { 'padel':'🎾', 'tenis':'🎾', 'futbol':'⚽', 'default':'🏟️' };
 
     // Inicialización
     document.addEventListener('DOMContentLoaded', () => {
@@ -225,15 +237,14 @@ $deportes = [
     async function aplicarFiltros() {
         const deporte = document.getElementById('filtroDeporte').value;
         const recinto = document.getElementById('filtroRecinto').value;
-        const rango = document.getElementById('filtroFecha').value;
-
+        
         document.getElementById('tablaBody').innerHTML = '<tr><td colspan="100%" style="padding:2rem; text-align:center;">Cargando...</td></tr>';
 
         try {
             const formData = new FormData();
             formData.append('deporte', deporte);
             formData.append('recinto', recinto);
-            formData.append('rango', rango);
+            formData.append('fecha', fechaPlanillaActual); // Enviar fecha seleccionada
             formData.append('id_socio', <?= $id_socio ?>);
 
             const res = await fetch('../api/reservas_club.php?action=get_disponibilidad', {
@@ -243,127 +254,138 @@ $deportes = [
             const data = await res.json();
             if(data.error) throw new Error(data.error);
             
-            renderizarPlanillaLimpia(data);
+            renderizarPlanillaSocio(data);
         } catch (error) {
             console.error(error);
             document.getElementById('tablaBody').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
         }
     }
 
-    function renderizarPlanillaLimpia(data) {
+    // === RENDERIZADO UNIFICADO PARA SOCIO ===
+    function renderizarPlanillaSocio(data) {
         const thead = document.getElementById('tablaHeader');
         const tbody = document.getElementById('tablaBody');
         
-        // 1. Identificar Canchas Únicas en los datos
+        // 1. Identificar Canchas Únicas
         const canchas = [...new Map(data.map(item => [item.id_cancha, item])).values()]
             .sort((a,b) => a.nro_cancha.localeCompare(b.nro_cancha));
         
         if(canchas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles con estos filtros.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
+            thead.innerHTML = '';
             return;
         }
 
-        // 2. Construir Header
-        let htmlHead = '<th>Hora</th>';
+        // 2. Construir Header con Controles de Fecha
+        let htmlHead = `<th style="background:#f8f9fa; position:sticky; left:0; z-index:11; border-right:1px solid #eee; height:60px;">
+            <div class="table-header-controls" style="flex-direction:column; gap:4px;">
+                <div style="display:flex; gap:5px;">
+                    <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
+                    <input type="date" class="input-fecha-header" value="${fechaPlanillaActual}" onchange="actualizarFechaInput(this.value)">
+                    <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
+                </div>
+                <button class="date-nav-btn" style="font-size:0.7rem;" onclick="irAHoy()">Hoy</button>
+            </div>
+        </th>`;
+        
         canchas.forEach(c => {
-            htmlHead += `<th>${c.nro_cancha}<br><small style="font-weight:normal; font-size:0.7rem;">${c.recinto_nombre}</small></th>`;
+            const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
+            htmlHead += `<th>${icono}<br>${c.nro_cancha}</th>`;
         });
         thead.innerHTML = htmlHead;
 
-        // 3. Generar Filas por HORA EXACTA (07:00, 08:00, etc.)
+        // 3. Generar Filas cada 30 Minutos (Para soportar Rowspan de 90min)
         let htmlBody = '';
-        let horaActual = 7; // 07:00
-        const horaFinDia = 23; // 23:00
+        let horaActualMinutos = 7 * 60; // 07:00
+        const finDiaMinutos = 23 * 60;  // 23:00
+        let skipCells = {}; // Mapa para saltar celdas ocupadas por rowspan
 
-        while(horaActual < horaFinDia) {
-            const timeLabel = horaActual.toString().padStart(2,'0') + ":00";
+        while (horaActualMinutos < finDiaMinutos) {
+            const h = Math.floor(horaActualMinutos / 60);
+            const m = horaActualMinutos % 60;
+            const timeLabel = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            const esMediaHora = (m === 30);
             
-            htmlBody += `<tr><td>${timeLabel}</td>`;
-            
-            canchas.forEach(cancha => {
-                // Buscar reserva que EMPIECE exactamente en esta hora
-                // O que esté OCCUPANDO esta hora (para pintar rojo)
-                
-                // Estrategia: Buscamos cualquier reserva que solape con esta hora
-                // Para simplificar la vista "Grid", pintamos la celda completa si hay algo en esa hora
-                
-                // Nota: La API debe devolver todas las reservas del día, no solo las disponibles
-                // Asumimos que 'data' trae todo. Si no, hay que ajustar la API.
-                
-                // Buscamos la reserva más relevante para esta celda
-                const reservaEnHora = data.find(d => 
+            htmlBody += `<tr>`;
+            // Columna Hora: Solo mostrar texto si es hora en punto
+            htmlBody += `<td style="${esMediaHora ? 'border-bottom:none; color:#ccc;' : ''}">${esMediaHora ? '' : timeLabel}</td>`;
+
+            canchas.forEach((cancha, indexCancha) => {
+                // Verificar si esta celda está saltada por un rowspan anterior
+                if (skipCells[indexCancha] && skipCells[indexCancha] > 0) {
+                    skipCells[indexCancha]--;
+                    return; 
+                }
+
+                // Buscar reserva que EMPIECE en este slot exacto
+                const reservaInicio = data.find(d => 
                     d.id_cancha == cancha.id_cancha && 
-                    d.hora_inicio.substring(0,2) == horaActual.toString().padStart(2,'0')
+                    d.hora_inicio.substring(0,5) == timeLabel &&
+                    d.estado !== 'disponible' // Si está disponible, no es reserva
                 );
 
-                // También verificamos si hay una reserva que empezó antes y sigue activa (ej. 07:30 - 09:00 viendo las 08:00)
-                // Esto requiere lógica más compleja de rowspan. Para ahora, simplificamos:
-                // Si hay reserva que empieza en esta hora, la mostramos.
-                
-                if(reservaEnHora) {
-                    // Calcular duración visual aproximada
-                    const hInicio = parseInt(reservaEnHora.hora_inicio.substring(0,2));
-                    const mInicio = parseInt(reservaEnHora.hora_inicio.substring(3,5));
-                    const hFin = parseInt(reservaEnHora.hora_fin.substring(0,2));
-                    const mFin = parseInt(reservaEnHora.hora_fin.substring(3,5));
+                if (reservaInicio) {
+                    // Calcular duración en slots de 30 min
+                    const hIni = parseInt(reservaInicio.hora_inicio.substring(0,2)) * 60 + parseInt(reservaInicio.hora_inicio.substring(3,5));
+                    const hFin = parseInt(reservaInicio.hora_fin.substring(0,2)) * 60 + parseInt(reservaInicio.hora_fin.substring(3,5));
+                    const duracionMinutos = hFin - hIni;
+                    const rowspan = Math.max(1, Math.round(duracionMinutos / 30));
                     
-                    const duracionMinutos = ((hFin * 60) + mFin) - ((hInicio * 60) + mInicio);
-                    const rowspan = Math.ceil(duracionMinutos / 60); // Cuántas filas de hora ocupa
-                    
-                    // Si es la primera vez que encontramos esta reserva (coincide hora inicio)
-                    if(hInicio == horaActual) {
-                         htmlBody += `<td class="slot-ocupado" rowspan="${rowspan}" onclick='alert("Esta cancha está ocupada")'>
-                            <div style="font-size:0.75rem;">${reservaEnHora.hora_inicio.substring(0,5)} - ${reservaEnHora.hora_fin.substring(0,5)}</div>
-                         </td>`;
-                    } else {
-                        // Esta celda está cubierta por el rowspan de arriba, no renderizamos nada
-                        // Pero como estamos en un bucle simple, necesitamos saber qué celdas saltar.
-                        // Para simplificar este ejemplo sin backend complejo, asumiremos que la API devuelve slots.
-                        // Si usamos esta lógica de "Horas Exactas", necesitamos un mapa de ocupación.
-                        
-                        // SOLUCIÓN SIMPLE PARA DEMO:
-                        // Si ya fue procesada por un rowspan anterior, no hacemos nada.
-                        // (Esto requiere un array de control 'skipCells' como en el admin)
-                    }
-                } else {
-                    // Disponible
-                    // Buscamos si hay un slot disponible específico para esta hora exacta
-                    const slotDisponible = data.find(d => 
-                        d.id_cancha == cancha.id_cancha && 
-                        d.hora_inicio.substring(0,5) == timeLabel &&
-                        d.estado === 'disponible'
-                    );
+                    if (rowspan > 1) skipCells[indexCancha] = rowspan - 1;
 
-                    if(slotDisponible) {
-                        htmlBody += `<td class="slot-disponible" onclick='seleccionarSlot(${JSON.stringify(slotDisponible).replace(/'/g, "&#39;")})'></td>`;
-                    } else {
-                        // No hay dato explícito, asumimos ocupado o no generado
-                        htmlBody += `<td class="slot-ocupado" style="opacity:0.3;">-</td>`;
-                    }
+                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan * 40}px;">
+                        <div>${reservaInicio.hora_inicio.substring(0,5)} - ${reservaInicio.hora_fin.substring(0,5)}</div>
+                        <div style="font-size:0.65rem; opacity:0.8;">Ocupado</div>
+                    </td>`;
+                } else {
+                    // Disponible: Buscar si existe un slot disponible explícito o asumir libre
+                    // Para simplificar, si no hay reserva empezando aquí, está libre.
+                    htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${cancha.id_cancha}", "${timeLabel}", "${cancha.nro_cancha}", "${cancha.recinto_nombre}", "${cancha.id_deporte}", "${cancha.valor_arriendo}")'></td>`;
                 }
             });
             
             htmlBody += `</tr>`;
-            horaActual++;
+            horaActualMinutos += 30;
         }
         tbody.innerHTML = htmlBody;
     }
 
-    // NOTA: La función anterior es una simplificación. Para que funcione perfecto con rowspan
-    // necesitas implementar la lógica de 'skipCells' que usamos en el admin.
-    // Por ahora, si ves celdas vacías, es porque la API no devolvió un slot "disponible" para esa hora exacta.
+    // Funciones de Navegación de Fecha
+    function cambiarDia(dias) {
+        const fechaObj = new Date(fechaPlanillaActual);
+        fechaObj.setDate(fechaObj.getDate() + dias);
+        fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
+        aplicarFiltros();
+    }
+    function irAHoy() {
+        fechaPlanillaActual = new Date().toISOString().split('T')[0];
+        aplicarFiltros();
+    }
+    function actualizarFechaInput(val) {
+        fechaPlanillaActual = val;
+        aplicarFiltros();
+    }
 
-    function seleccionarSlot(slot) {
-        reservaActual = slot;
+    // Selección de Slot
+    function seleccionarSlot(idCancha, hora, nroCancha, recinto, deporte, valor) {
+        reservaActual = {
+            id_cancha: idCancha,
+            nro_cancha: nroCancha,
+            recinto_nombre: recinto,
+            id_deporte: deporte,
+            valor_arriendo: valor,
+            fecha: fechaPlanillaActual,
+            hora_inicio: hora
+        };
+
         const modal = document.getElementById('modalReservaInteligente');
-        
         document.getElementById('modalInfo').innerHTML = `
-            <strong>Cancha:</strong> ${slot.nro_cancha} (${slot.recinto_nombre})<br>
-            <strong>Fecha:</strong> ${slot.fecha}<br>
-            <strong>Hora Inicio:</strong> ${slot.hora_inicio.substring(0,5)}
+            <strong>Cancha:</strong> ${nroCancha} (${recinto})<br>
+            <strong>Fecha:</strong> ${fechaPlanillaActual}<br>
+            <strong>Hora Inicio:</strong> ${hora}
         `;
         
-        const esPadel = (slot.id_deporte === 'padel');
+        const esPadel = (deporte === 'padel');
         document.getElementById('opcionesDuracion').style.display = esPadel ? 'block' : 'none';
         
         if(esPadel) {
@@ -373,7 +395,6 @@ $deportes = [
             document.querySelector('input[name="duracion"][value="60"]').checked = true;
             actualizarPrecioModal(60);
         }
-
         modal.style.display = 'flex';
     }
 
@@ -393,9 +414,8 @@ $deportes = [
         if(!reservaActual) return;
         const duracion = parseInt(document.querySelector('input[name="duracion"]:checked').value);
         
-        const [h, m] = reservaActual.hora_inicio.substring(0,5).split(':').map(Number);
-        const fechaInicio = new Date();
-        fechaInicio.setHours(h, m, 0);
+        const [h, m] = reservaActual.hora_inicio.split(':').map(Number);
+        const fechaInicio = new Date(`${reservaActual.fecha}T${reservaActual.hora_inicio}:00`);
         const fechaFin = new Date(fechaInicio.getTime() + duracion * 60000);
         const horaFinStr = fechaFin.toTimeString().substring(0,8);
 
