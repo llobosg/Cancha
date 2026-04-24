@@ -121,18 +121,20 @@ $monto_deuda = $s_deuda->fetchColumn();
     .planilla-table td { animation: fadeInUp 0.3s ease-out; }
     .planilla-table td:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
 
-    /* 🎯 DRAG & DROP (CONSOLIDADO Y SIN CONFLICTOS) */
-    .cell-reserva { cursor: grab !important; transition: transform 0.2s, opacity 0.2s; }
+    /* 🎯 DRAG & DROP - VERSIÓN ESTABLE PARA TABLAS */
+    .cell-reserva { 
+        cursor: grab !important; 
+        transition: opacity 0.2s, transform 0.2s; 
+    }
     .cell-reserva:active { cursor: grabbing; }
     .cell-reserva.dragging {
-        opacity: 0.3 !important;
+        opacity: 0.4 !important;
         border: 3px dashed #333 !important;
-        transform: scale(0.95) !important;
+        transform: scale(0.96) !important;
         background: rgba(255,255,255,0.3) !important;
-        pointer-events: none !important; /* CLAVE: permite detectar celdas de abajo */
         z-index: 9999 !important;
+        /* ❌ ELIMINADO: pointer-events: none; (esto cancela el drag) */
     }
-    .drop-zone { transition: all 0.2s ease; }
     td.drop-target {
         background: #FFCDD2 !important;
         box-shadow: inset 0 0 0 3px #EF5350 !important;
@@ -140,16 +142,17 @@ $monto_deuda = $s_deuda->fetchColumn();
         z-index: 10 !important;
     }
     td.coord-highlight, th.coord-highlight {
-        background: #FFF3E0 !important;
+        background: #FFF8E1 !important;
         font-weight: 900 !important;
         transform: scale(1.12) !important;
         border: 2px solid #FFA000 !important;
         z-index: 20 !important;
-        transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
     }
-    @keyframes dropSuccess { 0% { transform: scale(1.03); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
     .drop-anim { animation: dropSuccess 0.3s ease-out; }
+    @keyframes dropSuccess { 0% { transform: scale(1.03); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
 
+   
+    .drop-zone { transition: all 0.2s ease; }
     @media (max-width: 1024px) {
         .main-layout { grid-template-columns: 1fr !important; height: auto; display: block; }
         .planilla-header-controls { min-width: 100%; width: 100%; overflow-x: auto; }
@@ -441,13 +444,15 @@ function renderizarPlanilla(data, filtroEstado) {
     let html = `<thead><tr>`;
     html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
-    data.canchas.forEach(c => {
+    data.canchas.forEach((c, index) => {
+        window.currentCanchasData = data.canchas; // Guardar referencia global
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        html += `<th style="background:#AB47BC; color: black; width:110px; min-width:110px; max-width:110px; font-size:0.75rem; padding:4px;">
+        html += `<th style="background:#AB47BC; color:white; width:110px; font-size:0.75rem;" 
+                data-cancha-id="${c.id_cancha}">
                     <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
-                 </th>`;
+                </th>`;
     });
-    html += `</tr></thead><tbody>`;
+        html += `</tr></thead><tbody>`;
 
     const ahora = new Date();
     let skipCells = {};
@@ -496,7 +501,9 @@ function renderizarPlanilla(data, filtroEstado) {
                     const esPasado = slotFecha <= new Date();
                     
                     if (esPasado) {
-                        html += `<td class="estado-disponible" style="opacity:0.3; cursor:not-allowed;"></td>`;
+                        html += `<td class="estado-disponible" 
+                                    data-cancha-id="${cancha.id_cancha}"
+                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                     } else {
                         // ✅ AGREGADOS: ondragover, ondrop
                         html += `<td class="estado-disponible drop-zone" 
@@ -515,26 +522,135 @@ function renderizarPlanilla(data, filtroEstado) {
 
 // === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
 let draggedReservaId = null;
+let draggedElement = null;
 
 function dragStart(e, id) {
     draggedReservaId = id;
+    draggedElement = e.target;
+    
+    // Configurar dataTransfer ANTES de cualquier otra cosa
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.setData('text/plain', id.toString());
     
-    // Agregar clase visual
+    // Aplicar clase visual
     e.target.classList.add('dragging');
-    console.log(`🎯 Drag START: ID=${id}, Element=`, e.target, 'Clases:', e.target.classList);
     
-    // Forzar reflow para que el estilo se aplique inmediatamente
+    // Forzar reflow para aplicar estilos inmediatamente
     void e.target.offsetWidth;
+    
+    console.log(`🎯 Drag START: ID=${id}`);
 }
 
 function dragEnd(e) {
     console.log(`🎯 Drag END`);
-    e.target.classList.remove('dragging');
+    if (draggedElement) draggedElement.classList.remove('dragging');
     limpiarHighlights();
     draggedReservaId = null;
+    draggedElement = null;
 }
+
+// Listener GLOBAL para dragover (CRÍTICO para permitir drop)
+document.addEventListener('dragover', (e) => {
+    e.preventDefault(); // Permite el drop
+    e.dataTransfer.dropEffect = 'move';
+    
+    const td = e.target.closest('td.estado-disponible');
+    if (td) {
+        limpiarHighlights();
+        td.classList.add('drop-target');
+        highlightCoordinates(td);
+    }
+}, { passive: false });
+
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+function highlightCoordinates(td) {
+    const row = td.closest('tr');
+    if (!row) return;
+    const colIndex = Array.from(row.children).indexOf(td);
+    
+    // Resaltar Hora
+    const timeCell = row.querySelector('td:first-child');
+    if (timeCell) timeCell.classList.add('coord-highlight');
+    
+    // Resaltar Cancha (header)
+    const headerRow = document.querySelector('#tablaPlanilla thead tr');
+    if (headerRow && headerRow.children[colIndex]) {
+        headerRow.children[colIndex].classList.add('coord-highlight');
+    }
+}
+
+function limpiarHighlights() {
+    document.querySelectorAll('.drop-target, .coord-highlight').forEach(el => {
+        el.classList.remove('drop-target', 'coord-highlight');
+    });
+}
+
+// Listener GLOBAL para drop
+document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // Evitar conflictos con onclick
+    
+    const td = e.target.closest('td.estado-disponible');
+    if (!td || !draggedReservaId) return;
+    
+    td.classList.add('drop-anim');
+    setTimeout(() => td.classList.remove('drop-anim'), 300);
+    limpiarHighlights();
+    
+    // Extraer datos de la celda destino
+    const row = td.closest('tr');
+    const horaLabel = row?.querySelector('td:first-child')?.textContent?.trim();
+    const colIndex = Array.from(row.children).indexOf(td);
+    const headerRow = document.querySelector('#tablaPlanilla thead tr');
+    
+    // Obtener ID de cancha desde data attribute o índice
+    // Asegúrate de que tu renderPlanilla agregue data-cancha-id a los th
+    let canchaId = null;
+    if (headerRow && headerRow.children[colIndex]) {
+        canchaId = headerRow.children[colIndex].dataset.canchaId || 
+                   td.dataset.canchaId; // Fallback si lo agregas al td
+    }
+    
+    // Si no tienes data-cancha-id, usa un mapeo temporal
+    if (!canchaId) {
+        const canchasData = window.currentCanchasData || [];
+        if (canchasData[colIndex]) canchaId = canchasData[colIndex].id_cancha;
+    }
+
+    console.log(`🔄 Drop: ID=${draggedReservaId} → Cancha=${canchaId} @ ${horaLabel}`);
+
+    if (canchaId && horaLabel) {
+        if (confirm(`📅 ¿Mover reserva a las ${horaLabel} en Cancha ID ${canchaId}?`)) {
+            try {
+                const res = await fetch('../api/mover_reserva.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id_reserva: draggedReservaId,
+                        id_cancha: canchaId,
+                        hora_inicio: horaLabel + ':00',
+                        fecha: fechaPlanillaActual
+                    })
+                });
+                const data = await res.json();
+                showToast(data.success ? '✅ Reserva movida' : '❌ ' + data.message, 
+                         data.success ? 'success' : 'error');
+                if (data.success) cargarPlanillaReservas();
+            } catch (err) {
+                console.error('❌ Error en drop:', err);
+                showToast('❌ Error de conexión', 'error');
+            }
+        }
+    } else {
+        console.warn('⚠️ No se pudieron determinar cancha/hora destino');
+    }
+    
+    draggedReservaId = null;
+    draggedElement = null;
+});
 
 function dragOver(e) {
     e.preventDefault(); // CRÍTICO: permite el drop
@@ -546,32 +662,6 @@ function dragOver(e) {
         td.classList.add('drop-target');
         highlightCoordinates(td);
     }
-}
-
-function highlightCoordinates(td) {
-    const row = td.closest('tr');
-    if (!row) return;
-    const colIndex = Array.from(row.children).indexOf(td);
-    
-    // Resaltar Hora (primera columna)
-    const timeCell = row.querySelector('td:first-child');
-    if (timeCell) {
-        timeCell.classList.add('coord-highlight');
-        console.log(`✨ Highlight Hora:`, timeCell.textContent?.trim());
-    }
-    
-    // Resaltar Cancha (header correspondiente)
-    const headerRow = document.querySelector('#tablaPlanilla thead tr');
-    if (headerRow && headerRow.children[colIndex]) {
-        headerRow.children[colIndex].classList.add('coord-highlight');
-        console.log(`✨ Highlight Cancha:`, headerRow.children[colIndex].textContent?.trim());
-    }
-}
-
-function limpiarHighlights() {
-    document.querySelectorAll('#tablaPlanilla .drop-target, #tablaPlanilla .coord-highlight').forEach(el => {
-        el.classList.remove('drop-target', 'coord-highlight');
-    });
 }
 
 async function dropReserva(e, canchaId, hora) {
@@ -969,58 +1059,6 @@ document.getElementById('formReservaManual')?.addEventListener('submit', async(e
     cerrarModalReservaAdmin();
     showToast('❌ Error de red', 'error');
   }
-});
-
-// Permitir drop en celdas disponibles
-document.addEventListener('dragover', (e) => {
-    if (e.target.classList.contains('estado-disponible')) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    }
-});
-
-// Manejar drop
-document.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    if (!draggedReservaId || !e.target.classList.contains('estado-disponible')) return;
-    
-    // Extraer datos de la celda destino (cancha y hora)
-    const cell = e.target;
-    const row = cell.closest('tr');
-    const horaLabel = row.querySelector('td:first-child')?.textContent?.trim();
-    const colIndex = Array.from(cell.parentNode.children).indexOf(cell);
-    
-    // Obtener ID de cancha desde el header (columna correspondiente)
-    const headerRow = document.querySelector('#tablaPlanilla thead tr');
-    const canchaHeader = headerRow?.children[colIndex];
-    // Aquí necesitarías almacenar el ID de cancha en un data-attribute en el header
-    // O buscarlo desde los datos originales. Simplificamos asumiendo que lo tienes.
-    
-    if (!horaLabel) {
-        showToast('❌ No se pudo determinar la hora destino', 'error');
-        return;
-    }
-    
-    if (confirm(`¿Mover reserva a las ${horaLabel}?`)) {
-        try {
-            const res = await fetch('../api/mover_reserva.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    id_reserva: draggedReservaId,
-                    id_cancha: 1, // ← Reemplazar con lógica real para obtener ID cancha
-                    hora_inicio: horaLabel + ':00'
-                })
-            });
-            const data = await res.json();
-            showToast(data.success ? '✅ Reserva movida y correo enviado' : '❌ ' + data.message, 
-                     data.success ? 'success' : 'error');
-            if (data.success) cargarPlanillaReservas();
-        } catch (err) {
-            showToast('❌ Error de conexión al mover reserva', 'error');
-        }
-    }
-    draggedReservaId = null;
 });
 
 // === MODAL RESERVA MANUAL ADMIN ===
