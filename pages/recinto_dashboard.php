@@ -73,104 +73,82 @@ $monto_deuda = $s_deuda->fetchColumn();
     .dropdown-menu a { display: block; padding: 0.6rem 0.8rem; text-decoration: none; color: #333; font-size: 0.9rem; }
     .btn-logout { text-decoration: none; padding: 0.4rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
 
-    /* LAYOUT PRINCIPAL CENTRADO */
-    .main-layout {
-        display: grid; grid-template-columns: 200px 1fr 220px; gap: 1.5rem;
-        width: 98%; margin: 0 auto; padding: 0.5rem; height: calc(100vh - 60px); align-items: start;
-    }
-
-    /* Columna Izquierda: Acciones */
-    .actions-column { 
-        display: flex; flex-direction: column; gap: 1rem; 
-        padding-left: 1rem; /* Espacio desde el borde izquierdo */
-        margin-top: 60px; /* Alinear con KPIs */
-    }
+    /* LAYOUT */
+    .main-layout { display: grid; grid-template-columns: 200px 1fr 220px; gap: 1.5rem; width: 98%; margin: 0 auto; padding: 0.5rem; height: calc(100vh - 60px); align-items: start; }
+    .actions-column { display: flex; flex-direction: column; gap: 1rem; padding-left: 1rem; margin-top: 60px; }
     .action-btn-sidebar { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); color: #071289; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .action-btn-sidebar:hover { transform: translateY(-2px); }
-
-    .planilla-column {
-        background: transparent; display: flex; flex-direction: column; height: 100%; position: relative;
-        justify-content: flex-start; align-items: center;
-    }
-    .planilla-header-controls { 
-        background: rgba(21, 101, 192, 0.85); backdrop-filter: blur(10px); padding: 0.8rem 1.5rem;
-        border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.2); min-width: 940px; max-width: 1380px; width: fit-content;
-        display: flex; flex-wrap: nowrap; gap: 1.5rem; align-items: center; justify-content: space-between; color: white;
-    }
-    .planilla-table-container {
-        flex: 1; overflow: auto; padding: 4px; width: max-content !important;
-        min-width: 940px; background: transparent;
-    }
-    /* Columna Derecha: KPIs */
-    .kpi-column, .actions-column { margin-top: 50px; padding: 0 1rem; }
+    .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }
+    .planilla-header-controls { background: rgba(21, 101, 192, 0.85); backdrop-filter: blur(10px); padding: 0.8rem 1.5rem; border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); min-width: 940px; max-width: 1380px; width: fit-content; display: flex; flex-wrap: nowrap; gap: 1.5rem; align-items: center; justify-content: space-between; color: white; }
+    .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
+    .kpi-column { margin-top: 50px; padding: 0 1rem; }
     .kpi-card-mini { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-left: 4px solid #ccc; padding: 0.8rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .kpi-card-mini:hover { transform: translateX(-3px); }
     .kpi-card-mini div:first-child { font-size: 0.8rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
     .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; }
     .kpi-card-mini div:last-child { font-size: 0.7rem; opacity: 0.7; }
+    .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; } .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; }
+    .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; } .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; }
+    .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; }
+    .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
+    .torneos-panel-container { grid-column: 1 / -1; margin-top: 1rem; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 1.5rem; color: #333; display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); }
 
-    /* Colores KPI */
-    .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; }
-    .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; }
-    .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; }
-    .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; }
-    .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; }
-    .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; }
-    .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; }
-    .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
-
-    /* PANEL TORNEOS (Debajo de la planilla) */
-    .torneos-panel-container {
-        grid-column: 1 / -1; /* Ocupa todo el ancho */
-        margin-top: 1rem;
-        background: rgba(255,255,255,0.95);
-        border-radius: 12px;
-        padding: 1.5rem;
-        color: #333;
-        display: none; /* Oculto por defecto */
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
-    }
-
-    /* ESTILOS TABLA */
-   .planilla-table {
-    width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed;
-    }
-    .planilla-table th:first-child, .planilla-table td:first-child {
-        position: sticky; left: 0; z-index: 20; background: rgba(255,255,255,0.95) !important; color: #555; font-weight: 600;
-        border: none; border-radius: 10px; width: 65px !important; text-align: center; box-shadow: 2px 0 5px rgba(0,0,0,0.15);
-    }
-    .planilla-table th, .planilla-table td {
-        padding: 4px; vertical-align: middle; text-align: center; border-radius: 8px;
-        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
-    }
-    .planilla-table thead th {
-        background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 10;
-        border: none; border-radius: 10px; padding: 10px 6px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-     /* Color estado Celdas disponibles: fondo transparente */
-    .planilla-table td:hover { transform: scale(1.04); box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 5; position: relative; }
-    .planilla-table tbody td:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; position: relative; }
-
-    /* Celdas disponibles: fondo transparente */
-    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; }
-    /* Celdas reservadas: ROJO INTENSO */
+    /* TABLA */
+    .planilla-table { width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed; }
+    .planilla-table th:first-child, .planilla-table td:first-child { position: sticky; left: 0; z-index: 20; background: rgba(255,255,255,0.95) !important; color: #555; font-weight: 600; border: none; border-radius: 10px; width: 65px !important; text-align: center; box-shadow: 2px 0 5px rgba(0,0,0,0.15); }
+    .planilla-table th, .planilla-table td { padding: 4px; vertical-align: middle; text-align: center; border-radius: 8px; width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
+    .planilla-table thead th { background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 10; border: none; border-radius: 10px; padding: 10px 6px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer; }
     td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
-    /* Opcional: mantener verde/amarillo según estado de pago */
     td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
     td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
-    /* Hover suave */
-    td:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
 
-    
-    /* Modales */
-    #modalDetalleReserva, #modalPago, #modalListaKPI {
-        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-        background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px);
+    /* MODALES */
+    #modalDetalleReserva, #modalPago, #modalListaKPI { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+    #modalPago { z-index: 2500; } #modalListaKPI { z-index: 3000; }
+    #modalPago label { color: #333 !important; font-weight: bold; }
+    #modalPago small, #modalPago span, #modalPago div { color: #555 !important; } #modalPago h3 { color: #071289 !important; }
+    #modalListaKPI { color: #333 !important; } #modalListaKPI h3, #modalListaKPI th, #modalListaKPI td, #modalListaKPI span, #modalListaKPI div { color: #333 !important; }
+    #modalListaKPI span[onclick="cerrarModalListaKPI()"] { color: #999 !important; }
+    #modalListaKPI td:last-child:nth-last-child(2) { color: #c62828 !important; }
+
+    /* UTILIDADES & ANIMACIONES */
+    .section-divider { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; color: white; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5); opacity: 0.9; padding: 0.5rem; border-radius: 6px; transition: background 0.2s; cursor: pointer; }
+    .section-divider:hover { background: rgba(255,255,255,0.1); }
+    .rotated { transform: rotate(-180deg); }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.03); } 100% { transform:scale(1); } }
+    .planilla-table td { animation: fadeInUp 0.3s ease-out; }
+    .planilla-table td:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
+
+    /* 🎯 DRAG & DROP (CONSOLIDADO Y SIN CONFLICTOS) */
+    .cell-reserva { cursor: grab !important; transition: transform 0.2s, opacity 0.2s; }
+    .cell-reserva:active { cursor: grabbing; }
+    .cell-reserva.dragging {
+        opacity: 0.3 !important;
+        border: 3px dashed #333 !important;
+        transform: scale(0.95) !important;
+        background: rgba(255,255,255,0.3) !important;
+        pointer-events: none !important; /* CLAVE: permite detectar celdas de abajo */
+        z-index: 9999 !important;
     }
-    #modalPago { z-index: 2500; }
-    #modalListaKPI { z-index: 3000; }
+    .drop-zone { transition: all 0.2s ease; }
+    td.drop-target {
+        background: #FFCDD2 !important;
+        box-shadow: inset 0 0 0 3px #EF5350 !important;
+        transform: scale(1.04) !important;
+        z-index: 10 !important;
+    }
+    td.coord-highlight, th.coord-highlight {
+        background: #FFF3E0 !important;
+        font-weight: 900 !important;
+        transform: scale(1.12) !important;
+        border: 2px solid #FFA000 !important;
+        z-index: 20 !important;
+        transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes dropSuccess { 0% { transform: scale(1.03); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
+    .drop-anim { animation: dropSuccess 0.3s ease-out; }
 
     @media (max-width: 1024px) {
         .main-layout { grid-template-columns: 1fr !important; height: auto; display: block; }
@@ -178,121 +156,6 @@ $monto_deuda = $s_deuda->fetchColumn();
         .kpi-column { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; padding-right: 0; }
         .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; padding-left: 0; }
         .torneos-panel-container { grid-column: auto; }
-    }
-    /* Estilos específicos para el Modal de Pago */
-    #modalPago label {
-        color: #333 !important; /* Forzar color oscuro */
-        font-weight: bold;
-    }
-    #modalPago small, 
-    #modalPago span,
-    #modalPago div {
-        color: #555 !important; /* Gris oscuro para textos secundarios */
-    }
-    #modalPago h3 {
-        color: #071289 !important; /* Azul para el título */
-    }
-        .section-divider {
-        display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
-        color: white; font-weight: bold; font-size: 0.9rem;
-        margin-bottom: 0.5rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-        opacity: 0.9; padding: 0.5rem; border-radius: 6px;
-        transition: background 0.2s;
-    }
-    .section-divider:hover {
-        background: rgba(255,255,255,0.1);
-    }
-    /* Animación para la flechita */
-    .rotated {
-        transform: rotate(-180deg);
-    }
-    /* === CORRECCIÓN COLOR TEXTO MODAL LISTA KPI === */
-    #modalListaKPI {
-        color: #333 !important; /* Fuerza color oscuro en todo el modal */
-    }
-    
-    #modalListaKPI h3, 
-    #modalListaKPI th, 
-    #modalListaKPI td, 
-    #modalListaKPI span, 
-    #modalListaKPI div {
-        color: #333 !important; /* Asegura que hijos también sean oscuros */
-    }
-    
-    /* Excepción para el botón de cerrar (la X) */
-    #modalListaKPI span[onclick="cerrarModalListaKPI()"] {
-        color: #999 !important;
-    }
-    
-    /* Excepción para el saldo pendiente (que debe ser rojo) */
-    #modalListaKPI td:last-child:nth-last-child(2) { 
-        color: #c62828 !important; 
-    }
-    @keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.03); } 100% { transform:scale(1); } }
-    .planilla-table td { animation: fadeInUp 0.3s ease-out; }
-    .planilla-table td.estado-ocupado:hover { animation: pulse 1.5s infinite; }
-
-    /* === DRAG & DROP & HIGHLIGHTS === */
-    .cell-reserva { cursor: grab !important; transition: transform 0.2s, opacity 0.2s; }
-    .cell-reserva:active { cursor: grabbing; }
-    .dragging { opacity: 0.3 !important; pointer-events: none !important; border: 2px dashed #333; transform: scale(0.95); z-index: 9999; }
-    .drop-target { background: #FFCDD2 !important; box-shadow: 0 0 12px rgba(255,82,82,0.6); transform: scale(1.03); z-index: 5; position: relative; }
-    .coord-highlight { background: #FFF8E1 !important; font-weight: 800 !important; transform: scale(1.1); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); z-index: 15; }
-    .drop-zone { transition: all 0.2s ease; }
-
-    /* Animación suave al soltar */
-    @keyframes dropSuccess { 0% { transform: scale(1.03); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
-    .drop-anim { animation: dropSuccess 0.3s ease-out; }
-
-    /* Elemento siendo arrastrado: transparente a eventos para no tapar destino */
-    .cell-reserva.dragging { 
-        opacity: 0.3; 
-        pointer-events: none !important; /* CLAVE: deja pasar clicks/hover */
-        border: 2px dashed #333;
-        transform: scale(0.95);
-        z-index: 9999;
-    }
-
-    /* Destino activo */
-    .drop-zone.highlight { 
-        background: #FFCDD2 !important; 
-        box-shadow: 0 0 0 2px #EF5350; 
-        transform: scale(1.02);
-    }
-
-    /* Coordenadas visuales (Hora y Cancha) */
-    .time-label.highlight, .court-header.highlight {
-        transform: scale(1.15);
-        font-weight: 800;
-        background: #FFF3E0 !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 15;
-    }
-    /* === DRAG & DROP - FORZAR ESTILOS === */
-    td.cell-reserva.dragging {
-        opacity: 0.4 !important;
-        border: 3px dashed #333 !important;
-        transform: scale(0.96) !important;
-        background: rgba(255,255,255,0.3) !important;
-        pointer-events: none !important; /* CLAVE: permite que los eventos pasen a las celdas de abajo */
-        z-index: 9999 !important;
-        transition: all 0.15s ease !important;
-    }
-
-    td.drop-target {
-        background: #FFCDD2 !important;
-        box-shadow: inset 0 0 0 3px #EF5350 !important;
-        transform: scale(1.04) !important;
-        z-index: 10 !important;
-    }
-
-    td.coord-highlight {
-        background: #FFF8E1 !important;
-        font-weight: 900 !important;
-        transform: scale(1.12) !important;
-        border: 2px solid #FFA000 !important;
-        z-index: 20 !important;
     }
 </style>
 </head>
@@ -650,7 +513,7 @@ function renderizarPlanilla(data, filtroEstado) {
     table.innerHTML = html;
 }
 
-// === 🎯 DRAG & DROP - VERSIÓN DEBUG ===
+// === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
 let draggedReservaId = null;
 
 function dragStart(e, id) {
@@ -658,9 +521,12 @@ function dragStart(e, id) {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
     
-    // Forzar clase visual inmediatamente
+    // Agregar clase visual
     e.target.classList.add('dragging');
-    console.log(`🎯 Drag START: ID=${id}, Element=`, e.target);
+    console.log(`🎯 Drag START: ID=${id}, Element=`, e.target, 'Clases:', e.target.classList);
+    
+    // Forzar reflow para que el estilo se aplique inmediatamente
+    void e.target.offsetWidth;
 }
 
 function dragEnd(e) {
@@ -674,7 +540,7 @@ function dragOver(e) {
     e.preventDefault(); // CRÍTICO: permite el drop
     const td = e.target.closest('td.estado-disponible');
     
-    if (td) {
+    if (td && draggedReservaId) {
         console.log(`🎯 Drag OVER: celda disponible`, td);
         limpiarHighlights();
         td.classList.add('drop-target');
@@ -687,23 +553,23 @@ function highlightCoordinates(td) {
     if (!row) return;
     const colIndex = Array.from(row.children).indexOf(td);
     
-    // Resaltar Hora
+    // Resaltar Hora (primera columna)
     const timeCell = row.querySelector('td:first-child');
     if (timeCell) {
         timeCell.classList.add('coord-highlight');
-        console.log(`✨ Highlight Hora:`, timeCell.textContent.trim());
+        console.log(`✨ Highlight Hora:`, timeCell.textContent?.trim());
     }
     
-    // Resaltar Cancha (header)
+    // Resaltar Cancha (header correspondiente)
     const headerRow = document.querySelector('#tablaPlanilla thead tr');
     if (headerRow && headerRow.children[colIndex]) {
         headerRow.children[colIndex].classList.add('coord-highlight');
-        console.log(`✨ Highlight Cancha:`, headerRow.children[colIndex].textContent.trim());
+        console.log(`✨ Highlight Cancha:`, headerRow.children[colIndex].textContent?.trim());
     }
 }
 
 function limpiarHighlights() {
-    document.querySelectorAll('.drop-target, .coord-highlight').forEach(el => {
+    document.querySelectorAll('#tablaPlanilla .drop-target, #tablaPlanilla .coord-highlight').forEach(el => {
         el.classList.remove('drop-target', 'coord-highlight');
     });
 }
@@ -1315,14 +1181,6 @@ async function confirmarMovimiento() {
     }
 }
 </script>
-    <!-- Estilos adicionales para animaciones -->
-    <style>
-    @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .rotated { transform: rotate(-180deg); }
-    #modalPago label { color: #333 !important; font-weight: bold; }
-    #modalPago small, #modalPago span, #modalPago div { color: #555 !important; }
-    #modalPago h3 { color: #071289 !important; }
-    </style>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
         <div style="background:white; padding:2rem; border-radius:16px; max-width:480px; width:90%; position:relative; color:#333; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
             <!-- BOTÓN X PARA CERRAR -->
