@@ -200,7 +200,9 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             'hora_inicio' => $hora_inicio
         ];
     }
-    
+
+    require_once __DIR__ . '/../includes/reserva_mailer.php';
+    ReservaMailer::enviarConfirmacion($pdo, $id_reserva);
     return $reservas;
 }
 ?>

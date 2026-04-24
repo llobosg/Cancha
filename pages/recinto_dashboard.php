@@ -53,7 +53,7 @@ $monto_deuda = $s_deuda->fetchColumn();
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?></title>
 <style>
-    :root { --bg-primary: #071289; --font-main: 'Segoe UI', sans-serif; }
+   :root { --bg-primary: #071289; --accent: #4ECDC4; --font-main: 'Segoe UI', sans-serif; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         background: linear-gradient(rgba(0, 20, 10, 0.4), rgba(0, 30, 15, 0.5)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
@@ -75,14 +75,8 @@ $monto_deuda = $s_deuda->fetchColumn();
 
     /* LAYOUT PRINCIPAL CENTRADO */
     .main-layout {
-        display: grid;
-        /* Acciones (200px) | Planilla (Auto/Centro) | KPIs (240px) */
-        grid-template-columns: 200px auto 240px; 
-        justify-content: center; /* CLAVE: Centra la planilla en el espacio restante */
-        gap: 2rem; /* Espacio entre columnas */
-        width: 98%; margin: 0 auto; padding: 0.5rem;
-        height: calc(100vh - 60px);
-        align-items: start;
+        display: grid; grid-template-columns: 200px 1fr 220px; gap: 1.5rem;
+        width: 98%; margin: 0 auto; padding: 0.5rem; height: calc(100vh - 60px); align-items: start;
     }
 
     /* Columna Izquierda: Acciones */
@@ -91,50 +85,26 @@ $monto_deuda = $s_deuda->fetchColumn();
         padding-left: 1rem; /* Espacio desde el borde izquierdo */
         margin-top: 60px; /* Alinear con KPIs */
     }
-    .action-btn-sidebar {
-        background: white; color: #071289; border: none; padding: 0.8rem; border-radius: 8px;
-        font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;
-    }
+    .action-btn-sidebar { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); color: #071289; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .action-btn-sidebar:hover { transform: translateY(-2px); }
 
-    /* Columna Central: Planilla */
     .planilla-column {
-        background: transparent; display: flex; flex-direction: column;
-        height: 100%; position: relative;
-        max-width: 100%; /* Permitir que crezca */
+        background: transparent; display: flex; flex-direction: column; height: 100%; position: relative;
+        justify-content: flex-start; align-items: center;
     }
-    
-    /* HEADER FILTROS */
     .planilla-header-controls { 
-        background: rgba(21, 101, 192, 0.85); backdrop-filter: blur(10px);
-        padding: 0.8rem 1.5rem; border-radius: 12px; margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2);
-        min-width: 940px; max-width: 1380px; width: fit-content;
+        background: rgba(21, 101, 192, 0.85); backdrop-filter: blur(10px); padding: 0.8rem 1.5rem;
+        border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.2); min-width: 940px; max-width: 1380px; width: fit-content;
         display: flex; flex-wrap: nowrap; gap: 1.5rem; align-items: center; justify-content: space-between; color: white;
     }
-    .control-group { display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
-    .control-label { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
-    .control-input { background: rgba(255,255,255,0.2); border: none; outline: none; color: white; font-weight: bold; text-align: center; width: 130px; padding-right: 25px; border-radius: 4px; }
-    .control-btn { background: white; color: #0D47A1; border: none; border-radius: 4px; padding: 0.4rem 0.8rem; font-weight: bold; cursor: pointer; }
-    .control-select { background: rgba(255,255,255,0.95); border: none; border-radius: 4px; padding: 0.4rem; font-size: 0.85rem; color: #333; min-width: 110px; }
-
-    /* CONTENEDOR TABLA */
     .planilla-table-container {
-        flex: 1; overflow: auto; padding: 4px;
-        width: max-content !important; min-width: 940px; background-color: transparent;
+        flex: 1; overflow: auto; padding: 4px; width: max-content !important;
+        min-width: 940px; background: transparent;
     }
-
     /* Columna Derecha: KPIs */
-    .kpi-column {
-        display: flex; flex-direction: column; gap: 1rem; overflow-y: auto;
-        margin-top: 60px; /* Alinear visualmente */
-        padding-right: 1rem; /* ESPACIO DESDE EL BORDE DERECHO */
-    }
-    .kpi-card-mini {
-        background: white; border-left: 4px solid #ccc; padding: 1rem; border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1); color: #333; transition: transform 0.2s;
-    }
+    .kpi-column, .actions-column { margin-top: 50px; padding: 0 1rem; }
+    .kpi-card-mini { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-left: 4px solid #ccc; padding: 0.8rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .kpi-card-mini:hover { transform: translateX(-3px); }
     .kpi-card-mini div:first-child { font-size: 0.8rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
     .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; }
@@ -163,24 +133,27 @@ $monto_deuda = $s_deuda->fetchColumn();
     }
 
     /* ESTILOS TABLA */
-    .planilla-table { border-collapse: separate; border-spacing: 3px; }
+   .planilla-table {
+    width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed;
+    }
     .planilla-table th:first-child, .planilla-table td:first-child {
-        position: sticky; left: 0; z-index: 20; background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(5px);
-        color: #333; font-weight: bold; border-radius: 8px; box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-        width: 60px !important; min-width: 60px !important; max-width: 60px !important; padding: 4px !important; font-size: 0.75rem; text-align: center;
+        position: sticky; left: 0; z-index: 20; background: rgba(255,255,255,0.95) !important; color: #555; font-weight: 600;
+        border: none; border-radius: 10px; width: 65px !important; text-align: center; box-shadow: 2px 0 5px rgba(0,0,0,0.15);
     }
     .planilla-table th, .planilla-table td {
         padding: 4px; vertical-align: middle; text-align: center; border-radius: 8px;
         width: 110px !important; min-width: 110px !important; max-width: 110px !important;
     }
     .planilla-table thead th {
-        background: linear-gradient(135deg, #AB47BC, #8E24AA) !important; color: white; position: sticky; top: 0; z-index: 5;
-        height: 50px; font-size: 0.75rem; box-shadow: 0 4px 10px rgba(142, 36, 170, 0.3); border: 1px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 10;
+        border: none; border-radius: 10px; padding: 10px 6px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
     td.estado-pagado { background: linear-gradient(135deg, #66BB6A, #43A047) !important; color: white; box-shadow: 0 2px 5px rgba(67, 160, 71, 0.4); }
-    td.estado-parcial { background: linear-gradient(135deg, #FFEE58, #FDD835) !important; color: #333; box-shadow: 0 2px 5px rgba(253, 216, 53, 0.4); }
-    td.estado-pendiente { background: linear-gradient(135deg, #EF5350, #E53935) !important; color: white; box-shadow: 0 2px 5px rgba(229, 57, 53, 0.4); }
-    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; backdrop-filter: blur(2px); }
+    .planilla-table td:hover { transform: scale(1.04); box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 5; position: relative; }
+    td.estado-disponible { background: rgba(255,255,255,0.8) !important; cursor: pointer; }
+    td.estado-disponible:hover { background: #e8f5e9 !important; }
+    td.estado-ocupado { background: #FF5252 !important; color: white !important; font-size: 0.75rem; line-height: 1.2; cursor: default; }
+    td.estado-parcial { background: #FFEB3B !important; color: #333 !important; }
     .planilla-table tbody td:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; position: relative; }
 
     /* Modales */
@@ -247,6 +220,10 @@ $monto_deuda = $s_deuda->fetchColumn();
     #modalListaKPI td:last-child:nth-last-child(2) { 
         color: #c62828 !important; 
     }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.03); } 100% { transform:scale(1); } }
+    .planilla-table td { animation: fadeInUp 0.3s ease-out; }
+    .planilla-table td.estado-ocupado:hover { animation: pulse 1.5s infinite; }
 </style>
 </head>
 <body>
@@ -586,7 +563,21 @@ function renderizarPlanilla(data, filtroEstado) {
                     if (filtroEstado && filtroEstado !== 'disponible') opacity = '0.05';
                 }
 
-                html += `<td class="${bgClass}" style="height:40px; cursor:${clickEvt ? 'pointer' : 'default'}; opacity:${opacity}; width:110px; min-width:110px;" ${clickEvt}>${cellContent}</td>`;
+                // ✅ Nueva línea con lógica condicional:
+                if (res) {
+                    // Es una reserva existente: comportamiento normal
+                    html += `<td class="${bgClass}" 
+                        style="height:40px; cursor:grab; opacity:${opacity};" 
+                        ${clickEvt}
+                        draggable="true" 
+                        ondragstart="dragReserva(event, ${res.id_reserva})">
+                        ${cellContent}
+                    </td>`;
+                } else {
+                    // Es una celda DISPONIBLE: habilitar reserva manual admin
+                    const clickAdmin = `onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"`;
+                    html += `<td class="estado-disponible" style="height:40px; cursor:pointer; width:110px; min-width:110px;" ${clickAdmin}></td>`;
+                }
             });
             html += `</tr>`;
         }
@@ -868,15 +859,177 @@ async function cargarTorneos() {
     const c = document.getElementById('listaTorneos');
     if(c) c.innerHTML = '<p style="color:#666;">No hay torneos activos.</p>';
 }
-</script>
+let debounceTimer;
+function buscarSocioAdmin(query) {
+  clearTimeout(debounceTimer);
+  if(query.length < 2) { document.getElementById('searchResultsAdmin').style.display='none'; return; }
+  
+  debounceTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      const container = document.getElementById('searchResultsAdmin');
+      container.innerHTML = '';
+      
+      if(data.length === 0) { container.innerHTML = '<div style="padding:10px; color:#666;">Sin coincidencias. Crear nuevo registro.</div>'; }
+      else {
+        data.forEach(s => {
+          container.innerHTML += `<div onclick="seleccionarSocioAdmin(${s.id_socio}, '${s.nombre}', '${s.email}', '${s.celular}')" 
+            style="padding:10px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:0.9rem;">
+            <strong>${s.nombre}</strong> <span style="color:#666; font-size:0.8rem;">| ${s.email}</span></div>`;
+        });
+      }
+      container.style.display = 'block';
+    } catch(e) { console.error(e); }
+  }, 300);
+}
 
-<!-- Estilos adicionales para animaciones -->
-<style>
-@keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.rotated { transform: rotate(-180deg); }
-#modalPago label { color: #333 !important; font-weight: bold; }
-#modalPago small, #modalPago span, #modalPago div { color: #555 !important; }
-#modalPago h3 { color: #071289 !important; }
-</style>
+function seleccionarSocioAdmin(id, nombre, email, celular) {
+  document.getElementById('admin_socio_id').value = id;
+  document.getElementById('admin_nombre').value = nombre;
+  document.getElementById('admin_email').value = email;
+  document.getElementById('admin_celular').value = celular;
+  document.getElementById('searchResultsAdmin').style.display = 'none';
+}
+
+function abrirReservaAdmin(canchaId, fecha, hora) {
+  document.getElementById('admin_cancha_id').value = canchaId;
+  document.getElementById('admin_fecha').value = fecha;
+  document.getElementById('admin_hora').value = hora;
+  document.getElementById('searchAdmin').value = '';
+  document.getElementById('formReservaManual').reset();
+  document.getElementById('admin_socio_id').value = '';
+  document.getElementById('modalReservaAdmin').style.display = 'flex';
+}
+
+function cerrarModalReservaAdmin() { document.getElementById('modalReservaAdmin').style.display = 'none'; }
+
+document.getElementById('formReservaManual')?.addEventListener('submit', async(e) => {
+  e.preventDefault();
+  const data = {
+    id_cancha: document.getElementById('admin_cancha_id').value,
+    fecha: document.getElementById('admin_fecha').value,
+    hora_inicio: document.getElementById('admin_hora').value,
+    id_socio: document.getElementById('admin_socio_id').value || null,
+    nombre_cliente: document.getElementById('admin_nombre').value,
+    email_cliente: document.getElementById('admin_email').value,
+    celular_cliente: document.getElementById('admin_celular').value
+  };
+  
+  const res = await fetch('../api/admin/manual_booking.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  const result = await res.json();
+  cerrarModalReservaAdmin();
+  if (result.success && result.id_reserva) {
+    // Enviar confirmación por correo
+    fetch('../api/send_booking_confirmation.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id_reserva: result.id_reserva})
+    }).catch(e => console.warn('No se pudo enviar correo de confirmación', e));
+    
+    showToast('✅ Reserva creada y correo enviado', 'success');
+    } else {
+    showToast('❌ Error: ' + result.message, 'error');
+    }
+    cargarPlanillaReservas();
+});
+
+// === DRAG & DROP PARA MOVER RESERVAS ===
+let draggedReservaId = null;
+
+function dragReserva(e, id) {
+    draggedReservaId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+}
+
+// Permitir drop en celdas disponibles
+document.addEventListener('dragover', (e) => {
+    if (e.target.classList.contains('estado-disponible')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+});
+
+// Manejar drop
+document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    if (!draggedReservaId || !e.target.classList.contains('estado-disponible')) return;
+    
+    // Extraer datos de la celda destino (cancha y hora)
+    const cell = e.target;
+    const row = cell.closest('tr');
+    const horaLabel = row.querySelector('td:first-child')?.textContent?.trim();
+    const colIndex = Array.from(cell.parentNode.children).indexOf(cell);
+    
+    // Obtener ID de cancha desde el header (columna correspondiente)
+    const headerRow = document.querySelector('#tablaPlanilla thead tr');
+    const canchaHeader = headerRow?.children[colIndex];
+    // Aquí necesitarías almacenar el ID de cancha en un data-attribute en el header
+    // O buscarlo desde los datos originales. Simplificamos asumiendo que lo tienes.
+    
+    if (!horaLabel) {
+        showToast('❌ No se pudo determinar la hora destino', 'error');
+        return;
+    }
+    
+    if (confirm(`¿Mover reserva a las ${horaLabel}?`)) {
+        try {
+            const res = await fetch('../api/mover_reserva.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id_reserva: draggedReservaId,
+                    id_cancha: 1, // ← Reemplazar con lógica real para obtener ID cancha
+                    hora_inicio: horaLabel + ':00'
+                })
+            });
+            const data = await res.json();
+            showToast(data.success ? '✅ Reserva movida y correo enviado' : '❌ ' + data.message, 
+                     data.success ? 'success' : 'error');
+            if (data.success) cargarPlanillaReservas();
+        } catch (err) {
+            showToast('❌ Error de conexión al mover reserva', 'error');
+        }
+    }
+    draggedReservaId = null;
+});
+</script>
+    <!-- Estilos adicionales para animaciones -->
+    <style>
+    @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .rotated { transform: rotate(-180deg); }
+    #modalPago label { color: #333 !important; font-weight: bold; }
+    #modalPago small, #modalPago span, #modalPago div { color: #555 !important; }
+    #modalPago h3 { color: #071289 !important; }
+    </style>
+    <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative;">
+        <span onclick="cerrarModalReservaAdmin()" style="position:absolute; top:15px; right:15px; font-size:24px; cursor:pointer;">&times;</span>
+        <h3 style="color:#071289; margin-bottom:1rem;">📅 Reserva Manual</h3>
+        
+        <!-- Buscador Inteligente -->
+        <div style="position:relative; margin-bottom:1rem;">
+        <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
+                style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;" oninput="buscarSocioAdmin(this.value)">
+        <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:200px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+        </div>
+
+        <form id="formReservaManual">
+        <input type="hidden" id="admin_cancha_id">
+        <input type="hidden" id="admin_fecha">
+        <input type="hidden" id="admin_hora">
+        <input type="hidden" id="admin_socio_id">
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
+            <input type="text" id="admin_nombre" placeholder="Nombre completo" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input type="email" id="admin_email" placeholder="Email" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input type="text" id="admin_celular" placeholder="Celular (+569...)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        <button type="submit" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Reserva</button>
+        </form>
+        <p style="font-size:0.75rem; color:#666; margin-top:0.5rem; text-align:center;">* Si el socio no existe, se creará como "Individual" y recibirá un link de registro.</p>
+    </div>
+    </div>
 </body>
 </html>

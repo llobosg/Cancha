@@ -259,7 +259,7 @@ $deportes = [
 
         let htmlHead = '<th>Hora</th>';
         data.canchas.forEach(c => {
-            htmlHead += `<th>${iconosDeporte[c.id_deporte] || iconosDeporte['default']}<br><span style="font-weight:normal; font-size:0.7rem;">${c.nro_cancha}</span></th>`;
+            htmlHead += `<th>${iconosDeporte[c.id_deporte] || iconosDeporte['default']}<br><span style="font-weight:normal; font-size:0.7rem;">${c.nombre_cancha}</span></th>`;
         });
         thead.innerHTML = htmlHead;
 
