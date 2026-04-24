@@ -233,18 +233,12 @@ $monto_deuda = $s_deuda->fetchColumn();
     .planilla-table td { animation: fadeInUp 0.3s ease-out; }
     .planilla-table td.estado-ocupado:hover { animation: pulse 1.5s infinite; }
 
-    /* === DRAG & DROP VISUAL FEEDBACK === */
-    .cell-reserva { cursor: grab; transition: transform 0.2s, opacity 0.2s; }
+    /* === DRAG & DROP & HIGHLIGHTS === */
+    .cell-reserva { cursor: grab !important; transition: transform 0.2s, opacity 0.2s; }
     .cell-reserva:active { cursor: grabbing; }
-    .dragging { opacity: 0.4; border: 2px dashed #333; transform: scale(0.95); }
-
-    .drop-target { 
-        background: #FFCDD2 !important; /* Rojo suave para destino */
-        box-shadow: 0 0 12px rgba(255, 82, 82, 0.6); 
-        transform: scale(1.03); 
-        z-index: 5; position: relative;
-        transition: all 0.2s ease;
-    }
+    .dragging { opacity: 0.3 !important; pointer-events: none !important; border: 2px dashed #333; transform: scale(0.95); z-index: 9999; }
+    .drop-target { background: #FFCDD2 !important; box-shadow: 0 0 12px rgba(255,82,82,0.6); transform: scale(1.03); z-index: 5; position: relative; }
+    .coord-highlight { background: #FFF8E1 !important; font-weight: 800 !important; transform: scale(1.1); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); z-index: 15; }
     .drop-zone { transition: all 0.2s ease; }
 
     /* Animación suave al soltar */
@@ -597,30 +591,28 @@ function renderizarPlanilla(data, filtroEstado) {
 
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
-                    const nombre = (res.nombre_cliente || 'Reserva').substring(0, 15);
-                    // 🎯 DRAG & DROP ATRIBUTO
+                    const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 10);
+                    
+                    // ✅ AGREGADOS: draggable, ondragstart, ondragend
                     html += `<td class="${bgClass} cell-reserva" 
                                 draggable="true" 
-                                ondragstart="dragReserva(event, ${res.id_reserva})" 
-                                data-reserva-id="${res.id_reserva}"
+                                ondragstart="dragStart(event, ${res.id_reserva})" 
+                                ondragend="dragEnd(event)"
                                 style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
                                 onclick="abrirDetalleDesdePlanilla(${res.id_reserva})">
                                 <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
-                             </td>`;
-                    celdasPintadas++;
+                            </td>`;
                 } else {
                     const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
-                    const esPasado = slotFecha <= ahora;
+                    const esPasado = slotFecha <= new Date();
                     
                     if (esPasado) {
                         html += `<td class="estado-disponible" style="opacity:0.3; cursor:not-allowed;"></td>`;
                     } else {
-                        // 🎯 ZONA DE DROP CON EVENTOS
+                        // ✅ AGREGADOS: ondragover, ondrop
                         html += `<td class="estado-disponible drop-zone" 
-                                    ondragover="event.preventDefault()" 
-                                    ondragenter="highlightDrop(event)" 
-                                    ondragleave="unhighlightDrop(event)" 
+                                    ondragover="dragOver(event)" 
                                     ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
                                     onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                     }
@@ -634,6 +626,80 @@ function renderizarPlanilla(data, filtroEstado) {
 }
 
 let draggedReservaId = null;
+
+function dragStart(e, id) {
+    draggedReservaId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    e.target.classList.add('dragging');
+}
+
+function dragEnd(e) {
+    e.target.classList.remove('dragging');
+    limpiarHighlights();
+    draggedReservaId = null;
+}
+
+function dragOver(e) {
+    e.preventDefault();
+    const td = e.target.closest('td.estado-disponible');
+    limpiarHighlights();
+    if (td) {
+        td.classList.add('drop-target');
+        highlightCoordinates(td);
+    }
+}
+
+function highlightCoordinates(td) {
+    const row = td.closest('tr');
+    const colIndex = Array.from(row.children).indexOf(td);
+    
+    // Resaltar Hora (primera columna)
+    const timeCell = row.querySelector('td:first-child');
+    timeCell?.classList.add('coord-highlight');
+    
+    // Resaltar Cancha (header correspondiente)
+    const headerRow = document.querySelector('#tablaPlanilla thead tr');
+    if(headerRow && headerRow.children[colIndex]) {
+        headerRow.children[colIndex].classList.add('coord-highlight');
+    }
+}
+
+function limpiarHighlights() {
+    document.querySelectorAll('.drop-target, .coord-highlight').forEach(el => {
+        el.classList.remove('drop-target', 'coord-highlight');
+    });
+}
+
+async function dropReserva(e, canchaId, hora) {
+    e.preventDefault();
+    const targetCell = e.target.closest('td');
+    targetCell?.classList.add('drop-anim');
+    limpiarHighlights();
+    
+    if (!draggedReservaId) return;
+
+    if (confirm(`📅 ¿Mover reserva a las ${hora} en Cancha ID ${canchaId}?`)) {
+        try {
+            const res = await fetch('../api/mover_reserva.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id_reserva: draggedReservaId,
+                    id_cancha: canchaId,
+                    hora_inicio: hora + ':00',
+                    fecha: fechaPlanillaActual
+                })
+            });
+            const data = await res.json();
+            showToast(data.success ? '✅ Reserva movida correctamente' : '❌ ' + data.message, data.success ? 'success' : 'error');
+            if (data.success) cargarPlanillaReservas();
+        } catch (err) {
+            showToast('❌ Error al mover reserva', 'error');
+        }
+    }
+    draggedReservaId = null;
+}
 
 function dragReserva(e, id) {
     draggedReservaId = id;
@@ -1167,13 +1233,19 @@ function cerrarModalReservaAdmin() {
 }
 
 function abrirModalMover() {
+    const res = window.reservaActualSeleccionada;
+    if(!res) return;
+    
     document.getElementById('modalDetalleReserva').style.display = 'none';
     document.getElementById('modalMoverReserva').style.display = 'flex';
-    // Fecha mínima = mañana
+    
+    // Llenar datos originales
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('moverFecha').value = tomorrow.toISOString().split('T')[0];
+    document.getElementById('orig_resumen').textContent = `${res.fecha} | ${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)} | ${res.nombre_cancha || 'Cancha'}`;
+    document.getElementById('moverFecha').value = res.fecha; // o tomorrow.toISOString().split('T')[0]
     document.getElementById('moverFecha').min = tomorrow.toISOString().split('T')[0];
-    cargarHorasDisponibles();
+    
+    cargarHorasDisponibles(res.fecha);
 }
 
 function cerrarModalMover() {
@@ -1181,68 +1253,72 @@ function cerrarModalMover() {
     document.getElementById('modalDetalleReserva').style.display = 'flex';
 }
 
-async function cargarHorasDisponibles() {
-    const fecha = document.getElementById('moverFecha').value;
+async function cargarHorasDisponibles(fecha) {
+    fecha = fecha || document.getElementById('moverFecha').value;
     const select = document.getElementById('moverHora');
     select.disabled = true;
     select.innerHTML = '<option>⏳ Buscando disponibilidad...</option>';
+    actualizarResumenNuevo();
 
     try {
-        // Reutilizamos tu API de planilla para obtener slots libres de esa fecha
         const res = await fetch(`../api/canchaboard.php?action=get_planilla_reservas&fecha=${fecha}&deporte=todos`);
         const data = await res.json();
-        
         if (!data.slots) throw new Error('Formato inválido');
 
         select.innerHTML = '';
         let disponibles = 0;
-        
-        // Filtramos solo slots que tengan al menos UNA cancha libre
         data.slots.forEach(slot => {
             if (slot.is_label_row) {
                 const hayLibre = data.canchas.some(c => !data.reservas[`${c.id_cancha}_${slot.label}`]);
                 if (hayLibre) {
-                    select.innerHTML += `<option value="${slot.label}">${slot.label} hrs (Canchas libres)</option>`;
+                    select.innerHTML += `<option value="${slot.label}">${slot.label} hrs</option>`;
                     disponibles++;
                 }
             }
         });
 
-        if (disponibles === 0) {
-            select.innerHTML = '<option value="">❌ Sin disponibilidad</option>';
-        } else {
-            select.disabled = false;
-        }
+        select.disabled = disponibles === 0;
+        actualizarResumenNuevo();
     } catch (e) {
-        select.innerHTML = '<option value="">Error al cargar</option>';
-        console.error(e);
+        select.innerHTML = '<option>Error al cargar</option>';
     }
 }
 
+function actualizarResumenNuevo() {
+    const fecha = document.getElementById('moverFecha').value;
+    const hora = document.getElementById('moverHora').value;
+    document.getElementById('new_resumen').textContent = (fecha && hora) ? `${fecha} | ${hora}:00 - (misma duración)` : '--';
+}
+
 async function confirmarMovimiento() {
-    const id = window.reservaActualSeleccionada?.id_reserva;
+    const res = window.reservaActualSeleccionada;
     const nuevaFecha = document.getElementById('moverFecha').value;
     const nuevaHora = document.getElementById('moverHora').value;
 
-    if (!id || !nuevaFecha || !nuevaHora) return showToast('❌ Completa todos los campos', 'error');
+    if (!res || !nuevaFecha || !nuevaHora) return showToast('❌ Selecciona fecha y hora', 'error');
 
     try {
-        const res = await fetch('../api/mover_reserva.php', {
+        const response = await fetch('../api/mover_reserva.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                id_reserva: id,
-                fecha: nuevaFecha, // NUEVO CAMPO
+                id_reserva: res.id_reserva,
+                fecha: nuevaFecha,
                 hora_inicio: nuevaHora + ':00',
-                id_cancha: null // null = mantiene misma cancha, o puedes agregar selector
+                id_cancha: res.id_cancha // Mantiene misma cancha, cámbialo si quieres
             })
         });
-        const data = await res.json();
-        cerrarModalMover();
-        showToast(data.success ? '✅ Reserva reubicada y correo enviado' : '❌ ' + data.message, data.success ? 'success' : 'error');
-        if (data.success) cargarPlanillaReservas();
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('✅ Reserva reubicada y correo enviado', 'success');
+            cerrarModalMover();
+            cargarPlanillaReservas();
+        } else {
+            showToast('❌ ' + data.message, 'error');
+        }
     } catch (err) {
-        showToast('❌ Error al mover', 'error');
+        showToast('❌ Error de red al mover', 'error');
     }
 }
 </script>
@@ -1300,26 +1376,38 @@ async function confirmarMovimiento() {
 
     
 
-    <!-- 2. Submodal de Reubicación -->
     <div id="modalMoverReserva" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
-    <div style="background:white; padding:2rem; border-radius:16px; max-width:450px; width:90%; position:relative;">
-        <span onclick="cerrarModalMover()" style="position:absolute; top:15px; right:20px; font-size:24px; cursor:pointer; color:#999;">&times;</span>
-        <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">📅 Reubicar Reserva</h3>
-        
-        <div class="form-group" style="margin-bottom:1rem;">
-        <label style="font-weight:bold; color:#333;">Nueva Fecha:</label>
-        <input type="date" id="moverFecha" onchange="cargarHorasDisponibles()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
-        </div>
+        <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative; color:#333;">
+            <span onclick="cerrarModalMover()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">🔄 Reubicar Reserva</h3>
+            
+            <!-- RESUMEN COMPARATIVO -->
+            <div style="background:#f8f9fa; padding:1rem; border-radius:8px; margin-bottom:1.5rem; display:grid; gap:0.5rem;">
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                <span style="color:#666;">📍 <strong>Actual:</strong></span>
+                <span id="orig_resumen" style="font-weight:bold;">--</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding-top:0.5rem;">
+                <span style="color:#666;">🎯 <strong>Nueva:</strong></span>
+                <span id="new_resumen" style="font-weight:bold; color:#071289;">--</span>
+            </div>
+            </div>
 
-        <div class="form-group" style="margin-bottom:1rem;">
-        <label style="font-weight:bold; color:#333;">Nueva Hora (Solo disponibles):</label>
-        <select id="moverHora" disabled style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; background:#f9f9f9;">
-            <option>Selecciona una fecha primero</option>
-        </select>
-        </div>
+            <div class="form-group" style="margin-bottom:1rem;">
+            <label style="font-weight:bold; color:#333;">📅 Nueva Fecha:</label>
+            <input type="date" id="moverFecha" onchange="cargarHorasDisponibles()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+            </div>
 
-        <button onclick="confirmarMovimiento()" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Cambio</button>
-    </div>
+            <div class="form-group" style="margin-bottom:1.5rem;">
+            <label style="font-weight:bold; color:#333;">⏰ Nueva Hora:</label>
+            <select id="moverHora" disabled onchange="actualizarResumenNuevo()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; background:#f9f9f9;">
+                <option>Selecciona una fecha primero</option>
+            </select>
+            </div>
+
+            <button onclick="confirmarMovimiento()" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Cambio</button>
+        </div>
     </div>
 </body>
 </html>
