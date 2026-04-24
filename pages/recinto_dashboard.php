@@ -148,14 +148,22 @@ $monto_deuda = $s_deuda->fetchColumn();
         background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 10;
         border: none; border-radius: 10px; padding: 10px 6px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    td.estado-pagado { background: linear-gradient(135deg, #66BB6A, #43A047) !important; color: white; box-shadow: 0 2px 5px rgba(67, 160, 71, 0.4); }
+
+     /* Color estado Celdas disponibles: fondo transparente */
     .planilla-table td:hover { transform: scale(1.04); box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 5; position: relative; }
-    td.estado-disponible { background: rgba(255,255,255,0.8) !important; cursor: pointer; }
-    td.estado-disponible:hover { background: #e8f5e9 !important; }
-    td.estado-ocupado { background: #FF5252 !important; color: white !important; font-size: 0.75rem; line-height: 1.2; cursor: default; }
-    td.estado-parcial { background: #FFEB3B !important; color: #333 !important; }
     .planilla-table tbody td:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10; position: relative; }
 
+    /* Celdas disponibles: fondo transparente */
+    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; }
+    /* Celdas reservadas: ROJO INTENSO */
+    td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
+    /* Opcional: mantener verde/amarillo según estado de pago */
+    td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
+    td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
+    /* Hover suave */
+    td:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
+
+    
     /* Modales */
     #modalDetalleReserva, #modalPago, #modalListaKPI {
         display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -497,92 +505,88 @@ async function cargarPlanillaReservas() {
     }
 }
 
-// === RENDERIZADO ===
 function renderizarPlanilla(data, filtroEstado) {
     const table = document.getElementById('tablaPlanilla');
     if (!table) return;
-    if (!data.canchas || !data.canchas.length) { 
-        table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">Sin canchas.</td></tr>'; 
-        return; 
+    if (!data.canchas || !data.canchas.length) {
+        table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas.</td></tr>';
+        return;
     }
 
+    console.log(`📊 Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
+
     let html = `<thead><tr>`;
-    html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px;">Hora</th>`;
+    html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
     data.canchas.forEach(c => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; font-size:0.7rem;">
-                    <div style="white-space:normal;">${c.nombre_cancha}</div>
+        html += `<th style="background:#AB47BC; color:white; width:110px; min-width:110px; max-width:110px; font-size:0.75rem; padding:4px;">
+                    <div style="font-size:1rem;">${icono}</div>
+                    <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
                  </th>`;
     });
     html += `</tr></thead><tbody>`;
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const ahora = new Date(); // Para bloqueo de pasado
+    let skipCells = {}; // Controla rowspan por columna
+    let celdasPintadas = 0;
 
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
             html += `<tr>`;
-            html += `<td style="background:#f8f9fa; font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.7rem;">${slot.label}</td>`;
-            
-            data.canchas.forEach(cancha => {
-                const key = `${cancha.id_cancha}_${slot.label}`;
-                const res = data.reservas[key];
-                let bgClass = 'estado-disponible';
-                let cellContent = '';
-                let clickEvt = '';
-                let opacity = '1';
-                let cumpleFiltro = true;
+            html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
 
-                if (res) {
-                    let estadoLogico = '';
-                    if (res.estado_pago === 'pagado') estadoLogico = 'pagadas';
-                    else if (res.estado_pago === 'parcial') estadoLogico = 'parcial';
-                    else {
-                        const fechaRes = new Date(res.fecha + 'T00:00:00');
-                        estadoLogico = (fechaRes < hoy) ? 'no_pagadas' : 'reservada';
-                    }
-
-                    if (filtroEstado && filtroEstado !== '') {
-                        if (filtroEstado === 'disponible') cumpleFiltro = false;
-                        else if (filtroEstado !== estadoLogico) cumpleFiltro = false;
-                    }
-
-                    if (cumpleFiltro) {
-                        if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
-                        else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
-                        else bgClass = 'estado-pendiente';
-                        
-                        const nombre = (res.nombre_cliente || 'Reserva').substring(0, 10);
-                        cellContent = `<div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>`;
-                        if (res.id_reserva) clickEvt = `onclick="abrirDetalleDesdePlanilla(${res.id_reserva})"`;
-                    } else {
-                        opacity = '0.05';
-                        cellContent = '';
-                    }
-                } else {
-                    if (filtroEstado && filtroEstado !== 'disponible') opacity = '0.05';
+            data.canchas.forEach((cancha, idxCancha) => {
+                // Saltar celda si está cubierta por rowspan anterior
+                if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
+                    skipCells[idxCancha]--;
+                    return;
                 }
 
-                // ✅ Nueva línea con lógica condicional:
+                const key = `${cancha.id_cancha}_${slot.label}`;
+                const res = data.reservas[key];
+
                 if (res) {
-                    // Es una reserva existente: comportamiento normal
-                    html += `<td class="${bgClass}" 
-                        style="height:40px; cursor:grab; opacity:${opacity};" 
-                        ${clickEvt}
-                        draggable="true" 
-                        ondragstart="dragReserva(event, ${res.id_reserva})">
-                        ${cellContent}
-                    </td>`;
+                    // === CELDA RESERVADA ===
+                    let bgClass = 'estado-pendiente'; // Rojo por defecto
+                    if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
+                    else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
+
+                    // Calcular duración exacta y rowspan (cada fila = 30 min)
+                    const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
+                    const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
+                    const duracionMin = hFin - hIni;
+                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
+
+                    if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
+
+                    const nombre = (res.nombre_cliente || 'Reserva').substring(0, 10);
+                    html += `<td class="${bgClass}" rowspan="${rowspan}" style="height:${rowspan * 40}px; vertical-align:middle; cursor:pointer;" onclick="abrirDetalleDesdePlanilla(${res.id_reserva})">
+                                <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
+                                <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                             </td>`;
+                    celdasPintadas++;
+                    console.log(`🔴 Reserva pintada: ${cancha.nombre_cancha} | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
                 } else {
-                    // Es una celda DISPONIBLE: habilitar reserva manual admin
-                    const clickAdmin = `onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"`;
-                    html += `<td class="estado-disponible" style="height:40px; cursor:pointer; width:110px; min-width:110px;" ${clickAdmin}></td>`;
+                    // === CELDA DISPONIBLE ===
+                    // Verificar si es fecha/hora pasada o igual a ahora
+                    const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
+                    const esPasado = slotFecha <= ahora;
+
+                    if (esPasado) {
+                        html += `<td class="estado-disponible" style="opacity:0.3; cursor:not-allowed;" title="Horario no disponible"></td>`;
+                    } else {
+                        html += `<td class="estado-disponible" onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                    }
                 }
             });
             html += `</tr>`;
         }
     });
+    html += `</tbody>`;
     table.innerHTML = html;
+    console.log(`✅ Renderizado completo. Celdas reservadas: ${celdasPintadas}`);
 }
 
 // === DETALLE DE RESERVA (CORREGIDO) ===
@@ -884,26 +888,6 @@ function buscarSocioAdmin(query) {
   }, 300);
 }
 
-function seleccionarSocioAdmin(id, nombre, email, celular) {
-  document.getElementById('admin_socio_id').value = id;
-  document.getElementById('admin_nombre').value = nombre;
-  document.getElementById('admin_email').value = email;
-  document.getElementById('admin_celular').value = celular;
-  document.getElementById('searchResultsAdmin').style.display = 'none';
-}
-
-function abrirReservaAdmin(canchaId, fecha, hora) {
-  document.getElementById('admin_cancha_id').value = canchaId;
-  document.getElementById('admin_fecha').value = fecha;
-  document.getElementById('admin_hora').value = hora;
-  document.getElementById('searchAdmin').value = '';
-  document.getElementById('formReservaManual').reset();
-  document.getElementById('admin_socio_id').value = '';
-  document.getElementById('modalReservaAdmin').style.display = 'flex';
-}
-
-function cerrarModalReservaAdmin() { document.getElementById('modalReservaAdmin').style.display = 'none'; }
-
 document.getElementById('formReservaManual')?.addEventListener('submit', async(e) => {
   e.preventDefault();
   const data = {
@@ -994,6 +978,74 @@ document.addEventListener('drop', async (e) => {
     }
     draggedReservaId = null;
 });
+
+// === MODAL RESERVA MANUAL ADMIN ===
+let debounceTimer;
+function debounceBuscar(val) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => buscarSocioAdmin(val), 300);
+}
+
+async function buscarSocioAdmin(query) {
+    const container = document.getElementById('searchResultsAdmin');
+    if (!container) return;
+    if (query.length < 2) { container.style.display = 'none'; return; }
+
+    try {
+        const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
+        const text = await res.text(); // Leer como texto primero para evitar crash si viene HTML
+        
+        let data;
+        try { data = JSON.parse(text); } catch (e) {
+            console.error('❌ API search_socios devolvió HTML/JSON inválido:', text.substring(0, 150));
+            container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda. Revisa consola.</div>';
+            container.style.display = 'block';
+            return;
+        }
+
+        container.innerHTML = '';
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<div style="padding:10px; color:#666; font-size:0.85rem;">Sin coincidencias. Se creará socio nuevo.</div>';
+        } else {
+            data.forEach(s => {
+                const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
+                const safeEmail = (s.email || '').replace(/'/g, "\\'");
+                const safeCel = (s.celular || '').replace(/'/g, "\\'");
+                container.innerHTML += `
+                    <div onclick="seleccionarSocioAdmin(${s.id_socio}, '${safeNombre}', '${safeEmail}', '${safeCel}')"
+                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333; background:#fff;">
+                        <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
+                    </div>`;
+            });
+        }
+        container.style.display = 'block';
+    } catch (err) {
+        console.error('Error en buscarSocioAdmin:', err);
+    }
+}
+
+function seleccionarSocioAdmin(id, nombre, email, celular) {
+    document.getElementById('admin_socio_id').value = id;
+    document.getElementById('admin_nombre').value = nombre;
+    document.getElementById('admin_email').value = email;
+    document.getElementById('admin_celular').value = celular;
+    document.getElementById('searchResultsAdmin').style.display = 'none';
+    document.getElementById('searchAdmin').value = nombre;
+}
+
+function abrirReservaAdmin(canchaId, fecha, hora) {
+    document.getElementById('admin_cancha_id').value = canchaId;
+    document.getElementById('admin_fecha').value = fecha;
+    document.getElementById('admin_hora').value = hora;
+    document.getElementById('searchAdmin').value = '';
+    document.getElementById('formReservaManual')?.reset();
+    document.getElementById('admin_socio_id').value = '';
+    document.getElementById('modalReservaAdmin').style.display = 'flex';
+}
+
+function cerrarModalReservaAdmin() {
+    document.getElementById('modalReservaAdmin').style.display = 'none';
+}
 </script>
     <!-- Estilos adicionales para animaciones -->
     <style>
@@ -1004,32 +1056,35 @@ document.addEventListener('drop', async (e) => {
     #modalPago h3 { color: #071289 !important; }
     </style>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
-    <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative;">
-        <span onclick="cerrarModalReservaAdmin()" style="position:absolute; top:15px; right:15px; font-size:24px; cursor:pointer;">&times;</span>
-        <h3 style="color:#071289; margin-bottom:1rem;">📅 Reserva Manual</h3>
-        
-        <!-- Buscador Inteligente -->
-        <div style="position:relative; margin-bottom:1rem;">
-        <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
-                style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;" oninput="buscarSocioAdmin(this.value)">
-        <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:200px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
-        </div>
+        <div style="background:white; padding:2rem; border-radius:16px; max-width:480px; width:90%; position:relative; color:#333; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+            <!-- BOTÓN X PARA CERRAR -->
+            <span onclick="cerrarModalReservaAdmin()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
+            
+            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">📅 Reserva Manual</h3>
+            
+            <form id="formReservaManual">
+            <input type="hidden" id="admin_cancha_id">
+            <input type="hidden" id="admin_fecha">
+            <input type="hidden" id="admin_hora">
+            <input type="hidden" id="admin_socio_id">
+            
+            <!-- Buscador Inteligente -->
+            <div style="position:relative; margin-bottom:1rem;">
+                <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
+                    oninput="debounceBuscar(this.value)" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
+                <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+            </div>
 
-        <form id="formReservaManual">
-        <input type="hidden" id="admin_cancha_id">
-        <input type="hidden" id="admin_fecha">
-        <input type="hidden" id="admin_hora">
-        <input type="hidden" id="admin_socio_id">
-        
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
-            <input type="text" id="admin_nombre" placeholder="Nombre completo" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-            <input type="email" id="admin_email" placeholder="Email" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-            <input type="text" id="admin_celular" placeholder="Celular (+569...)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
+                <input type="text" id="admin_nombre" placeholder="Nombre completo" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+                <input type="email" id="admin_email" placeholder="Email" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+                <input type="text" id="admin_celular" placeholder="Celular (+569...)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            
+            <button type="submit" onclick="event.preventDefault(); alert('Funcionalidad de guardado en desarrollo. Integra tu API aquí.')" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Reserva</button>
+            </form>
+            <p style="font-size:0.7rem; color:#888; margin-top:0.5rem; text-align:center;">* Si el socio no existe, se creará como "Individual" y recibirá link de registro.</p>
         </div>
-        <button type="submit" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Reserva</button>
-        </form>
-        <p style="font-size:0.75rem; color:#666; margin-top:0.5rem; text-align:center;">* Si el socio no existe, se creará como "Individual" y recibirá un link de registro.</p>
-    </div>
     </div>
 </body>
 </html>
