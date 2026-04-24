@@ -1,25 +1,28 @@
 <?php
 // api/mover_reserva.php
-header('Content-Type: application/json');
-if (ob_get_level() > 0) ob_clean(); // Limpiar buffer previo para evitar "basura" en la respuesta
+header('Content-Type: application/json; charset=utf-8');
+if (ob_get_level() > 0) { ob_clean(); }
 
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/reserva_mailer.php';
+require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← CLAVE: cargar la clase
 
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-// Validar sesión
-if (!isset($_SESSION['id_recinto'])) {
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
-    exit;
-}
+error_log("[Mover Reserva] === INICIO ===");
 
 try {
+    if (session_status() === PHP_SESSION_NONE) { session_start(); }
+    
+    if (!isset($_SESSION['id_recinto'])) {
+        error_log("[Mover Reserva] ❌ Sesión inválida");
+        echo json_encode(['success' => false, 'message' => 'No autorizado']);
+        exit;
+    }
+    
+    $id_recinto = (int)$_SESSION['id_recinto'];
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
     
-    if (!$data) {
-        throw new Exception('Datos JSON inválidos');
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('JSON inválido: ' . json_last_error_msg());
     }
     
     $id_reserva = $data['id_reserva'] ?? null;
@@ -28,10 +31,10 @@ try {
     $nueva_cancha = $data['id_cancha'] ?? null;
     
     if (!$id_reserva || !$nueva_fecha || !$nueva_hora_inicio) {
-        throw new Exception('Datos incompletos: id_reserva, fecha y hora_inicio son requeridos');
+        throw new Exception('Datos incompletos');
     }
     
-    // 1. Obtener datos originales
+    // Obtener reserva original (validando recinto)
     $stmt = $pdo->prepare("
         SELECT r.*, c.nombre_cancha, c.id_deporte, rec.nombre as recinto_nombre
         FROM reservas r
@@ -39,38 +42,28 @@ try {
         JOIN recintos_deportivos rec ON c.id_recinto = rec.id_recinto
         WHERE r.id_reserva = ? AND c.id_recinto = ?
     ");
-    $stmt->execute([$id_reserva, $_SESSION['id_recinto']]);
-    $original = $stmt->fetch();
+    $stmt->execute([$id_reserva, $id_recinto]);
+    $original = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$original) {
         throw new Exception('Reserva no encontrada o no pertenece a este recinto');
     }
     
-    // 2. Calcular nueva hora fin (mantener duración original)
-    $inicio_orig = strtotime($original['hora_inicio']);
-    $fin_orig = strtotime($original['hora_fin']);
-    $duracion_seg = $fin_orig - $inicio_orig;
-    
+    // Calcular nueva hora fin (mantener duración)
+    $duracion_seg = strtotime($original['hora_fin']) - strtotime($original['hora_inicio']);
     $nueva_hora_fin = date('H:i:s', strtotime($nueva_hora_inicio) + $duracion_seg);
     
-    // 3. Actualizar en BD
+    // Actualizar en BD
+    $id_cancha_final = $nueva_cancha ?? $original['id_cancha'];
     $stmt = $pdo->prepare("
         UPDATE reservas 
         SET id_cancha = ?, fecha = ?, hora_inicio = ?, hora_fin = ?, updated_at = NOW()
         WHERE id_reserva = ?
     ");
-    $stmt->execute([
-        $nueva_cancha ?? $original['id_cancha'],
-        $nueva_fecha,
-        $nueva_hora_inicio,
-        $nueva_hora_fin,
-        $id_reserva
-    ]);
+    $stmt->execute([$id_cancha_final, $nueva_fecha, $nueva_hora_inicio, $nueva_hora_fin, $id_reserva]);
     
-    // 4. Preparar descripción de cambios
+    // Preparar cambios para correo
     $cambios = [];
-    $id_cancha_final = $nueva_cancha ?? $original['id_cancha'];
-    
     if ($id_cancha_final != $original['id_cancha']) {
         $stmt_c = $pdo->prepare("SELECT nombre_cancha FROM canchas WHERE id_cancha = ?");
         $stmt_c->execute([$id_cancha_final]);
@@ -83,9 +76,9 @@ try {
         $cambios['hora'] = substr($nueva_hora_inicio, 0, 5) . ' - ' . substr($nueva_hora_fin, 0, 5);
     }
     
-    // 5. Obtener datos actualizados para el correo
+    // Obtener datos actualizados para correo
     $stmt = $pdo->prepare("
-        SELECT r.*, c.nombre_cancha, c.id_deporte, rec.nombre as recinto_nombre,
+        SELECT r.*, c.nombre_cancha, rec.nombre as recinto_nombre, c.id_deporte,
                s.email, s.nombre as nombre_socio, s.alias
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
@@ -94,27 +87,32 @@ try {
         WHERE r.id_reserva = ?
     ");
     $stmt->execute([$id_reserva]);
-    $actualizada = $stmt->fetch();
+    $actualizada = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // 6. Enviar correo si hay datos actualizados y email
-    if ($actualizada && ($actualizada['email'] || $actualizada['email_cliente'])) {
-        ReservaMailer::enviarActualizacionConDatos($pdo, $actualizada, $cambios);
+    // ✅ ENVIAR CORREO CON NOMBRE DE CLASE CORRECTO
+    if ($actualizada && ($actualizada['email'] ?? $actualizada['email_cliente'] ?? null)) {
+        // Verificar que la clase y método existen antes de llamar
+        if (class_exists('BrevoMailer') && method_exists('BrevoMailer', 'enviarActualizacionConDatos')) {
+            error_log("[Mover Reserva] 📧 Enviando correo con BrevoMailer...");
+            BrevoMailer::enviarActualizacionConDatos($pdo, $actualizada, $cambios);
+        } else {
+            error_log("[Mover Reserva] ⚠️ BrevoMailer o método no encontrado. Saltando correo.");
+        }
     }
     
-    // 7. Respuesta JSON limpia
+    // Respuesta exitosa
     echo json_encode([
         'success' => true, 
         'message' => 'Reserva movida correctamente',
         'nueva_fecha' => $nueva_fecha,
-        'nueva_hora' => substr($nueva_hora_inicio,0,5) . '-' . substr($nueva_hora_fin,0,5)
+        'nueva_hora' => substr($nueva_hora_inicio, 0, 5) . '-' . substr($nueva_hora_fin, 0, 5)
     ]);
     
 } catch (Exception $e) {
-    error_log("[Mover Reserva] Error: " . $e->getMessage());
-    // Respuesta de error en JSON
+    error_log("[Mover Reserva] ❌ ERROR: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+    http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
-// Asegurar que no haya salida extra
-if (ob_get_level() > 0) ob_end_flush();
+if (ob_get_level() > 0) { ob_end_flush(); }
 ?>
