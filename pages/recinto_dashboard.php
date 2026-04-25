@@ -79,7 +79,18 @@ $monto_deuda = $s_deuda->fetchColumn();
     .action-btn-sidebar { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); color: #071289; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .action-btn-sidebar:hover { transform: translateY(-2px); }
     .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }
-    .planilla-header-controls { background: rgba(21, 101, 192, 0.85); backdrop-filter: blur(10px); padding: 0.8rem 1.5rem; border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); min-width: 940px; max-width: 1380px; width: fit-content; display: flex; flex-wrap: nowrap; gap: 1.5rem; align-items: center; justify-content: space-between; color: white; }
+    
+    
+    .planilla-header-controls {
+        display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem;
+        padding: 0.8rem; background: rgba(255,255,255,0.15); border-radius: 50px;
+        backdrop-filter: blur(8px); align-items: center; justify-content: center;
+    }
+    .control-group {
+        background: white; padding: 0.4rem 0.8rem; border-radius: 20px; color: #071289; border: none; font-weight: bold;
+        min-width: 120px; font-size: 0.85rem;
+    }
+    
     .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
     .kpi-column { margin-top: 50px; padding: 0 1rem; }
     .kpi-card-mini { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-left: 4px solid #ccc; padding: 0.8rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
@@ -263,6 +274,12 @@ td.cell-reserva[rowspan] > div:first-child {
 td.cell-reserva[rowspan] > div:last-child {
     margin-bottom: -5px;
 }
+
+.date-nav-btn {
+        background: white; border: 1px solid #ddd; border-radius: 50%; width: 32px; height: 32px;
+        color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+.date-nav-btn:hover { background: #f0f0f0; }
 </style>
 </head>
 <body>
@@ -317,12 +334,10 @@ td.cell-reserva[rowspan] > div:last-child {
     <!-- COLUMNA 2: PLANILLA (Centro) -->
     <div class="planilla-column">
         <div class="planilla-header-controls">
-            <div class="control-group">
-                <input type="date" id="fechaPlanillaInput" class="control-input">
-                <button onclick="irAHoyPlanilla()" class="control-btn">Hoy</button>
-                <button onclick="cambiarDiaPlanilla(-1)" class="control-btn">&lt;</button>
-                <button onclick="cambiarDiaPlanilla(1)" class="control-btn">&gt;</button>
-            </div>
+            <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
+            <input type="date" id="filtroFecha" class="control-select" style="width: 135px;">
+            <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
+            <button class="date-nav-btn" onclick="irAHoy()" style="width:auto; padding:0 12px; border-radius:20px; font-size:0.8rem; height:32px;">Hoy</button>
             
             <div class="control-group">
                 <span class="control-label">Deportes:</span>
