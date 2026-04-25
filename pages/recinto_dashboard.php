@@ -94,14 +94,114 @@ $monto_deuda = $s_deuda->fetchColumn();
     .torneos-panel-container { grid-column: 1 / -1; margin-top: 1rem; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 1.5rem; color: #333; display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); }
 
     /* TABLA */
-    .planilla-table { width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed; }
-    .planilla-table th:first-child, .planilla-table td:first-child { position: sticky; left: 0; z-index: 20; background: rgba(255,255,255,0.95) !important; color: #555; font-weight: 600; border: none; border-radius: 10px; width: 65px !important; text-align: center; box-shadow: 2px 0 5px rgba(0,0,0,0.15); }
-    .planilla-table th, .planilla-table td { padding: 4px; vertical-align: middle; text-align: center; border-radius: 8px; width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
-    .planilla-table thead th { background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 10; border: none; border-radius: 10px; padding: 10px 6px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer; }
-    td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
-    td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
-    td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
+    .planilla-table {
+        width: auto;
+        border-collapse: collapse !important; /* CLAVE: rowspan funciona solo con collapse */
+        background: transparent;
+        table-layout: fixed;
+        border-spacing: 0 !important; /* Anular spacing anterior */
+    }
+    
+    /* === 🎯 TABLA CON ROWSPAN FUNCIONAL (border-collapse) === */
+    .planilla-table {
+        width: auto;
+        border-collapse: collapse !important; /* CLAVE: rowspan funciona solo con collapse */
+        background: transparent;
+        table-layout: fixed;
+        border-spacing: 0 !important; /* Anular spacing anterior */
+    }
+
+    /* Simular border-spacing: 6px usando border transparente */
+    .planilla-table th,
+    .planilla-table td {
+        border: 3px solid transparent !important; /* Simula spacing de 6px (3px por lado) */
+        padding: 4px !important;
+        vertical-align: middle !important;
+        text-align: center !important;
+        border-radius: 8px !important;
+        width: 110px !important;
+        min-width: 110px !important;
+        max-width: 110px !important;
+        box-sizing: border-box !important;
+        background-clip: padding-box !important; /* Evita que el background cubra el border */
+    }
+
+    /* Hora sticky */
+    .planilla-table th:first-child,
+    .planilla-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 20;
+        background: rgba(255,255,255,0.95) !important;
+        color: #555;
+        font-weight: 600;
+        border: none !important;
+        border-radius: 10px !important;
+        width: 65px !important;
+        text-align: center;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.15);
+    }
+
+    /* Headers */
+    .planilla-table thead th {
+        background: rgba(255,255,255,0.9) !important;
+        color: #333;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 10px 6px !important;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    /* Estados de celdas */
+    td.estado-disponible {
+        background: rgba(255,255,255,0.1) !important;
+        border: 1px dashed rgba(255,255,255,0.3) !important;
+        cursor: pointer;
+    }
+    td.estado-pendiente {
+        background: #FF5252 !important;
+        color: white !important;
+        border: none !important;
+    }
+    td.estado-pagado {
+        background: #4CAF50 !important;
+        color: white !important;
+        border: none !important;
+    }
+    td.estado-parcial {
+        background: #FFEB3B !important;
+        color: #333 !important;
+        border: none !important;
+    }
+
+    /* Hover */
+    .planilla-table td:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        transition: 0.2s;
+        z-index: 5;
+        position: relative;
+    }
+
+    /* === CELDAS CON ROWSPAN === */
+    td.cell-reserva[rowspan] {
+        vertical-align: middle !important;
+        text-align: center !important;
+        /* NO display:flex aquí, rompe rowspan */
+    }
+
+    td.cell-reserva[rowspan] .content-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        height: 100%;
+        width: 100%;
+    }
 
     /* MODALES */
     #modalDetalleReserva, #modalPago, #modalListaKPI { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
@@ -119,7 +219,7 @@ $monto_deuda = $s_deuda->fetchColumn();
     @keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
     @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.03); } 100% { transform:scale(1); } }
     .planilla-table td { animation: fadeInUp 0.3s ease-out; }
-    .planilla-table td:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
+
 
     /* 🎯 DRAG & DROP - VERSIÓN ESTABLE PARA TABLAS */
     .cell-reserva { 
@@ -150,8 +250,7 @@ $monto_deuda = $s_deuda->fetchColumn();
     }
     .drop-anim { animation: dropSuccess 0.3s ease-out; }
     @keyframes dropSuccess { 0% { transform: scale(1.03); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
-
-   
+ 
     .drop-zone { transition: all 0.2s ease; }
     @media (max-width: 1024px) {
         .main-layout { grid-template-columns: 1fr !important; height: auto; display: block; }
@@ -160,12 +259,7 @@ $monto_deuda = $s_deuda->fetchColumn();
         .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; padding-left: 0; }
         .torneos-panel-container { grid-column: auto; }
     }
-    /* === CENTRAR CONTENIDO EN CELDAS CON ROWSPAN === */
-    td.cell-reserva[rowspan] {
-        vertical-align: middle !important;
-        text-align: center !important;
-        /* display: table-cell por defecto, NO cambiar */
-    }
+
     /* Centrar contenido usando un div interno con flex (opcional) */
     td.cell-reserva[rowspan] > .content-wrapper {
         display: flex !important;
@@ -587,7 +681,7 @@ function renderizarPlanilla(data, filtroEstado) {
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
-                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
+                                style="cursor:grab;" 
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
                                 <div class="content-wrapper">
                                     <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
