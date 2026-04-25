@@ -2,9 +2,11 @@
     header('Content-Type: application/json; charset=utf-8');
     require_once __DIR__ . '/../includes/config.php';
 
-    try {
+    if (session_status() === PHP_SESSION_NONE) {
         session_start();
-        
+    }
+
+    try {
         // 1. Verificar autenticación
         $rol_actual = $_SESSION['recinto_rol'] ?? '';
         $roles_permitidos = ['admin', 'asistente']; // Aceptamos ambos roles
@@ -200,28 +202,34 @@
         
         $dias_map = [1=>'lunes', 2=>'martes', 3=>'miercoles', 4=>'jueves', 5=>'viernes', 6=>'sabado', 7=>'domingo'];
         
+        // Obtener hora de cierre de la cancha y duración del bloque
+        $hora_cierre_str = strlen($cancha['hora_fin']) == 5 ? $cancha['hora_fin'].':00' : $cancha['hora_fin'];
+        $duracion_minutos = (int)$cancha['duracion_bloque'];
+        
+        // Calcular la HORA MÁXIMA DE INICIO para que la reserva termine a tiempo
+        // Ej: cierre 23:00, duración 90 min → última inicio posible: 21:30
+        $hora_cierre_dt = new DateTime("1970-01-01 $hora_cierre_str");
+        $hora_max_inicio_dt = clone $hora_cierre_dt;
+        $hora_max_inicio_dt->sub(new DateInterval('PT' . $duracion_minutos . 'M'));
+        
         while ($current_date <= $end_date) {
             $dia_semana = $dias_map[(int)$current_date->format('N')];
             
             if (in_array($dia_semana, $dias_disponibles)) {
                 $hora_inicio_str = strlen($cancha['hora_inicio']) == 5 ? $cancha['hora_inicio'].':00' : $cancha['hora_inicio'];
-                $hora_fin_str = strlen($cancha['hora_fin']) == 5 ? $cancha['hora_fin'].':00' : $cancha['hora_fin'];
-                
-                $duracion_minutos = (int)$cancha['duracion_bloque'];
                 
                 $fecha_base = new DateTime('1970-01-01');
                 $hora_inicio_dt = clone $fecha_base;
                 $hora_inicio_dt->setTime((int)substr($hora_inicio_str,0,2), (int)substr($hora_inicio_str,3,2), (int)substr($hora_inicio_str,6,2));
                 
-                $hora_fin_dt = clone $fecha_base;
-                $hora_fin_dt->setTime((int)substr($hora_fin_str,0,2), (int)substr($hora_fin_str,3,2), (int)substr($hora_fin_str,6,2));
-                
+                // ✅ CORRECCIÓN CLAVE: Iterar solo mientras hora_inicio <= hora_max_inicio
                 $current_hora_dt = clone $hora_inicio_dt;
-                while ($current_hora_dt < $hora_fin_dt) {
+                while ($current_hora_dt <= $hora_max_inicio_dt) {
                     $hora_fin_bloque_dt = clone $current_hora_dt;
                     $hora_fin_bloque_dt->add(new DateInterval('PT' . $duracion_minutos . 'M'));
                     
-                    if ($hora_fin_bloque_dt <= $hora_fin_dt) {
+                    // Verificación extra de seguridad
+                    if ($hora_fin_bloque_dt <= $hora_cierre_dt) {
                         $disponibilidades[] = [
                             'id_cancha' => $cancha['id_cancha'],
                             'nro_cancha' => $cancha['nro_cancha'],
@@ -242,7 +250,8 @@
                             'email_cliente' => null
                         ];
                     }
-                    $current_hora_dt->add(new DateInterval('PT' . $duracion_minutos . 'M'));
+                    // Avanzar al siguiente slot (puede ser cada 30 min o según duracion_bloque)
+                    $current_hora_dt->add(new DateInterval('PT30M')); // Avanzar de 30 en 30 min para la grilla
                 }
             }
             $current_date->modify('+1 day');

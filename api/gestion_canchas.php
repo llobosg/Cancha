@@ -327,11 +327,14 @@ function generarBloquesSimple($pdo, $cancha, $fecha) {
         $hora_inicio = strtotime($cancha['hora_inicio']);
         $hora_fin = strtotime($cancha['hora_fin']);
         $duracion = max(60, (int)$cancha['duracion_bloque']) * 60;
-        
-        $hora_actual = $hora_inicio;
         $bloques_del_dia = 0;
+
+        $hora_cierre_ts = strtotime($cancha['hora_fin']);
+        $duracion_seg = max(60, (int)$cancha['duracion_bloque']) * 60;
+        $hora_max_inicio_ts = $hora_cierre_ts - $duracion_seg; // ← CLAVE
         
-        while ($hora_actual < $hora_fin) {
+        $hora_actual = strtotime($cancha['hora_inicio']);
+        while ($hora_actual <= $hora_max_inicio_ts) { // ← Cambiar condición    
             $hora_inicio_str = date('H:i:s', $hora_actual);
             $hora_fin_str = date('H:i:s', $hora_actual + $duracion);
             
@@ -342,7 +345,7 @@ function generarBloquesSimple($pdo, $cancha, $fecha) {
             ")->execute([$cancha['id_cancha'], $fecha, $hora_inicio_str, $hora_fin_str]);
             
             $bloques_del_dia++;
-            $hora_actual += $duracion;
+            $hora_actual += $duracion_seg; // o += 1800 para slots de 30 min
         }
         
         // Solo loguear para depuración si es necesario

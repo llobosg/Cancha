@@ -1,14 +1,21 @@
 <?php
+// api/crear_reserva_recurrente.php
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../includes/config.php';
+if (ob_get_level() > 0) { ob_clean(); }
 
-try {
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← CLAVE: cargar la clase
+
+// Manejo seguro de sesión
+if (session_status() === PHP_SESSION_NONE) {
     session_start();
-    
-    if (!isset($_SESSION['id_socio'])) {
-        throw new Exception('Acceso no autorizado', 401);
-    }
-    
+}
+
+if (!isset($_SESSION['id_socio'])) {
+    throw new Exception('Acceso no autorizado', 401);
+}
+
+try { 
     $id_socio = $_SESSION['id_socio'];
     
     // CORRECCIÓN AQUÍ: Forzar null si está vacío para evitar error de tipo entero
@@ -202,7 +209,12 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
     }
 
     require_once __DIR__ . '/../includes/reserva_mailer.php';
-    ReservaMailer::enviarConfirmacion($pdo, $id_reserva);
+    // ✅ CORRECTO:
+    if (class_exists('BrevoMailer') && method_exists('BrevoMailer', 'enviarConfirmacion')) {
+        BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
+    } else {
+        error_log("[Crear Reserva] ⚠️ BrevoMailer no disponible. Saltando correo.");
+    }
     return $reservas;
 }
 ?>

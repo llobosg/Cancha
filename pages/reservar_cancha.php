@@ -315,6 +315,18 @@ $deportes = [
     function cerrarModalReserva() { document.getElementById('modalReservaInteligente').style.display = 'none'; }
     
     function confirmarReservaInteligente() {
+        const horaCierre = "23:00"; // Idealmente venir de la API
+        const [hInicio, mInicio] = reservaActual.hora_inicio.split(':').map(Number);
+        const [hCierre, mCierre] = horaCierre.split(':').map(Number);
+
+        const finMinutos = (hInicio * 60 + mInicio) + duracion;
+        const cierreMinutos = hCierre * 60 + mCierre;
+
+        if (finMinutos > cierreMinutos) {
+            showToast('❌ Esta reserva termina después del horario de cierre', 'error');
+            return;
+        }
+        
         const duracion = parseInt(document.querySelector('input[name="duracion"]:checked').value);
         const [h,m] = reservaActual.hora_inicio.split(':').map(Number);
         const fin = new Date(`${reservaActual.fecha}T${reservaActual.hora_inicio}:00`);
@@ -329,6 +341,38 @@ $deportes = [
         fetch('../api/crear_reserva_recurrente.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: f })
         .then(r=>r.json()).then(d => { cerrarModalReserva(); if(d.success) { showToast('✅ Reserva creada', 'success'); aplicarFiltros(); } else showToast('❌ '+d.message, 'error'); })
         .catch(() => { cerrarModalReserva(); showToast('❌ Error de red', 'error'); });
+
+        try {
+            const res = await fetch('../api/crear_reserva_recurrente.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(datos)
+            });
+            
+            // Verificar si la respuesta es JSON válido antes de parsear
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await res.text();
+                console.error('❌ API devolvió HTML/Texto en lugar de JSON:', text.substring(0, 200));
+                throw new Error('Respuesta inválida del servidor (HTTP ' + res.status + ')');
+            }
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast('✅ Reserva creada, recibirás un correo de confirmación', 'success');
+                aplicarFiltros(); // Recargar planilla
+            } else {
+                showToast('❌ ' + (data.message || 'Error al crear reserva'), 'error');
+            }
+        } catch (err) {
+            console.error('❌ Error en confirmarReservaInteligente:', err);
+            // Mensaje más amigable para el usuario
+            const msg = err.message.includes('JSON') 
+                ? '❌ Error en el servidor. Intenta nuevamente.' 
+                : '❌ Error de conexión. Verifica tu internet.';
+            showToast(msg, 'error');
+        }
     }
 
     function showToast(msg, type) {
