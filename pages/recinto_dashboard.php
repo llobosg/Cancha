@@ -160,6 +160,17 @@ $monto_deuda = $s_deuda->fetchColumn();
         .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; padding-left: 0; }
         .torneos-panel-container { grid-column: auto; }
     }
+    /* === CENTRAR CONTENIDO EN CELDAS CON ROWSPAN === */
+    td.cell-reserva[rowspan] {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+    td.cell-reserva[rowspan] div {
+        line-height: 1.2 !important;
+    }
 </style>
 </head>
 <body>
@@ -441,11 +452,12 @@ function renderizarPlanilla(data, filtroEstado) {
         return;
     }
 
-    // === HEADER DE LA TABLA ===
+    console.log(`📊 [DEBUG] Renderizando planilla: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
+
+    // === HEADER ===
     let html = `<thead><tr>`;
     html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
-    // Guardar referencia global para drag & drop
     window.currentCanchasData = data.canchas;
     
     data.canchas.forEach((c, index) => {
@@ -457,78 +469,80 @@ function renderizarPlanilla(data, filtroEstado) {
     });
     html += `</tr></thead><tbody>`;
 
-    // === CUERPO DE LA TABLA: Slots de 30 minutos ===
+    // === CUERPO: Slots de 30 minutos ===
     const ahora = new Date();
-    let skipCells = {}; // Controla rowspan por columna
+    let skipCells = {};
     let celdasPintadas = 0;
+    let debugMatches = 0;
+    let debugNoMatches = 0;
 
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
             html += `<tr>`;
-            // Columna de hora (sticky)
             html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
 
             data.canchas.forEach((cancha, idxCancha) => {
-                // Saltar celda si está cubierta por rowspan anterior
+                // Saltar si está cubierta por rowspan
                 if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
                     skipCells[idxCancha]--;
                     return;
                 }
 
-                // 🔑 CLAVE: Normalizar slot.label para match exacto con BD
-                // slot.label viene como "21:00:00", necesitamos "21:00"
-                const slotLabelNormalized = slot.label.substring(0, 5);
+                // 🔑 CLAVE: Normalizar para match exacto
+                const slotLabelNormalized = slot.label.substring(0, 5); // "21:00:00" → "21:00"
                 const key = `${cancha.id_cancha}_${slotLabelNormalized}`;
                 const res = data.reservas[key];
 
+                // === LOGGING DETALLADO ===
                 if (res) {
-                    // === CELDA RESERVADA ===
-                    let bgClass = 'estado-pendiente';
-                    if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
-                    else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
-
-                    // Calcular duración EXACTA en minutos
+                    debugMatches++;
                     const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
                     const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
                     const duracionMin = hFin - hIni;
-                    
-                    // Rowspan: cada slot = 30 min, redondear hacia arriba
-                    // Ej: 90 min → rowspan=3 (21:00, 21:30, 22:00)
                     const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
+                    
+                    console.log(`✅ MATCH: Key="${key}" | Reserva: ${res.hora_inicio}-${res.hora_fin} | Duración: ${duracionMin}min | Rowspan: ${rowspan} | Cancha: ${cancha.nombre_cancha}`);
+                    
+                    // Calcular bgClass
+                    let bgClass = 'estado-pendiente';
+                    if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
+                    else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
 
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
-                    // ✅ Celda con rowspan, drag & drop, y alineación vertical
+                    // ✅ Celda con rowspan y alineación vertical FORZADA
                     html += `<td class="${bgClass} cell-reserva" 
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
-                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
+                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; display:flex; flex-direction:column; justify-content:center; align-items:center;" 
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                                <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
+                                <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                             </td>`;
                     
                     celdasPintadas++;
                     
-                    // Debug opcional (comentar en producción)
-                    // console.log(`🔴 Reserva: ${cancha.nombre_cancha} | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
-                    
                 } else {
-                    // === CELDA DISPONIBLE ===
+                    debugNoMatches++;
+                    // === DEBUG: Mostrar qué claves SÍ existen para esta cancha ===
+                    if (slot.label === "21:00:00" && cancha.id_cancha == 1) { // Ejemplo: debug solo para cancha 1 a las 21:00
+                        const clavesExistentes = Object.keys(data.reservas).filter(k => k.startsWith(`${cancha.id_cancha}_`));
+                        console.log(`❌ NO MATCH: Key="${key}" | Claves existentes para cancha ${cancha.id_cancha}:`, clavesExistentes.slice(0, 10));
+                    }
+                    
+                    // Celda disponible normal
                     const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
                     const esPasado = slotFecha <= ahora;
                     
                     if (esPasado) {
-                        // Horario pasado: no reservable
                         html += `<td class="estado-disponible" 
                                     data-cancha-id="${cancha.id_cancha}"
                                     style="opacity:0.3; cursor:not-allowed;"
                                     title="Horario no disponible"></td>`;
                     } else {
-                        // Horario futuro: reservable + drop zone para drag & drop
                         html += `<td class="estado-disponible drop-zone" 
                                     data-cancha-id="${cancha.id_cancha}"
                                     ondragover="dragOver(event)" 
@@ -544,8 +558,9 @@ function renderizarPlanilla(data, filtroEstado) {
     html += `</tbody>`;
     table.innerHTML = html;
     
-    // Debug final opcional
-    // console.log(`✅ Planilla renderizada: ${celdasPintadas} reservas pintadas`);
+    // === RESUMEN FINAL DE DEBUG ===
+    console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas | ${debugMatches} matches | ${debugNoMatches} no-matches`);
+    console.log(`🔍 [DEBUG] skipCells al final:`, JSON.stringify(skipCells));
 }
 
 // === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
