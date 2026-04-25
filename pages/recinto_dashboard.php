@@ -444,8 +444,8 @@ function renderizarPlanilla(data, filtroEstado) {
     let html = `<thead><tr>`;
     html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
+    window.currentCanchasData = data.canchas; // Guardar referencia global
     data.canchas.forEach((c, index) => {
-        window.currentCanchasData = data.canchas; // Guardar referencia global
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
         html += `<th style="background:#AB47BC; color:white; width:110px; font-size:0.75rem;" 
                 data-cancha-id="${c.id_cancha}">
@@ -603,7 +603,11 @@ async function dropReserva(e, canchaId, hora) {
     e.preventDefault();
     console.log(`🎯 Drop: canchaId=${canchaId}, hora=${hora}, draggedId=${draggedReservaId}`);
     e.stopPropagation(); // 🔑 EVITA QUE EL EVENTO BUBBLEE A OTROS LISTENERS
-    if (!draggedReservaId) return;
+     // Validación adicional por seguridad
+    if (!draggedReservaId || !canchaId || !hora) {
+        console.warn('⚠️ Datos incompletos para mover reserva');
+        return;
+    }
 
     
     const targetCell = e.target.closest('td');

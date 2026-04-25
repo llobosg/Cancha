@@ -13,9 +13,12 @@ $error_type = '';
 $success = false;
 $email_to_verify = '';
 
-// Valores por defecto desde URL
-$prefill_nombre = $_GET['prefill_nombre'] ?? '';
-$prefill_email = $_GET['prefill_email'] ?? '';
+
+// Inicializar variables de prefill con valores por defecto
+$prefill_nombre = $_GET['prefill_nombre'] ?? $_POST['nombre'] ?? '';
+$prefill_email = $_GET['prefill_email'] ?? $_POST['email'] ?? '';
+$prefill_telefono = $_GET['prefill_telefono'] ?? $_POST['telefono'] ?? ''; // ← AGREGAR ESTA LÍNEA
+$prefill_direccion = $_GET['prefill_direccion'] ?? $_POST['direccion'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -402,17 +405,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="input-group">
                     <label>Responsable *</label>
-                    <input type="text" name="responsable" placeholder="Tu nombre" required value="<?= htmlspecialchars($prefill_nombre) ?>">
+                    <input type="text" name="responsable" placeholder="Tu nombre" required value="<?= htmlspecialchars($prefill_nombre ?? '') ?>">
                 </div>
 
                 <!-- Fila 3: Correo | Celular -->
                 <div class="input-group">
                     <label>Correo *</label>
-                    <input type="email" name="email_responsable" placeholder="tu@email.com" required value="<?= htmlspecialchars($prefill_email) ?>">
+                    <input type="email" name="email_responsable" placeholder="tu@email.com" required value="<?= htmlspecialchars($prefill_email ?? '') ?>">
                 </div>
                 <div class="input-group">
                     <label>Celular</label>
-                    <input type="tel" name="telefono" placeholder="+56 9..." required value="<?= htmlspecialchars($prefill_telefono) ?>">
+                    <input type="tel" name="telefono" placeholder="+56 9..." required value="<?= htmlspecialchars($prefill_telefono ?? '') ?>">
                 </div>
 
                 <!-- Fila 4: Logo -->

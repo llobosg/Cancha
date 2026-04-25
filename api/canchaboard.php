@@ -32,7 +32,6 @@
 
             case 'get_detalle_reserva':
                 // Validar sesión y recinto
-                error_log("[DEBUG] get_detalle_reserva: id_reserva=$id_reserva, id_recinto=$id_recinto");
                 if (session_status() === PHP_SESSION_NONE) session_start();
                 if (!isset($_SESSION['id_recinto'])) {
                     http_response_code(401);
@@ -42,6 +41,8 @@
                 
                 $id_reserva = (int)($_POST['id_reserva'] ?? 0);
                 $id_recinto = (int)$_SESSION['id_recinto'];
+
+                error_log("[DEBUG] get_detalle_reserva: id_reserva=$id_reserva, id_recinto=$id_recinto");
                 
                 if (!$id_reserva) {
                     http_response_code(400);
@@ -92,8 +93,8 @@
                 $fecha = $_GET['fecha'] ?? date('Y-m-d');
                 $deporte = $_GET['deporte'] ?? ''; // Ej: 'padel'
                 
-                if (!$deporte) {
-                    echo json_encode(['error' => 'Deporte requerido']);
+                if ($deporte && $deporte !== 'todos' && !in_array($deporte, ['futbol', 'padel', 'tenis', 'voleyball', 'futsal', 'futbolito'])) {
+                    echo json_encode(['error' => 'Deporte no válido']);
                     exit;
                 }
                 
