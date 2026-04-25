@@ -602,7 +602,6 @@ function dragOver(e) {
 async function dropReserva(e, canchaId, hora) {
     e.preventDefault();
     console.log(`🎯 Drop: canchaId=${canchaId}, hora=${hora}, draggedId=${draggedReservaId}`);
-    
     e.stopPropagation(); // 🔑 EVITA QUE EL EVENTO BUBBLEE A OTROS LISTENERS
     if (!draggedReservaId) return;
 

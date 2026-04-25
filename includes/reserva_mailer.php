@@ -97,7 +97,7 @@
             }
         }
         
-        // === FUNCIÓN NUEVA: Enviar actualización con datos ya actualizados ===
+            // === FUNCIÓN NUEVA: Enviar actualización con datos ya actualizados ===
         public static function enviarActualizacionConDatos($pdo, $actualizada, $original) {
             $to_email = $actualizada['email'] ?? $actualizada['email_cliente'] ?? null;
             $to_name = $actualizada['nombre_socio'] ?? $actualizada['alias'] ?? $actualizada['nombre_cliente'] ?? 'Cliente';
@@ -154,7 +154,7 @@
                 </p>
                 <hr style='margin:25px 0;border:0;border-top:1px solid #eee;'>
                 <p style='text-align:center;font-size:0.9rem;color:#888;'>
-                    ¿Necesitas ayuda? Contáctanos en contacto@canchasport.com
+                    ¿Necesitas ayuda? Contáctanos en soporte@canchasport.com
                 </p>
             </div>";
             
@@ -162,7 +162,7 @@
                 $mail = new BrevoMailer();
                 $mail->setTo($to_email, $to_name)
                     ->setSubject("🔄 Tu reserva ha sido reubicada - CanchaSport")
-                    ->setReplyTo('contacto@canchasport.com', 'Soporte CanchaSport')
+                    ->setReplyTo('reservas@canchasport.com', 'Soporte CanchaSport')
                     ->setHtmlBody($html);
                 return $mail->send();
             } catch (Exception $e) {
