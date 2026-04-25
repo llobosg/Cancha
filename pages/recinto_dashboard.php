@@ -156,27 +156,20 @@ $monto_deuda = $s_deuda->fetchColumn();
         box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
-    /* Estados de celdas */
-    td.estado-disponible {
-        background: rgba(255,255,255,0.1) !important;
-        border: 1px dashed rgba(255,255,255,0.3) !important;
-        cursor: pointer;
-    }
-    td.estado-pendiente {
-        background: #FF5252 !important;
-        color: white !important;
-        border: none !important;
-    }
-    td.estado-pagado {
-        background: #4CAF50 !important;
-        color: white !important;
-        border: none !important;
-    }
-    td.estado-parcial {
-        background: #FFEB3B !important;
-        color: #333 !important;
-        border: none !important;
-    }
+    /* ✅ CSS LIMPIO PARA TABLA (IDÉNTICO AL SOCIO) */
+.planilla-table {
+    width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed;
+}
+.planilla-table td {
+    padding: 4px; vertical-align: middle; text-align: center; border: none; border-radius: 8px;
+    width: 110px !important; min-width: 110px !important; max-width: 110px !important;
+    transition: all 0.2s ease; height: 40px; /* Altura base por fila */
+}
+td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
+td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
+td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
+td.cell-reserva { cursor: grab !important; }
+td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer;}
 
     /* Hover */
     .planilla-table td:hover {
@@ -192,15 +185,6 @@ $monto_deuda = $s_deuda->fetchColumn();
         vertical-align: middle !important;
         text-align: center !important;
         /* NO display:flex aquí, rompe rowspan */
-    }
-
-    td.cell-reserva[rowspan] .content-wrapper {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        height: 100%;
-        width: 100%;
     }
 
     /* MODALES */
@@ -260,58 +244,10 @@ $monto_deuda = $s_deuda->fetchColumn();
         .torneos-panel-container { grid-column: auto; }
     }
 
-    /* Centrar contenido usando un div interno con flex (opcional) */
-    td.cell-reserva[rowspan] > .content-wrapper {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        height: 100%;
-        width: 100%;
-    }
-    td.cell-reserva[rowspan] div {
-        line-height: 1.2 !important;
-    }
-    /* === 🎯 FIX: CELDAS CON ROWSPAN - OCUPAR ALTURA EXACTA === */
-
-/* Forzar altura basada en rowspan */
-.planilla-table td[rowspan] {
-    height: auto !important;
-    min-height: calc(var(--rowspan, 1) * 40px) !important;
-    padding: 0 !important;
-    vertical-align: middle !important;
-    display: table-cell !important;
-    box-sizing: border-box !important;
-}
-
-/* Compensar border-spacing para que rowspan cubra filas correctamente */
-.planilla-table td[rowspan] {
-    margin-bottom: -6px !important; /* Compensa el border-spacing: 6px */
-}
-
-/* Centrar contenido vertical y horizontalmente */
-td.cell-reserva[rowspan] {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    text-align: center !important;
-}
-
-td.cell-reserva[rowspan] > div {
-    line-height: 1.2 !important;
-    width: 100%;
-}
-
 /* === DEBUG VISUAL: Outline para ver rowspan === */
 /* (Comentar en producción) */
 td[rowspan="3"] {
     outline-color: rgba(255, 0, 0, 0.7) !important;
-}
-/* === FIX PARA ROWSPAN CON BORDER-SPACING === */
-.planilla-table {
-    border-collapse: separate !important;
-    border-spacing: 6px !important;
 }
 
 /* Forzar que rowspan funcione con border-spacing */
@@ -327,15 +263,6 @@ td.cell-reserva[rowspan] > div:first-child {
 td.cell-reserva[rowspan] > div:last-child {
     margin-bottom: -5px;
 }
-
-/* Debug visual opcional: outline para ver rowspan */
-/* Comentar en producción */
-/*
-td[rowspan] {
-    outline: 1px dashed rgba(255,255,0,0.5);
-    outline-offset: -1px;
-}
-*/
 </style>
 </head>
 <body>
@@ -675,18 +602,15 @@ function renderizarPlanilla(data, filtroEstado) {
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
                     // ✅ IMPORTANTE: rowspan="${rowspan}" como atributo HTML
-                    html += `<td class="${bgClass} cell-reserva" 
-                                rowspan="${rowspan}"
-                                data-rowspan="${rowspan}"
+                  html += `<td class="${bgClass} cell-reserva" 
+                                rowspan="${rowspan}" 
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
-                                style="cursor:grab;" 
+                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                                <div class="content-wrapper">
-                                    <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
-                                    <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
-                                </div>
+                                <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
+                                <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                             </td>`;
                     
                     celdasPintadas++;
