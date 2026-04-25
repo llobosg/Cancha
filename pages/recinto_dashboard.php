@@ -338,26 +338,21 @@ td.cell-reserva[rowspan] > div:last-child {
             <input type="date" id="filtroFecha" class="control-select" style="width: 135px;">
             <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
             <button class="date-nav-btn" onclick="irAHoy()" style="width:auto; padding:0 12px; border-radius:20px; font-size:0.8rem; height:32px;">Hoy</button>
-            
-            <div class="control-group">
-                <span class="control-label">Deportes:</span>
-                <select id="filtroDeporte" class="control-select">
-                    <option value="todos">Todos</option>
-                    <option value="padel">Pádel</option>
-                    <option value="futbol">Fútbol</option>
-                    <option value="tenis">Tenis</option>
-                </select>
-            </div>
 
-            <div class="control-group">
-                <span class="control-label">Estado:</span>
-                <select id="filtroEstado" class="control-select">
-                    <option value="">Todos</option>
-                    <option value="pagadas">Pagadas</option>
-                    <option value="parcial">Parcial</option>
-                    <option value="no_pagadas">No Pagadas</option>
-                </select>
-            </div>
+            <select class="control-select" id="filtroDeporte">
+                <option value="">Deporte...</option>
+                <?php foreach ($deportes as $key => $value): ?>
+                    <option value="<?= $key ?>"><?= $value ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <select class="control-select" id="filtroEstado">
+                <option value="">Estado...</option>
+                <option value="disponible">Disponible</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="pagado">Pagado</option>
+                <option value="parcial">Pago Parcial</option>
+            </select>
         </div>
         
         <div class="planilla-table-container">
