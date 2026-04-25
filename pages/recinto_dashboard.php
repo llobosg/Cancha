@@ -162,11 +162,18 @@ $monto_deuda = $s_deuda->fetchColumn();
     }
     /* === CENTRAR CONTENIDO EN CELDAS CON ROWSPAN === */
     td.cell-reserva[rowspan] {
+        vertical-align: middle !important;
+        text-align: center !important;
+        /* display: table-cell por defecto, NO cambiar */
+    }
+    /* Centrar contenido usando un div interno con flex (opcional) */
+    td.cell-reserva[rowspan] > .content-wrapper {
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
         align-items: center !important;
-        text-align: center !important;
+        height: 100%;
+        width: 100%;
     }
     td.cell-reserva[rowspan] div {
         line-height: 1.2 !important;
@@ -207,6 +214,34 @@ td.cell-reserva[rowspan] > div {
 td[rowspan="3"] {
     outline-color: rgba(255, 0, 0, 0.7) !important;
 }
+/* === FIX PARA ROWSPAN CON BORDER-SPACING === */
+.planilla-table {
+    border-collapse: separate !important;
+    border-spacing: 6px !important;
+}
+
+/* Forzar que rowspan funcione con border-spacing */
+.planilla-table td[rowspan] {
+    vertical-align: middle !important;
+    /* NO usar display:flex aquí, rompe rowspan en tablas */
+}
+
+/* Centrar contenido dentro de celda con rowspan */
+td.cell-reserva[rowspan] > div:first-child {
+    margin-top: -5px; /* Ajuste fino para centrar */
+}
+td.cell-reserva[rowspan] > div:last-child {
+    margin-bottom: -5px;
+}
+
+/* Debug visual opcional: outline para ver rowspan */
+/* Comentar en producción */
+/*
+td[rowspan] {
+    outline: 1px dashed rgba(255,255,0,0.5);
+    outline-offset: -1px;
+}
+*/
 </style>
 </head>
 <body>
@@ -488,7 +523,7 @@ function renderizarPlanilla(data, filtroEstado) {
         return;
     }
 
-    console.log(`📊 [DEBUG] Renderizando planilla: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
+    console.log(`📊 [DEBUG] Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
 
     // === HEADER ===
     let html = `<thead><tr>`;
@@ -509,8 +544,6 @@ function renderizarPlanilla(data, filtroEstado) {
     const ahora = new Date();
     let skipCells = {};
     let celdasPintadas = 0;
-    let debugMatches = 0;
-    let debugNoMatches = 0;
 
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
@@ -518,22 +551,19 @@ function renderizarPlanilla(data, filtroEstado) {
             html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
 
             data.canchas.forEach((cancha, idxCancha) => {
-                // Saltar si está cubierta por rowspan
+                // Saltar si está cubierta por rowspan anterior
                 if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
                     skipCells[idxCancha]--;
                     return;
                 }
 
-                // 🔑 CLAVE: Normalizar para match exacto
+                // 🔑 CLAVE: Normalizar slot.label para match exacto con BD
                 const slotLabelNormalized = slot.label.substring(0, 5); // "21:00:00" → "21:00"
                 const key = `${cancha.id_cancha}_${slotLabelNormalized}`;
                 const res = data.reservas[key];
 
-                // === LOGGING DETALLADO ===
                 if (res) {
-                    debugMatches++;
-                    
-                    // Calcular bgClass
+                    // === CELDA RESERVADA ===
                     let bgClass = 'estado-pendiente';
                     if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                     else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
@@ -542,46 +572,40 @@ function renderizarPlanilla(data, filtroEstado) {
                     const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
                     const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
                     const duracionMin = hFin - hIni;
-                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30)); // Debería ser 3
+                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
 
-                    console.log(`✅ MATCH: Key="${key}" | Reserva: ${res.hora_inicio}-${res.hora_fin} | Duración: ${duracionMin}min | Rowspan: ${rowspan} | Cancha: ${cancha.nombre_cancha}`);
+                    console.log(`✅ MATCH: Key="${key}" | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
 
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
-                    // ✅ AQUÍ ESTÁ LA CORRECCIÓN: rowspan="${rowspan}" agregado explícitamente
+                    // ✅ IMPORTANTE: rowspan="${rowspan}" como atributo HTML
                     html += `<td class="${bgClass} cell-reserva" 
-                                rowspan="${rowspan}" 
+                                rowspan="${rowspan}"
                                 data-rowspan="${rowspan}"
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
                                 style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                                <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
-                                <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                                <div class="content-wrapper">
+                                    <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
+                                    <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                                </div>
                             </td>`;
                     
                     celdasPintadas++;
                     
                 } else {
-                    debugNoMatches++;
-                    // === DEBUG: Mostrar qué claves SÍ existen para esta cancha ===
-                    if (slot.label === "21:00:00" && cancha.id_cancha == 1) { // Ejemplo: debug solo para cancha 1 a las 21:00
-                        const clavesExistentes = Object.keys(data.reservas).filter(k => k.startsWith(`${cancha.id_cancha}_`));
-                        console.log(`❌ NO MATCH: Key="${key}" | Claves existentes para cancha ${cancha.id_cancha}:`, clavesExistentes.slice(0, 10));
-                    }
-                    
-                    // Celda disponible normal
+                    // === CELDA DISPONIBLE ===
                     const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
                     const esPasado = slotFecha <= ahora;
                     
                     if (esPasado) {
                         html += `<td class="estado-disponible" 
                                     data-cancha-id="${cancha.id_cancha}"
-                                    style="opacity:0.3; cursor:not-allowed;"
-                                    title="Horario no disponible"></td>`;
+                                    style="opacity:0.3; cursor:not-allowed;"></td>`;
                     } else {
                         html += `<td class="estado-disponible drop-zone" 
                                     data-cancha-id="${cancha.id_cancha}"
@@ -597,21 +621,17 @@ function renderizarPlanilla(data, filtroEstado) {
     
     html += `</tbody>`;
     table.innerHTML = html;
-
-     setTimeout(() => {
-        const celdasRowspan = document.querySelectorAll('td[rowspan]');
-        console.log(`🔍 [DEBUG CSS] Celdas con rowspan: ${celdasRowspan.length}`);
-        celdasRowspan.forEach((td, i) => {
-            const style = window.getComputedStyle(td);
-            console.log(`   [${i}] rowspan=${td.rowspan} | height=${style.height} | display=${style.display} | offsetHeight=${td.offsetHeight}`);
+    
+    // Debug opcional: verificar rowspan aplicado
+    setTimeout(() => {
+        const celdas = document.querySelectorAll('td.cell-reserva[rowspan]');
+        console.log(`🔍 [DEBUG] Celdas con rowspan: ${celdas.length}`);
+        celdas.forEach((td, i) => {
+            console.log(`   [${i}] rowspan="${td.getAttribute('rowspan')}" | offsetHeight=${td.offsetHeight}px`);
         });
     }, 100);
     
-    // === RESUMEN FINAL DE DEBUG ===
-    console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas | ${debugMatches} matches | ${debugNoMatches} no-matches`);
-    console.log(`🔍 [DEBUG] skipCells al final:`, JSON.stringify(skipCells));
-
-   
+    console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas`);
 }
 
 // === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
