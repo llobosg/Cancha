@@ -171,6 +171,46 @@ $monto_deuda = $s_deuda->fetchColumn();
     td.cell-reserva[rowspan] div {
         line-height: 1.2 !important;
     }
+    /* === 🎯 FIX: CELDAS CON ROWSPAN - OCUPAR ALTURA EXACTA === */
+
+/* Forzar altura basada en rowspan */
+.planilla-table td[rowspan] {
+    height: auto !important;
+    min-height: calc(var(--rowspan, 1) * 40px) !important;
+    padding: 0 !important;
+    vertical-align: middle !important;
+    display: table-cell !important;
+    box-sizing: border-box !important;
+}
+
+/* Compensar border-spacing para que rowspan cubra filas correctamente */
+.planilla-table td[rowspan] {
+    margin-bottom: -6px !important; /* Compensa el border-spacing: 6px */
+}
+
+/* Centrar contenido vertical y horizontalmente */
+td.cell-reserva[rowspan] {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+td.cell-reserva[rowspan] > div {
+    line-height: 1.2 !important;
+    width: 100%;
+}
+
+/* === DEBUG VISUAL: Outline para ver rowspan === */
+/* (Comentar en producción) */
+td[rowspan] {
+    outline: 2px dashed rgba(0, 255, 0, 0.5) !important;
+    outline-offset: -2px;
+}
+td[rowspan="3"] {
+    outline-color: rgba(255, 0, 0, 0.7) !important;
+}
 </style>
 </head>
 <body>
@@ -514,12 +554,14 @@ function renderizarPlanilla(data, filtroEstado) {
                     
                     // ✅ Celda con rowspan y alineación vertical FORZADA
                     html += `<td class="${bgClass} cell-reserva" 
+                                rowspan="${rowspan}"
+                                data-rowspan="${rowspan}"  /* ← AGREGAR ESTO */
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
-                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; display:flex; flex-direction:column; justify-content:center; align-items:center;" 
+                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                                <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
+                                <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                             </td>`;
                     
