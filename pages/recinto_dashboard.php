@@ -441,10 +441,13 @@ function renderizarPlanilla(data, filtroEstado) {
         return;
     }
 
+    // === HEADER DE LA TABLA ===
     let html = `<thead><tr>`;
     html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
-    window.currentCanchasData = data.canchas; // Guardar referencia global
+    // Guardar referencia global para drag & drop
+    window.currentCanchasData = data.canchas;
+    
     data.canchas.forEach((c, index) => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
         html += `<th style="background:#AB47BC; color:white; width:110px; font-size:0.75rem;" 
@@ -452,41 +455,52 @@ function renderizarPlanilla(data, filtroEstado) {
                     <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
                 </th>`;
     });
-        html += `</tr></thead><tbody>`;
+    html += `</tr></thead><tbody>`;
 
+    // === CUERPO DE LA TABLA: Slots de 30 minutos ===
     const ahora = new Date();
-    let skipCells = {};
+    let skipCells = {}; // Controla rowspan por columna
     let celdasPintadas = 0;
 
     data.slots.forEach(slot => {
         if (slot.is_label_row) {
             html += `<tr>`;
+            // Columna de hora (sticky)
             html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
 
             data.canchas.forEach((cancha, idxCancha) => {
+                // Saltar celda si está cubierta por rowspan anterior
                 if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
                     skipCells[idxCancha]--;
                     return;
                 }
 
-                const key = `${cancha.id_cancha}_${slot.label}`;
+                // 🔑 CLAVE: Normalizar slot.label para match exacto con BD
+                // slot.label viene como "21:00:00", necesitamos "21:00"
+                const slotLabelNormalized = slot.label.substring(0, 5);
+                const key = `${cancha.id_cancha}_${slotLabelNormalized}`;
                 const res = data.reservas[key];
 
                 if (res) {
+                    // === CELDA RESERVADA ===
                     let bgClass = 'estado-pendiente';
                     if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                     else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
 
+                    // Calcular duración EXACTA en minutos
                     const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
                     const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
                     const duracionMin = hFin - hIni;
+                    
+                    // Rowspan: cada slot = 30 min, redondear hacia arriba
+                    // Ej: 90 min → rowspan=3 (21:00, 21:30, 22:00)
                     const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
 
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
-                    // ✅ AGREGADOS: draggable, ondragstart, ondragend
+                    // ✅ Celda con rowspan, drag & drop, y alineación vertical
                     html += `<td class="${bgClass} cell-reserva" 
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
@@ -496,16 +510,27 @@ function renderizarPlanilla(data, filtroEstado) {
                                 <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                             </td>`;
+                    
+                    celdasPintadas++;
+                    
+                    // Debug opcional (comentar en producción)
+                    // console.log(`🔴 Reserva: ${cancha.nombre_cancha} | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
+                    
                 } else {
+                    // === CELDA DISPONIBLE ===
                     const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
-                    const esPasado = slotFecha <= new Date();
+                    const esPasado = slotFecha <= ahora;
                     
                     if (esPasado) {
+                        // Horario pasado: no reservable
                         html += `<td class="estado-disponible" 
                                     data-cancha-id="${cancha.id_cancha}"
-                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                                    style="opacity:0.3; cursor:not-allowed;"
+                                    title="Horario no disponible"></td>`;
                     } else {
+                        // Horario futuro: reservable + drop zone para drag & drop
                         html += `<td class="estado-disponible drop-zone" 
+                                    data-cancha-id="${cancha.id_cancha}"
                                     ondragover="dragOver(event)" 
                                     ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
                                     onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
@@ -515,8 +540,12 @@ function renderizarPlanilla(data, filtroEstado) {
             html += `</tr>`;
         }
     });
+    
     html += `</tbody>`;
     table.innerHTML = html;
+    
+    // Debug final opcional
+    // console.log(`✅ Planilla renderizada: ${celdasPintadas} reservas pintadas`);
 }
 
 // === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
