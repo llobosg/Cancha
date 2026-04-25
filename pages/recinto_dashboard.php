@@ -599,10 +599,21 @@ function renderizarPlanilla(data, filtroEstado) {
     
     html += `</tbody>`;
     table.innerHTML = html;
+
+     setTimeout(() => {
+        const celdasRowspan = document.querySelectorAll('td[rowspan]');
+        console.log(`🔍 [DEBUG CSS] Celdas con rowspan: ${celdasRowspan.length}`);
+        celdasRowspan.forEach((td, i) => {
+            const style = window.getComputedStyle(td);
+            console.log(`   [${i}] rowspan=${td.rowspan} | height=${style.height} | display=${style.display} | offsetHeight=${td.offsetHeight}`);
+        });
+    }, 100);
     
     // === RESUMEN FINAL DE DEBUG ===
     console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas | ${debugMatches} matches | ${debugNoMatches} no-matches`);
     console.log(`🔍 [DEBUG] skipCells al final:`, JSON.stringify(skipCells));
+
+   
 }
 
 // === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
