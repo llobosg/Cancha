@@ -204,10 +204,6 @@ td.cell-reserva[rowspan] > div {
 
 /* === DEBUG VISUAL: Outline para ver rowspan === */
 /* (Comentar en producción) */
-td[rowspan] {
-    outline: 2px dashed rgba(0, 255, 0, 0.5) !important;
-    outline-offset: -2px;
-}
 td[rowspan="3"] {
     outline-color: rgba(255, 0, 0, 0.7) !important;
 }
@@ -536,32 +532,34 @@ function renderizarPlanilla(data, filtroEstado) {
                 // === LOGGING DETALLADO ===
                 if (res) {
                     debugMatches++;
-                    const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
-                    const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
-                    const duracionMin = hFin - hIni;
-                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
-                    
-                    console.log(`✅ MATCH: Key="${key}" | Reserva: ${res.hora_inicio}-${res.hora_fin} | Duración: ${duracionMin}min | Rowspan: ${rowspan} | Cancha: ${cancha.nombre_cancha}`);
                     
                     // Calcular bgClass
                     let bgClass = 'estado-pendiente';
                     if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
                     else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
 
+                    // Calcular duración y rowspan
+                    const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
+                    const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
+                    const duracionMin = hFin - hIni;
+                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30)); // Debería ser 3
+
+                    console.log(`✅ MATCH: Key="${key}" | Reserva: ${res.hora_inicio}-${res.hora_fin} | Duración: ${duracionMin}min | Rowspan: ${rowspan} | Cancha: ${cancha.nombre_cancha}`);
+
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
-                    // ✅ Celda con rowspan y alineación vertical FORZADA
+                    // ✅ AQUÍ ESTÁ LA CORRECCIÓN: rowspan="${rowspan}" agregado explícitamente
                     html += `<td class="${bgClass} cell-reserva" 
-                                rowspan="${rowspan}"
-                                data-rowspan="${rowspan}"  /* ← AGREGAR ESTO */
+                                rowspan="${rowspan}" 
+                                data-rowspan="${rowspan}"
                                 draggable="true" 
                                 ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                                 ondragend="dragEnd(event)"
                                 style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                                <div style="font-size:0.7rem; font-weight:bold;">${nombre}</div>
+                                <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
                             </td>`;
                     
