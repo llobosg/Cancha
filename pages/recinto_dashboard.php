@@ -1241,4 +1241,7 @@ async function confirmarMovimiento() {
         </div>
     </div>
 
-    <!-
+    <!-- === SISTEMA DE TOAST NOTIFICATIONS === -->
+    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
+</body>
+</html>
