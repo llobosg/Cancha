@@ -1009,6 +1009,7 @@
 
         <!-- MITAD INFERIOR -->
         <div class="dashboard-lower" style="margin-top: 8rem;">
+                $filtro = $_GET['filtro'] ?? $_POST['filtro'] ?? '';
                 <h3>Detalle Eventos</h3>
                 <!-- Filtros -->
                 <button class="filter-btn" data-filter="inscritos">Inscritos Próximo Evento</button>
