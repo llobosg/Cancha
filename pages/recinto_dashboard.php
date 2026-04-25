@@ -82,7 +82,7 @@ $monto_deuda = $s_deuda->fetchColumn();
     
     
     .planilla-header-controls {
-        display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem;
+          display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem;
         padding: 0.8rem; background: rgba(255,255,255,0.15); border-radius: 50px;
         backdrop-filter: blur(8px); align-items: center; justify-content: center;
     }
