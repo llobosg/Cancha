@@ -1,27 +1,49 @@
 <?php
 // pages/gestion_asistentes.php
-session_start();
+
+// 1. Manejo de sesión SEGURO (evita "headers already sent")
+if (session_status() === PHP_SESSION_NONE) {
+    session_name('CANCHASPORT_SESSION');
+    session_start();
+}
+
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/permisos.php';
 
-// Seguridad: Solo Admins pueden acceder
-if (!esAdmin()) {
+// 2. Logging para depuración (ver en Railway logs)
+error_log("[GestionAsistentes] === INICIO ===");
+error_log("[GestionAsistentes] Sesión: id_recinto=" . ($_SESSION['id_recinto'] ?? 'NO SET') . ", rol=" . ($_SESSION['recinto_rol'] ?? 'NO SET') . ", id_admin=" . ($_SESSION['id_admin'] ?? 'NO SET'));
+
+// 3. Verificación de seguridad EXPLÍCITA (sin depender de esAdmin() si falla)
+$rol_actual = $_SESSION['recinto_rol'] ?? '';
+$id_recinto_session = $_SESSION['id_recinto'] ?? null;
+
+if ($rol_actual !== 'admin' || !$id_recinto_session) {
+    error_log("[GestionAsistentes] ❌ Acceso denegado. Rol: '$rol_actual', ID Recinto: " . var_export($id_recinto_session, true));
     header('Location: recinto_dashboard.php');
     exit;
 }
 
-$id_recinto = $_SESSION['id_recinto'];
+$id_recinto = (int)$id_recinto_session;
 $nombre_recinto = $_SESSION['nombre_recinto'] ?? 'Recinto Deportivo';
 
-// Obtener lista de asistentes actuales
-$stmt = $pdo->prepare("
-    SELECT ar.id_admin, ar.usuario, ar.nombre_completo, ar.email, ar.telefono, ar.created_at, ar.rol
-    FROM admin_recintos ar
-    WHERE ar.id_recinto = ? AND ar.rol = 'asistente'
-    ORDER BY ar.created_at DESC
-");
-$stmt->execute([$id_recinto]);
-$asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+error_log("[GestionAsistentes] ✅ Acceso permitido. Recinto ID: $id_recinto");
+
+// 4. Obtener lista de asistentes actuales
+try {
+    $stmt = $pdo->prepare("
+        SELECT ar.id_admin, ar.usuario, ar.nombre_completo, ar.email, ar.telefono, ar.created_at, ar.rol
+        FROM admin_recintos ar
+        WHERE ar.id_recinto = ? AND ar.rol = 'asistente'
+        ORDER BY ar.created_at DESC
+    ");
+    $stmt->execute([$id_recinto]);
+    $asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("[GestionAsistentes] ✅ Consultados " . count($asistentes) . " asistentes");
+} catch (Exception $e) {
+    error_log("[GestionAsistentes] ❌ Error en consulta: " . $e->getMessage());
+    $asistentes = [];
+}
 ?>
 
 <!DOCTYPE html>
@@ -35,7 +57,7 @@ $asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
         
-        /* Estilos Top Bar CanchaSport */
+        /* Top Bar CanchaSport */
         .top-bar {
             background: linear-gradient(90deg, #CE93D8 0%, #BA68C8 50%, #AB47BC 100%);
             padding: 1rem 2rem;
@@ -75,7 +97,6 @@ $asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         .btn-back:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
 
-        /* Resto de estilos */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; margin-top: 1rem; }
         .btn-primary { background: #AB47BC; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; box-shadow: 0 4px 6px rgba(171, 71, 188, 0.2); }
         .btn-primary:hover { background: #8E24AA; transform: translateY(-2px); }
@@ -111,15 +132,10 @@ $asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <a href="../index.php" class="brand-logo">
         <span>🏟️</span> CanchaSport
     </a>
-    
-    <!-- Botón Volver al Dashboard -->
-    <a href="recinto_dashboard.php" class="btn-back">
-        ← Volver al Dashboard
-    </a>
+    <a href="recinto_dashboard.php" class="btn-back">← Volver al Dashboard</a>
 </div>
 
 <div class="container">
-    <!-- Header Interno -->
     <div class="page-header">
         <div>
             <h1 style="color: #333; margin: 0; font-size: 1.8rem;">👥 Gestión de Asistentes</h1>
@@ -132,7 +148,6 @@ $asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </button>
     </div>
 
-    <!-- Tabla -->
     <div class="table-container">
         <table>
             <thead>
@@ -157,7 +172,7 @@ $asistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <td><?= date('d/m/Y', strtotime($asistente['created_at'])) ?></td>
                         <td><span class="badge badge-active">Activo</span></td>
                         <td style="text-align: right;">
-                            <button onclick="eliminarAsistente(<?= $asistente['id_admin'] ?>, '<?= htmlspecialchars($asistente['nombre_completo']) ?>')" 
+                            <button onclick="eliminarAsistente(<?= $asistente['id_admin'] ?>, '<?= htmlspecialchars($asistente['nombre_completo'], ENT_QUOTES) ?>')" 
                                 style="background: #ffebee; color: #c62828; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s;">
                                 Dar de Baja
                             </button>

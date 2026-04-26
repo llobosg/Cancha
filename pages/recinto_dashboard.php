@@ -416,28 +416,28 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         <div class="kpi-card-mini kpi-ingresos">
             <div>Ingresos Mes</div>
             <div>$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
-            <div><?= $var_ing >= 0 ? '▲' : '▼' ?> <?= number_format(abs($var_ing), 1) ?>%</div>
+            <div style="color: #4A4A4A"><?= $var_ing >= 0 ? '▲' : '▼' ?> <?= number_format(abs($var_ing), 1) ?>%</div>
         </div>
         <?php endif; ?>
 
         <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
             <div>Pago Parcial</div>
             <div>$<?= number_format($parcial_act, 0, ',', '.') ?></div>
-            <div>Ver detalles</div>
+            <div style="color: #4A4A4A">Ver detalles</div>
         </div>
 
         <?php if ($rol_actual === 'admin'): ?>
         <div class="kpi-card-mini kpi-reserva">
             <div>En Reserva</div>
             <div><?= $cant_reserva ?></div>
-            <div>Próximas no pagadas</div>
+            <div style="color: #4A4A4A">Próximas no pagadas</div>
         </div>
         <?php endif; ?>
 
         <div class="kpi-card-mini kpi-deuda" onclick="abrirListaKPI('deuda')">
             <div>Deuda Vencida</div>
             <div>$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-            <div>Ver deudores</div>
+            <div style="color: #4A4A4A">Ver deudores</div>
         </div>
     </div>
 
