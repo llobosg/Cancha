@@ -101,99 +101,6 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; font-weight:bold; }
     .torneos-panel-container { grid-column: 1 / -1; margin-top: 1rem; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 1.5rem; color: #333; display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); }
 
-    /* TABLA */
-    .planilla-table {
-        width: auto;
-        border-collapse: collapse !important; /* CLAVE: rowspan funciona solo con collapse */
-        background: transparent;
-        table-layout: fixed;
-        border-spacing: 0 !important; /* Anular spacing anterior */
-    }
-    
-    /* === 🎯 TABLA CON ROWSPAN FUNCIONAL (border-collapse) === */
-    .planilla-table {
-        width: auto;
-        border-collapse: collapse !important; /* CLAVE: rowspan funciona solo con collapse */
-        background: transparent;
-        table-layout: fixed;
-        border-spacing: 0 !important; /* Anular spacing anterior */
-    }
-
-    /* Simular border-spacing: 6px usando border transparente */
-    .planilla-table th,
-    .planilla-table td {
-        border: 3px solid transparent !important; /* Simula spacing de 6px (3px por lado) */
-        padding: 4px !important;
-        vertical-align: middle !important;
-        text-align: center !important;
-        border-radius: 8px !important;
-        width: 110px !important;
-        min-width: 110px !important;
-        max-width: 110px !important;
-        box-sizing: border-box !important;
-        background-clip: padding-box !important; /* Evita que el background cubra el border */
-    }
-
-    /* === 2. CABECERA DE CANCHAS (Sticky corregido) === */
-    .planilla-table thead th {
-        position: sticky !important;
-        top: 0 !important; /* ✅ CLAVE: 0 relativo al contenedor scroll, no viewport */
-        z-index: 100 !important;
-        background: rgba(255,255,255,0.95) !important;
-        color: #4A4A4A !important; /* Grafito */
-        border: none;
-        border-radius: 10px;
-        padding: 10px 6px;
-        font-weight: 700;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    /* Esquina superior izquierda (Hora) */
-    .planilla-table thead th:first-child {
-        z-index: 110 !important;
-        background: rgba(245, 248, 255, 0.98) !important;
-        top: 0 !important;
-    }
-
-    /* Columna Hora (Sticky izquierda, independiente del scroll vertical) */
-    .planilla-table td:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 105 !important;
-        background: rgba(255,255,255,0.95) !important;
-        color: #555 !important;
-        font-weight: 600;
-        border: none;
-        border-radius: 10px;
-        width: 65px !important;
-        text-align: center;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.15);
-    }
-
-        /* ✅ CSS LIMPIO PARA TABLA (IDÉNTICO AL SOCIO) */
-    .planilla-table {
-        width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed;
-    }
-    .planilla-table td {
-        padding: 4px; vertical-align: middle; text-align: center; border: none; border-radius: 8px;
-        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
-        transition: all 0.2s ease; height: 40px; /* Altura base por fila */
-    }
-    td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
-    td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
-    td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
-    td.cell-reserva { cursor: grab !important; }
-    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer;}
-
-    /* Hover */
-    .planilla-table td:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        transition: 0.2s;
-        z-index: 5;
-        position: relative;
-    }
-
     /* === CELDAS CON ROWSPAN === */
     td.cell-reserva[rowspan] {
         vertical-align: middle !important;
@@ -216,7 +123,6 @@ $monto_deuda = $s_deuda->fetchColumn();
     .rotated { transform: rotate(-180deg); }
     @keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
     @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.03); } 100% { transform:scale(1); } }
-    .planilla-table td { animation: fadeInUp 0.3s ease-out; }
 
 
     /* 🎯 DRAG & DROP - VERSIÓN ESTABLE PARA TABLAS */
@@ -262,12 +168,6 @@ $monto_deuda = $s_deuda->fetchColumn();
 /* (Comentar en producción) */
 td[rowspan="3"] {
     outline-color: rgba(255, 0, 0, 0.7) !important;
-}
-
-/* Forzar que rowspan funcione con border-spacing */
-.planilla-table td[rowspan] {
-    vertical-align: middle !important;
-    /* NO usar display:flex aquí, rompe rowspan en tablas */
 }
 
 /* Centrar contenido dentro de celda con rowspan */
@@ -369,6 +269,92 @@ td.cell-reserva[rowspan] > div:last-child {
 }
 /* Opcional: Ajustar placeholders para que no choquen */
 ::placeholder { color: #888 !important; }
+
+/* === 🎯 TABLA DASHBOARD (UNIFICADA Y STICKY CORREGIDA) === */
+
+/* 1. Contenedor de Scroll (Contexto OBLIGATORIO para sticky) */
+.planilla-table-container {
+    flex: 1;
+    overflow: auto !important; /* Sin esto, sticky no funciona */
+    background: transparent;
+    padding: 0 !important; /* Padding rompe sticky en Chrome/Safari */
+    min-height: 0; /* Fix para hijos flex */
+}
+
+/* 2. Estructura de la Tabla */
+.planilla-table {
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 6px; /* Mantiene rowspan funcional y estética */
+    background: transparent;
+    table-layout: fixed;
+    margin: 4px; /* Margen externo reemplaza el padding del contenedor */
+}
+
+/* 3. Fila de Nombres de Cancha (Sticky Superior) */
+.planilla-table thead th {
+    position: sticky !important;
+    top: 0 !important; /* Se pega al borde superior del scroll */
+    z-index: 50 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #4A4A4A !important; /* ✅ Grafito */
+    border: none;
+    border-radius: 10px;
+    padding: 10px 6px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* 4. Columna de Horas (Sticky Izquierda) */
+.planilla-table td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 40 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #555 !important;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    width: 65px !important;
+    min-width: 65px !important;
+    text-align: center;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.15);
+}
+
+/* 5. Esquina Superior Izquierda (Hora + Header Cancha) */
+.planilla-table thead th:first-child {
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 60 !important; /* Mayor que th y td para superponerse limpiamente */
+}
+
+/* 6. Celdas Generales y Estados */
+.planilla-table td {
+    padding: 4px !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+    border: none !important;
+    border-radius: 8px !important;
+    width: 110px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    height: 40px;
+    transition: all 0.2s ease;
+}
+td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer; }
+td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
+td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
+td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
+td.cell-reserva { cursor: grab !important; vertical-align: middle !important; text-align: center !important; }
+
+/* Hover */
+.planilla-table td:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 5;
+    position: relative;
+}
 </style>
 </head>
 <body>
