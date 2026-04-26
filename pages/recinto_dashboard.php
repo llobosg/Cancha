@@ -280,6 +280,10 @@ td.cell-reserva[rowspan] > div:last-child {
         color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center;
     }
 .date-nav-btn:hover { background: #f0f0f0; }
+.control-select {
+        background: white; padding: 0.4rem 0.8rem; border-radius: 20px; color: #071289; border: none; font-weight: bold;
+        min-width: 120px; font-size: 0.85rem;
+    }
 </style>
 </head>
 <body>
