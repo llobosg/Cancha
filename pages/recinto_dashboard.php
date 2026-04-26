@@ -78,19 +78,7 @@ $monto_deuda = $s_deuda->fetchColumn();
     .actions-column { display: flex; flex-direction: column; gap: 1rem; padding-left: 1rem; margin-top: 60px; }
     .action-btn-sidebar { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); color: #071289; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .action-btn-sidebar:hover { transform: translateY(-2px); }
-    .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }
-    
-    
-    .planilla-header-controls {
-          display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem;
-        padding: 0.8rem; background: rgba(255,255,255,0.15); border-radius: 50px;
-        backdrop-filter: blur(8px); align-items: center; justify-content: center;
-    }
-    .control-group {
-        background: white; padding: 0.4rem 0.8rem; border-radius: 20px; color: #071289; border: none; font-weight: bold;
-        min-width: 120px; font-size: 0.85rem;
-    }
-    
+    .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }    
     .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
     .kpi-column { margin-top: 50px; padding: 0 1rem; }
     .kpi-card-mini { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-left: 4px solid #ccc; padding: 0.8rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
@@ -280,10 +268,80 @@ td.cell-reserva[rowspan] > div:last-child {
         color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center;
     }
 .date-nav-btn:hover { background: #f0f0f0; }
-.control-select {
+/* 2. Inputs y Selectores (Bordes Ovalados) */
+.control-select,
+.control-input {
+    background: white; 
+    padding: 0.4rem 0.8rem; 
+    border-radius: 20px; /* ✅ Bordes redondeados */
+    color: #071289; 
+    border: 1px solid #ddd; 
+    font-weight: bold;
+    min-width: 120px; 
+    font-size: 0.85rem;
+    height: 32px; /* Altura uniforme con botones */
+    cursor: pointer;
+    outline: none;
+}
+/* Ajuste específico para el calendario */
+.control-input {
+    min-width: 135px;
+}
+/* 3. Botones Circulares (< >) */
+.date-nav-btn {
+    background: white; 
+    border: 1px solid #ddd; 
+    border-radius: 50%; /* ✅ Círculo perfecto */
+    width: 32px; 
+    height: 32px;
+    color: #555; 
+    cursor: pointer; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+.date-nav-btn:hover { background: #f0f0f0; }
+/* 4. Botón Hoy (Ovalado) */
+.planilla-header-controls button[onclick="irAHoy()"] {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 0 12px;
+    height: 32px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.planilla-header-controls button[onclick="irAHoy()"]:hover {
+    background: #f0f0f0;
+}
+/* 1. Contenedor Principal (Forma de Píldora) */
+.planilla-header-controls { 
+        background: rgba(21, 101, 192, 0.85); 
+        backdrop-filter: blur(10px); 
+        padding: 0.8rem 1.5rem; 
+        border-radius: 50px; /* ✅ CLAVE: Cambiar de 12px a 50px */
+        margin-bottom: 1rem; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.2); 
+        min-width: 940px; 
+        max-width: 1380px; 
+        width: fit-content;
+        display: flex; 
+        flex-wrap: nowrap; 
+        gap: 0.6rem; 
+        align-items: center; 
+        justify-content: center; 
+        color: white;
+}
+.control-group {
         background: white; padding: 0.4rem 0.8rem; border-radius: 20px; color: #071289; border: none; font-weight: bold;
         min-width: 120px; font-size: 0.85rem;
-    }
+}
 </style>
 </head>
 <body>
