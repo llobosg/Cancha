@@ -595,11 +595,27 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
 }
 .submodal-close:hover { background: #e0e0e0; color: #c62828; }
 
-/* Tabla de fixture */
+/* === BOTONES DE ACCIÓN (Reutilizables) === */
+.action-btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+/* === TABLA DE FIXTURE === */
 .fixture-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
+    background: white;
 }
 .fixture-table th {
     background: #071289;
@@ -607,13 +623,19 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     padding: 0.8rem;
     text-align: left;
     font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 5;
 }
 .fixture-table td {
     padding: 0.8rem;
     border-bottom: 1px solid #eee;
     vertical-align: middle;
 }
+.fixture-table tr:last-child td { border-bottom: none; }
 .fixture-table tr:hover { background: #f9f9f9; }
+
+/* === BOTÓN RESULTADO === */
 .btn-resultado {
     background: #071289;
     color: white;
@@ -1743,84 +1765,202 @@ document.querySelector('.planilla-table-container')?.addEventListener('scroll', 
     if (e.target.scrollTop > 10) header.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
     else header.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
 });
-// === 🏆 ABRIR SUBMODAL DE FIXTURE ===
+
+// === 🏆 ABRIR SUBMODAL DE FIXTURE (Versión Completa y Corregida) ===
 async function abrirFixtureModal(idTorneo) {
-    window.torneoActualId = idTorneo; // Guardar para navegación interna
+    console.log('🔍 [Fixture] Abriendo modal para torneo ID:', idTorneo);
+    
+    // Guardar ID para navegación interna
+    window.torneoActualId = idTorneo;
     
     const submodal = document.getElementById('submodalGenerico');
     const contenido = document.getElementById('submodalContenido');
     
-    if (!submodal || !contenido) return;
+    if (!submodal || !contenido) {
+        console.error('❌ [Fixture] Elementos del submodal no encontrados');
+        return;
+    }
     
     // Mostrar submodal con animación
     submodal.style.display = 'flex';
-    void submodal.offsetWidth; // Forzar reflow
+    void submodal.offsetWidth; // Forzar reflow para activar transición CSS
     submodal.classList.add('active');
     
-    contenido.innerHTML = `<div style="text-align:center; padding:2rem; color:#666;">🔄 Cargando fixture...</div>`;
+    // Estado de carga
+    contenido.innerHTML = `
+        <div style="text-align:center; padding:3rem; color:#666;">
+            <div style="font-size:2.5rem; margin-bottom:1rem;">🔄</div>
+            <p style="font-weight:600;">Cargando fixture...</p>
+            <p style="font-size:0.9rem; color:#999;">Obteniendo partidos del torneo</p>
+        </div>`;
     
     try {
-        const res = await fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`, { credentials: 'include' });
-        if (!res.ok) throw new Error(`Error ${res.status}`);
+        // Fetch a API corregida (lee resultados directamente de partidos_torneo)
+        const res = await fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        console.log('📡 [Fixture] Response:', res.status, res.ok);
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error('❌ [Fixture] HTTP Error:', res.status, errorText);
+            throw new Error(`Error ${res.status}: ${errorText.substring(0, 150)}`);
+        }
         
         const fixture = await res.json();
+        console.log('📦 [Fixture] Datos recibidos:', Array.isArray(fixture) ? `${fixture.length} partidos` : 'formato inválido');
         
+        // Manejar array vacío
         if (!Array.isArray(fixture) || fixture.length === 0) {
+            console.log('ℹ️ [Fixture] No hay partidos para este torneo');
             contenido.innerHTML = `
                 <div style="text-align:center; padding:3rem; color:#888;">
-                    <div style="font-size:3rem; margin-bottom:0.5rem;">📋</div>
-                    <p>No hay partidos programados aún</p>
-                    <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
+                    <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
+                    <p style="font-size:1.1rem; font-weight:600; margin-bottom:0.5rem;">No hay partidos programados aún</p>
+                    <p style="font-size:0.9rem;">Crea el fixture desde "Crear Fixture" o espera a que se generen automáticamente</p>
+                    <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1.5rem;">
+                        <button class="action-btn" style="background:#071289;" onclick="window.location.href='crear_fixture.php?id=${idTorneo}'">Crear Fixture</button>
+                        <button class="action-btn" style="background:#6c757d;" onclick="volverATorneosActivos()">← Volver</button>
+                    </div>
                 </div>`;
             return;
         }
         
-        // Renderizar tabla de fixture
-        let html = `<h3 style="margin:0 0 1rem 0; color:#071289;">🎾 Fixture del Torneo</h3>`;
-        html += `<table class="fixture-table"><thead><tr>
-            <th>Ronda</th><th>Pareja 1</th><th>vs</th><th>Pareja 2</th><th>Fecha</th><th>Acción</th>
-        </tr></thead><tbody>`;
-        
-        fixture.forEach(partido => {
-            const fecha = partido.fecha_hora ? new Date(partido.fecha_hora).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '-';
-            const tieneResultado = partido.juegos1 !== null && partido.juegos2 !== null;
+        // === RENDERIZAR TABLA DE FIXTURE ===
+        let html = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
+                <h3 style="margin:0; color:#071289; font-size:1.3rem;">🎾 Fixture del Torneo</h3>
+                <span style="background:#e3f2fd; color:#071289; padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; font-weight:600;">
+                    ${fixture.length} partidos
+                </span>
+            </div>
             
-            html += `<tr>
-                <td>${partido.ronda || '-'}</td>
-                <td><strong>${partido.pareja1 || 'TBD'}</strong></td>
-                <td>vs</td>
-                <td><strong>${partido.pareja2 || 'TBD'}</strong></td>
-                <td style="font-size:0.85rem; color:#666;">${fecha}</td>
-                <td>
-                    ${tieneResultado 
-                        ? `<span style="color:#4CAF50; font-weight:600;">${partido.juegos1}-${partido.juegos2}</span>` 
-                        : `<button class="btn-resultado" onclick="abrirResultado(${partido.id_partido}, '${partido.pareja1?.replace(/'/g, "\\'")}', '${partido.pareja2?.replace(/'/g, "\\'")}')">Resultados</button>`
-                    }
-                </td>
-            </tr>`;
+            <div style="overflow-x:auto; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                <table class="fixture-table" style="width:100%; border-collapse:collapse; font-size:0.9rem; min-width:600px;">
+                    <thead>
+                        <tr style="background:#071289; color:white;">
+                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Ronda</th>
+                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Pareja 1</th>
+                            <th style="padding:0.8rem; text-align:center; font-weight:600;">vs</th>
+                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Pareja 2</th>
+                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Fecha</th>
+                            <th style="padding:0.8rem; text-align:center; font-weight:600;">Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        // Renderizar cada partido
+        fixture.forEach((partido, index) => {
+            const fecha = partido.fecha_hora_programada 
+                ? new Date(partido.fecha_hora_programada).toLocaleString('es-CL', {
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                }) 
+                : '-';
+            
+            // Determinar si hay resultado guardado
+            const tieneResultado = partido.juegos_pareja_1 !== null && 
+                                  partido.juegos_pareja_2 !== null && 
+                                  !isNaN(partido.juegos_pareja_1) && 
+                                  !isNaN(partido.juegos_pareja_2);
+            
+            const marcador = tieneResultado ? `${partido.juegos_pareja_1}-${partido.juegos_pareja_2}` : '-';
+            
+            // Determinar ganador para destacar en verde
+            let ganador = null;
+            if (tieneResultado) {
+                if (partido.juegos_pareja_1 > partido.juegos_pareja_2) ganador = 'pareja1';
+                else if (partido.juegos_pareja_2 > partido.juegos_pareja_1) ganador = 'pareja2';
+            }
+            
+            // Sanitizar nombres para evitar XSS en onclick
+            const safePareja1 = (partido.pareja1 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const safePareja2 = (partido.pareja2 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            
+            html += `
+                <tr style="border-bottom:1px solid #eee; transition:background 0.2s;" 
+                    onmouseover="this.style.background='#f9f9f9'" 
+                    onmouseout="this.style.background='transparent'">
+                    <td style="padding:0.8rem; font-weight:600; color:#071289;">${partido.ronda || '-'}</td>
+                    
+                    <!-- Pareja 1 -->
+                    <td style="padding:0.8rem;">
+                        <div style="font-weight:600; color:${ganador === 'pareja1' ? '#4CAF50' : '#333'};">
+                            ${partido.pareja1 || 'TBD'}
+                        </div>
+                        ${tieneResultado ? `<div style="font-size:0.75rem; color:#666; margin-top:2px;">${partido.juegos_pareja_1} juegos</div>` : ''}
+                    </td>
+                    
+                    <!-- VS -->
+                    <td style="padding:0.8rem; text-align:center; font-weight:bold; color:#071289;">vs</td>
+                    
+                    <!-- Pareja 2 -->
+                    <td style="padding:0.8rem;">
+                        <div style="font-weight:600; color:${ganador === 'pareja2' ? '#4CAF50' : '#333'};">
+                            ${partido.pareja2 || 'TBD'}
+                        </div>
+                        ${tieneResultado ? `<div style="font-size:0.75rem; color:#666; margin-top:2px;">${partido.juegos_pareja_2} juegos</div>` : ''}
+                    </td>
+                    
+                    <!-- Fecha -->
+                    <td style="padding:0.8rem; font-size:0.85rem; color:#666;">${fecha}</td>
+                    
+                    <!-- Resultado / Acción -->
+                    <td style="padding:0.8rem; text-align:center;">
+                        ${tieneResultado 
+                            ? `<span style="background:#4CAF50; color:white; padding:0.35rem 0.9rem; border-radius:20px; font-size:0.85rem; font-weight:600; display:inline-block;">${marcador}</span>` 
+                            : `<button class="btn-resultado" 
+                                      onclick="abrirResultado(${partido.id_partido}, '${safePareja1}', '${safePareja2}')"
+                                      style="background:#071289; color:white; padding:0.4rem 1rem; border-radius:6px; border:none; font-weight:600; font-size:0.85rem; cursor:pointer; transition:0.2s;"
+                                      onmouseover="this.style.background='#050d66'"
+                                      onmouseout="this.style.background='#071289'">
+                                  Editar
+                              </button>`
+                        }
+                    </td>
+                </tr>`;
         });
         
-        html += `</tbody></table>`;
-        html += `<div style="display:flex; gap:0.5rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid #eee;">
-            <button class="action-btn" style="background:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Ver Posiciones</button>
-            <button class="action-btn" style="background:#6c757d;" onclick="volverATorneosActivos()">← Volver a Torneos</button>
-        </div>`;
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Acciones inferiores -->
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid #eee; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="action-btn" style="background:#071289; color:white;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Ver Posiciones</button>
+                    <button class="action-btn" style="background:#2196F3; color:white;" onclick="verResultados(${idTorneo})">📊 Resultados Generales</button>
+                </div>
+                <button class="action-btn" style="background:#6c757d; color:white;" onclick="volverATorneosActivos()">← Volver a Torneos Activos</button>
+            </div>`;
         
         contenido.innerHTML = html;
+        console.log('✅ [Fixture] Renderizado completado');
         
     } catch (error) {
-        console.error('❌ Error cargando fixture:', error);
+        console.error('❌ [Fixture] Error fatal:', error);
         contenido.innerHTML = `
-            <div style="text-align:center; color:#c62828; padding:2rem;">
-                ⚠️ Error: ${error.message}<br>
-                <button class="action-btn" style="margin-top:0.5rem;" onclick="abrirFixtureModal(${idTorneo})">Reintentar</button>
-                <button class="action-btn" style="margin-top:0.5rem; background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button>
+            <div style="text-align:center; color:#c62828; padding:2.5rem;">
+                <div style="font-size:2.5rem; margin-bottom:0.5rem;">⚠️</div>
+                <p style="font-weight:600; font-size:1.1rem;">Error al cargar fixture</p>
+                <p style="font-size:0.9rem; color:#666; margin:0.5rem 0 1.5rem 0;">${error.message}</p>
+                <div style="display:flex; gap:0.5rem; justify-content:center;">
+                    <button class="action-btn" style="background:#071289; color:white;" onclick="abrirFixtureModal(${idTorneo})">🔄 Reintentar</button>
+                    <button class="action-btn" style="background:#6c757d; color:white;" onclick="cerrarSubmodal()">Cerrar</button>
+                </div>
             </div>`;
     }
 }
+
+// === VOLVER A TORNEOS ACTIVOS ===
 function volverATorneosActivos() {
+    console.log('🔙 Volviendo a Torneos Activos...');
     cerrarSubmodal();
-    // Asegurar que el panel de torneos esté visible
+    
+    // Asegurar que el panel principal de torneos esté visible
     const panel = document.getElementById('panelTorneos');
     if (panel) {
         panel.style.display = 'flex';
@@ -1828,18 +1968,51 @@ function volverATorneosActivos() {
         panel.classList.add('active');
     }
 }
-// Cerrar submodal al hacer click fuera de la tarjeta
-document.getElementById('submodalGenerico')?.addEventListener('click', (e) => {
-    if (e.target.id === 'submodalGenerico') cerrarSubmodal();
+
+// === CERRAR SUBMODAL (Versión Robusta) ===
+function cerrarSubmodal() {
+    const submodal = document.getElementById('submodalGenerico');
+    if (!submodal) return;
+    
+    console.log('🔒 Cerrando submodal...');
+    submodal.classList.remove('active');
+    
+    setTimeout(() => {
+        submodal.style.display = 'none';
+        const contenido = document.getElementById('submodalContenido');
+        if (contenido) contenido.innerHTML = '';
+        console.log('✅ Submodal cerrado');
+    }, 300); // Debe coincidir con transition-duration en CSS
+}
+
+// === EVENTO CLICK EN OVERLAY (Cerrar al hacer click fuera) ===
+document.addEventListener('click', function(e) {
+    const submodal = document.getElementById('submodalGenerico');
+    if (submodal && 
+        submodal.style.display !== 'none' && 
+        e.target === submodal) {
+        console.log('🖱️ Click en overlay, cerrando...');
+        cerrarSubmodal();
+    }
 });
 
-// Cerrar con tecla Escape
-document.addEventListener('keydown', (e) => {
+// === CERRAR CON TECLA ESCAPE ===
+document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const submodal = document.getElementById('submodalGenerico');
         if (submodal && submodal.style.display !== 'none') {
+            console.log('⌨️ Tecla Escape, cerrando...');
             cerrarSubmodal();
         }
+    }
+});
+
+// === BOTÓN X DENTRO DEL SUBMODAL ===
+// Asegurar que funcione incluso si se re-renderiza el contenido
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('submodal-close') || e.target.closest('.submodal-close')) {
+        console.log('❌ Click en botón X, cerrando...');
+        cerrarSubmodal();
     }
 });
 </script>
