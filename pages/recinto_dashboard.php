@@ -293,40 +293,24 @@ td.cell-reserva[rowspan] > div:last-child {
 
 /* 3. Fila de Nombres de Cancha (Sticky Superior) */
 .planilla-table thead th {
-    position: sticky !important;
-    top: 0 !important; /* Se pega al borde superior del scroll */
-    z-index: 50 !important;
-    background: rgba(255, 255, 255, 0.95) !important;
-    color: #4A4A4A !important; /* ✅ Grafito */
-    border: none;
-    border-radius: 10px;
-    padding: 10px 6px;
-    font-weight: 700;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 5;
+        border: none; border-radius: 12px; padding: 10px; font-size: 0.85rem; font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 /* 4. Columna de Horas (Sticky Izquierda) */
 .planilla-table td:first-child {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 40 !important;
-    background: rgba(255, 255, 255, 0.95) !important;
-    color: #555 !important;
-    font-weight: 600;
-    border: none;
-    border-radius: 10px;
-    width: 65px !important;
-    min-width: 65px !important;
-    text-align: center;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.15);
+        position: sticky; left: 0; z-index: 10;
+        background: rgba(255,255,255,0.95) !important; color: #555; font-weight: bold;
+        border: none; border-radius: 10px; width: 70px !important; text-align: center;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
 /* 5. Esquina Superior Izquierda (Hora + Header Cancha) */
-.planilla-table thead th:first-child {
-    position: sticky !important;
-    top: 0 !important;
-    left: 0 !important;
-    z-index: 60 !important; /* Mayor que th y td para superponerse limpiamente */
+.planilla-table thead th {
+        background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 5;
+        border: none; border-radius: 12px; padding: 10px; font-size: 0.85rem; font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 /* 6. Celdas Generales y Estados */
