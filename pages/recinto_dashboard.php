@@ -2263,6 +2263,145 @@ async function guardarResultadoSet(idPartido) {
         btn.textContent = '💾 Guardar';
     }
 }
+// === 🏆 VER POSICIONES DEL TORNEO ===
+async function verPosicionesTorneo(idTorneo) {
+    const overlay = document.getElementById('submodalFixtureOverlay'); // Reusamos el mismo overlay o creamos uno nuevo si prefieres
+    const body = document.getElementById('submodalFixtureBody');
+    
+    if(!overlay || !body) return;
+    
+    // Mostrar estado de carga
+    body.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando posiciones...</p>';
+    
+    try {
+        const res = await fetch(`../api/torneos/posiciones_torneo.php?id=${idTorneo}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        
+        const ranking = await res.json();
+        
+        if (!Array.isArray(ranking) || ranking.length === 0) {
+            body.innerHTML = `
+                <div style="text-align:center; padding:3rem; color:#888;">
+                    <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
+                    <p>No hay datos de posiciones aún.</p>
+                    <p style="font-size:0.9rem;">Juega partidos para generar el ranking.</p>
+                </div>`;
+            return;
+        }
+        
+        let html = `
+            <h3 style="margin:0 0 1rem 0; color:#071289;">🏆 Tabla de Posiciones</h3>
+            <table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#071289; color:white;">
+                        <th style="padding:0.8rem; text-align:center; width:60px;">#</th>
+                        <th style="padding:0.8rem; text-align:left;">Pareja</th>
+                        <th style="padding:0.8rem; text-align:center; width:100px;">Puntos</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        ranking.forEach((item, index) => {
+            const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+            const bgClass = index < 3 ? 'style="background:#f0f7ff;"' : '';
+            
+            html += `<tr ${bgClass}>
+                <td style="padding:0.8rem; text-align:center; font-weight:bold;">${medal} ${index + 1}</td>
+                <td style="padding:0.8rem; font-weight:600;">${item.alias}</td>
+                <td style="padding:0.8rem; text-align:center; font-weight:bold; color:#071289;">${item.puntos}</td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        html += `<div style="margin-top:1.5rem; display:flex; gap:0.5rem; justify-content:space-between;">
+            <button class="action-btn" style="background:#071289;" onclick="verFixturePorSets(${idTorneo})">← Volver al Fixture</button>
+            <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalFixture()">Cerrar</button>
+        </div>`;
+        
+        body.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error cargando posiciones:', error);
+        body.innerHTML = `
+            <div style="text-align:center; color:#c62828; padding:2rem;">
+                ⚠️ Error: ${error.message}<br>
+                <button class="action-btn" style="margin-top:0.5rem;" onclick="verPosicionesTorneo(${idTorneo})">Reintentar</button>
+            </div>`;
+    }
+}
+
+// === 📊 VER RESULTADOS GENERALES (Historial de Partidos) ===
+async function verResultados(idTorneo) {
+    const overlay = document.getElementById('submodalFixtureOverlay');
+    const body = document.getElementById('submodalFixtureBody');
+    
+    if(!overlay || !body) return;
+    
+    body.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando resultados...</p>';
+    
+    try {
+        const res = await fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        
+        const resultados = await res.json();
+        
+        if (!Array.isArray(resultados) || resultados.length === 0) {
+            body.innerHTML = `
+                <div style="text-align:center; padding:3rem; color:#888;">
+                    <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
+                    <p>No hay resultados registrados aún.</p>
+                </div>`;
+            return;
+        }
+        
+        let html = `
+            <h3 style="margin:0 0 1rem 0; color:#071289;">📊 Historial de Resultados</h3>
+            <table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#071289; color:white;">
+                        <th style="padding:0.8rem; text-align:left;">Fecha</th>
+                        <th style="padding:0.8rem; text-align:left;">Pareja 1</th>
+                        <th style="padding:0.8rem; text-align:center;">Resultado</th>
+                        <th style="padding:0.8rem; text-align:left;">Pareja 2</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        resultados.forEach(r => {
+            const fecha = r.fecha_hora_programada 
+                ? new Date(r.fecha_hora_programada).toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) 
+                : '-';
+            
+            const j1 = parseInt(r.juegos1) || 0;
+            const j2 = parseInt(r.juegos2) || 0;
+            const ganador1 = j1 > j2 ? 'ganador-highlight' : '';
+            const ganador2 = j2 > j1 ? 'ganador-highlight' : '';
+            
+            html += `<tr>
+                <td style="padding:0.8rem; font-size:0.85rem; color:#666;">${fecha}</td>
+                <td style="padding:0.8rem; font-weight:600;" class="${ganador1}">${r.pareja1}</td>
+                <td style="padding:0.8rem; text-align:center; font-weight:bold; font-size:1.1rem;">${j1} - ${j2}</td>
+                <td style="padding:0.8rem; font-weight:600;" class="${ganador2}">${r.pareja2}</td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        html += `<div style="margin-top:1.5rem; display:flex; gap:0.5rem; justify-content:space-between;">
+            <button class="action-btn" style="background:#071289;" onclick="verFixturePorSets(${idTorneo})">← Volver al Fixture</button>
+            <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalFixture()">Cerrar</button>
+        </div>`;
+        
+        body.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error cargando resultados:', error);
+        body.innerHTML = `
+            <div style="text-align:center; color:#c62828; padding:2rem;">
+                ⚠️ Error: ${error.message}<br>
+                <button class="action-btn" style="margin-top:0.5rem;" onclick="verResultados(${idTorneo})">Reintentar</button>
+            </div>`;
+    }
+}
 
 function cerrarSubmodalFixture() {
     const overlay = document.getElementById('submodalFixtureOverlay');
