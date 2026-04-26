@@ -287,9 +287,9 @@ $monto_deuda = $s_deuda->fetchColumn();
         gap: 1rem; 
         padding-left: 1rem; 
         margin-top: 60px;
-        width: 120px !important;
-        min-width: 120px !important;
-        max-width: 120px !important;
+        width: 200px !important;
+        min-width: 200px !important;
+        max-width: 200px !important;
         flex-shrink: 0; /* Evita que se encoja en pantallas pequeñas */
     }
     /* Botones de acciones con ancho completo */
