@@ -80,10 +80,19 @@ $monto_deuda = $s_deuda->fetchColumn();
     .action-btn-sidebar:hover { transform: translateY(-2px); }
     .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }    
     .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
+
+    /* === 3. TÍTULOS KPIs (Grafito) === */
+    .kpi-card-mini div:first-child {
+        color: #4A4A4A !important; /* ✅ Grafito oscuro */
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        opacity: 1 !important; /* Quitar transparencia antigua */
+        letter-spacing: 0.5px;
+    }
     .kpi-column { margin-top: 50px; padding: 0 1rem; }
     .kpi-card-mini { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-left: 4px solid #ccc; padding: 0.8rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
     .kpi-card-mini:hover { transform: translateX(-3px); }
-    .kpi-card-mini div:first-child { font-size: 0.8rem; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
     .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; }
     .kpi-card-mini div:last-child { font-size: 0.7rem; opacity: 0.7; }
     .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; } .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; }
@@ -125,50 +134,56 @@ $monto_deuda = $s_deuda->fetchColumn();
         background-clip: padding-box !important; /* Evita que el background cubra el border */
     }
 
-    /* Hora sticky */
-    .planilla-table th:first-child,
-    .planilla-table td:first-child {
-        position: sticky;
-        left: 0;
-        z-index: 20;
+    /* === 2. CABECERA DE CANCHAS (Sticky y visible) === */
+    .planilla-table thead th {
+        position: sticky !important;
+        top: 105px !important; /* 50px(topbar) + 55px(filtros) ≈ 105px */
+        z-index: 100 !important;
         background: rgba(255,255,255,0.95) !important;
-        color: #555;
+        color: #4A4A4A !important; /* ✅ Grafito */
+        border: none;
+        border-radius: 10px;
+        padding: 10px 6px;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        transform: translateZ(0); /* Fix sticky bugs */
+    }
+
+    /* Esquina superior izquierda (Hora + Header Canchas) */
+    .planilla-table thead th:first-child {
+        z-index: 110 !important;
+        background: rgba(245, 248, 255, 0.98) !important;
+    }
+
+    /* Columna Hora (Sticky izquierda, independiente del scroll vertical) */
+    .planilla-table td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 105 !important;
+        background: rgba(255,255,255,0.95) !important;
+        color: #555 !important;
         font-weight: 600;
-        border: none !important;
-        border-radius: 10px !important;
+        border: none;
+        border-radius: 10px;
         width: 65px !important;
         text-align: center;
         box-shadow: 2px 0 5px rgba(0,0,0,0.15);
     }
 
-    /* Headers */
-    .planilla-table thead th {
-        background: rgba(255,255,255,0.9) !important;
-        color: #4A4A4A !important; /* Grafito oscuro */
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 10px 6px !important;
-        font-weight: bold;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        /* ✅ CSS LIMPIO PARA TABLA (IDÉNTICO AL SOCIO) */
+    .planilla-table {
+        width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed;
     }
-
-    /* ✅ CSS LIMPIO PARA TABLA (IDÉNTICO AL SOCIO) */
-.planilla-table {
-    width: auto; border-collapse: separate; border-spacing: 6px; background: transparent; table-layout: fixed;
-}
-.planilla-table td {
-    padding: 4px; vertical-align: middle; text-align: center; border: none; border-radius: 8px;
-    width: 110px !important; min-width: 110px !important; max-width: 110px !important;
-    transition: all 0.2s ease; height: 40px; /* Altura base por fila */
-}
-td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
-td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
-td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
-td.cell-reserva { cursor: grab !important; }
-td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer;}
+    .planilla-table td {
+        padding: 4px; vertical-align: middle; text-align: center; border: none; border-radius: 8px;
+        width: 110px !important; min-width: 110px !important; max-width: 110px !important;
+        transition: all 0.2s ease; height: 40px; /* Altura base por fila */
+    }
+    td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
+    td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
+    td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
+    td.cell-reserva { cursor: grab !important; }
+    td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer;}
 
     /* Hover */
     .planilla-table td:hover {
@@ -319,15 +334,29 @@ td.cell-reserva[rowspan] > div:last-child {
 .planilla-header-controls button[onclick="irAHoy()"]:hover {
     background: #f0f0f0;
 }
-/* 1. Contenedor Principal (Forma de Píldora) */
-/* === HEADER STICKY === */
+/* === 1. HEADER FILTROS (Sticky + Largo completo + Sin amontonamiento) === */
 .planilla-header-controls {
     position: sticky !important;
-    top: 50px !important; /* Justo debajo de la top-bar (50px) */
+    top: 50px !important; /* Justo debajo de la top-bar */
     z-index: 900 !important;
-    background: rgba(21, 101, 192, 0.95) !important; /* Más opaco para legibilidad al scrollear */
+    background: rgba(21, 101, 192, 0.95) !important;
     backdrop-filter: blur(12px);
-    transition: box-shadow 0.3s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    margin: 0 auto 1rem auto; /* Centrado */
+    width: 96% !important; /* Largo completo controlado */
+    max-width: 1380px !important;
+    min-width: 340px !important;
+    display: flex;
+    flex-wrap: wrap; /* Ajuste seguro sin superponer */
+    justify-content: center;
+    align-items: center;
+    gap: 0.6rem;
+    color: white;
+    transform: translateZ(0); /* Fix para sticky en Safari/Chrome */
+    transition: box-shadow 0.3s ease;
 }
 
 /* Sombra sutil cuando el usuario hace scroll */
