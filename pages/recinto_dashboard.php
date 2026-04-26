@@ -282,28 +282,24 @@ td.cell-reserva[rowspan] > div:last-child {
 }
 
 /* 2. Estructura de la Tabla */
-.planilla-table {
-    width: auto;
-    border-collapse: separate;
-    border-spacing: 6px; /* Mantiene rowspan funcional y estética */
-    background: transparent;
-    table-layout: fixed;
-    margin: 4px; /* Margen externo reemplaza el padding del contenedor */
+ .planilla-table {
+    width: auto; border-collapse: separate; border-spacing: 6px; background: transparent;
+    table-layout: fixed; min-width: 600px; margin: 0 auto;
 }
 
 /* 3. Fila de Nombres de Cancha (Sticky Superior) */
 .planilla-table thead th {
-        background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 5;
-        border: none; border-radius: 12px; padding: 10px; font-size: 0.85rem; font-weight: bold;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.9) !important; color: #4A4A4A; position: sticky; top: 0; z-index: 5;
+    border: none; border-radius: 12px; padding: 10px; font-size: 0.85rem; font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 /* 4. Columna de Horas (Sticky Izquierda) */
 .planilla-table td:first-child {
-        position: sticky; left: 0; z-index: 10;
-        background: rgba(255,255,255,0.95) !important; color: #555; font-weight: bold;
-        border: none; border-radius: 10px; width: 70px !important; text-align: center;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    position: sticky; left: 0; z-index: 10;
+    background: rgba(255,255,255,0.95) !important; color: #555; font-weight: bold;
+    border: none; border-radius: 10px; width: 70px !important; text-align: center;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
 /* 5. Esquina Superior Izquierda (Hora + Header Cancha) */
@@ -315,17 +311,10 @@ td.cell-reserva[rowspan] > div:last-child {
 
 /* 6. Celdas Generales y Estados */
 .planilla-table td {
-    padding: 4px !important;
-    vertical-align: middle !important;
-    text-align: center !important;
-    border: none !important;
-    border-radius: 8px !important;
-    width: 110px !important;
-    min-width: 110px !important;
-    max-width: 110px !important;
-    height: 40px;
-    transition: all 0.2s ease;
+        padding: 8px 4px; vertical-align: middle; text-align: center;
+        border: none; border-radius: 10px; transition: all 0.2s ease; height: 40px;
 }
+
 td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px dashed rgba(255,255,255,0.3) !important; cursor: pointer; }
 td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
 td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
@@ -338,7 +327,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     z-index: 5;
     position: relative;
-}
+}  
 </style>
 </head>
 <body>
