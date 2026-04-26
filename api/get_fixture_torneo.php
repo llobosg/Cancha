@@ -17,35 +17,50 @@ if (!$id_torneo) {
 }
 
 try {
-    // ✅ CORRECCIÓN: Eliminada columna 'ronda' que no existe en tu tabla
-    // Usamos las columnas reales: juegos_pareja_1/2, fecha_hora_programada, etc.
+    // Obtenemos partidos con nombres completos de las parejas
     $stmt = $pdo->prepare("
         SELECT 
             p.id_partido, 
             p.fecha_hora_programada,
             p.estado,
-            -- Pareja 1
-            COALESCE(pj1.nombre_pareja, CONCAT('Pareja #', p.id_pareja_1)) as pareja1,
             p.juegos_pareja_1,
-            -- Pareja 2
-            COALESCE(pj2.nombre_pareja, CONCAT('Pareja #', p.id_pareja_2)) as pareja2,
-            p.juegos_pareja_2
+            p.juegos_pareja_2,
+            -- Nombre Pareja 1
+            CONCAT(
+                COALESCE(s1.alias, jt1.nombre, 'J1'), 
+                ' & ', 
+                COALESCE(s1b.alias, jt1b.nombre, 'J2')
+            ) AS nombre_pareja_1,
+            -- Nombre Pareja 2
+            CONCAT(
+                COALESCE(s2.alias, jt2.nombre, 'J3'), 
+                ' & ', 
+                COALESCE(s2b.alias, jt2b.nombre, 'J4')
+            ) AS nombre_pareja_2
         FROM partidos_torneo p
-        LEFT JOIN parejas_torneo pj1 ON p.id_pareja_1 = pj1.id_pareja
-        LEFT JOIN parejas_torneo pj2 ON p.id_pareja_2 = pj2.id_pareja
+        LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
+        LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
+        LEFT JOIN jugadores_temporales jt1 ON pt1.id_jugador_temp_1 = jt1.id_jugador
+        LEFT JOIN socios s1b ON pt1.id_socio_2 = s1b.id_socio
+        LEFT JOIN jugadores_temporales jt1b ON pt1.id_jugador_temp_2 = jt1b.id_jugador
+        
+        LEFT JOIN parejas_torneo pt2 ON p.id_pareja_2 = pt2.id_pareja
+        LEFT JOIN socios s2 ON pt2.id_socio_1 = s2.id_socio
+        LEFT JOIN jugadores_temporales jt2 ON pt2.id_jugador_temp_1 = jt2.id_jugador
+        LEFT JOIN socios s2b ON pt2.id_socio_2 = s2b.id_socio
+        LEFT JOIN jugadores_temporales jt2b ON pt2.id_jugador_temp_2 = jt2b.id_jugador
+        
         WHERE p.id_torneo = ?
         ORDER BY p.fecha_hora_programada ASC, p.id_partido ASC
     ");
     $stmt->execute([$id_torneo]);
     $fixture = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    error_log("[Fixture] Torneo $id_torneo: " . count($fixture) . " partidos encontrados");
-    
     echo json_encode($fixture);
     
 } catch (Exception $e) {
     error_log("❌ Error en get_fixture_torneo.php: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Error al cargar fixture: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Error al cargar fixture']);
 }
 ?>

@@ -2143,85 +2143,119 @@ function cerrarSubmodalInscritos() {
     }
 }
 
-// === 🎾 VER FIXTURE POR SETS ===
+// === 🎾 VER FIXTURE POR SETS (Agrupado y Editable) ===
 async function verFixturePorSets(idTorneo) {
+    window.torneoActualId = idTorneo; // Guardar contexto
     const overlay = document.getElementById('submodalFixtureOverlay');
     const body = document.getElementById('submodalFixtureBody');
     
-    if(!overlay) return;
+    if(!overlay || !body) return;
     
     overlay.style.display = 'flex';
     void overlay.offsetWidth;
     overlay.classList.add('active');
     
-    body.innerHTML = '<p style="text-align:center; padding:2rem;">Cargando fixture...</p>';
+    body.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando fixture...</p>';
     
     try {
-        // Usamos la API existente que ya devuelve los datos correctos
         const res = await fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        
         const partidos = await res.json();
         
-        if(partidos.length === 0) {
-            body.innerHTML = '<p style="text-align:center; padding:2rem;">No hay partidos generados.</p>';
+        if (!Array.isArray(partidos) || partidos.length === 0) {
+            body.innerHTML = `
+                <div style="text-align:center; padding:3rem; color:#888;">
+                    <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
+                    <p>No hay partidos generados.</p>
+                    <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodalFixture()">Cerrar</button>
+                </div>`;
             return;
         }
         
-        // Agrupar por fecha/hora para simular "Sets" o Rondas
-        // Asumimos que los partidos de una misma ronda tienen la misma hora programada
-        const rondas = {};
+        // Agrupar partidos por fecha_hora_programada (cada hora distinta es un "Set" o Ronda)
+        const sets = {};
         partidos.forEach(p => {
-            const key = p.fecha_hora_programada; // Agrupación simple por hora
-            if(!rondas[key]) rondas[key] = [];
-            rondas[key].push(p);
+            const key = p.fecha_hora_programada; // Ej: "2026-03-13 19:00:00"
+            if (!sets[key]) sets[key] = [];
+            sets[key].push(p);
         });
         
         let html = '';
-        let setNum = 1;
+        let setCounter = 1;
         
-        Object.values(rondas).forEach(partidosRonda => {
+        // Ordenar las llaves (horas) cronológicamente
+        const sortedKeys = Object.keys(sets).sort();
+        
+        sortedKeys.forEach(key => {
+            const partidosSet = sets[key];
+            const horaLegible = new Date(key).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
             html += `<div class="set-container">
-                <div class="set-header">SET ${setNum} (${new Date(partidosRonda[0].fecha_hora_programada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</div>`;
+                <div class="set-header">
+                    <span>SET ${setCounter} (${horaLegible})</span>
+                    <span style="font-size:0.8rem; color:#666;">${partidosSet.length} partidos</span>
+                </div>`;
                 
-            partidosRonda.forEach(p => {
+            partidosSet.forEach(p => {
                 const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
-                const j1 = tieneResultado ? p.juegos_pareja_1 : '';
-                const j2 = tieneResultado ? p.juegos_pareja_2 : '';
-                const ganadorClass1 = (tieneResultado && j1 > j2) ? 'ganador-highlight' : '';
-                const ganadorClass2 = (tieneResultado && j2 > j1) ? 'ganador-highlight' : '';
+                const j1 = tieneResultado ? p.juegos_pareja_1 : '-';
+                const j2 = tieneResultado ? p.juegos_pareja_2 : '-';
+                
+                // Determinar ganador para estilo visual
+                const g1 = (tieneResultado && j1 > j2) ? 'ganador-highlight' : '';
+                const g2 = (tieneResultado && j2 > j1) ? 'ganador-highlight' : '';
+                
+                // Sanitizar nombres para el onclick
+                const safeP1 = (p.nombre_pareja_1 || 'TBD').replace(/'/g, "\\'");
+                const safeP2 = (p.nombre_pareja_2 || 'TBD').replace(/'/g, "\\'");
                 
                 html += `<div class="partido-row">
-                    <div class="pareja-nombre ${ganadorClass1}">${p.pareja1}</div>
-                    <div class="vs-badge">VS</div>
-                    <div class="pareja-nombre ${ganadorClass2}">${p.pareja2}</div>
+                    <!-- Pareja 1 -->
+                    <div class="pareja-nombre ${g1}" style="text-align:right; padding-right:1rem;">
+                        ${p.nombre_pareja_1 || 'TBD'}
+                    </div>
                     
-                    <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+                    <!-- VS / Resultado Central -->
+                    <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; min-width:120px;">
                         ${tieneResultado 
-                            ? `<span class="marcador-final">${j1} - ${j2}</span>`
-                            : `<input type="number" id="j1_${p.id_partido}" class="resultado-input" min="0" max="7" placeholder="0">
-                               <span>-</span>
-                               <input type="number" id="j2_${p.id_partido}" class="resultado-input" min="0" max="7" placeholder="0">`
+                            ? `<div class="marcador-final" 
+                                   style="cursor:pointer; padding:0.2rem 0.6rem; border-radius:12px; background:#e8f5e9; border:1px solid #c8e6c9;"
+                                   onclick="abrirModalEditarResultado(${p.id_partido}, '${safeP1}', '${safeP2}', ${j1}, ${j2})">
+                                   ${j1} - ${j2}
+                               </div>`
+                            : `<button class="btn-guardar-set" 
+                                      onclick="abrirModalEditarResultado(${p.id_partido}, '${safeP1}', '${safeP2}', 0, 0)">
+                                      Ingresar
+                               </button>`
                         }
                     </div>
                     
-                    <div style="text-align:right;">
-                        ${!tieneResultado 
-                            ? `<button class="btn-guardar-set" onclick="guardarResultadoSet(${p.id_partido})">💾 Guardar</button>`
-                            : `<span style="color:#4CAF50; font-size:0.8rem;">Finalizado</span>`
-                        }
+                    <!-- Pareja 2 -->
+                    <div class="pareja-nombre ${g2}" style="text-align:left; padding-left:1rem;">
+                        ${p.nombre_pareja_2 || 'TBD'}
                     </div>
                 </div>`;
             });
             
             html += `</div>`;
-            setNum++;
+            setCounter++;
         });
         
-        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalFixture()">Cerrar</button></div>`;
+        html += `<div style="margin-top:1.5rem; display:flex; gap:0.5rem; justify-content:space-between;">
+            <button class="action-btn" style="background:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>
+            <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalFixture()">Cerrar</button>
+        </div>`;
+        
         body.innerHTML = html;
         
-    } catch(e) {
-        console.error(e);
-        body.innerHTML = '<p style="color:red; text-align:center;">Error al cargar fixture.</p>';
+    } catch (error) {
+        console.error('❌ Error cargando fixture:', error);
+        body.innerHTML = `
+            <div style="text-align:center; color:#c62828; padding:2rem;">
+                ⚠️ Error: ${error.message}<br>
+                <button class="action-btn" style="margin-top:0.5rem;" onclick="verFixturePorSets(${idTorneo})">Reintentar</button>
+            </div>`;
     }
 }
 
@@ -2408,6 +2442,107 @@ function cerrarSubmodalFixture() {
     if(overlay) {
         overlay.classList.remove('active');
         setTimeout(() => overlay.style.display = 'none', 300);
+    }
+}
+// === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
+function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
+    const submodal = document.getElementById('submodalGenerico');
+    const contenido = document.getElementById('submodalContenido');
+    
+    if (!submodal || !contenido) return;
+    
+    // Mostrar submodal
+    submodal.style.display = 'flex';
+    void submodal.offsetWidth;
+    submodal.classList.add('active');
+    
+    // HTML del formulario
+    contenido.innerHTML = `
+        <div style="text-align:center; max-width:400px; margin:0 auto;">
+            <h3 style="color:#071289; margin-bottom:1rem;">📊 Registrar Resultado</h3>
+            <p style="margin-bottom:1.5rem; font-weight:600;">${pareja1} <span style="color:#999;">vs</span> ${pareja2}</p>
+            
+            <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                <div style="text-align:center;">
+                    <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja1.split(' & ')[0]}...</label>
+                    <input type="number" id="edit_j1" value="${val1}" min="0" max="7" 
+                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="font-size:1.5rem; font-weight:bold; color:#ccc;">-</div>
+                <div style="text-align:center;">
+                    <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja2.split(' & ')[0]}...</label>
+                    <input type="number" id="edit_j2" value="${val2}" min="0" max="7" 
+                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                </div>
+            </div>
+            
+            <div id="preview_ganador" style="margin-bottom:1rem; font-weight:bold; color:#071289; height:24px;"></div>
+            
+            <div style="display:flex; gap:0.5rem; justify-content:center;">
+                <button class="action-btn" style="background:#4CAF50;" onclick="guardarResultadoEditado(${idPartido})">💾 Guardar</button>
+                <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    // Listeners para previsualizar ganador
+    const input1 = document.getElementById('edit_j1');
+    const input2 = document.getElementById('edit_j2');
+    const preview = document.getElementById('preview_ganador');
+    
+    const updatePreview = () => {
+        const v1 = parseInt(input1.value) || 0;
+        const v2 = parseInt(input2.value) || 0;
+        if (v1 > v2) preview.textContent = `Ganador: ${pareja1}`;
+        else if (v2 > v1) preview.textContent = `Ganador: ${pareja2}`;
+        else preview.textContent = 'Empate (revisar reglas)';
+    };
+    
+    input1.addEventListener('input', updatePreview);
+    input2.addEventListener('input', updatePreview);
+    updatePreview(); // Ejecutar al inicio
+}
+
+// === 💾 GUARDAR RESULTADO EDITADO ===
+async function guardarResultadoEditado(idPartido) {
+    const j1 = document.getElementById('edit_j1').value;
+    const j2 = document.getElementById('edit_j2').value;
+    
+    if (j1 === '' || j2 === '') {
+        alert('Ingresa ambos marcadores');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('id_partido', idPartido);
+        formData.append('juegos1', j1);
+        formData.append('juegos2', j2);
+        
+        const res = await fetch('../api/guardar_resultado_torneo.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.success) {
+            cerrarSubmodal();
+            // Recargar el fixture para ver el cambio reflejado
+            if (window.torneoActualId) {
+                verFixturePorSets(window.torneoActualId);
+            }
+        } else {
+            alert('❌ Error: ' + data.message);
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    } catch (e) {
+        console.error(e);
+        alert('❌ Error de conexión');
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 </script>
