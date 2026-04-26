@@ -649,6 +649,50 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     transition: 0.2s;
 }
 .btn-resultado:hover { background: #050d66; transform: translateY(-2px); }
+/* === MODAL INSCRITOS Y FIXTURE === */
+.torneo-submodal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+    z-index: 4500; display: none; justify-content: center; align-items: center;
+    padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
+}
+.torneo-submodal-overlay.active { opacity: 1; pointer-events: auto; }
+
+.torneo-submodal-card {
+    background: white; border-radius: 16px; width: 95%; max-width: 900px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex; flex-direction: column;
+}
+.torneo-submodal-overlay.active .torneo-submodal-card { transform: scale(1); }
+
+.torneo-header {
+    padding: 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;
+    background: #f8f9fa; border-radius: 16px 16px 0 0;
+}
+.torneo-body { padding: 1.5rem; flex: 1; }
+
+/* Tabla de Inscritos */
+.tabla-inscritos th { background: #071289; color: white; padding: 0.8rem; text-align: left; font-size: 0.9rem; }
+.tabla-inscritos td { padding: 0.8rem; border-bottom: 1px solid #eee; font-size: 0.9rem; vertical-align: middle; }
+.btn-bajar-pareja {
+    background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 0.4rem 0.8rem;
+    border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.2s;
+}
+.btn-bajar-pareja:hover { background: #ef9a9a; color: white; }
+
+/* Fixture por Sets */
+.set-container { margin-bottom: 2rem; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
+.set-header { background: #f5f5f5; padding: 0.8rem 1.2rem; font-weight: bold; color: #071289; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; }
+.partido-row { display: grid; grid-template-columns: 2fr 1fr 2fr 1fr 1fr; gap: 1rem; padding: 1rem 1.2rem; align-items: center; border-bottom: 1px solid #f0f0f0; }
+.partido-row:last-child { border-bottom: none; }
+.pareja-nombre { font-weight: 600; color: #333; font-size: 0.95rem; }
+.vs-badge { text-align: center; font-weight: bold; color: #999; font-size: 0.8rem; }
+.resultado-input { width: 60px; padding: 0.4rem; text-align: center; border: 1px solid #ddd; border-radius: 6px; font-weight: bold; }
+.btn-guardar-set { background: #4CAF50; color: white; border: none; padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.btn-guardar-set:disabled { background: #ccc; cursor: not-allowed; }
+.marcador-final { font-weight: 800; color: #071289; font-size: 1.1rem; text-align: center; }
+.ganador-highlight { color: #2E7D32; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -1461,7 +1505,9 @@ async function cargarTorneos() {
             const fechaInicio = t.fecha_inicio ? new Date(t.fecha_inicio).toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) : '-';
             const inscritos = parseInt(t.parejas_inscritas) || 0;
             const maxInscritos = parseInt(t.num_parejas_max) || 0;
-            const progreso = maxInscritos > 0 ? Math.min(100, (inscritos / maxInscritos) * 100) : 0;
+            const inscritosCount = parseInt(t.parejas_inscritas) || 0;
+            const maxParejas = parseInt(t.num_parejas_max) || 0;
+            const progreso = maxParejas > 0 ? Math.min(100, (inscritosCount / maxParejas) * 100) : 0;
             const icono = {padel:'🎾',tenis:'🎾',futbol:'⚽',futsal:'⚽'}[t.deporte?.toLowerCase()] || '🏆';
             const estadoColor = estado === 'abierto' ? '#4CAF50' : (estado.includes('curso') || estado.includes('progreso') ? '#2196F3' : '#FF9800');
             
@@ -1490,10 +1536,13 @@ async function cargarTorneos() {
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-size:0.85rem; color:#555;">
                     <div>📅 Inicio: ${fechaInicio}</div>
                     <div>🎾 ${t.deporte || '-'}</div>
-                    <div>👥 ${inscritos}/${maxInscritos || '∞'} parejas</div>
+                    <span>👥 ${inscritosCount}/${maxParejas || '∞'} parejas</span>
+                    <button onclick="abrirModalInscritos(${t.id_torneo})" 
+                    style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#071289; padding:0;" 
+                    title="Ver inscritos">👁️</button>
                     <div>💰 ${t.valor ? '$'+parseInt(t.valor).toLocaleString() : 'Gratis'}</div>
                 </div>
-                ${maxInscritos > 0 ? `<div style="background:#e0e0e0; border-radius:10px; height:6px; overflow:hidden;"><div style="background:${estadoColor}; height:100%; width:${progreso}%; border-radius:10px;"></div></div>` : ''}
+                ${maxParejas > 0 ? `<div style="background:#e0e0e0; border-radius:10px; height:6px; overflow:hidden;"><div style="background:${estadoColor}; height:100%; width:${progreso}%; border-radius:10px;"></div></div>` : ''}
                 ${botones}
             </div>`;
         });
@@ -2014,6 +2063,214 @@ document.addEventListener('click', function(e) {
         cerrarSubmodal();
     }
 });
+// === 👁️ VER INSCRITOS Y BAJAR PAREJA ===
+async function abrirModalInscritos(idTorneo) {
+    const overlay = document.getElementById('submodalInscritosOverlay');
+    const body = document.getElementById('submodalInscritosBody');
+    
+    if(!overlay) return; // Asegúrate de agregar el HTML del modal al final del body
+    
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth;
+    overlay.classList.add('active');
+    
+    body.innerHTML = '<p style="text-align:center; padding:2rem;">Cargando inscritos...</p>';
+    
+    try {
+        const res = await fetch(`../api/get_inscritos_torneo.php?id_torneo=${idTorneo}`);
+        const inscritos = await res.json();
+        
+        if(inscritos.length === 0) {
+            body.innerHTML = '<p style="text-align:center; padding:2rem; color:#888;">No hay parejas inscritas.</p>';
+            return;
+        }
+        
+        let html = `<table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
+            <thead><tr><th>Pareja</th><th>Jugador 1</th><th>Jugador 2</th><th>Contacto</th><th>Acción</th></tr></thead>
+            <tbody>`;
+            
+        inscritos.forEach(p => {
+            const contacto = p.email1 || p.email_temp1 || '-';
+            html += `<tr>
+                <td><strong>${p.nombre_pareja_completo}</strong></td>
+                <td>${p.jugador1}</td>
+                <td>${p.jugador2}</td>
+                <td style="font-size:0.85rem; color:#666;">${contacto}</td>
+                <td>
+                    <button class="btn-bajar-pareja" onclick="bajarPareja(${p.id_pareja}, '${p.nombre_pareja_completo.replace(/'/g, "\\'")}', ${idTorneo})">
+                        📉 Bajar
+                    </button>
+                </td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalInscritos()">Cerrar</button></div>`;
+        body.innerHTML = html;
+        
+    } catch(e) {
+        body.innerHTML = '<p style="color:red; text-align:center;">Error al cargar inscritos.</p>';
+    }
+}
+
+async function bajarPareja(idPareja, nombre, idTorneo) {
+    if(!confirm(`¿Estás seguro de BAJAR a la pareja "${nombre}"?\n\nSe les enviará un correo notificando su exclusión.`)) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('id_pareja', idPareja);
+        
+        const res = await fetch('../api/eliminar_pareja_torneo.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if(data.success) {
+            alert('✅ Pareja bajada y notificada.');
+            abrirModalInscritos(idTorneo); // Recargar lista
+            cargarTorneos(); // Actualizar contadores en tarjetas
+        } else {
+            alert('❌ Error: ' + data.message);
+        }
+    } catch(e) {
+        alert('❌ Error de conexión');
+    }
+}
+
+function cerrarSubmodalInscritos() {
+    const overlay = document.getElementById('submodalInscritosOverlay');
+    if(overlay) {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.style.display = 'none', 300);
+    }
+}
+
+// === 🎾 VER FIXTURE POR SETS ===
+async function verFixturePorSets(idTorneo) {
+    const overlay = document.getElementById('submodalFixtureOverlay');
+    const body = document.getElementById('submodalFixtureBody');
+    
+    if(!overlay) return;
+    
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth;
+    overlay.classList.add('active');
+    
+    body.innerHTML = '<p style="text-align:center; padding:2rem;">Cargando fixture...</p>';
+    
+    try {
+        // Usamos la API existente que ya devuelve los datos correctos
+        const res = await fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`);
+        const partidos = await res.json();
+        
+        if(partidos.length === 0) {
+            body.innerHTML = '<p style="text-align:center; padding:2rem;">No hay partidos generados.</p>';
+            return;
+        }
+        
+        // Agrupar por fecha/hora para simular "Sets" o Rondas
+        // Asumimos que los partidos de una misma ronda tienen la misma hora programada
+        const rondas = {};
+        partidos.forEach(p => {
+            const key = p.fecha_hora_programada; // Agrupación simple por hora
+            if(!rondas[key]) rondas[key] = [];
+            rondas[key].push(p);
+        });
+        
+        let html = '';
+        let setNum = 1;
+        
+        Object.values(rondas).forEach(partidosRonda => {
+            html += `<div class="set-container">
+                <div class="set-header">SET ${setNum} (${new Date(partidosRonda[0].fecha_hora_programada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</div>`;
+                
+            partidosRonda.forEach(p => {
+                const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
+                const j1 = tieneResultado ? p.juegos_pareja_1 : '';
+                const j2 = tieneResultado ? p.juegos_pareja_2 : '';
+                const ganadorClass1 = (tieneResultado && j1 > j2) ? 'ganador-highlight' : '';
+                const ganadorClass2 = (tieneResultado && j2 > j1) ? 'ganador-highlight' : '';
+                
+                html += `<div class="partido-row">
+                    <div class="pareja-nombre ${ganadorClass1}">${p.pareja1}</div>
+                    <div class="vs-badge">VS</div>
+                    <div class="pareja-nombre ${ganadorClass2}">${p.pareja2}</div>
+                    
+                    <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+                        ${tieneResultado 
+                            ? `<span class="marcador-final">${j1} - ${j2}</span>`
+                            : `<input type="number" id="j1_${p.id_partido}" class="resultado-input" min="0" max="7" placeholder="0">
+                               <span>-</span>
+                               <input type="number" id="j2_${p.id_partido}" class="resultado-input" min="0" max="7" placeholder="0">`
+                        }
+                    </div>
+                    
+                    <div style="text-align:right;">
+                        ${!tieneResultado 
+                            ? `<button class="btn-guardar-set" onclick="guardarResultadoSet(${p.id_partido})">💾 Guardar</button>`
+                            : `<span style="color:#4CAF50; font-size:0.8rem;">Finalizado</span>`
+                        }
+                    </div>
+                </div>`;
+            });
+            
+            html += `</div>`;
+            setNum++;
+        });
+        
+        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalFixture()">Cerrar</button></div>`;
+        body.innerHTML = html;
+        
+    } catch(e) {
+        console.error(e);
+        body.innerHTML = '<p style="color:red; text-align:center;">Error al cargar fixture.</p>';
+    }
+}
+
+async function guardarResultadoSet(idPartido) {
+    const j1 = document.getElementById(`j1_${idPartido}`).value;
+    const j2 = document.getElementById(`j2_${idPartido}`).value;
+    
+    if(j1 === '' || j2 === '') {
+        alert('Ingresa ambos marcadores');
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('id_partido', idPartido);
+        formData.append('juegos1', j1);
+        formData.append('juegos2', j2);
+        
+        const res = await fetch('../api/guardar_resultado_torneo.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if(data.success) {
+            // Recargar solo este set o todo el fixture para reflejar cambios
+            // Por simplicidad, recargamos el modal completo
+            const idTorneo = window.torneoActualId; 
+            if(idTorneo) verFixturePorSets(idTorneo);
+        } else {
+            alert('❌ Error: ' + data.message);
+            btn.disabled = false;
+            btn.textContent = '💾 Guardar';
+        }
+    } catch(e) {
+        alert('❌ Error de conexión');
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar';
+    }
+}
+
+function cerrarSubmodalFixture() {
+    const overlay = document.getElementById('submodalFixtureOverlay');
+    if(overlay) {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.style.display = 'none', 300);
+    }
+}
 </script>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
         <div style="background:white; padding:2rem; border-radius:16px; max-width:480px; width:90%; position:relative; color:#333; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
@@ -2105,6 +2362,27 @@ document.addEventListener('click', function(e) {
             <div id="submodalContenido" style="max-height:70vh; overflow-y:auto; padding:0.5rem;">
                 <!-- Contenido inyectado por JS -->
             </div>
+        </div>
+    </div>
+    <!-- MODAL INSCRITOS -->
+    <div id="submodalInscritosOverlay" class="torneo-submodal-overlay">
+        <div class="torneo-submodal-card">
+            <div class="torneo-header">
+                <h3 style="margin:0; color:#071289;">👥 Parejas Inscritas</h3>
+                <button onclick="cerrarSubmodalInscritos()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div id="submodalInscritosBody" class="torneo-body"></div>
+        </div>
+    </div>
+
+    <!-- MODAL FIXTURE POR SETS -->
+    <div id="submodalFixtureOverlay" class="torneo-submodal-overlay">
+        <div class="torneo-submodal-card">
+            <div class="torneo-header">
+                <h3 style="margin:0; color:#071289;">🎾 Fixture por Sets</h3>
+                <button onclick="cerrarSubmodalFixture()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div id="submodalFixtureBody" class="torneo-body"></div>
         </div>
     </div>
 </body>
