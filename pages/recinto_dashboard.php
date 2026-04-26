@@ -99,15 +99,23 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; font-weight:bold; }
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; font-weight:bold; }
     
-    /* === ANIMACIÓN PANEL TORNEOS === */
-    .torneos-panel-container {
-        animation: slideUp 0.3s ease-out;
+    /* === PANEL TORNEOS - VISIBILIDAD FORZADA === */
+    #panelTorneos.torneos-panel-container {
+        display: block !important; /* Override cualquier display: none */
+        opacity: 1 !important;
+        visibility: visible !important;
+        background: rgba(255,255,255,0.98) !important; /* Fondo blanco sólido */
+        color: #333 !important;
+        z-index: 100 !important;
+        position: relative !important;
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.2) !important;
+        animation: slideUpPanel 0.3s ease-out !important;
     }
 
-    @keyframes slideUp {
+    @keyframes slideUpPanel {
         from { 
             opacity: 0; 
-            transform: translateY(20px); 
+            transform: translateY(30px); 
             max-height: 0;
             padding: 0 1.5rem;
         }
@@ -119,25 +127,36 @@ $monto_deuda = $s_deuda->fetchColumn();
         }
     }
 
-    /* Animación de entrada para tarjetas */
-    #listaTorneos > div {
-        animation: fadeIn 0.3s ease-out forwards;
-        opacity: 0;
+    /* === TARJETAS CON ANIMACIÓN DE ENTRADA === */
+    @keyframes fadeInCard {
+        to { opacity: 1; transform: translateY(0); }
     }
+
+    #listaTorneos > div {
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeInCard 0.3s ease-out forwards;
+    }
+
+    /* Staggered delay para efecto cascada */
     #listaTorneos > div:nth-child(1) { animation-delay: 0.1s; }
     #listaTorneos > div:nth-child(2) { animation-delay: 0.15s; }
     #listaTorneos > div:nth-child(3) { animation-delay: 0.2s; }
     #listaTorneos > div:nth-child(n+4) { animation-delay: 0.25s; }
 
-    @keyframes fadeIn {
-        to { opacity: 1; }
-    }
-
     /* Hover effect */
     #listaTorneos > div:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
         transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    /* Asegurar que el grid funcione */
+    #listaTorneos {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+        gap: 1rem !important;
+        width: 100% !important;
     }
 
     /* === CELDAS CON ROWSPAN === */
@@ -481,13 +500,14 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     </div>
 
     <!-- PANEL TORNEOS (Debajo de todo, ancho completo) -->
-    <div id="panelTorneos" class="torneos-panel-container">
+    <div id="panelTorneos" class="torneos-panel-container" style="display: none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
             <h3 style="margin:0; color:#071289;">🏆 Torneos Activos</h3>
-            <button onclick="document.getElementById('panelTorneos').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666;">&times;</button>
+            <button onclick="document.getElementById('panelTorneos').style.display='none'" 
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666;">&times;</button>
         </div>
         <div id="listaTorneos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:1rem;">
-            <p style="color:#666;">Cargando torneos...</p>
+            <!-- Contenido inyectado por JS -->
         </div>
     </div>
 
@@ -1160,57 +1180,94 @@ function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu
 function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
 document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
 
-// === 🏆 CARGAR TORNEOS ACTIVOS (API Real: get_torneos_recinto.php) ===
+// === 🏆 CARGAR TORNEOS (Versión Debug + Robusta) ===
 async function cargarTorneos() {
     const container = document.getElementById('listaTorneos');
-    if (!container) return;
+    const panel = document.getElementById('panelTorneos');
     
-    // Estado de carga inicial
+    console.log('🔍 [Torneos] Iniciando cargarTorneos()');
+    console.log('🔍 [Torneos] container:', container);
+    console.log('🔍 [Torneos] panel:', panel);
+    
+    if (!container) {
+        console.error('❌ [Torneos] #listaTorneos no encontrado');
+        return;
+    }
+    
+    // Asegurar que el panel sea visible (override de cualquier estilo inline)
+    if (panel) {
+        panel.style.display = 'block';
+        panel.style.opacity = '1';
+        panel.style.visibility = 'visible';
+        panel.style.maxHeight = '80vh';
+        panel.style.overflowY = 'auto';
+        console.log('✅ [Torneos] Panel forzado a visible');
+    }
+    
+    // Estado de carga visible
     container.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #666;">
+        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #666; background: rgba(255,255,255,0.9); border-radius: 8px;">
             <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
-            Cargando torneos...
+            <p style="font-weight: 600;">Cargando torneos...</p>
         </div>`;
     
     try {
-        // ✅ USAR TU API EXISTENTE
+        console.log('📡 [Torneos] Fetching API...');
         const res = await fetch(`../api/get_torneos_recinto.php`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
         });
         
+        console.log('📡 [Torneos] Response status:', res.status, res.ok);
+        
         if (!res.ok) {
-            if (res.status === 401 || res.status === 403) {
-                throw new Error('Sesión expirada o acceso denegado');
-            }
             const errorText = await res.text();
-            throw new Error(`Error ${res.status}: ${errorText.substring(0, 100)}`);
+            console.error('❌ [Torneos] HTTP Error:', res.status, errorText);
+            throw new Error(`Error ${res.status}: ${errorText.substring(0, 150)}`);
         }
         
         const torneos = await res.json();
+        console.log('✅ [Torneos] Datos recibidos:', torneos);
+        console.log('✅ [Torneos] Tipo:', Array.isArray(torneos) ? 'array' : typeof torneos);
+        console.log('✅ [Torneos] Cantidad:', Array.isArray(torneos) ? torneos.length : 'N/A');
         
-        // Manejar respuesta vacía
+        // Manejar array vacío EXPLÍCITAMENTE
         if (!torneos || !Array.isArray(torneos) || torneos.length === 0) {
+            console.log('ℹ️ [Torneos] Sin torneos activos, mostrando mensaje vacío');
             container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #999;">
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #999; background: rgba(255,255,255,0.9); border-radius: 8px;">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
-                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No hay torneos activos</p>
-                    <p style="font-size: 0.9rem;">Crea uno nuevo para comenzar</p>
+                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 600;">No hay torneos activos</p>
+                    <p style="font-size: 0.9rem;">Crea uno nuevo desde "Crear Torneo"</p>
                 </div>`;
             return;
         }
         
-        // ✅ Renderizar tarjetas adaptadas a TU estructura de datos
+        // ✅ Renderizar tarjetas (con logging por cada una)
+        console.log(`🎨 [Torneos] Renderizando ${torneos.length} tarjetas...`);
         let html = '';
-        torneos.forEach(t => {
-            // Formatear fechas
-            const fechaInicio = t.fecha_inicio ? new Date(t.fecha_inicio).toLocaleDateString('es-CL', { 
-                day: '2-digit', month: 'short', year: 'numeric' 
-            }) : '-';
-            const fechaFin = t.fecha_fin ? new Date(t.fecha_fin).toLocaleDateString('es-CL', { 
-                day: '2-digit', month: 'short' 
-            }) : '';
+        
+        torneos.forEach((t, index) => {
+            console.log(`🎨 [Torneos] #${index+1}:`, {
+                id: t.id_torneo,
+                nombre: t.nombre,
+                estado: t.estado,
+                inscritas: t.parejas_inscritas
+            });
+            
+            // Formatear fechas seguras
+            const parseDate = (dateStr) => {
+                if (!dateStr) return '-';
+                try {
+                    return new Date(dateStr).toLocaleDateString('es-CL', { 
+                        day: '2-digit', month: 'short', year: 'numeric' 
+                    });
+                } catch { return dateStr; }
+            };
+            
+            const fechaInicio = parseDate(t.fecha_inicio);
+            const fechaFin = t.fecha_fin ? new Date(t.fecha_fin).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }) : '';
             
             // Estado visual
             const estadoMap = {
@@ -1218,31 +1275,29 @@ async function cargarTorneos() {
                 'cerrado': { label: 'CERRADO', color: '#FF9800' },
                 'en_progreso': { label: 'EN CURSO', color: '#2196F3' }
             };
-            const estado = estadoMap[t.estado] || { label: t.estado?.toUpperCase() || 'DESCONOCIDO', color: '#9E9E9E' };
+            const estado = estadoMap[t.estado] || { label: (t.estado || 'DESCONOCIDO').toUpperCase(), color: '#9E9E9E' };
             
-            // Progreso de inscritos
+            // Progreso
             const inscritos = parseInt(t.parejas_inscritas) || 0;
             const maxInscritos = parseInt(t.num_parejas_max) || 0;
             const progreso = maxInscritos > 0 ? Math.min(100, (inscritos / maxInscritos) * 100) : 0;
             
-            // Deporte icono
+            // Icono deporte
             const iconoDeporte = {
-                'padel': '🎾', 'tenis': '🎾', 'futbol': '⚽', 'voleyball': '🏐'
+                'padel': '🎾', 'tenis': '🎾', 'futbol': '⚽', 'futsal': '⚽', 'voleyball': '🏐'
             }[t.deporte?.toLowerCase()] || '🏆';
             
             html += `
-            <div style="background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid ${estado.color}; animation: fadeIn 0.3s ease;">
-                <!-- Header -->
+            <div style="background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid ${estado.color}; opacity: 0; animation: fadeInCard 0.3s ease-out ${index * 0.1}s forwards;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <h4 style="margin: 0; color: #071289; font-size: 1.1rem; font-weight: 700; line-height: 1.3;">
                         ${iconoDeporte} ${t.nombre || 'Sin nombre'}
                     </h4>
-                    <span style="background: ${estado.color}; color: white; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: bold; white-space: nowrap;">
+                    <span style="background: ${estado.color}; color: white; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: bold;">
                         ${estado.label}
                     </span>
                 </div>
                 
-                <!-- Info grid -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem; color: #555;">
                     <div>📅 ${fechaInicio}${fechaFin ? ` - ${fechaFin}` : ''}</div>
                     <div>🎾 ${t.deporte || '-'}</div>
@@ -1250,36 +1305,35 @@ async function cargarTorneos() {
                     <div>💰 ${t.valor ? '$' + parseInt(t.valor).toLocaleString() : 'Gratis'}</div>
                 </div>
                 
-                <!-- Barra de progreso (solo si hay límite) -->
                 ${maxInscritos > 0 ? `
                 <div style="background: #f0f0f0; border-radius: 10px; height: 6px; overflow: hidden;">
-                    <div style="background: ${estado.color}; height: 100%; width: ${progreso}%; border-radius: 10px; transition: width 0.3s;"></div>
+                    <div style="background: ${estado.color}; height: 100%; width: ${progreso}%; border-radius: 10px;"></div>
                 </div>` : ''}
                 
-                <!-- Descripción corta -->
-                ${t.descripcion ? `<p style="font-size: 0.85rem; color: #666; margin: 0; line-height: 1.4;">${t.descripcion.substring(0, 80)}${t.descripcion.length > 80 ? '...' : ''}</p>` : ''}
+                ${t.descripcion ? `<p style="font-size: 0.85rem; color: #666; margin: 0; line-height: 1.4;">${t.descripcion.substring(0, 100)}${t.descripcion.length > 100 ? '...' : ''}</p>` : ''}
                 
-                <!-- Acciones -->
                 <div style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem;">
                     <a href="panel_torneo.php?id=${t.id_torneo}" 
-                       style="flex: 1; text-align: center; background: #071289; color: white; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.2s;">
+                       style="flex: 1; text-align: center; background: #071289; color: white; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
                         Ver Detalle
                     </a>
-                    ${t.publico == 1 || t.estado === 'abierto' ? `
+                    ${(t.publico == 1 || t.estado === 'abierto') ? `
                     <a href="torneo_invite.php?id=${t.id_torneo}" 
-                       style="flex: 1; text-align: center; background: #4ECDC4; color: #071289; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.2s;">
+                       style="flex: 1; text-align: center; background: #4ECDC4; color: #071289; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
                         Invitar
                     </a>` : ''}
                 </div>
             </div>`;
         });
         
+        console.log('🎨 [Torneos] Inyectando HTML en container...');
         container.innerHTML = html;
+        console.log('✅ [Torneos] Renderizado completo');
         
     } catch (error) {
-        console.error('❌ Error cargando torneos:', error);
+        console.error('❌ [Torneos] Error fatal:', error);
         container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #c62828;">
+            <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #c62828; background: #ffebee; border-radius: 8px;">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
                 <p style="font-weight: 600;">Error al cargar torneos</p>
                 <p style="font-size: 0.9rem; color: #666;">${error.message}</p>
