@@ -144,7 +144,7 @@ $monto_deuda = $s_deuda->fetchColumn();
     /* Headers */
     .planilla-table thead th {
         background: rgba(255,255,255,0.9) !important;
-        color: #333;
+        color: #4A4A4A !important; /* Grafito oscuro */
         position: sticky;
         top: 0;
         z-index: 10;
@@ -191,7 +191,7 @@ td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px
     #modalPago { z-index: 2500; } #modalListaKPI { z-index: 3000; }
     #modalPago label { color: #333 !important; font-weight: bold; }
     #modalPago small, #modalPago span, #modalPago div { color: #555 !important; } #modalPago h3 { color: #071289 !important; }
-    #modalListaKPI { color: #333 !important; } #modalListaKPI h3, #modalListaKPI th, #modalListaKPI td, #modalListaKPI span, #modalListaKPI div { color: #333 !important; }
+    #modalListaKPI { color: #4A4A4A !important; /* Grafito oscuro */ !important; } #modalListaKPI h3, #modalListaKPI th, #modalListaKPI td, #modalListaKPI span, #modalListaKPI div { color: #333 !important; }
     #modalListaKPI span[onclick="cerrarModalListaKPI()"] { color: #999 !important; }
     #modalListaKPI td:last-child:nth-last-child(2) { color: #c62828 !important; }
 
@@ -274,7 +274,7 @@ td.cell-reserva[rowspan] > div:last-child {
     background: white; 
     padding: 0.4rem 0.8rem; 
     border-radius: 20px; /* ✅ Bordes redondeados */
-    color: #071289; 
+    color: #4A4A4A !important; /* Grafito oscuro */
     border: 1px solid #ddd; 
     font-weight: bold;
     min-width: 120px; 
@@ -320,28 +320,26 @@ td.cell-reserva[rowspan] > div:last-child {
     background: #f0f0f0;
 }
 /* 1. Contenedor Principal (Forma de Píldora) */
-.planilla-header-controls { 
-        background: rgba(21, 101, 192, 0.85); 
-        backdrop-filter: blur(10px); 
-        padding: 0.8rem 1.5rem; 
-        border-radius: 50px; /* ✅ CLAVE: Cambiar de 12px a 50px */
-        margin-bottom: 1rem; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.2); 
-        min-width: 940px; 
-        max-width: 1380px; 
-        width: fit-content;
-        display: flex; 
-        flex-wrap: nowrap; 
-        gap: 0.6rem; 
-        align-items: center; 
-        justify-content: center; 
-        color: white;
+/* === HEADER STICKY === */
+.planilla-header-controls {
+    position: sticky !important;
+    top: 50px !important; /* Justo debajo de la top-bar (50px) */
+    z-index: 900 !important;
+    background: rgba(21, 101, 192, 0.95) !important; /* Más opaco para legibilidad al scrollear */
+    backdrop-filter: blur(12px);
+    transition: box-shadow 0.3s;
+}
+
+/* Sombra sutil cuando el usuario hace scroll */
+.planilla-column.scrolled .planilla-header-controls {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 .control-group {
         background: white; padding: 0.4rem 0.8rem; border-radius: 20px; color: #071289; border: none; font-weight: bold;
         min-width: 120px; font-size: 0.85rem;
 }
+/* Opcional: Ajustar placeholders para que no choquen */
+::placeholder { color: #888 !important; }
 </style>
 </head>
 <body>
@@ -396,19 +394,19 @@ td.cell-reserva[rowspan] > div:last-child {
     <!-- COLUMNA 2: PLANILLA (Centro) -->
     <div class="planilla-column">
         <div class="planilla-header-controls">
-            <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
-            <input type="date" id="filtroFecha" class="control-select" style="width: 135px;">
-            <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
-            <button class="date-nav-btn" onclick="irAHoy()" style="width:auto; padding:0 12px; border-radius:20px; font-size:0.8rem; height:32px;">Hoy</button>
-
-            <select class="control-select" id="filtroDeporte">
-                <option value="">Deporte...</option>
-                <?php foreach ($deportes as $key => $value): ?>
-                    <option value="<?= $key ?>"><?= $value ?></option>
-                <?php endforeach; ?>
+            <button class="date-nav-btn" onclick="cambiarDiaPlanilla(-1)">&lt;</button>
+            <input type="date" id="fechaPlanillaInput" class="control-select" style="width: 135px;">
+            <button class="date-nav-btn" onclick="cambiarDiaPlanilla(1)">&gt;</button>
+            <button class="date-nav-btn" onclick="irAHoyPlanilla()" style="width:auto; padding:0 12px; border-radius:20px; font-size:0.8rem; height:32px;">Hoy</button>
+            
+            <select class="control-select" id="filtroDeporte" onchange="cargarPlanillaReservas()">
+                <option value="todos">Todos</option>
+                <option value="padel">Pádel</option>
+                <option value="futbol">Fútbol</option>
+                <option value="tenis">Tenis</option>
             </select>
 
-            <select class="control-select" id="filtroEstado">
+            <select class="control-select" id="filtroEstado" onchange="cargarPlanillaReservas()">
                 <option value="">Estado...</option>
                 <option value="disponible">Disponible</option>
                 <option value="pendiente">Pendiente</option>
@@ -1365,6 +1363,12 @@ async function confirmarMovimiento() {
         showToast('❌ Error de red al mover', 'error');
     }
 }
+// Detectar scroll para sombra del header
+document.querySelector('.planilla-table-container')?.addEventListener('scroll', function(e) {
+    const header = document.querySelector('.planilla-header-controls');
+    if (e.target.scrollTop > 10) header.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+    else header.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+});
 </script>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
         <div style="background:white; padding:2rem; border-radius:16px; max-width:480px; width:90%; position:relative; color:#333; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
