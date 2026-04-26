@@ -1,6 +1,6 @@
 <?php
 // includes/config.php
-// Configuración centralizada - Compatible con Railway + Local
+// Configuración centralizada - Compatible con Railway (MYSQL*) + Local
 
 // 1. Manejo de sesión CENTRALIZADO (UNA SOLA VEZ)
 if (session_status() === PHP_SESSION_NONE) {
@@ -16,75 +16,82 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 2. Parseo ROBUSTO de DATABASE_URL para Railway
-function parseRailwayDB() {
-    $dbUrl = getenv('DATABASE_URL');
-    
-    if (!$dbUrl) {
-        // Fallback para desarrollo local
+// 2. Obtener credenciales de BD - Prioridad: Railway MYSQL* > DATABASE_URL > Local
+function getDbCredentials() {
+    // === OPCIÓN 1: Railway con variables MYSQL* (tu esquema probado) ===
+    if (getenv('MYSQLHOST') || getenv('RAILWAY_ENVIRONMENT')) {
         return [
-            'host' => getenv('DB_HOST') ?: 'localhost',
-            'port' => getenv('DB_PORT') ?: '3306',
-            'dbname' => getenv('DB_NAME') ?: 'canchasport',
-            'user' => getenv('DB_USER') ?: 'root',
-            'pass' => getenv('DB_PASS') ?: ''
+            'host' => getenv('MYSQLHOST') ?: getenv('RAILWAY_MYSQL_HOST') ?: '127.0.0.1',
+            'port' => getenv('MYSQLPORT') ?: getenv('RAILWAY_MYSQL_PORT') ?: '3306',
+            'dbname' => getenv('MYSQLDATABASE') ?: getenv('RAILWAY_MYSQL_DATABASE') ?: 'canchasport',
+            'user' => getenv('MYSQLUSER') ?: getenv('RAILWAY_MYSQL_USER') ?: 'root',
+            'pass' => getenv('MYSQLPASSWORD') ?: getenv('RAILWAY_MYSQL_PASSWORD') ?: ''
         ];
     }
     
-    // Parsear URL estilo: mysql://user:pass@host:port/db?options
-    $parsed = parse_url($dbUrl);
+    // === OPCIÓN 2: Railway con DATABASE_URL (parseo robusto) ===
+    $dbUrl = getenv('DATABASE_URL');
+    if ($dbUrl) {
+        $parsed = parse_url($dbUrl);
+        return [
+            'host' => $parsed['host'] ?? '127.0.0.1',
+            'port' => $parsed['port'] ?? '3306',
+            'dbname' => ltrim($parsed['path'] ?? '', '/'),
+            'user' => $parsed['user'] ?? 'root',
+            'pass' => $parsed['pass'] ?? ''
+        ];
+    }
     
-    // Railway a veces usa 'postgresql' o 'mysql' como esquema
-    $scheme = $parsed['scheme'] ?? 'mysql';
-    
+    // === OPCIÓN 3: Desarrollo local ===
     return [
-        'host' => $parsed['host'] ?? 'localhost',
-        'port' => $parsed['port'] ?? ($scheme === 'postgresql' ? '5432' : '3306'),
-        'dbname' => ltrim($parsed['path'] ?? '', '/'),
-        'user' => $parsed['user'] ?? '',
-        'pass' => $parsed['pass'] ?? ''
+        'host' => '127.0.0.1',  // Usar IP en lugar de localhost para forzar TCP
+        'port' => '3306',
+        'dbname' => 'canchasport',
+        'user' => 'root',
+        'pass' => ''
     ];
 }
 
 // 3. Obtener credenciales
-$db = parseRailwayDB();
+$db = getDbCredentials();
 
-// 4. Construir DSN para PDO (FORZAR TCP para evitar socket local)
+// 4. Logging para debug (ver en Railway)
+error_log("[CONFIG] DB Credentials: host={$db['host']}, port={$db['port']}, db={$db['dbname']}, user={$db['user']}");
+
+// 5. Construir DSN para PDO (FORZAR TCP con 127.0.0.1 o host explícito)
 $dsn = "mysql:host={$db['host']};port={$db['port']};dbname={$db['dbname']};charset=utf8mb4";
 
-// 5. Opciones PDO robustas
+// 6. Opciones PDO robustas
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES => false,
-    PDO::ATTR_PERSISTENT => false, // Importante en entornos serverless como Railway
-    PDO::MYSQL_ATTR_SSL_CA => getenv('MYSQL_ATTR_SSL_CA') ?? null // SSL si Railway lo requiere
+    PDO::ATTR_PERSISTENT => false, // Importante en serverless
 ];
 
-// 6. Conexión con manejo de errores amigable
+// 7. Conexión con manejo de errores
 try {
     $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
-    // error_log("[CONFIG] ✅ Conexión BD exitosa: {$db['host']}:{$db['port']}");
+    error_log("[CONFIG] ✅ Conexión BD exitosa");
 } catch (PDOException $e) {
-    // Logging detallado para debug (NO mostrar en producción)
     error_log("[CONFIG] ❌ Error BD: " . $e->getMessage());
     error_log("[CONFIG] DSN: $dsn");
-    error_log("[CONFIG] Host: {$db['host']}, Port: {$db['port']}, DB: {$db['dbname']}");
+    error_log("[CONFIG] Credenciales usadas: " . json_encode(array_diff_key($db, ['pass' => true])));
     
-    // Mensaje genérico para el usuario
-    if (getenv('APP_ENV') === 'production') {
-        die('Error de conexión. Intenta nuevamente en unos minutos.');
+    // Mensaje amigable
+    if (getenv('APP_ENV') === 'production' || getenv('RAILWAY_ENVIRONMENT')) {
+        die('Error de conexión. Intenta nuevamente.');
     } else {
         die('Error de conexión a BD: ' . htmlspecialchars($e->getMessage()));
     }
 }
 
-// 7. Definir constantes de API (si existen)
+// 8. Definir constantes de API
 if (!defined('BREVO_API_KEY')) {
     define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?? '');
 }
 
-// 8. Funciones de utilidad globales
+// 9. Funciones de utilidad globales
 if (!function_exists('esAdmin')) {
     function esAdmin() {
         return (isset($_SESSION['recinto_rol']) && $_SESSION['recinto_rol'] === 'admin');
