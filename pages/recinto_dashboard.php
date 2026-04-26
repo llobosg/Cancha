@@ -84,11 +84,6 @@ $monto_deuda = $s_deuda->fetchColumn();
         align-items: start;
     }
     
-
-
-
-
-    
     .action-btn-sidebar:hover { transform: translateY(-2px); }
     .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }    
     .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
@@ -135,7 +130,7 @@ $monto_deuda = $s_deuda->fetchColumn();
         
         /* Animación */
         display: none; /* Oculto por defecto, JS lo muestra */
-        animation: slideUpPanel 0.3s ease-out !important;
+        animation: slideUpPanel 1s ease-out !important;
         transform-origin: top center;
     }
 
@@ -168,33 +163,11 @@ $monto_deuda = $s_deuda->fetchColumn();
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Tarjetas individuales */
-    #listaTorneos > div {
-        background: white; 
-        border-radius: 12px; 
-        padding: 1.2rem; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-        display: flex; 
-        flex-direction: column; 
-        gap: 0.8rem; 
-        border-left: 4px solid #4CAF50;
-        opacity: 0;
-        transform: translateY(10px);
-        animation: fadeInCard 0.3s ease-out forwards;
-    }
-
    /* Staggered animation para efecto cascada */
     #listaTorneos > div:nth-child(1) { animation-delay: 0.1s; }
     #listaTorneos > div:nth-child(2) { animation-delay: 0.15s; }
     #listaTorneos > div:nth-child(3) { animation-delay: 0.2s; }
     #listaTorneos > div:nth-child(n+4) { animation-delay: 0.25s; }
-
-    /* Hover effect */
-    #listaTorneos > div:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
 
     /* Asegurar que el grid funcione */
     #listaTorneos {
@@ -314,9 +287,9 @@ $monto_deuda = $s_deuda->fetchColumn();
         gap: 1rem; 
         padding-left: 1rem; 
         margin-top: 60px;
-        width: 320px !important; /* ✅ +15 caracteres aprox (antes ~200px) */
-        min-width: 320px !important;
-        max-width: 320px !important;
+        width: 120px !important;
+        min-width: 120px !important;
+        max-width: 120px !important;
         flex-shrink: 0; /* Evita que se encoja en pantallas pequeñas */
     }
     /* Botones de acciones con ancho completo */
@@ -493,7 +466,84 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     z-index: 5;
     position: relative;
-}  
+}
+/* === MODAL TORNEOS (Overlay + Animación desde abajo) === */
+.torneos-modal-overlay {
+    position: fixed !important;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.65) !important; /* Fondo oscuro semitransparente */
+    backdrop-filter: blur(6px) !important;
+    z-index: 3000 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(100%); /* Empieza desde el fondo */
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.torneos-modal-overlay.active {
+    opacity: 1 !important;
+    transform: translateY(0) !important; /* Sube al centro */
+    pointer-events: auto !important;
+}
+/* Tarjeta interna blanca */
+.torneos-card {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 960px; /* Ancho óptimo para ver 2-3 tarjetas */
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    transform: translateY(30px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) 0.1s;
+}
+
+.torneos-modal-overlay.active .torneos-card {
+    transform: translateY(0);
+    opacity: 1;
+}
+/* === ESTILOS DE BOTONES EN FICHAS === */
+.btn-torneo {
+    padding: 0.55rem 0.8rem !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+    font-size: 0.82rem !important;
+    text-align: center !important;
+    transition: all 0.2s ease !important;
+    flex: 1 !important;
+    min-width: 110px !important;
+    display: inline-block !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+.btn-torneo:hover { transform: translateY(-2px) !important; box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important; }
+
+.btn-invitar    { background: #E0F7FA !important; color: #006064 !important; }
+.btn-fixture    { background: #071289 !important; color: white !important; }
+.btn-ver-fixture{ background: #f0f0f0 !important; color: #333 !important; }
+.btn-resultados { background: #071289 !important; color: white !important; }
+
+/* Grid responsive para tarjetas */
+#listaTorneos > div {
+    background: #fafafa;
+    border-radius: 12px;
+    padding: 1.2rem;
+    border-left: 4px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+#listaTorneos > div:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body>
@@ -607,15 +657,16 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         </div>
     </div>
 
-    <!-- PANEL TORNEOS (Debajo de la planilla, ancho completo) -->
-    <div id="panelTorneos" class="torneos-panel-container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #eee;">
-            <h3 style="margin:0; color:#071289; font-size:1.3rem;">🏆 Torneos Activos</h3>
-            <button onclick="document.getElementById('panelTorneos').style.display='none'" 
-                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; padding:0 0.5rem;">&times;</button>
-        </div>
-        <div id="listaTorneos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
-            <!-- Contenido inyectado por JS -->
+   <!-- PANEL TORNEOS (Ahora es Modal Overlay) -->
+    <div id="panelTorneos" class="torneos-modal-overlay">
+        <div class="torneos-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
+                <h3 style="margin:0; color:#071289; font-size:1.4rem;">🏆 Torneos Activos</h3>
+                <button onclick="cerrarModalTorneos()" style="background:#f0f0f0; border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; color:#666; font-size:1.2rem; display:flex; align-items:center; justify-content:center; transition:0.2s;">&times;</button>
+            </div>
+            <div id="listaTorneos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
+                <!-- Contenido inyectado por JS -->
+            </div>
         </div>
     </div>
 
@@ -705,15 +756,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filtroEstado')?.addEventListener('change', function() { 
         estadoSeleccionadoPlanilla = this.value; 
         cargarPlanillaReservas(); 
-    });
-
-    // Botón Torneos (si existe)
-    document.getElementById('btnTorneosActivos')?.addEventListener('click', () => {
-        const panel = document.getElementById('panelTorneos');
-        if(panel) {
-            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
-            if(panel.style.display === 'block') cargarTorneos();
-        }
     });
 
     cargarPlanillaReservas();
@@ -1288,170 +1330,100 @@ function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu
 function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
 document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
 
-// === 🏆 CARGAR TORNEOS (Versión Debug + Robusta) ===
+// === 🏆 CARGAR TORNEOS + LÓGICA DE BOTONES ===
 async function cargarTorneos() {
     const container = document.getElementById('listaTorneos');
-    const panel = document.getElementById('panelTorneos');
+    if (!container) return;
     
-    console.log('🔍 [Torneos] Iniciando cargarTorneos()');
-    console.log('🔍 [Torneos] container:', container);
-    console.log('🔍 [Torneos] panel:', panel);
-    
-    if (!container) {
-        console.error('❌ [Torneos] #listaTorneos no encontrado');
-        return;
-    }
-    
-    // Asegurar que el panel sea visible (override de cualquier estilo inline)
-    if (panel) {
-        panel.style.display = 'block';
-        panel.style.opacity = '1';
-        panel.style.visibility = 'visible';
-        panel.style.maxHeight = '80vh';
-        panel.style.overflowY = 'auto';
-        console.log('✅ [Torneos] Panel forzado a visible');
-    }
-    
-    // Estado de carga visible
-    container.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #666; background: rgba(255,255,255,0.9); border-radius: 8px;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
-            <p style="font-weight: 600;">Cargando torneos...</p>
-        </div>`;
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem; color:#666;">🔄 Cargando torneos...</div>`;
     
     try {
-        console.log('📡 [Torneos] Fetching API...');
-        const res = await fetch(`../api/get_torneos_recinto.php`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        console.log('📡 [Torneos] Response status:', res.status, res.ok);
-        
-        if (!res.ok) {
-            const errorText = await res.text();
-            console.error('❌ [Torneos] HTTP Error:', res.status, errorText);
-            throw new Error(`Error ${res.status}: ${errorText.substring(0, 150)}`);
-        }
+        const res = await fetch(`../api/get_torneos_recinto.php`, { credentials: 'include' });
+        if (!res.ok) throw new Error(`Error ${res.status}`);
         
         const torneos = await res.json();
-        console.log('✅ [Torneos] Datos recibidos:', torneos);
-        console.log('✅ [Torneos] Tipo:', Array.isArray(torneos) ? 'array' : typeof torneos);
-        console.log('✅ [Torneos] Cantidad:', Array.isArray(torneos) ? torneos.length : 'N/A');
         
-        // Manejar array vacío EXPLÍCITAMENTE
-        if (!torneos || !Array.isArray(torneos) || torneos.length === 0) {
-            console.log('ℹ️ [Torneos] Sin torneos activos, mostrando mensaje vacío');
-            container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #999; background: rgba(255,255,255,0.9); border-radius: 8px;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
-                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 600;">No hay torneos activos</p>
-                    <p style="font-size: 0.9rem;">Crea uno nuevo desde "Crear Torneo"</p>
-                </div>`;
+        if (!Array.isArray(torneos) || torneos.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#888;">
+                <div style="font-size:3rem; margin-bottom:0.5rem;">📋</div>
+                <p>No hay torneos activos</p></div>`;
             return;
         }
         
-        // ✅ Renderizar tarjetas (con logging por cada una)
-        console.log(`🎨 [Torneos] Renderizando ${torneos.length} tarjetas...`);
         let html = '';
-        
-        torneos.forEach((t, index) => {
-            console.log(`🎨 [Torneos] #${index+1}:`, {
-                id: t.id_torneo,
-                nombre: t.nombre,
-                estado: t.estado,
-                inscritas: t.parejas_inscritas
-            });
-            
-            // Formatear fechas seguras
-            const parseDate = (dateStr) => {
-                if (!dateStr) return '-';
-                try {
-                    return new Date(dateStr).toLocaleDateString('es-CL', { 
-                        day: '2-digit', month: 'short', year: 'numeric' 
-                    });
-                } catch { return dateStr; }
-            };
-            
-            const fechaInicio = parseDate(t.fecha_inicio);
-            const fechaFin = t.fecha_fin ? new Date(t.fecha_fin).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }) : '';
-            
-            // Estado visual
-            const estadoMap = {
-                'abierto': { label: 'ABIERTO', color: '#4CAF50' },
-                'cerrado': { label: 'CERRADO', color: '#FF9800' },
-                'en_progreso': { label: 'EN CURSO', color: '#2196F3' }
-            };
-            const estado = estadoMap[t.estado] || { label: (t.estado || 'DESCONOCIDO').toUpperCase(), color: '#9E9E9E' };
-            
-            // Progreso
+        torneos.forEach(t => {
+            const estado = (t.estado || '').toLowerCase();
+            const fechaInicio = t.fecha_inicio ? new Date(t.fecha_inicio).toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) : '-';
             const inscritos = parseInt(t.parejas_inscritas) || 0;
             const maxInscritos = parseInt(t.num_parejas_max) || 0;
             const progreso = maxInscritos > 0 ? Math.min(100, (inscritos / maxInscritos) * 100) : 0;
+            const icono = {padel:'🎾',tenis:'🎾',futbol:'⚽',futsal:'⚽'}[t.deporte?.toLowerCase()] || '🏆';
+            const estadoColor = estado === 'abierto' ? '#4CAF50' : (estado.includes('curso') || estado.includes('progreso') ? '#2196F3' : '#FF9800');
             
-            // Icono deporte
-            const iconoDeporte = {
-                'padel': '🎾', 'tenis': '🎾', 'futbol': '⚽', 'futsal': '⚽', 'voleyball': '🏐'
-            }[t.deporte?.toLowerCase()] || '🏆';
+            // === LÓGICA DE BOTONES POR ESTADO ===
+            let botones = `<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:auto; padding-top:0.8rem; border-top:1px solid #eee;">`;
+            if (estado === 'abierto') {
+                botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
+                botones += `<a href="crear_fixture.php?id=${t.id_torneo}" class="btn-torneo btn-fixture">Crear Fixture</a>`;
+            } else { // EN CURSO, CERRADO
+                botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
+                botones += `<a href="ver_fixture.php?id=${t.id_torneo}" class="btn-torneo btn-ver-fixture">Ver Fixture</a>`;
+                botones += `<a href="panel_torneo.php?id=${t.id_torneo}" class="btn-torneo btn-resultados">Resultados</a>`;
+            }
+            botones += `</div>`;
             
-            html += `
-            <div style="background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid ${estado.color}; opacity: 0; animation: fadeInCard 0.3s ease-out ${index * 0.1}s forwards;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <h4 style="margin: 0; color: #071289; font-size: 1.1rem; font-weight: 700; line-height: 1.3;">
-                        ${iconoDeporte} ${t.nombre || 'Sin nombre'}
-                    </h4>
-                    <span style="background: ${estado.color}; color: white; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: bold;">
-                        ${estado.label}
-                    </span>
+            html += `<div style="border-left-color:${estadoColor}; animation:fadeIn 0.3s ease-out forwards;">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <h4 style="margin:0; color:#071289; font-size:1.1rem; font-weight:700;">${icono} ${t.nombre || 'Sin nombre'}</h4>
+                    <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold; text-transform:uppercase;">${estado === 'en_progreso' ? 'EN CURSO' : estado}</span>
                 </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem; color: #555;">
-                    <div>📅 ${fechaInicio}${fechaFin ? ` - ${fechaFin}` : ''}</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-size:0.85rem; color:#555;">
+                    <div>📅 Inicio: ${fechaInicio}</div>
                     <div>🎾 ${t.deporte || '-'}</div>
                     <div>👥 ${inscritos}/${maxInscritos || '∞'} parejas</div>
-                    <div>💰 ${t.valor ? '$' + parseInt(t.valor).toLocaleString() : 'Gratis'}</div>
+                    <div>💰 ${t.valor ? '$'+parseInt(t.valor).toLocaleString() : 'Gratis'}</div>
                 </div>
-                
-                ${maxInscritos > 0 ? `
-                <div style="background: #f0f0f0; border-radius: 10px; height: 6px; overflow: hidden;">
-                    <div style="background: ${estado.color}; height: 100%; width: ${progreso}%; border-radius: 10px;"></div>
-                </div>` : ''}
-                
-                ${t.descripcion ? `<p style="font-size: 0.85rem; color: #666; margin: 0; line-height: 1.4;">${t.descripcion.substring(0, 100)}${t.descripcion.length > 100 ? '...' : ''}</p>` : ''}
-                
-                <div style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem;">
-                    <a href="panel_torneo.php?id=${t.id_torneo}" 
-                       style="flex: 1; text-align: center; background: #071289; color: white; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
-                        Ver Detalle
-                    </a>
-                    ${(t.publico == 1 || t.estado === 'abierto') ? `
-                    <a href="torneo_invite.php?id=${t.id_torneo}" 
-                       style="flex: 1; text-align: center; background: #4ECDC4; color: #071289; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
-                        Invitar
-                    </a>` : ''}
-                </div>
+                ${maxInscritos > 0 ? `<div style="background:#e0e0e0; border-radius:10px; height:6px; overflow:hidden;"><div style="background:${estadoColor}; height:100%; width:${progreso}%; border-radius:10px;"></div></div>` : ''}
+                ${botones}
             </div>`;
         });
         
-        console.log('🎨 [Torneos] Inyectando HTML en container...');
         container.innerHTML = html;
-        console.log('✅ [Torneos] Renderizado completo');
-        
     } catch (error) {
-        console.error('❌ [Torneos] Error fatal:', error);
-        container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #c62828; background: #ffebee; border-radius: 8px;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
-                <p style="font-weight: 600;">Error al cargar torneos</p>
-                <p style="font-size: 0.9rem; color: #666;">${error.message}</p>
-                <button onclick="cargarTorneos()" 
-                        style="margin-top: 1rem; padding: 0.5rem 1.5rem; background: #071289; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                    Reintentar
-                </button>
-            </div>`;
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#c62828; padding:2rem;">⚠️ Error: ${error.message}<br><button onclick="cargarTorneos()" style="margin-top:0.5rem; padding:0.4rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">Reintentar</button></div>`;
     }
 }
+
+// === TOGGLE MODAL CON ANIMACIÓN ===
+document.getElementById('btnTorneosActivos')?.addEventListener('click', () => {
+    const panel = document.getElementById('panelTorneos');
+    if (!panel) return;
+    
+    // Abrir
+    panel.style.display = 'flex';
+    // Forzar reflow para activar transición CSS
+    void panel.offsetWidth;
+    panel.classList.add('active');
+    
+    // Cargar datos solo la primera vez
+    if (!panel.dataset.loaded) {
+        cargarTorneos();
+        panel.dataset.loaded = 'true';
+    }
+});
+
+function cerrarModalTorneos() {
+    const panel = document.getElementById('panelTorneos');
+    if (panel) {
+        panel.classList.remove('active');
+        setTimeout(() => { panel.style.display = 'none'; }, 400); // Esperar animación
+    }
+}
+
+// Cerrar al hacer click fuera de la tarjeta
+document.getElementById('panelTorneos')?.addEventListener('click', (e) => {
+    if (e.target.id === 'panelTorneos') cerrarModalTorneos();
+});
 
 function buscarSocioAdmin(query) {
   clearTimeout(debounceTimer);
