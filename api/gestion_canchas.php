@@ -8,7 +8,6 @@ if (ob_get_level() === 0) {
 }
 
 try {
-    session_start();
     if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
         throw new Exception('Acceso no autorizado');
     }
