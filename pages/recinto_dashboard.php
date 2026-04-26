@@ -2077,7 +2077,7 @@ async function abrirModalInscritos(idTorneo) {
     body.innerHTML = '<p style="text-align:center; padding:2rem;">Cargando inscritos...</p>';
     
     try {
-        const res = await fetch(`../api/get_inscritos_torneo.php?id_torneo=${idTorneo}`);
+        const res = await fetch(`../api/get_inscritos_torneos.php?id_torneo=${idTorneo}`);
         const inscritos = await res.json();
         
         if(inscritos.length === 0) {
@@ -2143,9 +2143,9 @@ function cerrarSubmodalInscritos() {
     }
 }
 
-// === 🎾 VER FIXTURE POR SETS (Agrupado y Editable) ===
+// === 🎾 VER FIXTURE POR SETS (Agrupado por Hora + Nombres Reales) ===
 async function verFixturePorSets(idTorneo) {
-    window.torneoActualId = idTorneo; // Guardar contexto
+    window.torneoActualId = idTorneo;
     const overlay = document.getElementById('submodalFixtureOverlay');
     const body = document.getElementById('submodalFixtureBody');
     
@@ -2162,6 +2162,7 @@ async function verFixturePorSets(idTorneo) {
         if (!res.ok) throw new Error(`Error ${res.status}`);
         
         const partidos = await res.json();
+        console.log('[Fixture] Datos recibidos:', partidos); // Debug
         
         if (!Array.isArray(partidos) || partidos.length === 0) {
             body.innerHTML = `
@@ -2173,18 +2174,17 @@ async function verFixturePorSets(idTorneo) {
             return;
         }
         
-        // Agrupar partidos por fecha_hora_programada (cada hora distinta es un "Set" o Ronda)
+        // Agrupar por fecha_hora_programada (cada hora distinta es un SET)
         const sets = {};
         partidos.forEach(p => {
-            const key = p.fecha_hora_programada; // Ej: "2026-03-13 19:00:00"
+            // Normalizar hora para agrupar (ej: 19:00:00 y 19:00:05 mismo set)
+            const key = p.fecha_hora_programada.substring(0, 16); // YYYY-MM-DD HH:MM
             if (!sets[key]) sets[key] = [];
             sets[key].push(p);
         });
         
         let html = '';
         let setCounter = 1;
-        
-        // Ordenar las llaves (horas) cronológicamente
         const sortedKeys = Object.keys(sets).sort();
         
         sortedKeys.forEach(key => {
@@ -2202,25 +2202,22 @@ async function verFixturePorSets(idTorneo) {
                 const j1 = tieneResultado ? p.juegos_pareja_1 : '-';
                 const j2 = tieneResultado ? p.juegos_pareja_2 : '-';
                 
-                // Determinar ganador para estilo visual
                 const g1 = (tieneResultado && j1 > j2) ? 'ganador-highlight' : '';
                 const g2 = (tieneResultado && j2 > j1) ? 'ganador-highlight' : '';
                 
-                // Sanitizar nombres para el onclick
-                const safeP1 = (p.nombre_pareja_1 || 'TBD').replace(/'/g, "\\'");
-                const safeP2 = (p.nombre_pareja_2 || 'TBD').replace(/'/g, "\\'");
+                // Sanitización EXTREMA para evitar errores en onclick
+                const safeP1 = (p.nombre_pareja_1 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const safeP2 = (p.nombre_pareja_2 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
                 html += `<div class="partido-row">
-                    <!-- Pareja 1 -->
                     <div class="pareja-nombre ${g1}" style="text-align:right; padding-right:1rem;">
                         ${p.nombre_pareja_1 || 'TBD'}
                     </div>
                     
-                    <!-- VS / Resultado Central -->
                     <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; min-width:120px;">
                         ${tieneResultado 
                             ? `<div class="marcador-final" 
-                                   style="cursor:pointer; padding:0.2rem 0.6rem; border-radius:12px; background:#e8f5e9; border:1px solid #c8e6c9;"
+                                   style="cursor:pointer; padding:0.3rem 0.8rem; border-radius:12px; background:#e8f5e9; border:1px solid #c8e6c9; font-weight:bold;"
                                    onclick="abrirModalEditarResultado(${p.id_partido}, '${safeP1}', '${safeP2}', ${j1}, ${j2})">
                                    ${j1} - ${j2}
                                </div>`
@@ -2231,7 +2228,6 @@ async function verFixturePorSets(idTorneo) {
                         }
                     </div>
                     
-                    <!-- Pareja 2 -->
                     <div class="pareja-nombre ${g2}" style="text-align:left; padding-left:1rem;">
                         ${p.nombre_pareja_2 || 'TBD'}
                     </div>
@@ -2256,6 +2252,111 @@ async function verFixturePorSets(idTorneo) {
                 ⚠️ Error: ${error.message}<br>
                 <button class="action-btn" style="margin-top:0.5rem;" onclick="verFixturePorSets(${idTorneo})">Reintentar</button>
             </div>`;
+    }
+}
+
+// === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
+function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
+    const submodal = document.getElementById('submodalGenerico');
+    const contenido = document.getElementById('submodalContenido');
+    
+    if (!submodal || !contenido) {
+        console.error('Submodal elements not found');
+        return;
+    }
+    
+    submodal.style.display = 'flex';
+    void submodal.offsetWidth;
+    submodal.classList.add('active');
+    
+    // Decodificar entidades HTML si vienen así
+    const cleanP1 = pareja1.replace(/&quot;/g, '"').replace(/\\'/g, "'");
+    const cleanP2 = pareja2.replace(/&quot;/g, '"').replace(/\\'/g, "'");
+    
+    contenido.innerHTML = `
+        <div style="text-align:center; max-width:400px; margin:0 auto;">
+            <h3 style="color:#071289; margin-bottom:1rem;">📊 Registrar Resultado</h3>
+            <p style="margin-bottom:1.5rem; font-weight:600; font-size:0.9rem;">${cleanP1} <span style="color:#999;">vs</span> ${cleanP2}</p>
+            
+            <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                <div style="text-align:center;">
+                    <label style="display:block; font-size:0.75rem; color:#666; margin-bottom:0.3rem;">Sets P1</label>
+                    <input type="number" id="edit_j1" value="${val1}" min="0" max="7" 
+                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="font-size:1.5rem; font-weight:bold; color:#ccc;">-</div>
+                <div style="text-align:center;">
+                    <label style="display:block; font-size:0.75rem; color:#666; margin-bottom:0.3rem;">Sets P2</label>
+                    <input type="number" id="edit_j2" value="${val2}" min="0" max="7" 
+                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                </div>
+            </div>
+            
+            <div id="preview_ganador" style="margin-bottom:1rem; font-weight:bold; color:#071289; height:24px;"></div>
+            
+            <div style="display:flex; gap:0.5rem; justify-content:center;">
+                <button class="action-btn" style="background:#4CAF50;" onclick="guardarResultadoEditado(${idPartido})">💾 Guardar</button>
+                <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cancelar</button>
+            </div>
+        </div>
+    `;
+    
+    const input1 = document.getElementById('edit_j1');
+    const input2 = document.getElementById('edit_j2');
+    const preview = document.getElementById('preview_ganador');
+    
+    const updatePreview = () => {
+        const v1 = parseInt(input1.value) || 0;
+        const v2 = parseInt(input2.value) || 0;
+        if (v1 > v2) preview.textContent = `Ganador: ${cleanP1}`;
+        else if (v2 > v1) preview.textContent = `Ganador: ${cleanP2}`;
+        else preview.textContent = 'Empate';
+    };
+    
+    input1.addEventListener('input', updatePreview);
+    input2.addEventListener('input', updatePreview);
+    updatePreview();
+}
+
+// === 💾 GUARDAR RESULTADO EDITADO ===
+async function guardarResultadoEditado(idPartido) {
+    const j1 = document.getElementById('edit_j1').value;
+    const j2 = document.getElementById('edit_j2').value;
+    
+    if (j1 === '' || j2 === '') {
+        alert('Ingresa ambos marcadores');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('id_partido', idPartido);
+        formData.append('juegos1', j1);
+        formData.append('juegos2', j2);
+        
+        const res = await fetch('../api/guardar_resultado_torneo.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.success) {
+            cerrarSubmodal();
+            if (window.torneoActualId) {
+                verFixturePorSets(window.torneoActualId);
+            }
+        } else {
+            alert('❌ Error: ' + data.message);
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    } catch (e) {
+        console.error(e);
+        alert('❌ Error de conexión');
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
@@ -2442,107 +2543,6 @@ function cerrarSubmodalFixture() {
     if(overlay) {
         overlay.classList.remove('active');
         setTimeout(() => overlay.style.display = 'none', 300);
-    }
-}
-// === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
-function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
-    const submodal = document.getElementById('submodalGenerico');
-    const contenido = document.getElementById('submodalContenido');
-    
-    if (!submodal || !contenido) return;
-    
-    // Mostrar submodal
-    submodal.style.display = 'flex';
-    void submodal.offsetWidth;
-    submodal.classList.add('active');
-    
-    // HTML del formulario
-    contenido.innerHTML = `
-        <div style="text-align:center; max-width:400px; margin:0 auto;">
-            <h3 style="color:#071289; margin-bottom:1rem;">📊 Registrar Resultado</h3>
-            <p style="margin-bottom:1.5rem; font-weight:600;">${pareja1} <span style="color:#999;">vs</span> ${pareja2}</p>
-            
-            <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:1.5rem;">
-                <div style="text-align:center;">
-                    <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja1.split(' & ')[0]}...</label>
-                    <input type="number" id="edit_j1" value="${val1}" min="0" max="7" 
-                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
-                </div>
-                <div style="font-size:1.5rem; font-weight:bold; color:#ccc;">-</div>
-                <div style="text-align:center;">
-                    <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja2.split(' & ')[0]}...</label>
-                    <input type="number" id="edit_j2" value="${val2}" min="0" max="7" 
-                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
-                </div>
-            </div>
-            
-            <div id="preview_ganador" style="margin-bottom:1rem; font-weight:bold; color:#071289; height:24px;"></div>
-            
-            <div style="display:flex; gap:0.5rem; justify-content:center;">
-                <button class="action-btn" style="background:#4CAF50;" onclick="guardarResultadoEditado(${idPartido})">💾 Guardar</button>
-                <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cancelar</button>
-            </div>
-        </div>
-    `;
-    
-    // Listeners para previsualizar ganador
-    const input1 = document.getElementById('edit_j1');
-    const input2 = document.getElementById('edit_j2');
-    const preview = document.getElementById('preview_ganador');
-    
-    const updatePreview = () => {
-        const v1 = parseInt(input1.value) || 0;
-        const v2 = parseInt(input2.value) || 0;
-        if (v1 > v2) preview.textContent = `Ganador: ${pareja1}`;
-        else if (v2 > v1) preview.textContent = `Ganador: ${pareja2}`;
-        else preview.textContent = 'Empate (revisar reglas)';
-    };
-    
-    input1.addEventListener('input', updatePreview);
-    input2.addEventListener('input', updatePreview);
-    updatePreview(); // Ejecutar al inicio
-}
-
-// === 💾 GUARDAR RESULTADO EDITADO ===
-async function guardarResultadoEditado(idPartido) {
-    const j1 = document.getElementById('edit_j1').value;
-    const j2 = document.getElementById('edit_j2').value;
-    
-    if (j1 === '' || j2 === '') {
-        alert('Ingresa ambos marcadores');
-        return;
-    }
-    
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
-    
-    try {
-        const formData = new FormData();
-        formData.append('id_partido', idPartido);
-        formData.append('juegos1', j1);
-        formData.append('juegos2', j2);
-        
-        const res = await fetch('../api/guardar_resultado_torneo.php', { method: 'POST', body: formData });
-        const data = await res.json();
-        
-        if (data.success) {
-            cerrarSubmodal();
-            // Recargar el fixture para ver el cambio reflejado
-            if (window.torneoActualId) {
-                verFixturePorSets(window.torneoActualId);
-            }
-        } else {
-            alert('❌ Error: ' + data.message);
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
-    } catch (e) {
-        console.error(e);
-        alert('❌ Error de conexión');
-        btn.disabled = false;
-        btn.textContent = originalText;
     }
 }
 </script>

@@ -17,7 +17,6 @@ if (!$id_torneo) {
 }
 
 try {
-    // Obtenemos partidos con nombres completos de las parejas
     $stmt = $pdo->prepare("
         SELECT 
             p.id_partido, 
@@ -25,17 +24,17 @@ try {
             p.estado,
             p.juegos_pareja_1,
             p.juegos_pareja_2,
-            -- Nombre Pareja 1
+            -- Pareja 1: Construcción segura de nombre
             CONCAT(
-                COALESCE(s1.alias, jt1.nombre, 'J1'), 
+                COALESCE(s1.alias, jt1.nombre, CONCAT('Socio ', p.id_pareja_1)), 
                 ' & ', 
-                COALESCE(s1b.alias, jt1b.nombre, 'J2')
+                COALESCE(s1b.alias, jt1b.nombre, 'Pareja')
             ) AS nombre_pareja_1,
-            -- Nombre Pareja 2
+            -- Pareja 2: Construcción segura de nombre
             CONCAT(
-                COALESCE(s2.alias, jt2.nombre, 'J3'), 
+                COALESCE(s2.alias, jt2.nombre, CONCAT('Socio ', p.id_pareja_2)), 
                 ' & ', 
-                COALESCE(s2b.alias, jt2b.nombre, 'J4')
+                COALESCE(s2b.alias, jt2b.nombre, 'Pareja')
             ) AS nombre_pareja_2
         FROM partidos_torneo p
         LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
@@ -55,6 +54,11 @@ try {
     ");
     $stmt->execute([$id_torneo]);
     $fixture = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Debug: Verificar qué nombres llegan
+    if (!empty($fixture)) {
+        error_log("[Fixture Debug] Primer partido: " . json_encode($fixture[0]));
+    }
     
     echo json_encode($fixture);
     
