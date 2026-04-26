@@ -3,12 +3,19 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
 // Prevenir salida antes del JSON
-if (ob_get_level() === 0) {
-    ob_start();
-}
+if (ob_get_level() > 0) { ob_clean(); }
 
 try {
-    if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+    // ✅ CORRECCIÓN: Usar mismos roles que pages/gestion_canchas.php
+    $rol_actual = $_SESSION['recinto_rol'] ?? '';
+    $roles_permitidos = ['admin', 'asistente'];
+
+    if (!verificarRolRecinto(['admin', 'asistente'])) {
+    throw new Exception('Acceso no autorizado');
+}
+    
+    if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_permitidos)) {
+        error_log("[API GestionCanchas] ❌ Acceso denegado. Rol: '$rol_actual'");
         throw new Exception('Acceso no autorizado');
     }
     

@@ -107,4 +107,14 @@ if (!function_exists('estaAutenticado')) {
         return isset($_SESSION['id_recinto'], $_SESSION['recinto_rol']);
     }
 }
+
+if (!function_exists('verificarRolRecinto')) {
+    function verificarRolRecinto($roles_permitidos = ['admin']) {
+        if (!isset($_SESSION['id_recinto'])) {
+            return false;
+        }
+        $rol_actual = $_SESSION['recinto_rol'] ?? '';
+        return in_array($rol_actual, $roles_permitidos);
+    }
+}
 ?>
