@@ -304,7 +304,7 @@ td.cell-reserva[rowspan] > div:last-child {
 
 /* 5. Esquina Superior Izquierda (Hora + Header Cancha) */
 .planilla-table thead th {
-        background: rgba(255,255,255,0.9) !important; color: #333; position: sticky; top: 0; z-index: 5;
+        background: rgba(255,255,255,0.9) !important; color: #4A4A4A; position: sticky; top: 0; z-index: 5;
         border: none; border-radius: 12px; padding: 10px; font-size: 0.85rem; font-weight: bold;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
@@ -606,13 +606,13 @@ function renderizarPlanilla(data, filtroEstado) {
 
     // === HEADER ===
     let html = `<thead><tr>`;
-    html += `<th style="background:#AB47BC; color:white; position:sticky; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
+    html += `<th style="background:#AB47BC; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
     window.currentCanchasData = data.canchas;
     
     data.canchas.forEach((c, index) => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        html += `<th style="background:#AB47BC; color:white; width:110px; font-size:0.75rem;" 
+        html += `<th style="background:#AB47BC; width:110px; font-size:0.75rem;" 
                 data-cancha-id="${c.id_cancha}">
                     <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
                 </th>`;
