@@ -544,6 +544,89 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     transition: transform 0.2s, box-shadow 0.2s;
 }
 #listaTorneos > div:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+/* === SUBMODAL MODERNO (Animación + Blur) === */
+.submodal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 4000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.submodal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.submodal-card {
+    background: white;
+    border-radius: 16px;
+    width: 95%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    transform: scale(0.95) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.submodal-overlay.active .submodal-card {
+    transform: scale(1) translateY(0);
+}
+.submodal-close {
+    position: absolute;
+    top: 12px; right: 16px;
+    background: #f0f0f0;
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: #666;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.2s;
+    z-index: 10;
+}
+.submodal-close:hover { background: #e0e0e0; color: #c62828; }
+
+/* Tabla de fixture */
+.fixture-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+.fixture-table th {
+    background: #071289;
+    color: white;
+    padding: 0.8rem;
+    text-align: left;
+    font-weight: 600;
+}
+.fixture-table td {
+    padding: 0.8rem;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+.fixture-table tr:hover { background: #f9f9f9; }
+.btn-resultado {
+    background: #071289;
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+.btn-resultado:hover { background: #050d66; transform: translateY(-2px); }
 </style>
 </head>
 <body>
@@ -1362,13 +1445,18 @@ async function cargarTorneos() {
             
             // === LÓGICA DE BOTONES POR ESTADO ===
             let botones = `<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:auto; padding-top:0.8rem; border-top:1px solid #eee;">`;
+
+            // Botón Invitar (siempre visible)
+            botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
+
             if (estado === 'abierto') {
-                botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
-                botones += `<a href="crear_fixture.php?id=${t.id_torneo}" class="btn-torneo btn-fixture">Crear Fixture</a>`;
-            } else { // EN CURSO, CERRADO
-                botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
-                botones += `<a href="ver_fixture.php?id=${t.id_torneo}" class="btn-torneo btn-ver-fixture">Ver Fixture</a>`;
-                botones += `<a href="panel_torneo.php?id=${t.id_torneo}" class="btn-torneo btn-resultados">Resultados</a>`;
+                // ABIERTO: Crear Fixture + Finalizar
+                botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-fixture">Crear Fixture</button>`;
+                botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Finalizar + Upgrade</button>`;
+            } else {
+                // EN CURSO / CERRADO: Ver Fixture + Resultados
+                botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-ver-fixture">Ver Fixture</button>`;
+                botones += `<button onclick="verResultados(${t.id_torneo})" class="btn-torneo btn-resultados">Resultados</button>`;
             }
             botones += `</div>`;
             
@@ -1655,6 +1743,105 @@ document.querySelector('.planilla-table-container')?.addEventListener('scroll', 
     if (e.target.scrollTop > 10) header.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
     else header.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
 });
+// === 🏆 ABRIR SUBMODAL DE FIXTURE ===
+async function abrirFixtureModal(idTorneo) {
+    window.torneoActualId = idTorneo; // Guardar para navegación interna
+    
+    const submodal = document.getElementById('submodalGenerico');
+    const contenido = document.getElementById('submodalContenido');
+    
+    if (!submodal || !contenido) return;
+    
+    // Mostrar submodal con animación
+    submodal.style.display = 'flex';
+    void submodal.offsetWidth; // Forzar reflow
+    submodal.classList.add('active');
+    
+    contenido.innerHTML = `<div style="text-align:center; padding:2rem; color:#666;">🔄 Cargando fixture...</div>`;
+    
+    try {
+        const res = await fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`, { credentials: 'include' });
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        
+        const fixture = await res.json();
+        
+        if (!Array.isArray(fixture) || fixture.length === 0) {
+            contenido.innerHTML = `
+                <div style="text-align:center; padding:3rem; color:#888;">
+                    <div style="font-size:3rem; margin-bottom:0.5rem;">📋</div>
+                    <p>No hay partidos programados aún</p>
+                    <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
+                </div>`;
+            return;
+        }
+        
+        // Renderizar tabla de fixture
+        let html = `<h3 style="margin:0 0 1rem 0; color:#071289;">🎾 Fixture del Torneo</h3>`;
+        html += `<table class="fixture-table"><thead><tr>
+            <th>Ronda</th><th>Pareja 1</th><th>vs</th><th>Pareja 2</th><th>Fecha</th><th>Acción</th>
+        </tr></thead><tbody>`;
+        
+        fixture.forEach(partido => {
+            const fecha = partido.fecha_hora ? new Date(partido.fecha_hora).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '-';
+            const tieneResultado = partido.juegos1 !== null && partido.juegos2 !== null;
+            
+            html += `<tr>
+                <td>${partido.ronda || '-'}</td>
+                <td><strong>${partido.pareja1 || 'TBD'}</strong></td>
+                <td>vs</td>
+                <td><strong>${partido.pareja2 || 'TBD'}</strong></td>
+                <td style="font-size:0.85rem; color:#666;">${fecha}</td>
+                <td>
+                    ${tieneResultado 
+                        ? `<span style="color:#4CAF50; font-weight:600;">${partido.juegos1}-${partido.juegos2}</span>` 
+                        : `<button class="btn-resultado" onclick="abrirResultado(${partido.id_partido}, '${partido.pareja1?.replace(/'/g, "\\'")}', '${partido.pareja2?.replace(/'/g, "\\'")}')">Resultados</button>`
+                    }
+                </td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        html += `<div style="display:flex; gap:0.5rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid #eee;">
+            <button class="action-btn" style="background:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Ver Posiciones</button>
+            <button class="action-btn" style="background:#6c757d;" onclick="volverATorneosActivos()">← Volver a Torneos</button>
+        </div>`;
+        
+        contenido.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error cargando fixture:', error);
+        contenido.innerHTML = `
+            <div style="text-align:center; color:#c62828; padding:2rem;">
+                ⚠️ Error: ${error.message}<br>
+                <button class="action-btn" style="margin-top:0.5rem;" onclick="abrirFixtureModal(${idTorneo})">Reintentar</button>
+                <button class="action-btn" style="margin-top:0.5rem; background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button>
+            </div>`;
+    }
+}
+function volverATorneosActivos() {
+    cerrarSubmodal();
+    // Asegurar que el panel de torneos esté visible
+    const panel = document.getElementById('panelTorneos');
+    if (panel) {
+        panel.style.display = 'flex';
+        void panel.offsetWidth;
+        panel.classList.add('active');
+    }
+}
+// Cerrar submodal al hacer click fuera de la tarjeta
+document.getElementById('submodalGenerico')?.addEventListener('click', (e) => {
+    if (e.target.id === 'submodalGenerico') cerrarSubmodal();
+});
+
+// Cerrar con tecla Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const submodal = document.getElementById('submodalGenerico');
+        if (submodal && submodal.style.display !== 'none') {
+            cerrarSubmodal();
+        }
+    }
+});
 </script>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
         <div style="background:white; padding:2rem; border-radius:16px; max-width:480px; width:90%; position:relative; color:#333; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
@@ -1738,5 +1925,15 @@ document.querySelector('.planilla-table-container')?.addEventListener('scroll', 
 
     <!-- === SISTEMA DE TOAST NOTIFICATIONS === -->
     <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
+
+    <!-- === SUBMODAL GENÉRICO (Fixture, Resultados, Ranking) === -->
+    <div id="submodalGenerico" class="submodal-overlay" style="display:none;">
+        <div class="submodal-card">
+            <button class="submodal-close" onclick="cerrarSubmodal()">&times;</button>
+            <div id="submodalContenido" style="max-height:70vh; overflow-y:auto; padding:0.5rem;">
+                <!-- Contenido inyectado por JS -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
