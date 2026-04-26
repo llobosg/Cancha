@@ -95,10 +95,10 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-card-mini:hover { transform: translateX(-3px); }
     .kpi-card-mini div:nth-child(2) { font-size: 1.4rem; font-weight: 900; line-height: 1.2; margin: 0.3rem 0; }
     .kpi-card-mini div:last-child { font-size: 0.7rem; opacity: 0.7; }
-    .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; } .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; }
-    .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; } .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; }
-    .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; }
-    .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; }
+    .kpi-ingresos { border-left-color: #4CAF50; background: #E8F5E9; } .kpi-ingresos div:nth-child(2) { color: #1B5E20 !important; font-weight:bold; }
+    .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; } .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; font-weight:bold; }
+    .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; font-weight:bold; }
+    .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; font-weight:bold; }
     .torneos-panel-container { grid-column: 1 / -1; margin-top: 1rem; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 1.5rem; color: #333; display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); }
 
     /* TABLA */
@@ -134,25 +134,25 @@ $monto_deuda = $s_deuda->fetchColumn();
         background-clip: padding-box !important; /* Evita que el background cubra el border */
     }
 
-    /* === 2. CABECERA DE CANCHAS (Sticky y visible) === */
+    /* === 2. CABECERA DE CANCHAS (Sticky corregido) === */
     .planilla-table thead th {
         position: sticky !important;
-        top: 105px !important; /* 50px(topbar) + 55px(filtros) ≈ 105px */
+        top: 0 !important; /* ✅ CLAVE: 0 relativo al contenedor scroll, no viewport */
         z-index: 100 !important;
         background: rgba(255,255,255,0.95) !important;
-        color: #4A4A4A !important; /* ✅ Grafito */
+        color: #4A4A4A !important; /* Grafito */
         border: none;
         border-radius: 10px;
         padding: 10px 6px;
         font-weight: 700;
         box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        transform: translateZ(0); /* Fix sticky bugs */
     }
 
-    /* Esquina superior izquierda (Hora + Header Canchas) */
+    /* Esquina superior izquierda (Hora) */
     .planilla-table thead th:first-child {
         z-index: 110 !important;
         background: rgba(245, 248, 255, 0.98) !important;
+        top: 0 !important;
     }
 
     /* Columna Hora (Sticky izquierda, independiente del scroll vertical) */
