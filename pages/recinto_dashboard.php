@@ -72,10 +72,23 @@ $monto_deuda = $s_deuda->fetchColumn();
     .dropdown-menu a { display: block; padding: 0.6rem 0.8rem; text-decoration: none; color: #333; font-size: 0.9rem; }
     .btn-logout { text-decoration: none; padding: 0.4rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
 
-    /* LAYOUT */
-    .main-layout { display: grid; grid-template-columns: 200px 1fr 220px; gap: 1.5rem; width: 98%; margin: 0 auto; padding: 0.5rem; height: calc(100vh - 60px); align-items: start; }
-    .actions-column { display: flex; flex-direction: column; gap: 1rem; padding-left: 1rem; margin-top: 60px; }
-    .action-btn-sidebar { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); color: #071289; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 0.8rem; }
+    /* === 3. GRID PRINCIPAL (Ajustar gaps para mejor distribución) === */
+    .main-layout {
+        display: grid; 
+        grid-template-columns: 320px 1fr 220px !important; /* ✅ Columna acciones más ancha */
+        gap: 1rem !important; /* ✅ Reducir gap para aprovechar espacio */
+        width: 98%; 
+        margin: 0 auto; 
+        padding: 0.5rem; 
+        height: calc(100vh - 60px); 
+        align-items: start;
+    }
+    
+
+
+
+
+    
     .action-btn-sidebar:hover { transform: translateY(-2px); }
     .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }    
     .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
@@ -99,32 +112,55 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; font-weight:bold; }
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; font-weight:bold; }
     
-    /* === PANEL TORNEOS - VISIBILIDAD FORZADA === */
-    #panelTorneos.torneos-panel-container {
-        display: block !important; /* Override cualquier display: none */
-        opacity: 1 !important;
-        visibility: visible !important;
-        background: rgba(255,255,255,0.98) !important; /* Fondo blanco sólido */
+    /* === 2. PANEL TORNEOS (Ancho completo + Posición corregida) === */
+    .torneos-panel-container {
+        /* Posicionamiento */
+        grid-column: 2 / -1 !important; /* ✅ Ocupa desde columna central hasta el final */
+        margin-top: -1.5rem !important; /* ✅ Sube el panel para eliminar espacio vacío */
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        
+        /* Dimensiones */
+        width: calc(100% - 2rem) !important; /* Ancho completo con márgenes laterales */
+        max-width: 1380px !important;
+        
+        /* Visibilidad y estilo */
+        background: rgba(255,255,255,0.98) !important;
+        border-radius: 12px !important;
+        padding: 1.5rem !important;
         color: #333 !important;
-        z-index: 100 !important;
-        position: relative !important;
         box-shadow: 0 -5px 20px rgba(0,0,0,0.2) !important;
+        z-index: 50 !important;
+        position: relative !important;
+        
+        /* Animación */
+        display: none; /* Oculto por defecto, JS lo muestra */
         animation: slideUpPanel 0.3s ease-out !important;
+        transform-origin: top center;
     }
 
+    /* Animación de entrada */
     @keyframes slideUpPanel {
         from { 
             opacity: 0; 
-            transform: translateY(30px); 
+            transform: translateY(20px) scaleY(0.95);
             max-height: 0;
             padding: 0 1.5rem;
         }
         to { 
             opacity: 1; 
-            transform: translateY(0); 
+            transform: translateY(0) scaleY(1);
             max-height: 80vh;
             padding: 1.5rem;
         }
+    }
+    /* === 4. CONTENIDO DEL PANEL (Grid de tarjetas responsive) === */
+    #listaTorneos {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; /* ✅ Tarjetas más anchas */
+        gap: 1rem !important;
+        width: 100% !important;
+        margin-top: 0.5rem;
     }
 
     /* === TARJETAS CON ANIMACIÓN DE ENTRADA === */
@@ -132,13 +168,22 @@ $monto_deuda = $s_deuda->fetchColumn();
         to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Tarjetas individuales */
     #listaTorneos > div {
+        background: white; 
+        border-radius: 12px; 
+        padding: 1.2rem; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        display: flex; 
+        flex-direction: column; 
+        gap: 0.8rem; 
+        border-left: 4px solid #4CAF50;
         opacity: 0;
         transform: translateY(10px);
         animation: fadeInCard 0.3s ease-out forwards;
     }
 
-    /* Staggered delay para efecto cascada */
+   /* Staggered animation para efecto cascada */
     #listaTorneos > div:nth-child(1) { animation-delay: 0.1s; }
     #listaTorneos > div:nth-child(2) { animation-delay: 0.15s; }
     #listaTorneos > div:nth-child(3) { animation-delay: 0.2s; }
@@ -157,6 +202,46 @@ $monto_deuda = $s_deuda->fetchColumn();
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
         gap: 1rem !important;
         width: 100% !important;
+    }
+    /* === 5. RESPONSIVE (Ajustes para pantallas pequeñas) === */
+    @media (max-width: 1200px) {
+        .main-layout {
+            grid-template-columns: 280px 1fr 200px !important; /* Reducir en tablets */
+        }
+        .actions-column {
+            width: 280px !important;
+            min-width: 280px !important;
+            max-width: 280px !important;
+        }
+        .torneos-panel-container {
+            grid-column: 1 / -1 !important; /* Ocupar todo el ancho en móvil */
+            margin-top: 1rem !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-layout {
+            grid-template-columns: 1fr !important; /* Una sola columna en móvil */
+            height: auto !important;
+            display: block !important;
+        }
+        .actions-column {
+            width: 100% !important;
+            min-width: auto !important;
+            max-width: none !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            padding: 0.5rem 0 !important;
+            margin-top: 1rem !important;
+        }
+        .action-btn-sidebar {
+            min-width: 180px !important;
+            width: auto !important;
+        }
+        .torneos-panel-container {
+            width: 100% !important;
+            margin: 1rem 0 !important;
+        }
     }
 
     /* === CELDAS CON ROWSPAN === */
@@ -220,6 +305,29 @@ $monto_deuda = $s_deuda->fetchColumn();
         .kpi-column { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; padding-right: 0; }
         .actions-column { margin-top: 1rem; flex-direction: row; overflow-x: auto; padding-left: 0; }
         .torneos-panel-container { grid-column: auto; }
+    }
+
+    /* === 1. COLUMNA DE ACCIONES (Más ancha para mejor UX) === */
+    .actions-column { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 1rem; 
+        padding-left: 1rem; 
+        margin-top: 60px;
+        width: 320px !important; /* ✅ +15 caracteres aprox (antes ~200px) */
+        min-width: 320px !important;
+        max-width: 320px !important;
+        flex-shrink: 0; /* Evita que se encoja en pantallas pequeñas */
+    }
+    /* Botones de acciones con ancho completo */
+    .action-btn-sidebar {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        padding: 0.8rem 1rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 
 /* === DEBUG VISUAL: Outline para ver rowspan === */
@@ -428,7 +536,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
             </button>
             
             <button class="action-btn-sidebar" id="btnTorneosActivos">
-                <span>🏆</span> Ver Torneos
+                <span>🏆</span> Ver Torneos Pádel
             </button>
 
             <button class="action-btn-sidebar" onclick="window.location.href='crear_torneo.php'">
@@ -499,14 +607,14 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         </div>
     </div>
 
-    <!-- PANEL TORNEOS (Debajo de todo, ancho completo) -->
-    <div id="panelTorneos" class="torneos-panel-container" style="display: none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3 style="margin:0; color:#071289;">🏆 Torneos Activos</h3>
+    <!-- PANEL TORNEOS (Debajo de la planilla, ancho completo) -->
+    <div id="panelTorneos" class="torneos-panel-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #eee;">
+            <h3 style="margin:0; color:#071289; font-size:1.3rem;">🏆 Torneos Activos</h3>
             <button onclick="document.getElementById('panelTorneos').style.display='none'" 
-                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666;">&times;</button>
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; padding:0 0.5rem;">&times;</button>
         </div>
-        <div id="listaTorneos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:1rem;">
+        <div id="listaTorneos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
             <!-- Contenido inyectado por JS -->
         </div>
     </div>
