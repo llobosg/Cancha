@@ -98,7 +98,40 @@ $monto_deuda = $s_deuda->fetchColumn();
     .kpi-parcial { border-left-color: #FBC02D; background: #FFFDE7; cursor: pointer; } .kpi-parcial div:nth-child(2) { color: #EF6C00 !important; font-weight:bold; }
     .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; font-weight:bold; }
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; font-weight:bold; }
-    .torneos-panel-container { grid-column: 1 / -1; margin-top: 1rem; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 1.5rem; color: #333; display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); }
+    
+    /* === PANEL TORNEOS === */
+    .torneos-panel-container {
+        grid-column: 1 / -1;
+        margin-top: 1rem;
+        background: rgba(255,255,255,0.95);
+        border-radius: 12px;
+        padding: 1.5rem;
+        color: #333;
+        display: none; /* Oculto por defecto */
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Grid responsive para tarjetas */
+    #listaTorneos {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+
+    /* Hover effect en tarjetas */
+    #listaTorneos > div {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #listaTorneos > div:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
 
     /* === CELDAS CON ROWSPAN === */
     td.cell-reserva[rowspan] {
@@ -1120,10 +1153,110 @@ function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu
 function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
 document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
 
-// Torneos (Stub)
+// === 🏆 CARGAR TORNEOS ACTIVOS (API Real) ===
 async function cargarTorneos() {
-    const c = document.getElementById('listaTorneos');
-    if(c) c.innerHTML = '<p style="color:#666;">No hay torneos activos.</p>';
+    const container = document.getElementById('listaTorneos');
+    if (!container) return;
+    
+    // Estado de carga inicial
+    container.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #666;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
+            Cargando torneos...
+        </div>`;
+    
+    try {
+        // Fetch a API de torneos (ajusta el endpoint según tu backend)
+        const res = await fetch(`../api/torneos.php?action=get_activos&id_recinto=${encodeURIComponent('<?php echo $id_recinto; ?>')}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (!res.ok) {
+            if (res.status === 401) {
+                throw new Error('Sesión expirada');
+            }
+            throw new Error(`Error ${res.status}: ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        
+        // Manejar respuesta vacía
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #999;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No hay torneos activos</p>
+                    <p style="font-size: 0.9rem;">Crea uno nuevo para comenzar</p>
+                </div>`;
+            return;
+        }
+        
+        // Renderizar tarjetas de torneos
+        let html = '';
+        data.forEach(torneo => {
+            const fechaInicio = new Date(torneo.fecha_inicio).toLocaleDateString('es-CL', { 
+                day: '2-digit', month: 'short', year: 'numeric' 
+            });
+            const inscritos = torneo.inscritos || 0;
+            const maxInscritos = torneo.max_inscritos || '∞';
+            const progreso = maxInscritos === '∞' ? 100 : Math.min(100, (inscritos / maxInscritos) * 100);
+            
+            // Color según estado
+            const estadoColor = torneo.estado === 'abierto' ? '#4CAF50' : 
+                               torneo.estado === 'llenando' ? '#FF9800' : '#9E9E9E';
+            
+            html += `
+            <div style="background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid ${estadoColor};">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <h4 style="margin: 0; color: #071289; font-size: 1.1rem; font-weight: 700;">${torneo.nombre || 'Sin nombre'}</h4>
+                    <span style="background: ${estadoColor}; color: white; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">
+                        ${torneo.estado?.toUpperCase() || 'DESCONOCIDO'}
+                    </span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem; color: #555;">
+                    <div>📅 Inicio: ${fechaInicio}</div>
+                    <div>🎾 Deporte: ${torneo.deporte || '-'}</div>
+                    <div>👥 Inscritos: ${inscritos}/${maxInscritos}</div>
+                    <div>📍 Canchas: ${torneo.num_canchas || '-'}</div>
+                </div>
+                
+                <!-- Barra de progreso de inscritos -->
+                ${maxInscritos !== '∞' ? `
+                <div style="background: #f0f0f0; border-radius: 10px; height: 6px; overflow: hidden;">
+                    <div style="background: ${estadoColor}; height: 100%; width: ${progreso}%; border-radius: 10px; transition: width 0.3s;"></div>
+                </div>` : ''}
+                
+                <div style="display: flex; gap: 0.5rem; margin-top: auto;">
+                    <a href="panel_torneo.php?id=${torneo.id_torneo}" 
+                       style="flex: 1; text-align: center; background: #071289; color: white; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.2s;">
+                        Ver Detalle
+                    </a>
+                    ${torneo.estado === 'abierto' ? `
+                    <a href="torneo_invite.php?id=${torneo.id_torneo}" 
+                       style="flex: 1; text-align: center; background: #4ECDC4; color: #071289; padding: 0.6rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.2s;">
+                        Invitar
+                    </a>` : ''}
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error cargando torneos:', error);
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #c62828;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+                <p style="font-weight: 600;">Error al cargar torneos</p>
+                <p style="font-size: 0.9rem; color: #666;">${error.message}</p>
+                <button onclick="cargarTorneos()" 
+                        style="margin-top: 1rem; padding: 0.5rem 1.5rem; background: #071289; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Reintentar
+                </button>
+            </div>`;
+    }
 }
 
 function buscarSocioAdmin(query) {
