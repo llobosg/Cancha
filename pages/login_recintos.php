@@ -7,7 +7,6 @@ require_once __DIR__ . '/../includes/config.php';
 
 // 2. Iniciar sesión (Ahora es seguro porque config.php ya configuró las cookies)
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
 }
 
 // Ahora sí puedes usar $_SESSION sin warnings

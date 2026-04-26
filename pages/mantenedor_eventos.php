@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
 
 // Verificar autenticación CEO
 if (!isset($_SESSION['ceo_id']) || $_SESSION['ceo_rol'] !== 'ceo_cancha') {

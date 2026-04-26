@@ -18,7 +18,6 @@
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
-        session_start();
     }
 
     error_log("SESSION después de start: " . print_r($_SESSION, true));

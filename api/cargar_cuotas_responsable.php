@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 try {
     // Verificar que sea responsable de club

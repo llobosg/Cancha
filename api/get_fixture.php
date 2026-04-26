@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 // Validar que el usuario esté autenticado (socio o recinto)
 if (!isset($_SESSION['id_socio']) && !isset($_SESSION['id_recinto'])) {

@@ -4,7 +4,6 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
 try {
-    session_start();
     
     // 1. Verificar autenticación básica
     if (!isset($_SESSION['id_recinto'])) {

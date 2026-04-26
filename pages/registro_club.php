@@ -148,7 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         // Después de insertar el club y antes de mostrar éxito:
-        if (session_status() === PHP_SESSION_NONE) session_start();
 
         $_SESSION['temp_club_data'] = [
             'email' => $club_data['email_responsable'],

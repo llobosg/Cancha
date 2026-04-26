@@ -5,7 +5,6 @@ if (ob_get_level() > 0) ob_clean(); // Limpiar buffer para evitar HTML mezclado
 
 require_once __DIR__ . '/../includes/config.php';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['id_recinto'])) {
     echo json_encode(['error' => 'No autorizado']);
     exit;

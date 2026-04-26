@@ -3,7 +3,6 @@ require_once __DIR__ . '/../includes/config.php';
 
 // Iniciar sesión si no está iniciada
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
 }
 
 // Verificar autenticación

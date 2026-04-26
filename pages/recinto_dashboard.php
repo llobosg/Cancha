@@ -1,7 +1,6 @@
 <?php
 // pages/recinto_dashboard.php
 require_once __DIR__ . '/../includes/config.php';
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $rol_actual = $_SESSION['recinto_rol'] ?? '';
 $roles_validos = ['admin', 'asistente'];
@@ -344,7 +343,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
                     <span onclick="closeMenu()" style="cursor: pointer;">&times;</span>
                 </div>
                 <?php if ($rol_actual === 'admin'): ?>
-                    <a href="gestion_asistentes.php" onclick="closeMenu()">👥 Gestionar Asistentes</a>
+                    <a href="gestion_asistentes.php">👥 Gestionar Asistentes</a>
                 <?php endif; ?>
                 <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenu()">⚙️ Mi Perfil</a>
             </div>

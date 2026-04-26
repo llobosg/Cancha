@@ -3,8 +3,6 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/brevo_mailer.php';
 
-session_start();
-
 error_log("🔍 [INSCRIBIR_TORNEO] Inicio del script");
 error_log("🔍 [INSCRIBIR_TORNEO] Sesión actual: " . print_r($_SESSION, true));
 error_log("🔍 [INSCRIBIR_TORNEO] POST recibido: " . print_r($_POST, true));

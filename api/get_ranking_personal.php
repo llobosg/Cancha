@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 $id_socio = $_GET['id_socio'] ?? $_SESSION['id_socio'];
 if (!$id_socio) exit;

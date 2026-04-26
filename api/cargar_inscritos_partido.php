@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 try {
     $id_reserva = $_GET['id_reserva'] ?? null;
@@ -26,7 +25,6 @@ try {
 ?><?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 try {
     if (!isset($_SESSION['club_id']) || empty($_POST['id_reserva'])) {

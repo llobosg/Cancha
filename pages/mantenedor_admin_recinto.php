@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 // Verificar que sea admin de recinto
 if (!isset($_SESSION['id_recinto'])) {

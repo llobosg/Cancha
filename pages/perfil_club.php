@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 // Verificar que sea responsable de club
 if (!isset($_SESSION['club_id']) || !isset($_SESSION['current_club'])) {

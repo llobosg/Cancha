@@ -2,9 +2,6 @@
     header('Content-Type: application/json; charset=utf-8');
     require_once __DIR__ . '/../includes/config.php';
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
 
     try {
         // 1. Verificar autenticación
@@ -34,7 +31,6 @@
 
             case 'get_detalle_reserva':
                 // Validar sesión y recinto
-                if (session_status() === PHP_SESSION_NONE) session_start();
                 if (!isset($_SESSION['id_recinto'])) {
                     http_response_code(401);
                     echo json_encode(['error' => 'Sesión no válida']);

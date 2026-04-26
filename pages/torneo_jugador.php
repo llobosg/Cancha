@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 // Obtener slug del torneo
 $slug = $_GET['slug'] ?? null;

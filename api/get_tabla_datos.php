@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 error_log("=== INICIO get_tabla_datos.php ===");
 error_log("GET recibido: " . print_r($_GET, true));

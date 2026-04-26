@@ -1,6 +1,5 @@
 <?php
 // pages/registro_socio_v2.php
-session_start();
 require_once __DIR__ . '/../includes/config.php';
 
 if (isset($_SESSION['id_socio'])) {

@@ -5,7 +5,6 @@ require_once __DIR__ . '/../includes/config.php';
 // Manejo rápido de guardado de favoritos vía AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_favorites') {
     header('Content-Type: application/json');
-    if (session_status() === PHP_SESSION_NONE) { session_start(); }
     if (isset($_SESSION['id_socio'])) {
         $stmt = $pdo->prepare("UPDATE socios SET club_favorito = ?, deporte_favorito = ? WHERE id_socio = ?");
         $stmt->execute([$_POST['club_favorito'], $_POST['deporte_favorito'], $_SESSION['id_socio']]);
@@ -18,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 if (session_status() === PHP_SESSION_NONE) {
     session_name('CANCHASPORT_SESSION');
-    session_start();
 }
 
 if (!isset($_SESSION['id_socio'])) { header('Location: ../index.php'); exit; }

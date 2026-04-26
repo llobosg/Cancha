@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/brevo_mailer.php';
-session_start();
+
 
 try {
     if (!isset($_SESSION['id_socio'])) {

@@ -6,10 +6,6 @@ if (ob_get_level() > 0) { ob_clean(); }
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← CLAVE: cargar la clase
 
-// Manejo seguro de sesión
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 if (!isset($_SESSION['id_socio'])) {
     throw new Exception('Acceso no autorizado', 401);

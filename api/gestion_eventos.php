@@ -10,7 +10,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Minishlink\WebPush\WebPush;
 
-session_start();
 
 try {
     // Validar sesión y parámetros

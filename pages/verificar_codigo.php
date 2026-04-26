@@ -81,7 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
               // Iniciar sesión si no está activa
               if (session_status() === PHP_SESSION_NONE) {
-                  session_start();
               }
 
               // Guardar variables de sesión para acceso inmediato
@@ -332,7 +331,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <script>
     // Al inicio del script
-    if (session_status() === PHP_SESSION_NONE) session_start();
 
     if ($success_logic) { // Tu lógica actual de verificar código
         

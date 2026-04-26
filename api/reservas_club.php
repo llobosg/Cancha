@@ -7,9 +7,6 @@ error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
     
     // Validación básica de sesión
     $id_socio = $_POST['id_socio'] ?? ($_SESSION['id_socio'] ?? null);

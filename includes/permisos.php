@@ -1,5 +1,13 @@
 <?php
     // includes/permisos.php
+    if (!function_exists('requerirAdmin')) {
+        function requerirAdmin() {
+            if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin') {
+                header('Location: login_recintos.php');
+                exit;
+            }
+        }
+    }
 
     function tienePermiso($permiso) {
         if (!isset($_SESSION['recinto_rol'])) return false;

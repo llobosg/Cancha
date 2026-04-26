@@ -4,7 +4,6 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/permisos.php';
 
-session_start();
 
 // Seguridad: Solo Admins
 if (!esAdmin() || !isset($_SESSION['id_recinto'])) {

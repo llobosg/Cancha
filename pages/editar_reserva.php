@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 if (!isset($_SESSION['id_socio']) || !isset($_GET['id_reserva'])) {
     header('Location: dashboard_socio.php');

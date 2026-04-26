@@ -25,11 +25,6 @@ try {
     if (strlen($codigo) !== 4 || !ctype_digit($codigo)) {
         throw new Exception('Código inválido (debe ser 4 dígitos)');
     }
-
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
     $stmt = $pdo->prepare("SELECT id_socio, email FROM socios WHERE verification_code = ? AND email_verified = 0 LIMIT 1");
     $stmt->execute([$codigo]);
     $socio = $stmt->fetch();

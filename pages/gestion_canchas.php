@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start(); // Asegúrate que la sesión esté iniciada
 
 $rol_actual = $_SESSION['recinto_rol'] ?? '';
 $roles_permitidos = ['admin', 'asistente']; // Aceptamos ambos roles

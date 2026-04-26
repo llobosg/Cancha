@@ -1,7 +1,6 @@
 <?php
 // pages/login_email.php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 // Si ya hay sesión, redirigir según contexto
 if (isset($_SESSION['id_socio'])) {

@@ -148,7 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->send();
         
         // Guardar en sesión para la verificación
-        session_start();
         $_SESSION['pending_email'] = $email;
         
         header('Location: verificar_recinto.php');

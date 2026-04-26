@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
 
 // Verificar autenticación
 if (!isset($_SESSION['google_email']) && !isset($_SESSION['user_email'])) {

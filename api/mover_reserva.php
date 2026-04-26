@@ -9,8 +9,6 @@ require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← CLAVE: cargar l
 error_log("[Mover Reserva] === INICIO ===");
 
 try {
-    if (session_status() === PHP_SESSION_NONE) { session_start(); }
-    
     if (!isset($_SESSION['id_recinto'])) {
         error_log("[Mover Reserva] ❌ Sesión inválida");
         echo json_encode(['success' => false, 'message' => 'No autorizado']);

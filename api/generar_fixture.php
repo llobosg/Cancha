@@ -4,7 +4,6 @@ header('Content-Type: application/json');
 error_log("🔍 [GENERAR_FIXTURE] Inicio del script");
 
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 error_log("🔍 [GENERAR_FIXTURE] Sesión iniciada. ID recinto: " . ($_SESSION['id_recinto'] ?? 'NO DEFINIDO'));
 

@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-session_start();
 
 // Obtener ID del torneo desde la URL
 $id_torneo = (int)($_GET['id'] ?? 0);

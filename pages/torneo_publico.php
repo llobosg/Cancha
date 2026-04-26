@@ -5,7 +5,6 @@ date_default_timezone_set('America/Santiago');
 // Forzar locale a español (Linux/macOS)
 setlocale(LC_TIME, 'es_ES.UTF-8', 'es_ES', 'es', 'spanish');
 require_once __DIR__ . '/../includes/config.php';
-session_start(); 
 
 $slug = $_GET['slug'] ?? '';
 if (!$slug || strlen($slug) !== 8) {

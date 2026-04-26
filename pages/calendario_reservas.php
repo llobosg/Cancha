@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
 
 if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
     header('Location: ../index.php');

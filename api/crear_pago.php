@@ -3,7 +3,6 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/config_mercadopago.php';
 require_once __DIR__ . '/../vendor/autoload.php'; // ← ¡Clave!
-session_start();
 
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Client\Preference\PreferenceClient;
