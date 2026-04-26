@@ -33,4 +33,21 @@
         
         return false;
     }
+
+    function esAdmin() {
+        return isset($_SESSION['recinto_rol']) && $_SESSION['recinto_rol'] === 'admin_recinto';
+    }
+
+    function esAsistente() {
+        return isset($_SESSION['recinto_rol']) && $_SESSION['recinto_rol'] === 'asistente_recinto';
+    }
+
+    function requiereAdmin() {
+        if (!esAdmin()) {
+            // Opcional: Mostrar mensaje de error o redirigir
+            // header('Location: recinto_dashboard.php?error=acceso_denegado');
+            return false;
+        }
+        return true;
+    }
 ?>
