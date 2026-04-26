@@ -17,13 +17,12 @@ if (!$id_torneo) {
 }
 
 try {
-    // ✅ CORRECCIÓN: Leer directamente de partidos_torneo (los resultados YA están ahí)
-    // Unir con parejas_torneo para obtener nombres legibles
+    // ✅ CORRECCIÓN: Eliminada columna 'ronda' que no existe en tu tabla
+    // Usamos las columnas reales: juegos_pareja_1/2, fecha_hora_programada, etc.
     $stmt = $pdo->prepare("
         SELECT 
             p.id_partido, 
-            p.ronda, 
-            p.fecha_hora as fecha_hora_programada,
+            p.fecha_hora_programada,
             p.estado,
             -- Pareja 1
             COALESCE(pj1.nombre_pareja, CONCAT('Pareja #', p.id_pareja_1)) as pareja1,
@@ -35,12 +34,11 @@ try {
         LEFT JOIN parejas_torneo pj1 ON p.id_pareja_1 = pj1.id_pareja
         LEFT JOIN parejas_torneo pj2 ON p.id_pareja_2 = pj2.id_pareja
         WHERE p.id_torneo = ?
-        ORDER BY p.ronda ASC, p.fecha_hora ASC, p.id_partido ASC
+        ORDER BY p.fecha_hora_programada ASC, p.id_partido ASC
     ");
     $stmt->execute([$id_torneo]);
     $fixture = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Debug logging (eliminar en producción)
     error_log("[Fixture] Torneo $id_torneo: " . count($fixture) . " partidos encontrados");
     
     echo json_encode($fixture);

@@ -1829,7 +1829,7 @@ async function abrirFixtureModal(idTorneo) {
             return;
         }
         
-        // === RENDERIZAR TABLA DE FIXTURE ===
+                // === RENDERIZAR TABLA DE FIXTURE (Sin columna Ronda) ===
         let html = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
                 <h3 style="margin:0; color:#071289; font-size:1.3rem;">🎾 Fixture del Torneo</h3>
@@ -1839,14 +1839,14 @@ async function abrirFixtureModal(idTorneo) {
             </div>
             
             <div style="overflow-x:auto; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                <table class="fixture-table" style="width:100%; border-collapse:collapse; font-size:0.9rem; min-width:600px;">
+                <table class="fixture-table" style="width:100%; border-collapse:collapse; font-size:0.9rem; min-width:500px;">
                     <thead>
                         <tr style="background:#071289; color:white;">
-                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Ronda</th>
+                            <!-- Eliminado th Ronda -->
                             <th style="padding:0.8rem; text-align:left; font-weight:600;">Pareja 1</th>
                             <th style="padding:0.8rem; text-align:center; font-weight:600;">vs</th>
                             <th style="padding:0.8rem; text-align:left; font-weight:600;">Pareja 2</th>
-                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Fecha</th>
+                            <th style="padding:0.8rem; text-align:left; font-weight:600;">Fecha / Hora</th>
                             <th style="padding:0.8rem; text-align:center; font-weight:600;">Resultado</th>
                         </tr>
                     </thead>
@@ -1875,7 +1875,7 @@ async function abrirFixtureModal(idTorneo) {
                 else if (partido.juegos_pareja_2 > partido.juegos_pareja_1) ganador = 'pareja2';
             }
             
-            // Sanitizar nombres para evitar XSS en onclick
+            // Sanitizar nombres para evitar errores en onclick
             const safePareja1 = (partido.pareja1 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safePareja2 = (partido.pareja2 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
             
@@ -1883,7 +1883,6 @@ async function abrirFixtureModal(idTorneo) {
                 <tr style="border-bottom:1px solid #eee; transition:background 0.2s;" 
                     onmouseover="this.style.background='#f9f9f9'" 
                     onmouseout="this.style.background='transparent'">
-                    <td style="padding:0.8rem; font-weight:600; color:#071289;">${partido.ronda || '-'}</td>
                     
                     <!-- Pareja 1 -->
                     <td style="padding:0.8rem;">
