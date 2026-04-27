@@ -32,4 +32,17 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$id_torneo]);
 echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+$partidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // === LOGGING DE DEBUG ===
+    error_log("[FIXTURE API] Torneo ID: $id_torneo");
+    error_log("[FIXTURE API] Partidos encontrados: " . count($partidos));
+    if (!empty($partidos)) {
+        error_log("[FIXTURE API] Primer partido RAW: " . json_encode($partidos[0]));
+    } else {
+        error_log("[FIXTURE API] ⚠️ NO SE ENCONTRARON PARTIDOS");
+    }
+    
+    echo json_encode($partidos);
 ?>

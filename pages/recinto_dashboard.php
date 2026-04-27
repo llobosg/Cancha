@@ -2145,64 +2145,118 @@ function cerrarSubmodalInscritos() {
 
 // === 🎾 VER FIXTURE POR SETS (Agrupado por Hora + Nombres Reales) ===
 function verFixture(idTorneo) {
-      window.torneoActualId = idTorneo;
-        // Primero, obtener el nombre del torneo
-        fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
-            .then(r => r.json())
-            .then(torneo => {
-                const nombreTorneo = torneo.nombre || 'Torneo';
-                const rondaNum = 0;
+    console.log('🔍 [JS] verFixture llamado con ID:', idTorneo);
+    window.torneoActualId = idTorneo;
+    
+    const overlay = document.getElementById('submodalGenerico');
+    const contenido = document.getElementById('submodalContenido');
+    
+    if(!overlay || !contenido) {
+        console.error('❌ [JS] Elementos del modal no encontrados');
+        return;
+    }
+    
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth;
+    overlay.classList.add('active');
+    
+    contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando fixture...</p>';
 
-                // Luego, cargar el fixture
-                fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data || data.length === 0) {
-                            alert('No hay fixture generado');
-                            return;
-                        }
+    // 1. Fetch nombre torneo
+    console.log('📡 [JS] Fetching get_torneo_nombre.php...');
+    fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
+        .then(r => {
+            console.log('📡 [JS] Response torneo_nombre:', r.status);
+            return r.json();
+        })
+        .then(torneoData => {
+            console.log('✅ [JS] Nombre torneo recibido:', torneoData);
+            const nombreTorneo = torneoData.nombre || 'Torneo';
 
-                        let html = `<h3>🎾 Fixture - ${nombreTorneo}</h3>`;
-                        
-                        // Agrupar por fecha/hora
-                        const rondas = {};
-                        data.forEach(partido => {
-                            const key = partido.fecha_hora_programada;
-                            if (!rondas[key]) rondas[key] = [];
-                            rondas[key].push(partido);
-                        });
+            // 2. Fetch fixture
+            console.log('📡 [JS] Fetching get_fixture.php...');
+            return fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
+                .then(r => {
+                    console.log('📡 [JS] Response fixture:', r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('✅ [JS] Datos fixture recibidos:', data);
+                    console.log('✅ [JS] Cantidad partidos:', Array.isArray(data) ? data.length : 'NO ES ARRAY');
+                    
+                    if (!data || !Array.isArray(data) || data.length === 0) {
+                        console.warn('⚠️ [JS] No hay partidos para mostrar');
+                        contenido.innerHTML = `
+                            <div style="text-align:center; padding:3rem;">
+                                <p>No hay fixture generado.</p>
+                                <button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button>
+                            </div>`;
+                        return;
+                    }
 
-                        let rondaNum = 1;
-                        Object.entries(rondas).forEach(([fecha, partidos]) => {
-                            const fechaObj = new Date(fecha);
-                            const fechaStr = fechaObj.toLocaleDateString('es-CL');
-                            let horaStr = '';
-                            if (rondaNum === 1) {
-                                horaStr = ' ' + fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-                            }
-                            
-                            html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr}${horaStr}</strong><br>`;
-                            partidos.forEach(p => {
-                                html += `
-                                    <div style="display:flex;justify-content:space-between;margin:0.4rem 0;background:rgba(255,255,255,0.1);padding:0.5rem;border-radius:6px;">
-                                        <span>${p.pareja1}</span>
-                                        <span>vs</span>
-                                        <span>${p.pareja2}</span>
-                                        <span style="cursor:pointer;color:#FFD700;" onclick="abrirResultado(${p.id_partido}, '${p.pareja1}', '${p.pareja2}')">✅ Resultado</span>
-                                    </div>
-                                `;
-                            });
-                            html += `</div>`;
-                            rondaNum++;
-                        });
-
-                        html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
-                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#4ECDC4;" onclick="verResultados(${idTorneo})">Resultados Set</button>`;
-                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#FFD700;color:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>`;
-                        document.getElementById('submodalContenido').innerHTML = html;
-                        document.getElementById('submodalGenerico').style.display = 'flex';
+                    let html = `<h3 style="color:#071289; margin-bottom:1rem;">🎾 Fixture - ${nombreTorneo}</h3>`;
+                    
+                    // Agrupar por fecha/hora (SETS)
+                    const rondas = {};
+                    data.forEach(partido => {
+                        const key = partido.fecha_hora_programada;
+                        if (!rondas[key]) rondas[key] = [];
+                        rondas[key].push(partido);
                     });
-            });
+                    
+                    console.log('📊 [JS] Rondas agrupadas:', Object.keys(rondas).length);
+
+                    let rondaNum = 1;
+                    Object.entries(rondas).forEach(([fecha, partidos]) => {
+                        const fechaObj = new Date(fecha);
+                        const fechaStr = fechaObj.toLocaleDateString('es-CL');
+                        const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                        
+                        html += `<div style="margin:1.5rem 0; background:#f9f9f9; padding:1rem; border-radius:8px;">
+                                    <strong style="color:#071289;">📅 Set ${rondaNum} – ${fechaStr} ${horaStr}</strong><br>`;
+                        
+                        partidos.forEach(p => {
+                            console.log('🎾 [JS] Renderizando partido:', p.id_partido, 'Pareja1:', p.pareja1, 'Pareja2:', p.pareja2);
+                            
+                            const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
+                            const marcador = tieneResultado ? `${p.juegos_pareja_1} - ${p.juegos_pareja_2}` : 'vs';
+                            const estiloMarcador = tieneResultado ? 'color:#4CAF50; font-weight:bold;' : 'color:#999;';
+                            
+                            // Sanitizar comillas para onclick
+                            const safeP1 = (p.pareja1 || 'TBD').replace(/'/g, "\\'");
+                            const safeP2 = (p.pareja2 || 'TBD').replace(/'/g, "\\'");
+                            
+                            html += `
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin:0.6rem 0; background:white; padding:0.8rem; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                                    <div style="flex:1; text-align:right; font-weight:600;">${p.pareja1 || 'TBD'}</div>
+                                    <div style="padding:0 1rem; ${estiloMarcador}">${marcador}</div>
+                                    <div style="flex:1; text-align:left; font-weight:600;">${p.pareja2 || 'TBD'}</div>
+                                    <button style="margin-left:1rem; background:#071289; color:white; border:none; padding:0.4rem 0.8rem; border-radius:4px; cursor:pointer; font-size:0.8rem;" 
+                                            onclick="abrirResultado(${p.id_partido}, '${safeP1}', '${safeP2}')">
+                                        ${tieneResultado ? 'Editar' : 'Resultado'}
+                                    </button>
+                                </div>
+                            `;
+                        });
+                        html += `</div>`;
+                        rondaNum++;
+                    });
+
+                    html += `<div style="margin-top:2rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button>
+                        <button class="action-btn" style="background:#4ECDC4; color:#071289;" onclick="verResultados(${idTorneo})">📊 Resultados Set</button>
+                        <button class="action-btn" style="background:#FFD700; color:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>
+                    </div>`;
+                    
+                    console.log('🎨 [JS] Inyectando HTML en modal...');
+                    contenido.innerHTML = html;
+                    console.log('✅ [JS] Fixture renderizado correctamente');
+                });
+        })
+        .catch(err => {
+            console.error('❌ [JS] Error en verFixture:', err);
+            contenido.innerHTML = '<p style="color:red; text-align:center;">Error al cargar fixture. Revisa consola.</p>';
+        });
 }
 
 // === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
@@ -2413,6 +2467,64 @@ async function verPosicionesTorneo(idTorneo) {
                 <button class="action-btn" style="margin-top:0.5rem;" onclick="verPosicionesTorneo(${idTorneo})">Reintentar</button>
             </div>`;
     }
+}
+
+function abrirResultado(idPartido, pareja1, pareja2) {
+    console.log('✏️ [JS] abrirResultado llamado:', idPartido, pareja1, 'vs', pareja2);
+    
+    const contenido = document.getElementById('submodalContenido');
+    contenidoFixtureAnterior = contenido.innerHTML;
+
+    console.log('📡 [JS] Fetching get_resultado_partido.php...');
+    fetch(`../api/get_resultado_partido.php?id_partido=${idPartido}`)
+        .then(r => {
+            console.log('📡 [JS] Response resultado:', r.status);
+            return r.json();
+        })
+        .then(resultado => {
+            console.log('✅ [JS] Resultado recibido:', resultado);
+            
+            const j1 = resultado.juegos_pareja_1 || 0;
+            const j2 = resultado.juegos_pareja_2 || 0;
+
+            const html = `
+                <div style="text-align:center; max-width:450px; margin:0 auto;">
+                    <h3 style="color:#071289;">📊 Editar resultado</h3>
+                    <p style="margin:1rem 0; font-weight:600;">${pareja1} <span style="color:#999;">vs</span> ${pareja2}</p>
+                    
+                    <div style="display:flex; justify-content:center; gap:1.5rem; margin:1.5rem 0;">
+                        <div>
+                            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja1}</label>
+                            <input type="number" id="juegos1" min="0" max="7" value="${j1}" 
+                                   style="width:80px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                        </div>
+                        <div style="font-size:1.5rem; align-self:center; color:#ccc;">-</div>
+                        <div>
+                            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja2}</label>
+                            <input type="number" id="juegos2" min="0" max="7" value="${j2}" 
+                                   style="width:80px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                        </div>
+                    </div>
+                    
+                    <div id="ganadora" style="margin:1rem 0; font-weight:bold; color:#071289; height:24px;"></div>
+                    
+                    <div style="display:flex; gap:0.5rem; justify-content:center;">
+                        <button class="action-btn" style="background:#4CAF50;" onclick="guardarResultado(${idPartido}, '${pareja1.replace(/'/g, "\\'")}', '${pareja2.replace(/'/g, "\\'")}')">💾 Guardar</button>
+                        <button class="action-btn" style="background:#6c757d;" onclick="volverAFixture()">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            contenido.innerHTML = html;
+
+            document.getElementById('juegos1').addEventListener('input', actualizarGanadora);
+            document.getElementById('juegos2').addEventListener('input', actualizarGanadora);
+            actualizarGanadora();
+        })
+        .catch(err => {
+            console.error('❌ [JS] Error al cargar resultado:', err);
+            alert('❌ No se pudo cargar el resultado actual');
+            volverAFixture();
+        });
 }
 
 // === 📊 VER RESULTADOS GENERALES (Historial de Partidos) ===
