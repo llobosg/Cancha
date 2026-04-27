@@ -3,7 +3,7 @@ session_start();
 
 // === VALIDACIÓN DE SESIÓN ===
 if (!isset($_SESSION['id_socio'])) {
-    header("Location: login.php");
+    header("Location: " . BASE_URL . "login.php");
     exit;
 }
 
@@ -12,6 +12,7 @@ $es_responsable = $_SESSION['es_responsable'] ?? false;
 
 // === CONFIG GENERAL ===
 define('BASE_API', '../api/');
+define('BASE_URL', '/pages/');
 
 ?>
 <!DOCTYPE html>
