@@ -871,11 +871,24 @@
                                     <?php else: ?>
                                         <button 
                                             class="btn-action"
-                                            onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= htmlspecialchars($deporte, ENT_QUOTES) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                            onclick="anotarseEvento(
+                                                <?= (int)$id_reserva ?>, 
+                                                'reserva', 
+                                                <?= json_encode($deporte) ?>, 
+                                                <?= (int)$players ?>, 
+                                                <?= (float)$monto_total ?>
+                                            )">
                                             Anotarse
                                         </button>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                                onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                        <button 
+                                            class="btn-action"
+                                            onclick="anotarseConCerveza(
+                                                true, 
+                                                <?= (int)$id_reserva ?>, 
+                                                <?= json_encode($deporte) ?>, 
+                                                <?= (int)$players ?>, 
+                                                <?= (float)$monto_total ?>
+                                            )">
                                             Anotarse + llevo 🍺🍺
                                         </button>
                                     <?php endif; ?>
