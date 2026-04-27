@@ -842,6 +842,11 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
 .set-header { font-size: 0.85rem; padding: 0.5rem; }
 .partido-card { padding: 0.6rem; margin: 0.4rem 0; }
 .pareja-nombre { font-size: 0.85rem; }
+/* === MODAL FIXTURE ANCHO CONTROLADO === */
+.submodal-card.fixture-width {
+    max-width: 600px !important; /* Equivalente a ~50-60 caracteres */
+    width: 95% !important;
+}
 </style>
 </head>
 <body>
@@ -1678,6 +1683,7 @@ async function cargarTorneos() {
                 botonesHtml = `
                     <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
                         <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar" style="text-align:center; text-decoration:none; padding:0.6rem; border-radius:6px; background:#E0F7FA; color:#006064; font-weight:600; font-size:0.9rem;">📩 Invitar Parejas</a>
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="cerrarTorneo(${t.id_torneo})">Cerrar Inscrip..</button>
                         <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="generarFixture(${t.id_torneo})">⚙️ Crear Fixture</button>
                     </div>
                 `;
@@ -1690,7 +1696,7 @@ async function cargarTorneos() {
                             <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="verResultadosTV(${t.id_torneo})">📺 TV Mode</button>
                         </div>
                         ${estado !== 'finalizado' ? `
-                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#FF9800; color:white; border:none; font-weight:600; cursor:pointer; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background: #f64242; color:white; border:none; font-weight:600; cursor:pointer; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
                             ✅ Finalizar + Upgrade Ranking
                         </button>` : ''}
                     </div>
@@ -2054,22 +2060,6 @@ function volverATorneosActivos() {
     }
 }
 
-// === CERRAR SUBMODAL (Versión Robusta) ===
-function cerrarSubmodal() {
-    const submodal = document.getElementById('submodalGenerico');
-    if (!submodal) return;
-    
-    console.log('🔒 Cerrando submodal...');
-    submodal.classList.remove('active');
-    
-    setTimeout(() => {
-        submodal.style.display = 'none';
-        const contenido = document.getElementById('submodalContenido');
-        if (contenido) contenido.innerHTML = '';
-        console.log('✅ Submodal cerrado');
-    }, 300); // Debe coincidir con transition-duration en CSS
-}
-
 // === EVENTO CLICK EN OVERLAY (Cerrar al hacer click fuera) ===
 document.addEventListener('click', function(e) {
     const submodal = document.getElementById('submodalGenerico');
@@ -2102,61 +2092,55 @@ document.addEventListener('click', function(e) {
 });
 // === 👁️ VER INSCRITOS Y BAJAR PAREJA ===
 async function abrirModalInscritos(idTorneo) {
-    const overlay = document.getElementById('submodalInscritosOverlay');
-    const body = document.getElementById('submodalInscritosBody');
+    const overlay = document.getElementById('submodalGenerico');
+    const contenido = document.getElementById('submodalContenido');
     
-    if(!overlay) return; // Asegúrate de agregar el HTML del modal al final del body
+    if(!overlay || !contenido) return;
     
     overlay.style.display = 'flex';
     void overlay.offsetWidth;
     overlay.classList.add('active');
     
-    body.innerHTML = '<p style="text-align:center; padding:2rem;">Cargando inscritos...</p>';
+    contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando inscritos...</p>';
     
     try {
-        const res = await fetch(`../api/get_inscritos_torneos.php?id_torneo=${idTorneo}`);
-        const inscritos = await res.json();
+        const res = await fetch(`../api/get_inscritos_torneo.php?id_torneo=${idTorneo}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
         
-            // VALIDACIÓN DE SEGURIDAD
-            if (!Array.isArray(data)) {
-                console.error('❌ La API no devolvió un array:', data);
-                contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">
-                    <p>Error: ${data.error || 'Datos inválidos abrirModalInscritos'}</p>
-                    <button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button>
-                </div>`;
-                return;
-            }
+        const data = await res.json();
+        
+        // Validación estricta
+        if (!Array.isArray(data)) {
+            console.error('La API no devolvió un array:', data);
+            throw new Error(data.error || 'Datos inválidos');
+        }
 
-            if (data.length === 0) {
-                contenido.innerHTML = `<div style="text-align:center; padding:3rem;"><p>No hay fixture generado.</p><button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button></div>`;
-                return;
-            }
+        if(data.length === 0) {
+            contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#888;">No hay parejas inscritas aún.</p>';
+            return;
+        }
         
-        let html = `<table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
-            <thead><tr><th>Pareja</th><th>Jugador 1</th><th>Jugador 2</th><th>Contacto</th><th>Acción</th></tr></thead>
-            <tbody>`;
+        let html = `<h3 style="color:#071289; margin-bottom:1rem;">👥 Parejas Inscritas</h3>
+                    <table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="background:#071289; color:white;"><th>Pareja</th><th>Jugador 1</th><th>Jugador 2</th><th>Contacto</th></tr></thead>
+                    <tbody>`;
             
-        inscritos.forEach(p => {
-            const contacto = p.email1 || p.email_temp1 || '-';
-            html += `<tr>
-                <td><strong>${p.nombre_pareja_completo}</strong></td>
-                <td>${p.jugador1}</td>
-                <td>${p.jugador2}</td>
-                <td style="font-size:0.85rem; color:#666;">${contacto}</td>
-                <td>
-                    <button class="btn-bajar-pareja" onclick="bajarPareja(${p.id_pareja}, '${p.nombre_pareja_completo.replace(/'/g, "\\'")}', ${idTorneo})">
-                        📉 Bajar
-                    </button>
-                </td>
+        data.forEach(p => {
+            html += `<tr style="border-bottom:1px solid #eee;">
+                <td style="padding:0.8rem; font-weight:600;">${p.nombre_pareja || '-'}</td>
+                <td style="padding:0.8rem;">${p.jugador1}</td>
+                <td style="padding:0.8rem;">${p.jugador2}</td>
+                <td style="padding:0.8rem; font-size:0.85rem; color:#666;">${p.contacto}</td>
             </tr>`;
         });
         
         html += `</tbody></table>`;
-        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalInscritos()">Cerrar</button></div>`;
-        body.innerHTML = html;
+        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button></div>`;
+        contenido.innerHTML = html;
         
     } catch(e) {
-        body.innerHTML = '<p style="color:red; text-align:center;">Error al cargar inscritos.</p>';
+        console.error(e);
+        contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">⚠️ Error: ${e.message}<br><button class="action-btn" onclick="abrirModalInscritos(${idTorneo})">Reintentar</button></div>`;
     }
 }
 
@@ -2195,9 +2179,9 @@ let contenidoFixtureAnterior = '';
 window.torneoActualId = null;
 
 // === 🎾 VER FIXTURE (UX Mejorada) ===
-function verFixture(idTorneo) {
-    window.torneoActualId = idTorneo;
+function window.torneoActualId = idTorneo;
     const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card'); // Seleccionamos la tarjeta
     const contenido = document.getElementById('submodalContenido');
     
     if(!overlay || !contenido) return;
@@ -2205,6 +2189,10 @@ function verFixture(idTorneo) {
     overlay.style.display = 'flex';
     void overlay.offsetWidth;
     overlay.classList.add('active');
+    
+    // Aplicar clase de ancho controlado
+    card.classList.add('fixture-width'); 
+
     contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando fixture...</p>';
 
     fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
@@ -2293,13 +2281,17 @@ function verFixture(idTorneo) {
 
 // === ✏️ ABRIR RESULTADO (UX Mejorada) ===
 function abrirResultado(idPartido, pareja1, pareja2) {
-    contenidoFixtureAnterior = contenido.innerHTML;
+    // Definir explícitamente las variables aquí
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay.querySelector('.submodal-card');
-    const contenido = document.getElementById('submodalContenido');
+    const contenido = document.getElementById('submodalContenido'); // Aquí estaba el fallo
     
-    // Activar modo compacto
-    card.classList.add('compact-modal');
+    if (!contenido) return;
+
+    // Activar modo compacto móvil
+    if(card) card.classList.add('compact-modal');
+    
+    contenidoFixtureAnterior = contenido.innerHTML;
 
     fetch(`../api/get_resultado_partido.php?id_partido=${idPartido}`)
         .then(r => r.json())
@@ -2307,17 +2299,26 @@ function abrirResultado(idPartido, pareja1, pareja2) {
             const j1 = resultado.juegos_pareja_1 || 0;
             const j2 = resultado.juegos_pareja_2 || 0;
 
-             contenido.innerHTML = `
+            const html = `
                 <div style="text-align:center;">
-                    <h4 style="margin:0 0 1rem 0; color:#071289; font-size:1rem;">${pareja1} vs ${pareja2}</h4>
-                    <div class="compact-inputs">
-                        <input type="number" id="juegos1" class="compact-input" value="${j1}" min="0" max="7">
-                        <span style="font-weight:bold; color:#ccc;">-</span>
-                        <input type="number" id="juegos2" class="compact-input" value="${j2}" min="0" max="7">
+                    <h4 style="color:#071289; margin-bottom:1rem;">${pareja1} vs ${pareja2}</h4>
+                    
+                    <div style="display:flex; justify-content:center; gap:1rem; margin:1.5rem 0;">
+                        <div>
+                            <input type="number" id="juegos1" class="compact-input" value="${j1}" min="0" max="7">
+                            <div style="font-size:0.7rem; color:#666; margin-top:0.3rem;">${pareja1.split(' & ')[0]}</div>
+                        </div>
+                        <div style="font-size:1.5rem; align-self:center; color:#ccc;">-</div>
+                        <div>
+                            <input type="number" id="juegos2" class="compact-input" value="${j2}" min="0" max="7">
+                            <div style="font-size:0.7rem; color:#666; margin-top:0.3rem;">${pareja2.split(' & ')[0]}</div>
+                        </div>
                     </div>
-                    <div id="ganadora" style="font-size:0.9rem; color:#4CAF50; font-weight:bold; margin-bottom:1rem;"></div>
+                    
+                    <div id="ganadora" style="font-weight:bold; color:#4CAF50; margin-bottom:1rem;"></div>
+                    
                     <button class="compact-btn-save" onclick="guardarResultado(${idPartido}, '${pareja1.replace(/'/g, "\\'")}', '${pareja2.replace(/'/g, "\\'")}')">💾 Guardar</button>
-                    <button style="background:none; border:none; color:#666; margin-top:0.5rem; font-size:0.8rem; cursor:pointer;" onclick="volverAFixture()">Cancelar</button>
+                    <button style="background:none; border:none; color:#666; margin-top:0.5rem; cursor:pointer;" onclick="volverAFixture()">Cancelar</button>
                 </div>
             `;
             contenido.innerHTML = html;
@@ -2327,7 +2328,7 @@ function abrirResultado(idPartido, pareja1, pareja2) {
             actualizarGanadora();
         })
         .catch(err => {
-            console.error('Error:', err);
+            console.error(err);
             alert('❌ Error al cargar datos');
             volverAFixture();
         });
@@ -2381,6 +2382,8 @@ function volverAFixture() {
 
 function cerrarSubmodal() {
     const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card');
+    if(card) card.classList.remove('fixture-width', 'compact-modal'); // Limpiar clases
     if(overlay) {
         overlay.classList.remove('active');
         setTimeout(() => overlay.style.display = 'none', 300);
@@ -2634,7 +2637,7 @@ async function guardarResultadoSet(idPartido) {
 
 
 // Cerrar torneo
-function cerrarTorneo(id) {
+function cerrarTorneo(idTorneo) {
     if (confirm('¿Cerrar inscripciones para este torneo?')) {
     fetch('../api/cambiar_estado_torneo.php', {
         method: 'POST',
