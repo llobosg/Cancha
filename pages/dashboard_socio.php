@@ -1229,22 +1229,51 @@
                     });
             }
 
+            // === FUNCION BAJARSE DE EVENTO (Corregida) ===
             function bajarseEvento(idReserva) {
+                console.log('🔴 Intentando bajarse de ID:', idReserva); // Debug
+
+                // 1. Validación estricta del ID
+                if (!idReserva || idReserva === 'null' || idReserva === 'undefined') {
+                    mostrarToast('❌ Error: ID de reserva inválido', 'error');
+                    console.error('❌ ID inválido recibido:', idReserva);
+                    return;
+                }
+
                 if(!confirm('¿Seguro que deseas bajarte de este evento?')) return;
+
                 const formData = new FormData();
                 formData.append('action', 'bajarse');
-                formData.append('id_reserva', idReserva);
-                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-                    .then(r => r.json())
-                    .then(data => {
-                        if(data.success) {
-                            mostrarToast(data.message, 'exito');
-                            setTimeout(() => location.reload(), 1500);
-                        } else {
-                            mostrarToast('❌ ' + data.message, 'error');
-                        }
-                    })
-                    .catch(err => mostrarToast('❌ Error de conexión', 'error'));
+                // Aseguramos que el nombre del campo sea 'id_actividad' como espera la API
+                formData.append('id_actividad', idReserva); 
+                // Por si la API también busca 'id_reserva'
+                formData.append('id_reserva', idReserva); 
+
+                fetch('../api/gestion_eventos.php', { 
+                    method: 'POST', 
+                    body: formData,
+                    credentials: 'include' // Importante para enviar cookies de sesión
+                })
+                .then(r => {
+                    console.log('📡 Response status:', r.status);
+                    if (!r.ok) {
+                        return r.text().then(text => { throw new Error(text || 'Error HTTP ' + r.status); });
+                    }
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('📦 Response data:', data);
+                    if(data.success) {
+                        mostrarToast(data.message || '✅ Te has dado de baja', 'exito');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        mostrarToast('❌ ' + (data.message || 'Error desconocido'), 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ Fetch error:', err);
+                    mostrarToast('❌ Error de conexión: ' + err.message, 'error');
+                });
             }
 
             function pasoEvento(idReserva) {
