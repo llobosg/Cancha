@@ -1623,32 +1623,18 @@ async function cargarTorneos() {
             let botones = `<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:auto; padding-top:0.8rem; border-top:1px solid #eee;">`;
 
             // Botón Invitar (siempre visible)
-            botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
+            
 
-            let botonesHtml = '';
-
-            if (t.estado === 'abierto') {
-                // ABIERTO: Invitar, Crear Fixture
-                botonesHtml = `
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
-                        <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">📩 Invitar Parejas</a>
-                        <button class="btn-torneo btn-fixture" onclick="generarFixture(${t.id_torneo})">⚙️ Crear Fixture</button>
-                    </div>
-                `;
+            if (estado === 'abierto') {
+                // ABIERTO: invitar + Crear Fixture
+                botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
+                botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-fixture">Crear Fixture</button>`;
+                
             } else {
-                // EN CURSO / CERRADO: Ver Fixture, Resultados, Finalizar
-                botonesHtml = `
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
-                        <div style="display:flex; gap:0.5rem;">
-                            <button class="btn-torneo btn-ver-fixture" style="flex:1;" onclick="verFixture(${t.id_torneo})">🎾 Ver Fixture</button>
-                            <button class="btn-torneo btn-resultados" style="flex:1;" onclick="verResultados(${t.id_torneo})">📊 Resultados</button>
-                        </div>
-                        ${t.estado !== 'finalizado' ? `
-                        <button class="btn-torneo" style="background:#FF9800; color:white; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
-                            ✅ Finalizar + Upgrade Ranking
-                        </button>` : ''}
-                    </div>
-                `;
+                // EN CURSO / CERRADO: Ver Fixture + Resultados + Finalizar Upgrade
+                botones += `<button onclick="verFixture(${t.id_torneo})" class="btn-torneo btn-ver-fixture">Ver Fixture</button>`;
+                botones += `<button onclick="verResultados(${t.id_torneo})" class="btn-torneo btn-resultados">Resultados</button>`;
+                botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Finalizar + Upgrade</button>`;
             }
             botones += `</div>`;
             
