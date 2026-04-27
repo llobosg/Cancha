@@ -2491,6 +2491,121 @@ function verPosicionesTorneo(idTorneo) {
         });
 }
 
+// === 🎾 VER FIXTURE (Versión Final Corregida y Compacta) ===
+function verFixture(idTorneo) {
+    window.torneoActualId = idTorneo;
+    
+    // 1. Obtener elementos del DOM con validación
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay ? overlay.querySelector('.submodal-card') : null;
+    const contenido = document.getElementById('submodalContenido');
+    
+    if (!overlay || !card || !contenido) {
+        console.error('❌ Error: Elementos del modal no encontrados');
+        return;
+    }
+    
+    // 2. Configurar Modal (Ancho controlado + Animación)
+    card.classList.add('fixture-width'); // Limita el ancho a ~600px
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth; // Forzar reflow para animación
+    overlay.classList.add('active');
+    
+    contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">🔄 Cargando fixture...</p>';
+
+    // 3. Fetch Datos (Nombre Torneo + Fixture)
+    fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
+        .then(r => r.json())
+        .then(torneoData => {
+            const nombreTorneo = torneoData.nombre || 'Torneo';
+            
+            return fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
+                .then(r => {
+                    if (!r.ok) throw new Error(`Error ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    // Validación de datos
+                    if (!Array.isArray(data) || data.length === 0) {
+                        contenido.innerHTML = `
+                            <div style="text-align:center; padding:3rem;">
+                                <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
+                                <p>No hay fixture generado aún.</p>
+                                <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>
+                            </div>`;
+                        return;
+                    }
+
+                    let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-size:1.2rem;">🎾 Fixture - ${nombreTorneo}</h3>`;
+                    
+                    // Agrupar por fecha/hora (SETS)
+                    const rondas = {};
+                    data.forEach(partido => {
+                        const key = partido.fecha_hora_programada;
+                        if (!rondas[key]) rondas[key] = [];
+                        rondas[key].push(partido);
+                    });
+
+                    let rondaNum = 1;
+                    Object.entries(rondas).forEach(([fecha, partidos]) => {
+                        const fechaObj = new Date(fecha);
+                        const fechaStr = fechaObj.toLocaleDateString('es-CL', {day:'2-digit', month:'short'});
+                        const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                        
+                        html += `<div style="margin-bottom:1.5rem; background:#f8f9fa; border-radius:8px; overflow:hidden;">
+                                    <div style="background:#e9ecef; padding:0.6rem 1rem; font-weight:bold; color:#071289; font-size:0.9rem; display:flex; justify-content:space-between;">
+                                        <span>SET ${rondaNum}</span>
+                                        <span style="color:#666; font-weight:normal;">${fechaStr} - ${horaStr}</span>
+                                    </div>
+                                    <div style="padding:0.5rem;">`;
+                        
+                        partidos.forEach(p => {
+                            const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
+                            const marcador = tieneResultado ? `${p.juegos_pareja_1} - ${p.juegos_pareja_2}` : 'VS';
+                            const claseEstado = tieneResultado ? 'jugado' : 'pendiente';
+                            const estiloMarcador = tieneResultado ? 'color:#2E7D32; font-weight:800;' : 'color:#999;';
+                            
+                            // Determinar ganador para estilo visual
+                            const g1 = (tieneResultado && p.juegos_pareja_1 > p.juegos_pareja_2) ? 'ganador' : '';
+                            const g2 = (tieneResultado && p.juegos_pareja_2 > p.juegos_pareja_1) ? 'ganador' : '';
+
+                            // Sanitizar comillas para evitar errores en onclick
+                            const safeP1 = (p.pareja1 || '').replace(/'/g, "\\'");
+                            const safeP2 = (p.pareja2 || '').replace(/'/g, "\\'");
+
+                            html += `
+                                <div class="partido-card ${claseEstado}" style="display:flex; justify-content:space-between; align-items:center; margin:0.5rem 0; background:white; padding:0.8rem; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05); border-left: 3px solid ${tieneResultado ? '#4CAF50' : '#FFC107'};">
+                                    <div class="pareja-nombre ${g1}" style="flex:1; text-align:right; padding-right:0.5rem; font-size:0.9rem;">${p.pareja1}</div>
+                                    
+                                    <div style="min-width:60px; text-align:center; ${estiloMarcador}; font-size:1rem;">${marcador}</div>
+                                    
+                                    <div class="pareja-nombre ${g2}" style="flex:1; text-align:left; padding-left:0.5rem; font-size:0.9rem;">${p.pareja2}</div>
+                                    
+                                    <button style="margin-left:0.5rem; background:#071289; color:white; border:none; padding:0.4rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.75rem; min-width:70px;" 
+                                            onclick="abrirResultado(${p.id_partido}, '${safeP1}', '${safeP2}')">
+                                        ${tieneResultado ? '✏️ Editar' : '📝 Resultado'}
+                                    </button>
+                                </div>
+                            `;
+                        });
+                        html += `</div></div>`;
+                        rondaNum++;
+                    });
+
+                    // Sin botones inferiores redundantes (usamos la X y los de la ficha)
+                    contenido.innerHTML = html;
+                });
+        })
+        .catch(err => {
+            console.error('❌ Error cargando fixture:', err);
+            contenido.innerHTML = `
+                <div style="text-align:center; color:#c62828; padding:2rem;">
+                    ⚠️ Error: ${err.message}<br>
+                    <button class="action-btn" style="margin-top:0.5rem;" onclick="verFixture(${idTorneo})">Reintentar</button>
+                </div>`;
+        });
+}
+
 // === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
 function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
     const submodal = document.getElementById('submodalGenerico');
