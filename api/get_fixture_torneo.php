@@ -17,6 +17,7 @@ if (!$id_torneo) {
 }
 
 try {
+    // Consulta HÍBRIDA: Une Socios Y Jugadores Temporales
     $stmt = $pdo->prepare("
         SELECT 
             p.id_partido, 
@@ -24,25 +25,31 @@ try {
             p.estado,
             p.juegos_pareja_1,
             p.juegos_pareja_2,
-            -- Pareja 1: Construcción segura de nombre
+            
+            -- PAREJA 1: Prioriza Socio, sino Temporal
             CONCAT(
-                COALESCE(s1.alias, jt1.nombre, CONCAT('Socio ', p.id_pareja_1)), 
+                COALESCE(NULLIF(s1.alias, ''), SUBSTRING_INDEX(s1.nombre, ' ', 1), jt1.nombre, 'J1'), 
                 ' & ', 
-                COALESCE(s1b.alias, jt1b.nombre, 'Pareja')
+                COALESCE(NULLIF(s1b.alias, ''), SUBSTRING_INDEX(s1b.nombre, ' ', 1), jt1b.nombre, 'J2')
             ) AS nombre_pareja_1,
-            -- Pareja 2: Construcción segura de nombre
+            
+            -- PAREJA 2: Prioriza Socio, sino Temporal
             CONCAT(
-                COALESCE(s2.alias, jt2.nombre, CONCAT('Socio ', p.id_pareja_2)), 
+                COALESCE(NULLIF(s2.alias, ''), SUBSTRING_INDEX(s2.nombre, ' ', 1), jt2.nombre, 'J3'), 
                 ' & ', 
-                COALESCE(s2b.alias, jt2b.nombre, 'Pareja')
+                COALESCE(NULLIF(s2b.alias, ''), SUBSTRING_INDEX(s2b.nombre, ' ', 1), jt2b.nombre, 'J4')
             ) AS nombre_pareja_2
+            
         FROM partidos_torneo p
+        
+        -- Joins Pareja 1
         LEFT JOIN parejas_torneo pt1 ON p.id_pareja_1 = pt1.id_pareja
         LEFT JOIN socios s1 ON pt1.id_socio_1 = s1.id_socio
         LEFT JOIN jugadores_temporales jt1 ON pt1.id_jugador_temp_1 = jt1.id_jugador
         LEFT JOIN socios s1b ON pt1.id_socio_2 = s1b.id_socio
         LEFT JOIN jugadores_temporales jt1b ON pt1.id_jugador_temp_2 = jt1b.id_jugador
         
+        -- Joins Pareja 2
         LEFT JOIN parejas_torneo pt2 ON p.id_pareja_2 = pt2.id_pareja
         LEFT JOIN socios s2 ON pt2.id_socio_1 = s2.id_socio
         LEFT JOIN jugadores_temporales jt2 ON pt2.id_jugador_temp_1 = jt2.id_jugador
@@ -54,11 +61,6 @@ try {
     ");
     $stmt->execute([$id_torneo]);
     $fixture = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Debug: Verificar qué nombres llegan
-    if (!empty($fixture)) {
-        error_log("[Fixture Debug] Primer partido: " . json_encode($fixture[0]));
-    }
     
     echo json_encode($fixture);
     

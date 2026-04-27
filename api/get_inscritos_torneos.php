@@ -1,11 +1,12 @@
 <?php
 // api/get_inscritos_torneo.php
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
+if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['id_recinto'])) {
     http_response_code(403);
-    echo json_encode([]);
+    echo json_encode(['error' => 'No autorizado']);
     exit;
 }
 
@@ -19,13 +20,18 @@ try {
     $stmt = $pdo->prepare("
         SELECT 
             pt.id_pareja,
-            COALESCE(s1.alias, jt1.nombre, 'Jugador 1') AS jugador1,
-            COALESCE(s2.alias, jt2.nombre, 'Jugador 2') AS jugador2,
-            CONCAT(COALESCE(s1.alias, jt1.nombre), ' & ', COALESCE(s2.alias, jt2.nombre)) AS nombre_pareja_completo,
-            s1.email as email1,
-            s2.email as email2,
-            jt1.email as email_temp1,
-            jt2.email as email_temp2
+            -- Jugador 1: Socio o Temporal
+            COALESCE(NULLIF(s1.alias, ''), SUBSTRING_INDEX(s1.nombre, ' ', 1), jt1.nombre, 'J1') AS jugador1,
+            -- Jugador 2: Socio o Temporal
+            COALESCE(NULLIF(s2.alias, ''), SUBSTRING_INDEX(s2.nombre, ' ', 1), jt2.nombre, 'J2') AS jugador2,
+            -- Nombre Pareja
+            CONCAT(
+                COALESCE(NULLIF(s1.alias, ''), SUBSTRING_INDEX(s1.nombre, ' ', 1), jt1.nombre), 
+                ' & ', 
+                COALESCE(NULLIF(s2.alias, ''), SUBSTRING_INDEX(s2.nombre, ' ', 1), jt2.nombre)
+            ) AS nombre_pareja,
+            -- Contacto (Email de quien sea que tenga)
+            COALESCE(s1.email, jt1.email, s2.email, jt2.email, '-') AS contacto
         FROM parejas_torneo pt
         LEFT JOIN socios s1 ON pt.id_socio_1 = s1.id_socio
         LEFT JOIN jugadores_temporales jt1 ON pt.id_jugador_temp_1 = jt1.id_jugador
@@ -36,8 +42,10 @@ try {
     ");
     $stmt->execute([$id_torneo]);
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    
 } catch (Exception $e) {
     error_log("Error get_inscritos: " . $e->getMessage());
-    echo json_encode([]);
+    http_response_code(500);
+    echo json_encode(['error' => 'Error interno']);
 }
 ?>
