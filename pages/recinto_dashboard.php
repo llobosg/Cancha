@@ -2713,114 +2713,135 @@ function cerrarSubmodalFixture() {
 document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
-// === 📺 VER RESULTADOS TV MODE (Pantalla Completa - Blindada) ===
+// === 📺 VER RESULTADOS TV MODE (Pantalla Dividida 80/20) ===
 function verResultadosTV(idTorneo) {
-    console.log('📺 Iniciando TV Mode para torneo:', idTorneo);
+    console.log('📺 Iniciando TV Mode Split-Screen para torneo:', idTorneo);
     
     const overlay = document.getElementById('submodalGenerico');
-    // Buscamos la tarjeta dentro del overlay. Si no existe, usamos el overlay mismo como contenedor estilizado
-    let card = overlay ? overlay.querySelector('.submodal-card') : null;
+    const card = overlay.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
-    if (!overlay || !contenido) {
-        console.error('❌ Elementos del modal no encontrados para TV Mode');
-        return;
-    }
+    if (!overlay || !card || !contenido) return;
 
-    // Si no hay tarjeta interna (por si acaso), creamos una lógica fallback o asumimos que el CSS del overlay basta
-    if (!card) {
-        // Fallback: Estilizar el overlay directamente si no hay .submodal-card
-        overlay.style.justifyContent = 'center';
-        overlay.style.alignItems = 'center';
-        card = overlay; 
-    }
-
-    // Estilos TV
+    // Estilos para Modo TV Split-Screen
     overlay.style.zIndex = 5000;
-    card.style.maxWidth = '95%';
-    card.style.height = '90vh';
-    card.style.background = 'linear-gradient(rgba(0,20,10,0.95), rgba(0,30,15,0.98)), url("../assets/img/cancha_pasto2.jpg") center/cover';
+    card.style.maxWidth = '98%'; // Casi ancho completo
+    card.style.height = '95vh';  // Altura casi completa
+    card.style.padding = '0';    // Sin padding interno para usar todo el espacio
+    card.style.display = 'flex'; // Flexbox para dividir columnas
+    card.style.flexDirection = 'row';
+    card.style.background = '#1a1a1a'; // Fondo oscuro elegante
     card.style.color = 'white';
-    card.style.borderRadius = '16px';
-    card.style.boxShadow = '0 0 50px rgba(0,0,0,0.8)';
+    card.style.overflow = 'hidden'; // Evitar scroll en el contenedor principal
     
-    // Mostrar modal
-    overlay.style.display = 'flex';
-    void overlay.offsetWidth; // Forzar reflow
-    if(overlay.classList) overlay.classList.add('active'); // Si usa clases
-    
-    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin-top:20%;">🔄 Cargando marcador en vivo...</p>';
+    contenido.style.display = 'flex';
+    contenido.style.width = '100%';
+    contenido.style.height = '100%';
+    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
 
-    fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
-        .then(r => {
-            if (!r.ok) throw new Error('Error API');
-            return r.json();
-        })
-        .then(data => {
-            console.log('📊 Datos TV recibidos:', data.length, 'partidos');
-            
-            let html = `<h2 style="text-align:center; color:#FFD700; margin-bottom:2rem; text-transform:uppercase; font-size:2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
-            html += `<div style="overflow-y:auto; height:75%; padding:1rem; scrollbar-width: thin;">`;
-            
-            // Agrupar por sets (usando fecha_hora_programada)
-            const rondas = {};
-            data.forEach(p => {
-                // Validación segura de fecha
-                const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString();
-                const key = fechaRaw.substring(0, 16); // YYYY-MM-DD HH:mm
-                
-                if(!rondas[key]) rondas[key] = [];
-                rondas[key].push(p);
-            });
-
-            let setNum = 1;
-            Object.values(rondas).forEach(partidos => {
-                html += `<div style="margin-bottom:3rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:1rem;">
-                            <h3 style="color:#4ECDC4; margin-bottom:1.5rem; font-size:1.8rem; text-align:center;">SET ${setNum}</h3>`;
-                
-                partidos.forEach(p => {
-                    // Validar juegos
-                    const j1 = parseInt(p.juegos1) || 0;
-                    const j2 = parseInt(p.juegos2) || 0;
-                    
-                    const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
-                    const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
-                    
-                    html += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; font-size:1.8rem; background:rgba(255,255,255,0.05); padding:1.2rem; border-radius:16px; border: 1px solid rgba(255,255,255,0.1);">
-                            <span style="flex:1; text-align:right; padding-right:1rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
-                            <span style="padding:0 2rem; font-weight:bold; font-size:2.5rem; color:white; background:rgba(0,0,0,0.3); border-radius:12px; min-width:120px; text-align:center;">${j1} - ${j2}</span>
-                            <span style="flex:1; text-align:left; padding-left:1rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-                setNum++;
-            });
-            html += `</div>`;
-            
-            // Botón cerrar flotante
-            html += `<button style="position:absolute; bottom:2rem; right:2rem; background:rgba(255,255,255,0.1); border:2px solid white; color:white; padding:1rem 2rem; border-radius:50px; cursor:pointer; font-weight:bold; font-size:1.2rem; backdrop-filter:blur(5px); transition:0.3s;" onmouseover="this.style.background='white'; this.style.color='#333'" onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.color='white'" onclick="cerrarSubmodalTV()">❌ Cerrar TV</button>`;
-            
-            contenido.innerHTML = html;
-        })
-        .catch(err => {
-            console.error('❌ Error TV Mode:', err);
-            contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p></div>`;
+    // Fetch paralelo para Fixture y Posiciones
+    Promise.all([
+        fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
+        fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`).then(r => r.json())
+    ])
+    .then(([dataResultados, dataPosiciones]) => {
+        
+        // --- COLUMNA IZQUIERDA: FIXTURE (80%) ---
+        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333;">`;
+        htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin-bottom: 2rem; text-transform:uppercase; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
+        
+        // Agrupar por sets
+        const rondas = {};
+        dataResultados.forEach(p => {
+            const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString();
+            const key = fechaRaw.substring(0, 16); 
+            if(!rondas[key]) rondas[key] = [];
+            rondas[key].push(p);
         });
+
+        let setNum = 1;
+        Object.values(rondas).forEach(partidos => {
+            htmlFixture += `<div style="margin-bottom: 3rem;">
+                                <h3 style="color:#4ECDC4; margin-bottom: 1.5rem; font-size: 1.8rem; border-bottom: 2px solid #4ECDC4; padding-bottom: 0.5rem; display:inline-block;">SET ${setNum}</h3>`;
+            
+            partidos.forEach(p => {
+                const j1 = parseInt(p.juegos1) || 0;
+                const j2 = parseInt(p.juegos2) || 0;
+                
+                // Estilos condicionales para ganador
+                const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
+                const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
+                
+                htmlFixture += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; font-size: 1.6rem; background:rgba(255,255,255,0.05); padding:1.2rem; border-radius:12px; border: 1px solid rgba(255,255,255,0.1);">
+                        <span style="flex:1; text-align:right; padding-right:1.5rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
+                        <span style="padding:0 2rem; font-weight:bold; font-size: 2.2rem; color:white; background:rgba(0,0,0,0.4); border-radius:12px; min-width:140px; text-align:center; letter-spacing: 2px;">${j1} - ${j2}</span>
+                        <span style="flex:1; text-align:left; padding-left:1.5rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
+                    </div>
+                `;
+            });
+            htmlFixture += `</div>`;
+            setNum++;
+        });
+        htmlFixture += `</div>`;
+
+        // --- COLUMNA DERECHA: POSICIONES (20%) ---
+        let htmlPosiciones = `<div style="width: 20%; height: 100%; overflow-y: auto; padding: 1.5rem; background: rgba(0,0,0,0.2);">`;
+        htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin-bottom: 1.5rem; font-size: 1.4rem; text-transform:uppercase;">Posiciones</h3>`;
+        
+        if (dataPosiciones && dataPosiciones.posiciones && dataPosiciones.posiciones.length > 0) {
+            htmlPosiciones += `<table style="width:100%; border-collapse:collapse; font-size: 0.9rem;">`;
+            htmlPosiciones += `<thead><tr style="border-bottom:1px solid #555; text-align:left;"><th style="padding:0.5rem; color:#aaa;">#</th><th style="padding:0.5rem; color:#aaa;">Pareja</th><th style="padding:0.5rem; text-align:right; color:#aaa;">Sets</th></tr></thead><tbody>`;
+            
+            dataPosiciones.posiciones.forEach((p, index) => {
+                const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}.`));
+                const bgRow = index < 3 ? 'background:rgba(255,215,0,0.1);' : '';
+                
+                htmlPosiciones += `
+                    <tr style="border-bottom:1px solid #333; ${bgRow}">
+                        <td style="padding:0.6rem 0.2rem; font-weight:bold;">${medal}</td>
+                        <td style="padding:0.6rem 0.2rem; font-weight:500; line-height:1.2;">${p.nombre_pareja}</td>
+                        <td style="padding:0.6rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4;">${p.sets_ganados}</td>
+                    </tr>
+                `;
+            });
+            htmlPosiciones += `</tbody></table>`;
+        } else {
+            htmlPosiciones += `<p style="text-align:center; color:#666; font-size:0.8rem;">Sin datos de posiciones aún.</p>`;
+        }
+        
+        htmlPosiciones += `</div>`;
+
+        // Unir ambas columnas
+        contenido.innerHTML = htmlFixture + htmlPosiciones;
+    })
+    .catch(err => {
+        console.error('❌ Error TV Mode:', err);
+        contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p></div>`;
+    });
 }
 
 function cerrarSubmodalTV() {
     const overlay = document.getElementById('submodalGenerico');
-    const card = overlay ? overlay.querySelector('.submodal-card') : overlay;
+    const card = overlay ? overlay.querySelector('.submodal-card') : null;
+    const contenido = document.getElementById('submodalContenido');
     
-    // Restaurar estilos
+    // Restaurar estilos originales
     if(overlay) overlay.style.zIndex = 4000;
     if(card) {
-        card.style.maxWidth = ''; // Vuelve al CSS original
+        card.style.maxWidth = ''; 
         card.style.height = '';
+        card.style.padding = '';
+        card.style.display = '';
+        card.style.flexDirection = '';
         card.style.background = '';
         card.style.color = '';
+        card.style.overflow = '';
+    }
+    if(contenido) {
+        contenido.style.display = '';
+        contenido.style.width = '';
+        contenido.style.height = '';
     }
     
     cerrarSubmodal(); // Usa tu función estándar de cierre
