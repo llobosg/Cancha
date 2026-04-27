@@ -1,28 +1,27 @@
 <?php
-    // 1. Cargar configuración
+    // pages/dashboard_socio.php
+
+    // 1. Incluir config PRIMERO (esto inicia la sesión correctamente)
     require_once __DIR__ . '/../includes/config.php';
 
-    // 2. Restaurar sesión desde cookie si existe
-    if (isset($_COOKIE['cancha_session_id'])) {
-        session_id($_COOKIE['cancha_session_id']);
+    // 2. Validar que el usuario sea socio (no admin de recinto)
+    if (!isset($_SESSION['id_socio'])) {
+        // Si no hay sesión de socio, redirigir al login
+        header('Location: ../index.php');
+        exit;
     }
 
-    // 3. Configurar y arrancar sesión
-    session_name('CANCHASPORT_SESSION');
-    if (session_status() === PHP_SESSION_NONE) {
-        session_set_cookie_params([
-            'lifetime' => 86400,
-            'path' => '/',
-            'domain' => '',
-            'secure' => isset($_SERVER['HTTPS']),
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
-        session_start();
+    // 3. Obtener datos del socio
+    $id_socio = $_SESSION['id_socio'];
+    $stmt = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
+    $stmt->execute([$id_socio]);
+    $socio = $stmt->fetch();
+
+    if (!$socio) {
+        session_destroy();
+        header('Location: ../index.php');
+        exit;
     }
-
-    error_log("SESSION después de start: " . print_r($_SESSION, true));
-
     // === DETECTAR MODO INDIVIDUAL O CLUB ===
     $club_slug_from_url = $_GET['id_club'] ?? null;
     $modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
@@ -431,6 +430,8 @@
         $stmt_last->execute([$_SESSION['club_id']]);
         $ultimo_partido = $stmt_last->fetch();
     }
+    // Filtro para tabla de eventos (se usará en JS para mostrar/ocultar columnas)
+    $filtro = $_GET['filtro'] ?? $_POST['filtro'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -868,12 +869,26 @@
                                     <?php if ($cupos_llenos): ?>
                                         <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
                                     <?php else: ?>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                        <button 
+                                            class="btn-action"
+                                            onclick="anotarseEvento(
+                                                <?= (int)$id_reserva ?>, 
+                                                'reserva', 
+                                                <?= json_encode($deporte) ?>, 
+                                                <?= (int)$players ?>, 
+                                                <?= (float)$monto_total ?>
+                                            )">
                                             Anotarse
                                         </button>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
-                                                onclick="anotarseConCerveza(true, <?= (int)$id_reserva ?>, '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                        <button 
+                                            class="btn-action"
+                                            onclick="anotarseConCerveza(
+                                                true, 
+                                                <?= (int)$id_reserva ?>, 
+                                                <?= json_encode($deporte) ?>, 
+                                                <?= (int)$players ?>, 
+                                                <?= (float)$monto_total ?>
+                                            )">
                                             Anotarse + llevo 🍺🍺
                                         </button>
                                     <?php endif; ?>
@@ -1009,7 +1024,6 @@
 
         <!-- MITAD INFERIOR -->
         <div class="dashboard-lower" style="margin-top: 8rem;">
-                $filtro = $_GET['filtro'] ?? $_POST['filtro'] ?? '';
                 <h3>Detalle Eventos</h3>
                 <!-- Filtros -->
                 <button class="filter-btn" data-filter="inscritos">Inscritos Próximo Evento</button>
@@ -1095,239 +1109,46 @@
                 </div>
             </div>
         </div> 
-            
-
         <!-- SCRIPTS COMPLETOS -->
         <script>
-            // === FUNCIONES DE NOTIFICACIÓN ===
-            function mostrarNotificacion(mensaje, tipo = 'info') {
-            const toast = document.getElementById('toast');
-            const msg = document.getElementById('toast-message');
-            if (!toast || !msg) return;
-            msg.textContent = mensaje;
-            toast.className = 'toast ' + (tipo === 'exito' ? 'success' : tipo === 'error' ? 'error' : 'info');
-            toast.style.display = 'flex';
-            void toast.offsetWidth;
-            toast.classList.add('show');
-            setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.style.display = 'none', 400);
-            }, 5000);
-            }
-            // === VALIDAR EDAD ===
-            function validarEdad(fechaNac) {
-            if (!fechaNac) return true;
-            const hoy = new Date();
-            const nacimiento = new Date(fechaNac);
-            let edad = hoy.getFullYear() - nacimiento.getFullYear();
-            const mes = hoy.getMonth() - nacimiento.getMonth();
-            if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
-            return edad >= 14;
-            }
-            // === MANEJO DEL FORMULARIO ===
-            document.getElementById('registroForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fechaNacInput = document.getElementById('fecha_nac');
-            if (fechaNacInput && !validarEdad(fechaNacInput.value)) {
-            mostrarNotificacion('❌ La edad mínima es 14 años', 'error');
-            return;
-            }
-            const password = document.getElementById('password')?.value;
-            const passwordConfirm = document.getElementById('password_confirm')?.value;
-            if (password !== passwordConfirm) {
-            mostrarNotificacion('❌ Las contraseñas no coinciden', 'error');
-            return;
-            }
-            if (password && password.length < 6) {
-            mostrarNotificacion('❌ Contraseña debe tener al menos 6 caracteres', 'error');
-            return;
-            }
-            const formData = new FormData(e.target);
-            const btn = e.submitter;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = 'Enviando...';
-            btn.disabled = true;
-            try {
-            const response = await fetch('../api/enviar_codigo_socio.php', { method: 'POST', body: formData });
-            const textResponse = await response.text();
-            let data;
-            try { data = JSON.parse(textResponse); } catch (e) { throw new Error('Error interno del servidor'); }
-            if (data.success) {
-            mostrarNotificacion('✅ Código enviado a tu correo', 'exito');
-            setTimeout(() => {
-            if (data.club_slug && data.club_slug.trim() !== '') {
-            window.location.href = 'verificar_socio.php?club=' + encodeURIComponent(data.club_slug);
-            } else {
-            window.location.href = 'verificar_socio.php?id_socio=' + encodeURIComponent(data.id_socio);
-            }
-            }, 2000);
-            } else {
-            mostrarNotificacion('❌ ' + data.message, 'error');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            }
-            } catch (error) {
-            console.error('Error:', error);
-            mostrarNotificacion('❌ Error al enviar el código', 'error');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            }
-            });
-            // === CARGAR PUESTOS POR DEPORTE ===
-            function cargarPuestosPorDeporte(deporte) {
-            const url = deporte
-            ? '../api/get_puestos.php?deporte=' + encodeURIComponent(deporte)
-            : '../api/get_puestos.php';
-            fetch(url)
-            .then(r => r.json())
-            .then(puestos => {
-            const select = document.getElementById('id_puesto');
-            if (!select) return;
-            select.innerHTML = '<option value="">Seleccionar</option>';
-            puestos.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id_puesto;
-            opt.textContent = p.puesto;
-            select.appendChild(opt);
-            });
-            })
-            .catch(error => console.error('Error al cargar puestos:', error));
-            }
-            // === TOAST PERSONALIZADO ===
-            function mostrarToast(mensaje) {
-            let toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            toastContainer.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            max-width: 300px;
-            `;
-            document.body.appendChild(toastContainer);
-            }
-            const toast = document.createElement('div');
-            toast.textContent = mensaje;
-            toast.style.cssText = `
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
-            font-size: 14px;
-            `;
-            toastContainer.appendChild(toast);
-            setTimeout(() => {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-            }, 5000);
-            }
-            // === ANIMACIONES CSS ===
-            const style = document.createElement('style');
-            style.textContent = `
-            @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-            }
-            `;
-            document.head.appendChild(style);
-            // === REGIONES DINÁMICAS ===
-            let datosChile = {};
-            fetch('../api/get_regiones.php')
-                .then(response => response.json())
-                .then(data => { datosChile = data; })
-                .catch(error => console.error('Error al cargar regiones:', error));
-
-            function actualizarCiudades() {
-                const region = document.getElementById('region');
-                const ciudadSelect = document.getElementById('ciudad');
-                const comunaSelect = document.getElementById('comuna');
-                if (!region || !ciudadSelect || !comunaSelect) return;
-                ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad</option>';
-                comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-                ciudadSelect.disabled = !region.value;
-                comunaSelect.disabled = true;
-                if (region.value && datosChile[region.value]) {
-                Object.entries(datosChile[region.value].ciudades).forEach(([codigo, nombre]) => {
-                const option = document.createElement('option');
-                option.value = codigo;
-                option.textContent = nombre;
-                ciudadSelect.appendChild(option);
-                });
-                ciudadSelect.disabled = false;
-                }
-            }
-            document.getElementById('region')?.addEventListener('change', actualizarCiudades);
-            document.getElementById('ciudad')?.addEventListener('change', function() {
-            const region = document.getElementById('region')?.value;
-            const ciudad = this.value;
-            const comunaSelect = document.getElementById('comuna');
-            if (!comunaSelect) return;
-            comunaSelect.innerHTML = '<option value="">Seleccionar comuna</option>';
-            comunaSelect.disabled = !(region && ciudad && datosChile[region]?.comunas?.[ciudad]);
-            if (region && ciudad && datosChile[region]?.comunas?.[ciudad]) {
-            datosChile[region].comunas[ciudad].forEach(comuna => {
-            const option = document.createElement('option');
-            option.value = comuna.toLowerCase().replace(/\s+/g, '_');
-            option.textContent = comuna;
-            comunaSelect.appendChild(option);
-            });
-            comunaSelect.disabled = false;
-            }
-            });
-           
-            // === PUSH NOTIFICATIONS ===
-            function requestNotificationPermission() {
-                if (!('Notification' in window)) return;
-                if (Notification.permission === 'granted') {
-                subscribeToPush();
-                } else if (Notification.permission !== 'denied') {
-                Notification.requestPermission().then(permission => {
-                if (permission === 'granted') subscribeToPush();
-                });
-                }
-            }
-            function subscribeToPush() {
-                const vapidKey = '<?= VAPID_PUBLIC_KEY ?>';
-                if (!vapidKey || vapidKey === 'VAPID_PUBLIC_KEY') {
-                console.warn('VAPID key not configured');
-                return;
-                }
-                navigator.serviceWorker.ready.then(registration => {
-                return registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey)
-                });
-                }).then(subscription => {
-                fetch('../api/guardar_suscripcion.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                id_socio: <?= (int)($_SESSION['id_socio'] ?? 0) ?>,
-                subscription: subscription
-                })
-                });
-                });
-            }
-            function urlBase64ToUint8Array(base64String) {
-                const padding = '='.repeat((4 - base64String.length % 4) % 4);
-                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-                const rawData = atob(base64);
-                return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-            }
-            // === LIMPIAR SESIÓN ===
+            // === FUNCIONES CRÍTICAS DE NAVEGACIÓN Y SESIÓN ===
+            
+            // 1. Limpiar Sesión
             function limpiarSesion() {
                 localStorage.removeItem('cancha_session');
                 localStorage.removeItem('cancha_club');
             }
-            // === MODAL COMPARTIR ===
+
+            // 2. Cambiar Club (Definida explícitamente aquí para evitar ReferenceError)
+            function cambiarClub(clubSlug) {
+                console.log('🔄 Cambiando a club:', clubSlug);
+                document.body.style.cursor = 'wait';
+
+                fetch('../api/cambiar_club_sesion.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ club_slug: clubSlug })
+                })
+                .then(r => {
+                    if (!r.ok) throw new Error('Error en la red');
+                    return r.json();
+                })
+                .then(data => {
+                    document.body.style.cursor = 'default';
+                    if (data.success) {
+                        window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
+                    } else {
+                        alert('❌ Error: ' + (data.message || 'No se pudo cambiar de club'));
+                    }
+                })
+                .catch(err => {
+                    document.body.style.cursor = 'default';
+                    console.error('Error:', err);
+                    alert('❌ Error de conexión al cambiar de club');
+                });
+            }
+
+            // 3. Modal Compartir
             function abrirModalCompartir() {
                 const modal = document.getElementById('modalCompartir');
                 if (modal) modal.style.display = 'flex';
@@ -1337,20 +1158,34 @@
                 if (modal) modal.style.display = 'none';
             }
             function copiarEnlace() {
-                const url = '<?= json_encode("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>';
+                const url = "<?= htmlspecialchars("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>";
                 navigator.clipboard.writeText(url)
                 .then(() => alert('✅ Enlace copiado!'))
                 .catch(err => console.error('Error al copiar:', err));
             }
-            // === CERRAR MODAL AL HACER CLICK FUERA ===
-            const modalCompartir = document.getElementById('modalCompartir');
-                if (modalCompartir) {
-                modalCompartir.addEventListener('click', function(e) {
-                if (e.target === this) cerrarModalCompartir();
-                });
+
+            // === TOAST PERSONALIZADO (Definido temprano para evitar errores) ===
+            function mostrarToast(mensaje, tipo = 'info') {
+                let toastContainer = document.getElementById('toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'toast-container';
+                    toastContainer.style.cssText = `position: fixed; bottom: 20px; right: 20px; z-index: 1000; max-width: 300px;`;
+                    document.body.appendChild(toastContainer);
+                }
+                const toast = document.createElement('div');
+                toast.textContent = mensaje;
+                const color = tipo === 'exito' ? '#4CAF50' : (tipo === 'error' ? '#F44336' : '#667eea');
+                toast.style.cssText = `background: ${color}; color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards; font-size: 14px;`;
+                toastContainer.appendChild(toast);
+                setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
             }
+
             // === ACCIONES DE EVENTOS ===
             function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+                console.log('🔵 Intentando anotarse:', idActividad);
+                if (!idActividad) { mostrarToast('❌ Error: ID inválido', 'error'); return; }
+
                 const formData = new FormData();
                 formData.append('action', 'anotarse');
                 formData.append('id_actividad', idActividad);
@@ -1363,180 +1198,44 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            mostrarToast(data.message);
+                            mostrarToast(data.message, 'exito');
                             setTimeout(() => location.reload(), 1500);
                         } else {
-                            // ✅ MANEJO DEL NUEVO CASO: Ya pagó el mes
-                            if (data.message === 'NO_CUOTA_GENERADA') {
-                                mostrarToast('✅ ' + data.detail, 'exito'); // Toast verde indicando que ya está cubierto
-                                // No recargamos, porque no se hizo ningún cambio, solo informamos
-                            } else {
-                                mostrarToast('❌ ' + data.message);
-                            }
+                            mostrarToast('❌ ' + data.message, 'error');
                         }
                     })
                     .catch(error => {
-                        mostrarToast('❌ Error al procesar la inscripción');
-                        console.error('Error:', error);
+                        console.error('❌ Error Fetch:', error);
+                        mostrarToast('❌ Error de conexión', 'error');
                     });
             }
-            function pasoEvento(idReserva) {
-                const card = event.target.closest('.stat-card');
-                if (card) {
-                const pasoBtn = event.target;
-                pasoBtn.textContent = 'Paso esta semana';
-                pasoBtn.disabled = true;
-                pasoBtn.style.opacity = '0.7';
-                }
-            }
-            function invitarGalletas(idReserva) {
-                alert('Función "Invitar Galletas" en desarrollo');
-            }
-            function invitarCancha(idReserva) {
-                alert('Función "Invitar un Cancha" en desarrollo');
-            }
-            function pagarCuota(idCuota) {
-                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-            }
-            // === ARMAR EQUIPOS IA ===
-            function armarEquiposIA(idReserva) {
-                console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
-                fetch('../api/armar_equipos_ia.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_reserva: idReserva})
-                    })
-                .then(response => {
-                    console.log('ℹ️ [Frontend] Respuesta recibida, status:', response.status);
-                    if (!response.ok) {
-                    throw new Error('Respuesta no OK: ' + response.status);
-                }
-                return response.json();
-                })
-                .then(data => {
-                console.log('🤖 [Frontend] Datos recibidos:', data);
-                if (data.success) {
-                console.log('🤖 [Frontend] Llamando a mostrarModalEquipos()');
-                mostrarModalEquipos(data.equipos);
-                } else {
-                console.error('🤖 [Frontend] Error desde API:', data.message);
-                alert('Error: ' + data.message);
-                }
-                })
-                .catch(err => {
-                console.error('🤖 [Frontend] Error en armado de equipos:', err);
-                alert('Error al armar equipos: ' + err.message);
-                });
-            }
-            // === EDITAR PERFIL SOCIO ===
-            function editarPerfilSocio(idSocio) {
-                window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
-            }
-            // === ELIMINAR SOCIO ===
-            function eliminarSocio(idSocio) {
-                if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
-                fetch('../api/eliminar_socio.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_socio: idSocio})
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast('✅ Socio eliminado');
-                setTimeout(() => location.reload(), 1500);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                });
-            }
-            // === BAJARSE DE EVENTO ===
-            function bajarseEvento(idReserva, idSocioObjetivo = null) {
-                if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
-                const params = new URLSearchParams({
-                action: 'bajarse',
-                id_actividad: idReserva,
-                tipo_actividad: 'reserva'
-                });
-                if (idSocioObjetivo) {
-                params.append('id_socio_objetivo', idSocioObjetivo);
-                }
-                fetch('../api/gestion_eventos.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: params
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast(data.message);
-                setTimeout(() => location.reload(), 1500);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                })
-                .catch(err => {
-                console.error('Error:', err);
-                mostrarToast('❌ Error al procesar la baja');
-                });
-            }
 
-            // === REVISAR PAGO ===
-            function revisarPago(idCuota) {
-                fetch('../api/revisar_pago.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast('✅ Cuota en revisión');
-                setTimeout(() => cargarTabla('cuotas'), 1000);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                });
-            }
-            // === VALIDAR PAGO ===
-            function validarPago(idCuota) {
-                fetch('../api/validar_pago.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast('✅ Pago validado');
-                setTimeout(() => cargarTabla('cuotas'), 1000);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                });
-            }
-            // === ASIGNAR CERVEZA ===
-            function asignarCerveza(idInscrito, estado) {
-                fetch('../api/asignar_cerveza.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: new URLSearchParams({
-                    id_inscrito: idInscrito,
-                    lleva_cerveza: estado
-                    })
-                })
-                .then(r => r.json())
+            function bajarseEvento(idReserva) {
+                if(!confirm('¿Seguro que deseas bajarte de este evento?')) return;
+                const formData = new FormData();
+                formData.append('action', 'bajarse');
+                formData.append('id_reserva', idReserva);
+                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+                    .then(r => r.json())
                     .then(data => {
-                        if (data.success) {
-                            mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida');
-                            setTimeout(() => location.reload(), 1000);
+                        if(data.success) {
+                            mostrarToast(data.message, 'exito');
+                            setTimeout(() => location.reload(), 1500);
                         } else {
-                    mostrarToast('❌ ' + data.message);
-                    }
-                });
+                            mostrarToast('❌ ' + data.message, 'error');
+                        }
+                    })
+                    .catch(err => mostrarToast('❌ Error de conexión', 'error'));
             }
 
-            // === ANOTARSE CON CERVEZA ===
+            function pasoEvento(idReserva) {
+                const btn = event.target;
+                btn.textContent = 'Paso esta semana';
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                // Opcional: Guardar estado en BD si es necesario
+            }
+
             function anotarseConCerveza(llevaCerveza, idReserva, deporte, playersMax, montoTotal) {
                 const formData = new FormData();
                 formData.append('action', 'anotarse');
@@ -1551,63 +1250,28 @@
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) {
-                            mostrarToast(data.message);
+                            mostrarToast(data.message, 'exito');
                             setTimeout(() => location.reload(), 1500);
                         } else {
-                            mostrarToast('❌ ' + data.message);
+                            mostrarToast('❌ ' + data.message, 'error');
                         }
                     })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        mostrarToast('❌ Error al procesar la inscripción');
-                    });
+                    .catch(err => mostrarToast('❌ Error de conexión', 'error'));
             }
-            
-            // === TOGGLE CERVEZA MENU ===
-            function toggleCervezaMenu(e) {
-                e.stopPropagation();
-                const menu = document.getElementById('cervezaMenu');
-                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-            }
-            document.addEventListener('click', () => {
-                const menu = document.getElementById('cervezaMenu');
-                if (menu) menu.style.display = 'none';
-            });
 
-            // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
-            document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const golesRojos = formData.get('goles_rojos');
-                const golesBlancos = formData.get('goles_blancos');
-                const jugadorExperto = formData.get('jugador_experto');
-                if (!golesRojos && !golesBlancos) {
-                    alert('Ingresa al menos un marcador');
-                    return;
-                }
-                try {
-                    const response = await fetch('../api/guardar_resultado_partido.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        mostrarToast('✅ Resultado guardado');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        mostrarToast('❌ ' + data.message);
-                    }
-                } catch (error) {
-                    mostrarToast('❌ Error al guardar resultado');
-                    console.error('Error:', error);
-                }
-            });
-
-            // === CARGAR DETALLE EVENTOS ===
-            function formatDate(dateStr) {
-                if (!dateStr) return '-';
-                const [y, m, d] = dateStr.split('-');
-                return `${d}/${m}`;
+            // === ARMAR EQUIPOS IA ===
+            function armarEquiposIA(idReserva) {
+                fetch('../api/armar_equipos_ia.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_reserva: idReserva})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) mostrarModalEquipos(data.equipos);
+                    else alert('Error: ' + data.message);
+                })
+                .catch(err => alert('Error al armar equipos'));
             }
 
             // === MODAL EQUIPOS IA ===
@@ -1615,19 +1279,16 @@
                 const rojosEl = document.getElementById('equipoRojos');
                 const blancosEl = document.getElementById('equipoBlancos');
                 const modal = document.getElementById('modalEquipos');
-                if (!rojosEl || !blancosEl || !modal) {
-                    console.error('❌ Elementos del modal no encontrados');
-                    alert('Error: Modal no disponible');
-                    return;
-                }
+                if (!rojosEl || !blancosEl || !modal) return;
+                
                 rojosEl.innerHTML = '';
                 blancosEl.innerHTML = '';
+                
                 equipos.rojos.forEach(j => {
                     const li = document.createElement('li');
                     li.textContent = j.alias;
                     li.dataset.idSocio = j.id_socio;
-                    li.style.padding = '0.3rem';
-                    li.style.cursor = 'pointer';
+                    li.style.padding = '0.3rem'; li.style.cursor = 'pointer';
                     li.onclick = () => seleccionarJugador(li, 'rojos');
                     rojosEl.appendChild(li);
                 });
@@ -1635,8 +1296,7 @@
                     const li = document.createElement('li');
                     li.textContent = j.alias;
                     li.dataset.idSocio = j.id_socio;
-                    li.style.padding = '0.3rem';
-                    li.style.cursor = 'pointer';
+                    li.style.padding = '0.3rem'; li.style.cursor = 'pointer';
                     li.onclick = () => seleccionarJugador(li, 'blancos');
                     blancosEl.appendChild(li);
                 });
@@ -1644,790 +1304,219 @@
             }
 
             let jugadorSeleccionado = null;
-            let equipoOrigen = null;
-
             function seleccionarJugador(elemento, equipo) {
                 document.querySelectorAll('#equipoRojos li, #equipoBlancos li').forEach(el => {
-                    el.style.border = '1px solid transparent';
-                    el.style.backgroundColor = '';
+                    el.style.border = '1px solid transparent'; el.style.backgroundColor = '';
                 });
-                elemento.style.border = '2px solid #3498DB';
-                elemento.style.backgroundColor = '#d6eaf8';
+                elemento.style.border = '2px solid #3498DB'; elemento.style.backgroundColor = '#d6eaf8';
                 jugadorSeleccionado = elemento.dataset.idSocio;
-                equipoOrigen = equipo;
             }
 
-            // === MOVER JUGADOR ===
             function moverJugador(de, a) {
-                if (!jugadorSeleccionado) {
-                    alert('Selecciona un jugador primero');
-                    return;
-                }
+                if (!jugadorSeleccionado) { alert('Selecciona un jugador primero'); return; }
                 const origen = document.getElementById(`equipo${de.charAt(0).toUpperCase() + de.slice(1)}`);
                 const destino = document.getElementById(`equipo${a.charAt(0).toUpperCase() + a.slice(1)}`);
-                if (destino.children.length >= 7) {
-                    alert('El equipo ya tiene 7 jugadores');
-                    return;
-                }
+                if (destino.children.length >= 7) { alert('El equipo ya tiene 7 jugadores'); return; }
+                
                 let elementoSeleccionado = null;
                 Array.from(origen.children).forEach(li => {
-                    if (li.dataset.idSocio == jugadorSeleccionado) {
-                        elementoSeleccionado = li;
-                    }
+                    if (li.dataset.idSocio == jugadorSeleccionado) elementoSeleccionado = li;
                 });
+                
                 if (elementoSeleccionado) {
                     destino.appendChild(elementoSeleccionado);
                     jugadorSeleccionado = null;
-                    equipoOrigen = null;
                     elementoSeleccionado.style.border = '1px solid transparent';
                     elementoSeleccionado.style.backgroundColor = '';
                 }
             }
 
-            // === GUARDAR EQUIPOS ===
             function guardarEquipos() {
-                const rojos = Array.from(document.getElementById('equipoRojos').children).map(li =>
-                    li.dataset.idSocio
-                );
-                const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li =>
-                    li.dataset.idSocio
-                );
-                if (rojos.length === 0 || blancos.length === 0) {
-                    alert('Ambos equipos deben tener al menos un jugador');
-                    return;
-                }
+                const rojos = Array.from(document.getElementById('equipoRojos').children).map(li => li.dataset.idSocio);
+                const blancos = Array.from(document.getElementById('equipoBlancos').children).map(li => li.dataset.idSocio);
+                if (rojos.length === 0 || blancos.length === 0) { alert('Ambos equipos deben tener jugadores'); return; }
+                
                 fetch('../api/guardar_equipos_manual.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id_reserva: <?= $id_reserva ?? 0 ?>,
-                        rojos: rojos,
-                        blancos: blancos
-                    })
+                    body: JSON.stringify({ id_reserva: <?= $id_reserva ?? 0 ?>, rojos: rojos, blancos: blancos })
                 })
                 .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            mostrarToast('✅ Equipos guardados');
-                            setTimeout(() => location.reload(), 1500);
-                        } else {
-                            mostrarToast('❌ ' + data.message);
-                        }
-                    })
-                .catch(err => {
-                console.error('Error:', err);
-                mostrarToast('❌ Error al guardar equipos');
-                });
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Equipos guardados', 'exito'); setTimeout(() => location.reload(), 1500); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                })
+                .catch(err => mostrarToast('❌ Error al guardar', 'error'));
             }
 
-            // === CERRAR MODAL EQUIPOS ===
             function cerrarModalEquipos() {
                 const modal = document.getElementById('modalEquipos');
                 if (modal) modal.style.display = 'none';
             }
 
-            // === CARGAR TABLA ÚNICA ===
+            // === PAGAR CUOTA ===
+            function pagarCuota(idCuota) {
+                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+            }
+
+            // === REVISAR/VALIDAR PAGO ===
+            function revisarPago(idCuota) {
+                fetch('../api/revisar_pago.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
+
+            function validarPago(idCuota) {
+                fetch('../api/validar_pago.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
+
+            // === ASIGNAR CERVEZA ===
+            function asignarCerveza(idInscrito, estado) {
+                fetch('../api/asignar_cerveza.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({ id_inscrito: idInscrito, lleva_cerveza: estado })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida', 'exito');
+                        setTimeout(() => location.reload(), 1000);
+                    } else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
+
+            // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
+            document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                try {
+                    const response = await fetch('../api/guardar_resultado_partido.php', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.success) { mostrarToast('✅ Resultado guardado', 'exito'); setTimeout(() => location.reload(), 1500); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                } catch (error) { mostrarToast('❌ Error al guardar', 'error'); }
+            });
+
+            // === CARGAR TABLA DE DATOS ===
+            function formatDate(dateStr) {
+                if (!dateStr) return '-';
+                const [y, m, d] = dateStr.split('-');
+                return `${d}/${m}`;
+            }
+
             function cargarTabla(filtro) {
                 const tbody = document.getElementById('tablaContenido');
-                if (!tbody) {
-                    console.warn('⚠️ Contenedor #tablaContenido no encontrado');
-                    return;
-                }
+                if (!tbody) return;
 
-                switch (filtro) {
-                    case 'torneos':
-                        fetch('../api/get_mis_torneos.php')
-                            .then(r => r.json())
-                            .then(data => {
-                                if (!Array.isArray(data) || data.length === 0) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No estás inscrito en ningún torneo americano</td></tr>`;
-                                    return;
-                                }
-                                let html = '';
-                                data.forEach(row => {
-                                    let botonAccion = '-';
-                                    const fecha = row.fecha_inicio ? row.fecha_inicio.split('T')[0].split('-').reverse().join('/') : '-';
-                                    html += `
-                                        <tr onclick="abrirDetalleTorneo(${row.id_torneo})">
-                                            <td>${fecha}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>${row.id_club || '-'}</td>
-                                            <td>'Pasco'</td>
-                                            <td>${row.torneo || '-'}</td>
-                                            <td>${row.posicion || '-'}</td>
-                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>-</td>
-                                            <td>${row.comentario || '-'}</td>
-                                            <td>-</td>
-                                        </tr>
-                                    `;
-                                });
-                                tbody.innerHTML = html;
-                            })
-                            .catch(err => {
-                                console.error('Error:', err);
-                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los torneos</td></tr>';
-                            });
-                        break;
+                // Desactivar botones visualmente
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`[data-filter="${filtro}"]`)?.classList.add('active');
 
-                    case 'cuotas':
-                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.error) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-                                    return;
-                                }
-                                if (!Array.isArray(data) || data.length === 0) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-                                    return;
-                                }
-                                
-                                let html = '';
-                                const esResponsable = <?= json_encode($es_responsable) ?>;
-                                
-                                data.forEach(row => {
-                                    let botonAccion = '-';
-                                    
-                                    // Determinar tipo de pago
-                                    let tipoPagoDisplay = row.tipo_pago ? row.tipo_pago.toUpperCase() : 'SEMANA';
-                                    
-                                    // Monto Esperado (Lo que debía pagar según el tipo)
-                                    let montoEsperado = 0;
-                                    if (row.tipo_pago === 'mes' && row.valor_mes) {
-                                        montoEsperado = parseFloat(row.valor_mes);
-                                    } else {
-                                        montoEsperado = parseFloat(row.cuota_monto || 0);
-                                    }
-                                    
-                                    // ✅ CORRECCIÓN CRÍTICA: El pago realizado viene en 'row.monto'
-                                    // Asegúrate que tu API get_tabla_datos.php esté seleccionando c.monto como 'monto'
-                                    let pagoRealizado = parseFloat(row.monto || 0);
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:2rem;">Cargando...</td></tr>';
 
-                                    // Lógica de botones para responsable
-                                    if (esResponsable) {
-                                        if (row.estado === 'pendiente') {
-                                            botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_inscrito})">🔍 Revisar</button>`;
-                                        } else if (row.estado === 'en_revision') {
-                                            botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_inscrito})">✅ Validar</button>`;
-                                        }
-                                    }
+                fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.error || !Array.isArray(data) || data.length === 0) {
+                            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:2rem;">${data.error || 'No hay datos disponibles'}</td></tr>`;
+                            return;
+                        }
+                        
+                        let html = '';
+                        const esResponsable = <?= json_encode($es_responsable) ?>;
+                        const miIdSocio = <?= (int)($_SESSION['id_socio'] ?? 0) ?>;
 
-                                    html += `
-                                        <tr>
-                                            <td>${formatDate(row.fecha)}</td>
-                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                            <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.origen || '-'}</td>
-                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre || '-'}</td>
-                                            
-                                            <!-- Columna 1: Tipo Pago -->
-                                            <td style="text-align:center; font-weight:bold; color:${row.tipo_pago === 'mes' ? '#071289' : '#555'};">
-                                                ${tipoPagoDisplay}
-                                            </td>
-                                            
-                                            <!-- Columna 2: Monto Esperado -->
-                                            <td style="text-align:right;">$${montoEsperado.toLocaleString()}</td>
-                                            
-                                            <!-- Columna 3: Pago Realizado (CORREGIDO) -->
-                                            <td style="text-align:right; font-weight:bold; color:#28a745;">
-                                                $${pagoRealizado.toLocaleString()}
-                                            </td>
-                                            
-                                            <td>${row.comentario_completo || '-'}</td>
-                                            <td style="text-align:center;">${botonAccion}</td>
-                                        </tr>
-                                    `;
-                                });
-                                
-                                tbody.innerHTML = html;
-                            })
-                            .catch(err => {
-                                console.error('Error:', err);
-                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar las cuotas</td></tr>';
-                            });
-                        break;
+                        data.forEach(row => {
+                            let botonAccion = '-';
+                            
+                            // Lógica específica por filtro
+                            if (filtro === 'inscritos') {
+                                const esMiInscripcion = (row.id_socio == miIdSocio);
+                                const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
+                                const ahora = new Date();
+                                let acciones = '';
+                                if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
+                                    acciones += `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-right:0.3rem;" onclick="bajarseEvento(${row.id_evento}, ${esResponsable && !esMiInscripcion ? row.id_socio : 'null'})">Bajar</button>`;
+                                }
+                                if (esResponsable && fechaEvento > ahora) {
+                                    const emoji = row.lleva_cerveza ? '🍺' : '⚪';
+                                    acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
+                                }
+                                botonAccion = acciones || '-';
+                            } else if (filtro === 'cuotas' && esResponsable) {
+                                if (row.estado === 'pendiente') botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#F39C12;" onclick="revisarPago(${row.id_cuota})">🔍</button>`;
+                                else if (row.estado === 'en_revision') botonAccion = `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#2ECC71;" onclick="validarPago(${row.id_cuota})">✅</button>`;
+                            } else if (filtro === 'socios' && esResponsable) {
+                                botonAccion = `<span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_socio})">✏️</span>`;
+                            } else if (filtro === 'torneos') {
+                                botonAccion = `<span style="cursor:pointer;" onclick="abrirDetalleTorneo(${row.id_torneo})">👁️</span>`;
+                            }
 
-                    case 'socios':
-                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.error) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-                                    return;
-                                }
-                                if (!Array.isArray(data) || data.length === 0) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-                                    return;
-                                }
-                                let html = '';
-                                const esResponsable = <?= json_encode($es_responsable) ?>;
-                                data.forEach(row => {
-                                    let botonAccion = '-';
-                                    if (esResponsable) {
-                                        botonAccion = `
-                                            <div style="display:flex;gap:0.6rem;justify-content:center;">
-                                                <span style="cursor:pointer;font-size:1.2rem;" onclick="editarPerfilSocio(${row.id_evento})">✏️</span>
-                                                <span style="cursor:pointer;font-size:1.2rem;" onclick="eliminarSocio(${row.id_evento})">🗑️</span>
-                                            </div>
-                                        `;
-                                    }
-                                    html += `
-                                        <tr>
-                                            <td>${formatDate(row.fecha)}</td>
-                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                            <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.origen || '-'}</td>
-                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre || '-'}</td>
-                                            <td>${row.posicion_jugador || '-'}</td>
-                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                            <td>${row.comentario_completo}</td>
-                                            <td>${botonAccion}</td>
-                                        </tr>
-                                    `;
-                                });
-                                tbody.innerHTML = html;
-                            })
-                            .catch(err => {
-                                console.error('Error:', err);
-                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los socios</td></tr>';
-                            });
-                        break;
-
-                    case 'inscritos':
-                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.error) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-                                    return;
-                                }
-                                if (!Array.isArray(data) || data.length === 0) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-                                    return;
-                                }
-                                let html = '';
-                                const esResponsable = <?= json_encode($es_responsable) ?>;
-                                const miIdSocio = <?= (int)($_SESSION['id_socio'] ?? 0) ?>;
-                                data.forEach(row => {
-                                    let botonAccion = '-';
-                                    const esMiInscripcion = (row.id_socio == miIdSocio);
-                                    const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-                                    const ahora = new Date();
-                                    let acciones = '';
-                                    if (esMiInscripcion || (esResponsable && fechaEvento > ahora)) {
-                                        acciones += `<button class="btn-action" style="padding:0.2rem 0.4rem;font-size:0.7rem;background:#FF6B6B;margin-right:0.3rem;" onclick="bajarseEvento(${row.id_evento}, ${esResponsable && !esMiInscripcion ? row.id_socio : 'null'})">Bajar</button>`;
-                                    }
-                                    if (esResponsable && fechaEvento > ahora) {
-                                        const emoji = row.lleva_cerveza ? '🍺' : '';
-                                        acciones += `<span style="font-size:1.2rem;cursor:pointer;" onclick="asignarCerveza(${row.id_inscrito}, ${row.lleva_cerveza ? 0 : 1})">${emoji}</span>`;
-                                    }
-                                    botonAccion = acciones || '-';
-                                    html += `
-                                        <tr>
-                                            <td>${formatDate(row.fecha)}</td>
-                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                            <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.origen || '-'}</td>
-                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre || '-'}</td>
-                                            <td>${row.posicion_jugador || '-'}</td>
-                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                            <td>${row.comentario_completo}</td>
-                                            <td>${botonAccion}</td>
-                                        </tr>
-                                    `;
-                                });
-                                tbody.innerHTML = html;
-                            })
-                            .catch(err => {
-                                console.error('Error:', err);
-                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los inscritos</td></tr>';
-                            });
-                        break;
-
-                    case 'reservas':
-                    case 'eventos':
-                    case 'equipos':
-                        // Filtros sin acciones ni comentarios
-                        fetch(`../api/get_tabla_datos.php?filtro=${filtro}`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.error) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">${data.error}</td></tr>`;
-                                    return;
-                                }
-                                if (!Array.isArray(data) || data.length === 0) {
-                                    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay datos disponibles</td></tr>`;
-                                    return;
-                                }
-                                let html = '';
-                                data.forEach(row => {
-                                    let botonAccion = '-';
-                                    const fechaEvento = new Date(row.fecha + ' ' + (row.hora_inicio || '00:00'));
-                                    const ahora = new Date();
-                                    html += `
-                                        <tr>
-                                            <td>${formatDate(row.fecha)}</td>
-                                            <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
-                                            <td>${row.id_tipoevento || '-'}</td>
-                                            <td>${row.origen || '-'}</td>
-                                            <td>$${parseInt(row.costo_evento || 0).toLocaleString()}</td>
-                                            <td>${row.nombre || '-'}</td>
-                                            <td>${row.posicion_jugador || '-'}</td>
-                                            <td>$${parseInt(row.cuota_monto || 0).toLocaleString()}</td>
-                                            <td>$${parseInt(row.monto || 0).toLocaleString()}</td>
-                                            <td>${row.comentario_completo}</td>
-                                            <td>${botonAccion}</td>
-                                        </tr>
-                                    `;
-                                });
-                                tbody.innerHTML = html;
-                            })
-                            .catch(err => {
-                                console.error('Error:', err);
-                                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#FF6B6B;">Error al cargar los datos</td></tr>';
-                            });
-                        break;
-
-                    default:
-                        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Filtro no reconocido: "${filtro}"</td></tr>`;
-                        break;
-                }
+                            html += `
+                                <tr>
+                                    <td>${formatDate(row.fecha)}</td>
+                                    <td>${row.hora_inicio?.substring(0,5) || '-'}</td>
+                                    <td>${row.tipo || row.id_tipoevento || '-'}</td>
+                                    <td>${row.cancha || row.origen || '-'}</td>
+                                    <td>$${parseInt(row.costo_evento || row.monto_total || 0).toLocaleString()}</td>
+                                    <td>${row.nombre || '-'}</td>
+                                    <td>${row.puesto || row.posicion_jugador || '-'}</td>
+                                    <td>$${parseInt(row.cuota_monto || row.monto_esperado || 0).toLocaleString()}</td>
+                                    <td>$${parseInt(row.monto_pagado || row.monto || 0).toLocaleString()}</td>
+                                    <td>${row.comentario || '-'}</td>
+                                    <td>${botonAccion}</td>
+                                </tr>
+                            `;
+                        });
+                        tbody.innerHTML = html;
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#FF6B6B;">Error al cargar datos</td></tr>';
+                    });
             }
 
             // === INICIALIZAR AL CARGAR LA PÁGINA ===
             document.addEventListener('DOMContentLoaded', () => {
-                // 1. Configurar botones de filtro
+                // Configurar botones de filtro
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
                         const filtro = btn.getAttribute('data-filter');
                         cargarTabla(filtro);
                     });
                 });
                 
-                // 2. Cargar tabla según parámetro de URL o por defecto
+                // Cargar tabla por defecto
                 const urlParams = new URLSearchParams(window.location.search);
-                const filtro = urlParams.get('filtro') || 'inscritos';
-                const activeBtn = document.querySelector(`[data-filter="${filtro}"]`);
-                if (activeBtn) {
-                    activeBtn.classList.add('active');
-                }
-                cargarTabla(filtro);
+                const filtroInicial = urlParams.get('filtro') || 'inscritos';
+                cargarTabla(filtroInicial);
             });
 
-            // === CARGAR POSICIONES/RANKING/RESULTADOS (solo si hay torneo) ===
-            <?php if ($tiene_torneo && isset($torneo_actual['id_torneo'])): ?>
-            document.addEventListener('DOMContentLoaded', () => {
-                const idTorneo = <?= (int)$torneo_actual['id_torneo'] ?>;
-                const idSocio = <?= (int)($_SESSION['id_socio'] ?? 0) ?>;
-                
-                // Tabla de posiciones
-                fetch(`../api/get_posiciones_completo.php?id_torneo=${idTorneo}`)
-                .then(r => r.json())
-                .then(data => {
-                    let html = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
-                    html += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
-                    data.forEach((p, i) => {
-                        html += `<tr style="border-bottom:1px solid #eee;">
-                            <td style="text-align:center;">${i+1}</td>
-                            <td>${p.nombre_pareja || ''}</td>
-                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados || 0}</td>
-                        </tr>`;
-                    });
-                    html += '</tbody></table>';
-                    
-                    const contenedorPosiciones = document.getElementById('tablaPosicionesTorneo');
-                    if (contenedorPosiciones) {
-                        contenedorPosiciones.innerHTML = html || 'Sin posiciones';
-                    }
-                })
-                .catch(err => console.error('Error posiciones:', err));
+            // === ANIMACIONES CSS PARA TOAST ===
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+                @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+            `;
+            document.head.appendChild(style);
 
-                // Ranking personal
-                fetch(`../api/get_ranking_personal.php?id_socio=${idSocio}`)
-                .then(r => r.json())
-                .then(data => {
-                    const miRanking = document.getElementById('miRanking');
-                    if (miRanking && data && typeof data.total_puntos !== 'undefined') {
-                        miRanking.innerHTML = `
-                            <p><strong>Puntos totales:</strong> ${data.total_puntos}</p>
-                            <p><strong>Última posición:</strong> #${data.ultima_posicion || '—'}</p>
-                        `;
-                    }
-                })
-                .catch(err => console.error('Error ranking:', err));
-
-                // Resultados personales
-                fetch(`../api/get_resultados_personales.php?id_torneo=${idTorneo}`)
-                .then(r => r.json())
-                .then(data => {
-                    const contenedorResultados = document.getElementById('misResultadosTorneo');
-                    if (!contenedorResultados) return;
-                    
-                    if (!data || data.length === 0) {
-                        contenedorResultados.innerHTML = 'No hay partidos jugados aún.';
-                        return;
-                    }
-                    let html = '<ul style="list-style:none;padding:0;">';
-                    data.forEach(p => {
-                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
-                        html += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1 || 0}-${p.juegos_pareja_2 || 0} vs ${p.rival || ''}</li>`;
-                    });
-                    html += '</ul>';
-                    contenedorResultados.innerHTML = html;
-                })
-                .catch(err => console.error('Error resultados:', err));
-            });
-            <?php endif; ?>
-
-            // === INICIALIZAR PUESTOS ===
-            document.addEventListener('DOMContentLoaded', () => {
-                const deporteSelect = document.getElementById('deporte');
-                if (deporteSelect?.value) {
-                    cargarPuestosPorDeporte(deporteSelect.value);
-                }
-                deporteSelect?.addEventListener('change', function() {
-                    cargarPuestosPorDeporte(this.value);
-                });
-            });
-
-            function agregarOtroClub() {
-                fetch('../api/listar_clubes_publicos.php')
-                .then(r => r.json())
-                .then(clubes => {
-                    // Crear modal con DOM API (seguro contra PHP)
-                    const overlay = document.createElement('div');
-                    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;';
-                    
-                    const modal = document.createElement('div');
-                    modal.style.cssText = 'background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;';
-                    
-                    const title = document.createElement('h3');
-                    title.textContent = 'Selecciona un club';
-                    
-                    const search = document.createElement('input');
-                    search.type = 'text';
-                    search.id = 'buscador-club';
-                    search.placeholder = 'Buscar...';
-                    search.style.cssText = 'width:100%;padding:0.5rem;margin:0.5rem 0;';
-                    search.onkeyup = function() {
-                        const input = this.value.toLowerCase();
-                        document.querySelectorAll('#lista-clubes > div').forEach(item => {
-                            item.style.display = item.textContent.toLowerCase().includes(input) ? 'block' : 'none';
-                        });
-                    };
-                    
-                    const lista = document.createElement('div');
-                    lista.id = 'lista-clubes';
-                    lista.style.cssText = 'max-height:300px;overflow-y:auto;';
-                    
-                    const yaUnido = <?= json_encode(array_column($clubes_del_socio, 'id_club')) ?>;
-                    
-                    clubes.forEach(c => {
-                        if (yaUnido.includes(c.id_club)) return;
-                        const item = document.createElement('div');
-                        item.style.cssText = 'padding:0.5rem;cursor:pointer;border-bottom:1px solid #eee;';
-                        item.textContent = c.nombre;
-                        item.onclick = function() { solicitarUnirseAClub(c.id_club); };
-                        lista.appendChild(item);
-                    });
-                    
-                    const btnCerrar = document.createElement('button');
-                    btnCerrar.textContent = 'Cerrar';
-                    btnCerrar.style.cssText = 'margin-top:1rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;';
-                    btnCerrar.onclick = function() { document.body.removeChild(overlay); };
-                    
-                    // Ensamblar
-                    modal.appendChild(title);
-                    modal.appendChild(search);
-                    modal.appendChild(lista);
-                    modal.appendChild(btnCerrar);
-                    overlay.appendChild(modal);
-                    document.body.appendChild(overlay);
-                });
-            }
-
-            function filtrarClubes() {
-                const input = document.getElementById('buscador-club').value.toLowerCase();
-                const items = document.querySelectorAll('#lista-clubes > div');
-                items.forEach(item => {
-                    item.style.display = item.textContent.toLowerCase().includes(input) ? 'block' : 'none';
-                });
-            }
-
-            function cerrarModalOtroClub() {
-                const modal = document.getElementById('modalOtroClub');
-                if (modal) modal.remove();
-            }
-
-            function solicitarUnirseAClub(idClub) {
-                // Obtener slug del club
-                fetch(`../api/get_club_slug.php?id=${idClub}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        fetch('../api/unirse_a_club.php', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ club_slug: data.slug })
-                        })
-                        .then(r => r.json())
-                        .then(res => {
-                            cerrarModalOtroClub();
-                            if (res.success) {
-                                alert('✅ ' + res.message);
-                                location.reload();
-                            } else {
-                                alert('❌ ' + res.message);
-                            }
-                        });
-                    }
-                });
-            }
-
-            function cambiarClub(clubSlug) {
-                fetch('../api/cambiar_club_sesion.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ club_slug: clubSlug })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        // Agregar timestamp para evitar caché
-                        const ts = Date.now();
-                        window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${ts}`;
-                    } else {
-                        alert('❌ Error al cambiar de club');
-                    }
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    alert('❌ No se pudo cambiar de club');
-                });
-            }
-
-            function reemplazarCompanero(idPareja) {
-                if (!confirm('¿Estás seguro de reemplazar a tu compañero? Se generará un nuevo link de invitación.')) return;
-                
-                fetch('../api/generar_link_reemplazo.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id_pareja: idPareja })
-                })
-                .then(r => r.json())
-                .then(function(data) {
-                    if (data.success) {
-                        // Crear elementos con DOM API (más seguro que innerHTML)
-                        const overlay = document.createElement('div');
-                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;';
-                        
-                        const modal = document.createElement('div');
-                        modal.style.cssText = 'background:white;padding:2rem;border-radius:12px;max-width:400px;width:90%;';
-                        
-                        const title = document.createElement('h3');
-                        title.textContent = '🔗 Nuevo link de reemplazo';
-                        title.style.marginTop = '0';
-                        
-                        const desc = document.createElement('p');
-                        desc.textContent = 'Envía este link a tu nuevo compañero:';
-                        
-                        const linkBox = document.createElement('div');
-                        linkBox.style.cssText = 'background:#f1f1f1;padding:0.6rem;border-radius:6px;margin:1rem 0;word-break:break-all;font-family:monospace;font-size:0.9rem;';
-                        linkBox.textContent = data.link || ''; // ✅ Seguro: textContent escapa HTML
-                        
-                        const btnCopiar = document.createElement('button');
-                        btnCopiar.textContent = '📋 Copiar';
-                        btnCopiar.style.cssText = 'background:#071289;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;margin-right:0.5rem;cursor:pointer;';
-                        btnCopiar.onclick = function() {
-                            navigator.clipboard.writeText(data.link || '').then(function() {
-                                alert('✅ Link copiado');
-                            });
-                        };
-                        
-                        const btnCerrar = document.createElement('button');
-                        btnCerrar.textContent = 'Cerrar';
-                        btnCerrar.style.cssText = 'background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;';
-                        btnCerrar.onclick = function() {
-                            document.body.removeChild(overlay);
-                        };
-                        
-                        // Ensamblar
-                        modal.appendChild(title);
-                        modal.appendChild(desc);
-                        modal.appendChild(linkBox);
-                        modal.appendChild(btnCopiar);
-                        modal.appendChild(btnCerrar);
-                        overlay.appendChild(modal);
-                        document.body.appendChild(overlay);
-                        
-                    } else {
-                        alert('❌ ' + data.message);
-                    }
-                })
-                .catch(function(err) {
-                    console.error('Error:', err);
-                    alert('❌ Error al generar link de reemplazo');
-                });
-            }
-
-            function copiarYCerrar(btn) {
-                const link = btn.closest('div').querySelector('div').textContent.trim();
-                navigator.clipboard.writeText(link).then(() => {
-                    alert('✅ Link copiado');
-                    btn.closest('div').remove();
-                });
-            }
-
-            // === ABRIR DETALLE DE TORNEO ===
-            function abrirDetalleTorneo(idTorneo) {
-                fetch(`../api/get_detalle_torneo.php?id_torneo=${idTorneo}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (!data || !data.torneo) {
-                        alert('❌ No se pudo cargar el detalle del torneo');
-                        return;
-                    }
-
-                    // Crear modal
-                    const modal = document.createElement('div');
-                    modal.id = 'modalDetalleTorneo';
-                    modal.style.cssText = `
-                        position: fixed;
-                        top: 0; left: 0;
-                        width: 100%; height: 100%;
-                        background: rgba(0,0,0,0.7);
-                        z-index: 1000;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                    `;
-
-                    let resultadosHtml = '<ul style="list-style:none;padding:0;">';
-                    (data.resultados || []).forEach(p => {
-                        const resultado = p.resultado ? '✅ Ganó' : '❌ Perdió';
-                        resultadosHtml += `<li style="margin:0.5rem 0;">${resultado} ${p.juegos_pareja_1}-${p.juegos_pareja_2} vs ${p.rival}</li>`;
-                    });
-                    resultadosHtml += '</ul>';
-
-                    let posicionesHtml = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">';
-                    posicionesHtml += '<thead><tr style="background:#071289;color:white;"><th>#</th><th>Pareja</th><th>Sets</th></tr></thead><tbody>';
-                    (data.posiciones || []).forEach((p, i) => {
-                        posicionesHtml += `<tr style="border-bottom:1px solid #eee;">
-                            <td style="text-align:center;">${i+1}</td>
-                            <td>${p.nombre_pareja}</td>
-                            <td style="text-align:center;font-weight:bold;">${p.sets_ganados}</td>
-                        </tr>`;
-                    });
-                    posicionesHtml += '</tbody></table>';
-
-                    modal.innerHTML = `
-                        <div style="background:white;padding:2rem;border-radius:16px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;position:relative;">
-                            <button onclick="cerrarModalTorneo()" style="position:absolute;top:10px;right:10px;background:#6c757d;color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;">✕</button>
-                            <h3 style="margin-top:0;">📊 Detalle del Torneo</h3>
-                            <p><strong>Nombre:</strong> ${data.torneo.nombre}</p>
-                            <p><strong>Fecha:</strong> ${data.torneo.fecha_inicio}</p>
-                            <p><strong>Mi Posición:</strong> ${data.mi_posicion || '—'}</p>
-                            <h4 style="margin-top:1.5rem;">Mis Resultados</h4>
-                            ${resultadosHtml}
-                            <h4 style="margin-top:1.5rem;">Tabla de Posiciones</h4>
-                            ${posicionesHtml}
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
-                })
-                .catch(err => {
-                    console.error('Error al cargar detalle:', err);
-                    alert('❌ Error al cargar el detalle del torneo');
-                });
-            }
-
-            function cerrarModalTorneo() {
-                const modal = document.getElementById('modalDetalleTorneo');
-                if (modal) modal.remove();
-            }
-
-            function abrirRankingCompleto() {
-                fetch('../api/get_ranking_completo.php')
-                .then(r => r.json())
-                .then(data => {
-                    if (!data || data.length === 0) {
-                        alert('No hay datos de ranking aún.');
-                        return;
-                    }
-
-                    let html = `
-                        <div style="background:rgba(7,18,137,0.95);color:white;padding:1.5rem;border-radius:16px;max-height:80vh;overflow-y:auto;">
-                            <h3 style="margin-top:0;text-align:center;">🏆 Ranking Pádel CanchaSport</h3>
-                            <table style="width:100%;border-collapse:collapse;margin-top:1rem;font-size:0.85rem;">
-                                <thead>
-                                    <tr style="background:#FFD700;color:#071289;">
-                                        <th>#</th>
-                                        <th>Jugador</th>
-                                        <th>Nivel</th>
-                                        <th>Puntos</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-
-                    data.forEach((j, i) => {
-                        html += `
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
-                                <td style="text-align:center;">${i+1}</td>
-                                <td> ${j.nombre}</td>
-                                <td>${j.nivel}</td>
-                                <td style="text-align:right;font-weight:bold;">${j.total_puntos}</td>
-                            </tr>
-                        `;
-                    });
-
-                    html += `
-                                </tbody>
-                            </table>
-                            <button 
-                                onclick="cerrarRankingModal()" 
-                                style="margin-top:1rem;background:#6c757d;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;width:100%;">
-                                Cerrar
-                            </button>
-                        </div>
-                    `;
-
-                    // Crear modal
-                    const modal = document.createElement('div');
-                    modal.id = 'modalRanking';
-                    modal.style.cssText = `
-                        position: fixed;
-                        top: 0; left: 0;
-                        width: 100%; height: 100%;
-                        background: rgba(0,0,0,0.7);
-                        z-index: 1000;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        padding: 1rem;
-                    `;
-                    modal.innerHTML = html;
-                    document.body.appendChild(modal);
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    alert('❌ Error al cargar el ranking');
-                });
-            }
-
-            function cerrarRankingModal() {
-                const modal = document.getElementById('modalRanking');
-                if (modal) modal.remove();
-            }
         </script>
     </body>
 </html>
