@@ -865,30 +865,33 @@
                                             onclick="bajarseEvento(<?= (int)$id_reserva ?>)">
                                         Bajarse
                                     </button>
-                                    <?php else: ?>
+                                                                        <?php else: ?>
                                     <?php if ($cupos_llenos): ?>
                                         <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
                                     <?php else: ?>
-                                        <button 
-                                            class="btn-action"
-                                            onclick="anotarseEvento(
-                                                <?= (int)$id_reserva ?>, 
-                                                'reserva', 
-                                                <?= json_encode($deporte) ?>, 
-                                                <?= (int)$players ?>, 
-                                                <?= (float)$monto_total ?>
-                                            )">
+                                        <?php 
+                                            // === LOGS DE DEPURACIÓN ===
+                                            error_log("🔍 [DEBUG BOTONES] ID Reserva: " . $id_reserva);
+                                            error_log("🔍 [DEBUG BOTONES] Deporte RAW: " . var_export($deporte, true));
+                                            error_log("🔍 [DEBUG BOTONES] Players: " . $players);
+                                            error_log("🔍 [DEBUG BOTONES] Monto: " . $monto_total);
+                                            
+                                            // Sanitización extrema para JS
+                                            $js_deporte = addslashes($deporte); 
+                                            $js_id = (int)$id_reserva;
+                                            $js_players = (int)$players;
+                                            $js_monto = (float)$monto_total;
+                                        ?>
+                                        
+                                        <!-- Botón Anotarse -->
+                                        <button class="btn-action" 
+                                            onclick="console.log('🔵 Click Anotarse'); anotarseEvento(<?= $js_id ?>, 'reserva', '<?= $js_deporte ?>', <?= $js_players ?>, <?= $js_monto ?>)">
                                             Anotarse
                                         </button>
-                                        <button 
-                                            class="btn-action"
-                                            onclick="anotarseConCerveza(
-                                                true, 
-                                                <?= (int)$id_reserva ?>, 
-                                                <?= json_encode($deporte) ?>, 
-                                                <?= (int)$players ?>, 
-                                                <?= (float)$monto_total ?>
-                                            )">
+                                        
+                                        <!-- Botón Anotarse + Cerveza -->
+                                        <button class="btn-action" 
+                                            onclick="console.log('🍺 Click Cerveza'); anotarseConCerveza(true, <?= $js_id ?>, '<?= $js_deporte ?>', <?= $js_players ?>, <?= $js_monto ?>)">
                                             Anotarse + llevo 🍺🍺
                                         </button>
                                     <?php endif; ?>
