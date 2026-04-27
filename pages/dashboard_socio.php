@@ -1164,22 +1164,38 @@
                 .catch(err => console.error('Error al copiar:', err));
             }
 
-            // === TOAST PERSONALIZADO (Definido temprano para evitar errores) ===
-            function mostrarToast(mensaje, tipo = 'info') {
+                        // === TOAST PERSONALIZADO ===
+            function mostrarToast(mensaje, tipo = 'info') { // <--- Asegúrate que tenga 'tipo = info' o quítalo si usas ES5
                 let toastContainer = document.getElementById('toast-container');
                 if (!toastContainer) {
-                    toastContainer = document.createElement('div');
-                    toastContainer.id = 'toast-container';
-                    toastContainer.style.cssText = `position: fixed; bottom: 20px; right: 20px; z-index: 1000; max-width: 300px;`;
-                    document.body.appendChild(toastContainer);
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1000;
+                max-width: 300px;
+                `;
+                document.body.appendChild(toastContainer);
                 }
                 const toast = document.createElement('div');
                 toast.textContent = mensaje;
-                const color = tipo === 'exito' ? '#4CAF50' : (tipo === 'error' ? '#F44336' : '#667eea');
-                toast.style.cssText = `background: ${color}; color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards; font-size: 14px;`;
+                toast.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 12px 16px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+                font-size: 14px;
+                `;
                 toastContainer.appendChild(toast);
-                setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
-            }
+                setTimeout(() => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 5000);
+            } // <--- ¡ESTA LLAVE DE CIERRE ES CRÍTICA!
 
             // === ACCIONES DE EVENTOS ===
             function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
