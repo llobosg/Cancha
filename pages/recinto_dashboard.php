@@ -2203,7 +2203,7 @@ function verFixture(idTorneo) {
                         document.getElementById('submodalGenerico').style.display = 'flex';
                     });
             });
-    }
+}
 
 // === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
 function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
