@@ -801,6 +801,47 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     font-size: 1.1rem;
     min-height: 1.5rem;
 }
+/* === MODAL COMPACTO MÓVIL === */
+.submodal-card.compact-modal {
+    max-width: 320px !important; /* Ancho tipo móvil */
+    padding: 1rem !important;
+}
+.compact-inputs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+.compact-input {
+    width: 60px;
+    height: 60px;
+    font-size: 1.8rem;
+    text-align: center;
+    border: 2px solid #071289;
+    border-radius: 12px;
+    font-weight: bold;
+    color: #071289;
+}
+.compact-btn-save {
+    background: #4CAF50;
+    color: white;
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+.fixture-container {
+    max-height: 75vh; /* Ocupa el 75% de la pantalla */
+    overflow-y: auto; /* Scroll interno suave si es necesario */
+    padding-right: 5px;
+}
+.set-header { font-size: 0.85rem; padding: 0.5rem; }
+.partido-card { padding: 0.6rem; margin: 0.4rem 0; }
+.pareja-nombre { font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -1627,6 +1668,7 @@ async function cargarTorneos() {
 
             if (estado === 'abierto') {
                 // ABIERTO: invitar + Crear Fixture
+                botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Cerrar Inscripciones</button>`;
                 botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
                 botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-fixture">Crear Fixture</button>`;
                 
@@ -1639,6 +1681,18 @@ async function cargarTorneos() {
             botones += `</div>`;
             
             html += `<div style="border-left-color:${estadoColor}; animation:fadeIn 0.3s ease-out forwards;">
+                <div style="position:absolute; top:1rem; right:1rem; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold;">${estadoLabel}</span>
+                    
+                    <!-- Menú de 3 puntos -->
+                    <div style="position:relative;">
+                        <button onclick="toggleMenuTorneo(${t.id_torneo}, event)" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">⋮</button>
+                        <div id="menu-torneo-${t.id_torneo}" style="display:none; position:absolute; right:0; top:100%; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:10; min-width:120px;">
+                            <div onclick="editarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem;">✏️ Editar</div>
+                            <div onclick="eliminarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; color:#c62828; font-size:0.9rem;">🗑️ Eliminar</div>
+                        </div>
+                    </div>
+                </div>
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <h4 style="margin:0; color:#071289; font-size:1.1rem; font-weight:700;">${icono} ${t.nombre || 'Sin nombre'}</h4>
                     <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold; text-transform:uppercase;">${estado === 'en_progreso' ? 'EN CURSO' : estado}</span>
@@ -2166,12 +2220,6 @@ function verFixture(idTorneo) {
                         html += `</div>`;
                         rondaNum++;
                     });
-
-                    html += `<div style="margin-top:2rem; display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
-                        <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button>
-                        <button class="action-btn" style="background:#4ECDC4; color:#071289;" onclick="verResultados(${idTorneo})">📊 Resultados Set</button>
-                        <button class="action-btn" style="background:#FFD700; color:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>
-                    </div>`;
                     
                     contenido.innerHTML = html;
                 });
@@ -2184,8 +2232,13 @@ function verFixture(idTorneo) {
 
 // === ✏️ ABRIR RESULTADO (UX Mejorada) ===
 function abrirResultado(idPartido, pareja1, pareja2) {
-    const contenido = document.getElementById('submodalContenido');
     contenidoFixtureAnterior = contenido.innerHTML;
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card');
+    const contenido = document.getElementById('submodalContenido');
+    
+    // Activar modo compacto
+    card.classList.add('compact-modal');
 
     fetch(`../api/get_resultado_partido.php?id_partido=${idPartido}`)
         .then(r => r.json())
@@ -2193,33 +2246,17 @@ function abrirResultado(idPartido, pareja1, pareja2) {
             const j1 = resultado.juegos_pareja_1 || 0;
             const j2 = resultado.juegos_pareja_2 || 0;
 
-            const html = `
-                <div class="resultado-editor">
-                    <h3 style="color:#071289; margin-bottom:0.5rem;">📊 Registrar Resultado</h3>
-                    <p style="color:#666; font-size:0.9rem; margin-bottom:2rem;">Ingresa los sets ganados por cada pareja</p>
-                    
-                    <div style="font-weight:600; color:#333; margin-bottom:1rem;">${pareja1} <span style="color:#999;">vs</span> ${pareja2}</div>
-
-                    <div class="resultado-inputs">
-                        <div style="text-align:center;">
-                            <input type="number" id="juegos1" class="input-juegos" min="0" max="7" value="${j1}">
-                            <div style="font-size:0.8rem; color:#666; margin-top:0.5rem; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${pareja1}</div>
-                        </div>
-                        
-                        <div class="vs-divider">-</div>
-                        
-                        <div style="text-align:center;">
-                            <input type="number" id="juegos2" class="input-juegos" min="0" max="7" value="${j2}">
-                            <div style="font-size:0.8rem; color:#666; margin-top:0.5rem; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${pareja2}</div>
-                        </div>
+             contenido.innerHTML = `
+                <div style="text-align:center;">
+                    <h4 style="margin:0 0 1rem 0; color:#071289; font-size:1rem;">${pareja1} vs ${pareja2}</h4>
+                    <div class="compact-inputs">
+                        <input type="number" id="juegos1" class="compact-input" value="${j1}" min="0" max="7">
+                        <span style="font-weight:bold; color:#ccc;">-</span>
+                        <input type="number" id="juegos2" class="compact-input" value="${j2}" min="0" max="7">
                     </div>
-                    
-                    <div id="ganadora" class="preview-ganador"></div>
-                    
-                    <div style="display:flex; gap:1rem; justify-content:center; margin-top:2rem;">
-                        <button class="action-btn" style="background:#4CAF50; flex:1;" onclick="guardarResultado(${idPartido}, '${pareja1.replace(/'/g, "\\'")}', '${pareja2.replace(/'/g, "\\'")}')">💾 Guardar</button>
-                        <button class="action-btn" style="background:#f5f5f5; color:#333; flex:1;" onclick="volverAFixture()">Cancelar</button>
-                    </div>
+                    <div id="ganadora" style="font-size:0.9rem; color:#4CAF50; font-weight:bold; margin-bottom:1rem;"></div>
+                    <button class="compact-btn-save" onclick="guardarResultado(${idPartido}, '${pareja1.replace(/'/g, "\\'")}', '${pareja2.replace(/'/g, "\\'")}')">💾 Guardar</button>
+                    <button style="background:none; border:none; color:#666; margin-top:0.5rem; font-size:0.8rem; cursor:pointer;" onclick="volverAFixture()">Cancelar</button>
                 </div>
             `;
             contenido.innerHTML = html;
@@ -2264,7 +2301,8 @@ function guardarResultado(idPartido, pareja1, pareja2) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            volverAFixture();
+            // En lugar de volver al HTML viejo, recargamos el fixture fresco
+            verFixture(window.torneoActualId); 
         } else {
             alert('❌ ' + data.message);
         }
@@ -2275,14 +2313,9 @@ function guardarResultado(idPartido, pareja1, pareja2) {
     });
 }
 
+// Esta función ahora solo sirve para cancelar la edición
 function volverAFixture() {
-    if (contenidoFixtureAnterior) {
-        document.getElementById('submodalContenido').innerHTML = contenidoFixtureAnterior;
-    } else if (window.torneoActualId) {
-        verFixture(window.torneoActualId);
-    } else {
-        cerrarSubmodal();
-    }
+    verFixture(window.torneoActualId);
 }
 
 function cerrarSubmodal() {
@@ -2538,7 +2571,41 @@ async function guardarResultadoSet(idPartido) {
     }
 }
 
+    // editar torneo
+    function editarTorneo(idTorneo) {
+      // Redirigir al formulario de edición
+      window.location.href = `crear_torneo.php?editar=${idTorneo}`;
+    }
 
+   // Eliminar torneo
+    function eliminarTorneo(idTorneo) {
+      if (confirm('¿Eliminar este torneo? Esta acción no se puede deshacer.')) {
+        fetch('../api/eliminar_torneo.php', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_torneo: String(idTorneo)})
+        }).then(r => r.json()).then(data => {
+          if (data.success) location.reload();
+          else alert('Error: ' + data.message);
+        });
+      }
+    }
+
+    // Cerrar torneo
+    function cerrarTorneo(idTorneo) {
+      if (confirm('¿Cerrar inscripciones para este torneo?')) {
+        fetch('../api/cambiar_estado_torneo.php', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({id_torneo: String(idTorneo), estado: 'cerrado'})
+        }).then(r => r.json()).then(data => {
+          if (data.success) location.reload();
+          else alert('Error: ' + data.message);
+        });
+      }
+    }
 
 
 
@@ -2552,6 +2619,82 @@ function cerrarSubmodalFixture() {
         overlay.classList.remove('active');
         setTimeout(() => overlay.style.display = 'none', 300);
     }
+}
+function toggleMenuTorneo(id, event) {
+    event.stopPropagation();
+    // Cerrar otros menús
+    document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
+    // Abrir el actual
+    const menu = document.getElementById(`menu-torneo-${id}`);
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// Cerrar menús al hacer click fuera
+document.addEventListener('click', () => {
+    document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
+});
+function verResultadosTV(idTorneo) {
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card');
+    const contenido = document.getElementById('submodalContenido');
+    
+    // Estilo Full Screen TV
+    overlay.style.zIndex = 5000;
+    card.style.maxWidth = '95%';
+    card.style.height = '90vh';
+    card.style.background = 'linear-gradient(rgba(0,20,10,0.9), rgba(0,30,15,0.95)), url("../assets/img/cancha_pasto2.jpg") center/cover';
+    card.style.color = 'white';
+    
+    contenido.innerHTML = '<p style="text-align:center; color:white;">Cargando marcador...</p>';
+    
+    fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
+        .then(r => r.json())
+        .then(data => {
+            let html = `<h2 style="text-align:center; color:#FFD700; margin-bottom:1rem; text-transform:uppercase;">🏆 Marcador en Vivo</h2>`;
+            html += `<div style="overflow-y:auto; height:80%; padding:1rem;">`;
+            
+            // Agrupar por sets
+            const rondas = {};
+            data.forEach(p => {
+                const key = p.fecha_hora_programada.substring(0,16);
+                if(!rondas[key]) rondas[key] = [];
+                rondas[key].push(p);
+            });
+
+            let setNum = 1;
+            Object.values(rondas).forEach(partidos => {
+                html += `<div style="margin-bottom:2rem; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:1rem;">
+                            <h3 style="color:#4ECDC4; margin-bottom:1rem;">SET ${setNum}</h3>`;
+                partidos.forEach(p => {
+                    const ganadorClass = (p.juegos1 > p.juegos2) ? 'color:#4CAF50; font-weight:bold;' : '';
+                    html += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.8rem 0; font-size:1.2rem; background:rgba(255,255,255,0.1); padding:0.8rem; border-radius:8px;">
+                            <span style="flex:1; text-align:right; ${p.juegos1 > p.juegos2 ? 'color:#4CAF50; font-weight:bold;' : ''}">${p.pareja1}</span>
+                            <span style="padding:0 1.5rem; font-weight:bold; font-size:1.5rem;">${p.juegos1} - ${p.juegos2}</span>
+                            <span style="flex:1; text-align:left; ${p.juegos2 > p.juegos1 ? 'color:#4CAF50; font-weight:bold;' : ''}">${p.pareja2}</span>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                setNum++;
+            });
+            html += `</div>`;
+            html += `<button style="position:absolute; bottom:1rem; right:1rem; background:rgba(255,255,255,0.2); border:none; color:white; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;" onclick="cerrarSubmodalTV()">Cerrar TV</button>`;
+            
+            contenido.innerHTML = html;
+        });
+}
+
+function cerrarSubmodalTV() {
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card');
+    // Restaurar estilos
+    overlay.style.zIndex = 4000;
+    card.style.maxWidth = '800px';
+    card.style.height = 'auto';
+    card.style.background = 'white';
+    card.style.color = '#333';
+    cerrarSubmodal();
 }
 </script>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
