@@ -870,7 +870,7 @@
                                         <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
                                     <?php else: ?>
                                         <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= addslashes($deporte) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
+                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= htmlspecialchars($deporte, ENT_QUOTES) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)"
                                             Anotarse
                                         </button>
                                         <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
@@ -1349,8 +1349,17 @@
                 if (e.target === this) cerrarModalCompartir();
                 });
             }
-            // === ACCIONES DE EVENTOS ===
+            
+            // Función Anotarse
             function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+                console.log('🔵 Intentando anotarse:', idActividad); // Debug
+                
+                // Validación básica
+                if (!idActividad) {
+                    mostrarToast('❌ Error: ID de actividad inválido');
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('action', 'anotarse');
                 formData.append('id_actividad', idActividad);
@@ -1360,44 +1369,50 @@
                 formData.append('monto_total', montoTotal);
 
                 fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
                     .then(data => {
+                        console.log('📡 Respuesta API:', data);
                         if (data.success) {
-                            mostrarToast(data.message);
+                            mostrarToast(data.message, 'exito');
                             setTimeout(() => location.reload(), 1500);
                         } else {
-                            // ✅ MANEJO DEL NUEVO CASO: Ya pagó el mes
                             if (data.message === 'NO_CUOTA_GENERADA') {
-                                mostrarToast('✅ ' + data.detail, 'exito'); // Toast verde indicando que ya está cubierto
-                                // No recargamos, porque no se hizo ningún cambio, solo informamos
+                                mostrarToast('✅ ' + data.detail, 'exito');
                             } else {
-                                mostrarToast('❌ ' + data.message);
+                                mostrarToast('❌ ' + data.message, 'error');
                             }
                         }
                     })
                     .catch(error => {
-                        mostrarToast('❌ Error al procesar la inscripción');
-                        console.error('Error:', error);
+                        console.error('❌ Error Fetch:', error);
+                        mostrarToast('❌ Error de conexión al inscribirse', 'error');
                     });
             }
-            function pasoEvento(idReserva) {
-                const card = event.target.closest('.stat-card');
-                if (card) {
-                const pasoBtn = event.target;
-                pasoBtn.textContent = 'Paso esta semana';
-                pasoBtn.disabled = true;
-                pasoBtn.style.opacity = '0.7';
-                }
+
+            // Función Bajarse
+            function bajarseEvento(idReserva) {
+                if(!confirm('¿Seguro que deseas bajarte de este evento?')) return;
+                
+                const formData = new FormData();
+                formData.append('action', 'bajarse');
+                formData.append('id_reserva', idReserva);
+
+                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        if(data.success) {
+                            mostrarToast(data.message, 'exito');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            mostrarToast('❌ ' + data.message, 'error');
+                        }
+                    })
+                    .catch(err => mostrarToast('❌ Error de conexión', 'error'));
             }
-            function invitarGalletas(idReserva) {
-                alert('Función "Invitar Galletas" en desarrollo');
-            }
-            function invitarCancha(idReserva) {
-                alert('Función "Invitar un Cancha" en desarrollo');
-            }
-            function pagarCuota(idCuota) {
-                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-            }
+
             // === ARMAR EQUIPOS IA ===
             function armarEquiposIA(idReserva) {
                 console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
