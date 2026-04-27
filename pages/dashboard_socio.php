@@ -1,27 +1,27 @@
 <?php
-    // 1. Cargar configuración
+    // pages/dashboard_socio.php
+
+    // 1. Incluir config PRIMERO (esto inicia la sesión correctamente)
     require_once __DIR__ . '/../includes/config.php';
 
-    // 2. Restaurar sesión desde cookie si existe
-    if (isset($_COOKIE['cancha_session_id'])) {
-        session_id($_COOKIE['cancha_session_id']);
+    // 2. Validar que el usuario sea socio (no admin de recinto)
+    if (!isset($_SESSION['id_socio'])) {
+        // Si no hay sesión de socio, redirigir al login
+        header('Location: ../index.php');
+        exit;
     }
 
-    // 3. Configurar y arrancar sesión
-    session_name('CANCHASPORT_SESSION');
-    if (session_status() === PHP_SESSION_NONE) {
-        session_set_cookie_params([
-            'lifetime' => 86400,
-            'path' => '/',
-            'domain' => '',
-            'secure' => isset($_SERVER['HTTPS']),
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
+    // 3. Obtener datos del socio
+    $id_socio = $_SESSION['id_socio'];
+    $stmt = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
+    $stmt->execute([$id_socio]);
+    $socio = $stmt->fetch();
+
+    if (!$socio) {
+        session_destroy();
+        header('Location: ../index.php');
+        exit;
     }
-
-    error_log("SESSION después de start: " . print_r($_SESSION, true));
-
     // === DETECTAR MODO INDIVIDUAL O CLUB ===
     $club_slug_from_url = $_GET['id_club'] ?? null;
     $modo_individual = ($club_slug_from_url === null || trim($club_slug_from_url) === '');
@@ -430,6 +430,8 @@
         $stmt_last->execute([$_SESSION['club_id']]);
         $ultimo_partido = $stmt_last->fetch();
     }
+    // Filtro para tabla de eventos (se usará en JS para mostrar/ocultar columnas)
+    $filtro = $_GET['filtro'] ?? $_POST['filtro'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -1008,7 +1010,6 @@
 
         <!-- MITAD INFERIOR -->
         <div class="dashboard-lower" style="margin-top: 8rem;">
-                $filtro = $_GET['filtro'] ?? $_POST['filtro'] ?? '';
                 <h3>Detalle Eventos</h3>
                 <!-- Filtros -->
                 <button class="filter-btn" data-filter="inscritos">Inscritos Próximo Evento</button>
