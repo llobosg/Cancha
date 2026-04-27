@@ -6,7 +6,7 @@ define('BASE_API', '../api/');
 define('BASE_URL', '/pages/');
 
 if (!isset($_SESSION['id_socio'])) {
-    header("Location: " . BASE_URL . "login.php");
+    header("Location: " . BASE_URL . "login_email.php");
     exit;
 }
 
