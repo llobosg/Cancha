@@ -294,7 +294,7 @@ $monto_deuda = $s_deuda->fetchColumn();
         display: flex; 
         flex-direction: column; 
         gap: 1rem; 
-        padding-left: 1rem; 
+        padding-left: 1rem;
         margin-top: 60px;
         width: 200px !important;
         min-width: 200px !important;
@@ -2713,37 +2713,61 @@ function cerrarSubmodalFixture() {
 document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
-// === 📺 VER RESULTADOS TV MODE (Pantalla Completa - Corregida) ===
+// === 📺 VER RESULTADOS TV MODE (Pantalla Completa - Blindada) ===
 function verResultadosTV(idTorneo) {
     console.log('📺 Iniciando TV Mode para torneo:', idTorneo);
     
-    const overlay = document.getElementById('submodalGenerico'); // Reusamos el modal genérico
-    const card = overlay.querySelector('.submodal-card');
+    const overlay = document.getElementById('submodalGenerico');
+    // Buscamos la tarjeta dentro del overlay. Si no existe, usamos el overlay mismo como contenedor estilizado
+    let card = overlay ? overlay.querySelector('.submodal-card') : null;
     const contenido = document.getElementById('submodalContenido');
     
-    if (!overlay || !card || !contenido) return;
+    if (!overlay || !contenido) {
+        console.error('❌ Elementos del modal no encontrados para TV Mode');
+        return;
+    }
 
-    // Estilos para modo TV
+    // Si no hay tarjeta interna (por si acaso), creamos una lógica fallback o asumimos que el CSS del overlay basta
+    if (!card) {
+        // Fallback: Estilizar el overlay directamente si no hay .submodal-card
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        card = overlay; 
+    }
+
+    // Estilos TV
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '95%';
     card.style.height = '90vh';
-    card.style.background = 'linear-gradient(rgba(0,20,10,0.9), rgba(0,30,15,0.95)), url("../assets/img/cancha_pasto2.jpg") center/cover';
+    card.style.background = 'linear-gradient(rgba(0,20,10,0.95), rgba(0,30,15,0.98)), url("../assets/img/cancha_pasto2.jpg") center/cover';
     card.style.color = 'white';
+    card.style.borderRadius = '16px';
+    card.style.boxShadow = '0 0 50px rgba(0,0,0,0.8)';
     
-    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem;">🔄 Cargando marcador en vivo...</p>';
+    // Mostrar modal
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth; // Forzar reflow
+    if(overlay.classList) overlay.classList.add('active'); // Si usa clases
+    
+    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin-top:20%;">🔄 Cargando marcador en vivo...</p>';
 
     fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error('Error API');
+            return r.json();
+        })
         .then(data => {
-            let html = `<h2 style="text-align:center; color:#FFD700; margin-bottom:1rem; text-transform:uppercase; font-size:2rem;">🏆 Marcador en Vivo</h2>`;
-            html += `<div style="overflow-y:auto; height:80%; padding:1rem;">`;
+            console.log('📊 Datos TV recibidos:', data.length, 'partidos');
             
-            // Agrupar por sets
+            let html = `<h2 style="text-align:center; color:#FFD700; margin-bottom:2rem; text-transform:uppercase; font-size:2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
+            html += `<div style="overflow-y:auto; height:75%; padding:1rem; scrollbar-width: thin;">`;
+            
+            // Agrupar por sets (usando fecha_hora_programada)
             const rondas = {};
             data.forEach(p => {
-                // ✅ CORRECCIÓN: Validar si fecha_hora_programada existe antes de usar substring
-                const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString(); 
-                const key = fechaRaw.substring(0,16); 
+                // Validación segura de fecha
+                const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString();
+                const key = fechaRaw.substring(0, 16); // YYYY-MM-DD HH:mm
                 
                 if(!rondas[key]) rondas[key] = [];
                 rondas[key].push(p);
@@ -2751,21 +2775,22 @@ function verResultadosTV(idTorneo) {
 
             let setNum = 1;
             Object.values(rondas).forEach(partidos => {
-                html += `<div style="margin-bottom:2rem; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:1rem;">
-                            <h3 style="color:#4ECDC4; margin-bottom:1rem; font-size:1.5rem;">SET ${setNum}</h3>`;
+                html += `<div style="margin-bottom:3rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:1rem;">
+                            <h3 style="color:#4ECDC4; margin-bottom:1.5rem; font-size:1.8rem; text-align:center;">SET ${setNum}</h3>`;
+                
                 partidos.forEach(p => {
-                    // Validar juegos para evitar NaN
+                    // Validar juegos
                     const j1 = parseInt(p.juegos1) || 0;
                     const j2 = parseInt(p.juegos2) || 0;
                     
-                    const ganadorClass1 = (j1 > j2) ? 'color:#4CAF50; font-weight:bold;' : '';
-                    const ganadorClass2 = (j2 > j1) ? 'color:#4CAF50; font-weight:bold;' : '';
+                    const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
+                    const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
                     
                     html += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.8rem 0; font-size:1.5rem; background:rgba(255,255,255,0.1); padding:1rem; border-radius:12px;">
-                            <span style="flex:1; text-align:right; ${ganadorClass1}">${p.pareja1 || 'TBD'}</span>
-                            <span style="padding:0 2rem; font-weight:bold; font-size:2rem; color:white;">${j1} - ${j2}</span>
-                            <span style="flex:1; text-align:left; ${ganadorClass2}">${p.pareja2 || 'TBD'}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; font-size:1.8rem; background:rgba(255,255,255,0.05); padding:1.2rem; border-radius:16px; border: 1px solid rgba(255,255,255,0.1);">
+                            <span style="flex:1; text-align:right; padding-right:1rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
+                            <span style="padding:0 2rem; font-weight:bold; font-size:2.5rem; color:white; background:rgba(0,0,0,0.3); border-radius:12px; min-width:120px; text-align:center;">${j1} - ${j2}</span>
+                            <span style="flex:1; text-align:left; padding-left:1rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
                         </div>
                     `;
                 });
@@ -2773,14 +2798,32 @@ function verResultadosTV(idTorneo) {
                 setNum++;
             });
             html += `</div>`;
-            html += `<button style="position:absolute; bottom:2rem; right:2rem; background:rgba(255,255,255,0.2); border:2px solid white; color:white; padding:1rem 2rem; border-radius:50px; cursor:pointer; font-weight:bold; font-size:1.2rem;" onclick="cerrarSubmodalTV()">❌ Cerrar TV</button>`;
+            
+            // Botón cerrar flotante
+            html += `<button style="position:absolute; bottom:2rem; right:2rem; background:rgba(255,255,255,0.1); border:2px solid white; color:white; padding:1rem 2rem; border-radius:50px; cursor:pointer; font-weight:bold; font-size:1.2rem; backdrop-filter:blur(5px); transition:0.3s;" onmouseover="this.style.background='white'; this.style.color='#333'" onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.color='white'" onclick="cerrarSubmodalTV()">❌ Cerrar TV</button>`;
             
             contenido.innerHTML = html;
         })
         .catch(err => {
-            console.error(err);
-            contenido.innerHTML = '<p style="color:red; text-align:center;">Error al cargar resultados TV</p>';
+            console.error('❌ Error TV Mode:', err);
+            contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p></div>`;
         });
+}
+
+function cerrarSubmodalTV() {
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay ? overlay.querySelector('.submodal-card') : overlay;
+    
+    // Restaurar estilos
+    if(overlay) overlay.style.zIndex = 4000;
+    if(card) {
+        card.style.maxWidth = ''; // Vuelve al CSS original
+        card.style.height = '';
+        card.style.background = '';
+        card.style.color = '';
+    }
+    
+    cerrarSubmodal(); // Usa tu función estándar de cierre
 }
 
 function cerrarSubmodalTV() {
@@ -2807,6 +2850,45 @@ function cerrarSubmodalTV() {
     card.style.background = 'white';
     card.style.color = '#333';
     cerrarSubmodal();
+}
+// === ✅ FINALIZAR TORNEO Y CALCULAR RANKING ===
+function finalizarTorneoYCalcularRanking(idTorneo) {
+    if (!confirm('⚠️ ¿Estás seguro de FINALIZAR este torneo?\n\nEsto calculará el ranking oficial y cerrará las inscripciones. Esta acción no se puede deshacer.')) return;
+
+    console.log('🏁 Finalizando torneo:', idTorneo);
+
+    // 1. Validar que todos los partidos tengan resultado (opcional, pero recomendado)
+    fetch(`../api/validar_torneo_finalizado.php?id_torneo=${idTorneo}`)
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            alert('❌ No se puede finalizar: ' + (data.message || 'Faltan resultados por ingresar'));
+            return;
+        }
+
+        // 2. Calcular Ranking
+        return fetch('../api/calcular_ranking_torneo.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_torneo: idTorneo })
+        });
+    })
+    .then(r => {
+        if(!r) return; // Si falló el paso anterior
+        return r.json();
+    })
+    .then(res => {
+        if (res && res.success) {
+            alert('✅ Torneo finalizado y Ranking actualizado correctamente');
+            location.reload(); // Recargar para ver cambios
+        } else if (res) {
+            alert('❌ Error al calcular ranking: ' + res.message);
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('❌ Error de conexión al finalizar el torneo');
+    });
 }
 </script>
     <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
