@@ -1099,6 +1099,308 @@
 
         <!-- SCRIPTS COMPLETOS -->
         <script>
+            // === FUNCIONES CRÍTICAS DE NAVEGACIÓN Y SESIÓN ===
+    
+            // 1. Limpiar Sesión
+            function limpiarSesion() {
+                localStorage.removeItem('cancha_session');
+                localStorage.removeItem('cancha_club');
+            }
+
+            // 2. Cambiar Club (Definida explícitamente aquí para evitar ReferenceError)
+            function cambiarClub(clubSlug) {
+                console.log('🔄 Cambiando a club:', clubSlug);
+                
+                // Mostrar feedback visual opcional (cursor de espera)
+                document.body.style.cursor = 'wait';
+
+                fetch('../api/cambiar_club_sesion.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ club_slug: clubSlug })
+                })
+                .then(r => {
+                    if (!r.ok) throw new Error('Error en la red');
+                    return r.json();
+                })
+                .then(data => {
+                    document.body.style.cursor = 'default';
+                    if (data.success) {
+                        // Recargar con timestamp para evitar caché agresivo
+                        window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
+                    } else {
+                        alert('❌ Error: ' + (data.message || 'No se pudo cambiar de club'));
+                    }
+                })
+                .catch(err => {
+                    document.body.style.cursor = 'default';
+                    console.error('Error:', err);
+                    alert('❌ Error de conexión al cambiar de club');
+                });
+            }
+
+            // 3. Modal Compartir
+            function abrirModalCompartir() {
+                const modal = document.getElementById('modalCompartir');
+                if (modal) modal.style.display = 'flex';
+            }
+            function cerrarModalCompartir() {
+                const modal = document.getElementById('modalCompartir');
+                if (modal) modal.style.display = 'none';
+            }
+            function copiarEnlace() {
+                // Usar variable PHP inyectada de forma segura
+                const url = "<?= htmlspecialchars("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>";
+                navigator.clipboard.writeText(url)
+                .then(() => alert('✅ Enlace copiado!'))
+                .catch(err => console.error('Error al copiar:', err));
+            }
+
+            // Función Anotarse
+            function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+                console.log('🔵 Intentando anotarse:', idActividad); // Debug
+                
+                // Validación básica
+                if (!idActividad) {
+                    mostrarToast('❌ Error: ID de actividad inválido');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('action', 'anotarse');
+                formData.append('id_actividad', idActividad);
+                formData.append('tipo_actividad', tipoActividad);
+                formData.append('deporte', deporte);
+                formData.append('players_max', playersMax);
+                formData.append('monto_total', montoTotal);
+
+                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('📡 Respuesta API:', data);
+                        if (data.success) {
+                            mostrarToast(data.message, 'exito');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            if (data.message === 'NO_CUOTA_GENERADA') {
+                                mostrarToast('✅ ' + data.detail, 'exito');
+                            } else {
+                                mostrarToast('❌ ' + data.message, 'error');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Error Fetch:', error);
+                        mostrarToast('❌ Error de conexión al inscribirse', 'error');
+                    });
+            }
+
+            // Función Bajarse
+            function bajarseEvento(idReserva) {
+                if(!confirm('¿Seguro que deseas bajarte de este evento?')) return;
+                
+                const formData = new FormData();
+                formData.append('action', 'bajarse');
+                formData.append('id_reserva', idReserva);
+
+                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        if(data.success) {
+                            mostrarToast(data.message, 'exito');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            mostrarToast('❌ ' + data.message, 'error');
+                        }
+                    })
+                    .catch(err => mostrarToast('❌ Error de conexión', 'error'));
+            }
+
+            // === ARMAR EQUIPOS IA ===
+            function armarEquiposIA(idReserva) {
+                console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
+                fetch('../api/armar_equipos_ia.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_reserva: idReserva})
+                    })
+                .then(response => {
+                    console.log('ℹ️ [Frontend] Respuesta recibida, status:', response.status);
+                    if (!response.ok) {
+                    throw new Error('Respuesta no OK: ' + response.status);
+                }
+                return response.json();
+                })
+                .then(data => {
+                console.log('🤖 [Frontend] Datos recibidos:', data);
+                if (data.success) {
+                console.log('🤖 [Frontend] Llamando a mostrarModalEquipos()');
+                mostrarModalEquipos(data.equipos);
+                } else {
+                console.error('🤖 [Frontend] Error desde API:', data.message);
+                alert('Error: ' + data.message);
+                }
+                })
+                .catch(err => {
+                console.error('🤖 [Frontend] Error en armado de equipos:', err);
+                alert('Error al armar equipos: ' + err.message);
+                });
+            }
+            // === EDITAR PERFIL SOCIO ===
+            function editarPerfilSocio(idSocio) {
+                window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
+            }
+            // === ELIMINAR SOCIO ===
+            function eliminarSocio(idSocio) {
+                if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
+                fetch('../api/eliminar_socio.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_socio: idSocio})
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast('✅ Socio eliminado');
+                setTimeout(() => location.reload(), 1500);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                });
+            }
+
+            // === REVISAR PAGO ===
+            function revisarPago(idCuota) {
+                fetch('../api/revisar_pago.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast('✅ Cuota en revisión');
+                setTimeout(() => cargarTabla('cuotas'), 1000);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                });
+            }
+            // === VALIDAR PAGO ===
+            function validarPago(idCuota) {
+                fetch('../api/validar_pago.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                if (data.success) {
+                mostrarToast('✅ Pago validado');
+                setTimeout(() => cargarTabla('cuotas'), 1000);
+                } else {
+                mostrarToast('❌ ' + data.message);
+                }
+                });
+            }
+            // === ASIGNAR CERVEZA ===
+            function asignarCerveza(idInscrito, estado) {
+                fetch('../api/asignar_cerveza.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({
+                    id_inscrito: idInscrito,
+                    lleva_cerveza: estado
+                    })
+                })
+                .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida');
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                    mostrarToast('❌ ' + data.message);
+                    }
+                });
+            }
+
+            // === ANOTARSE CON CERVEZA ===
+            function anotarseConCerveza(llevaCerveza, idReserva, deporte, playersMax, montoTotal) {
+                const formData = new FormData();
+                formData.append('action', 'anotarse');
+                formData.append('id_actividad', idReserva);
+                formData.append('tipo_actividad', 'reserva');
+                formData.append('deporte', deporte);
+                formData.append('players_max', playersMax);
+                formData.append('monto_total', montoTotal);
+                formData.append('lleva_cerveza', llevaCerveza ? '1' : '0');
+                
+                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            mostrarToast(data.message);
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            mostrarToast('❌ ' + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        mostrarToast('❌ Error al procesar la inscripción');
+                    });
+            }
+            
+            // === TOGGLE CERVEZA MENU ===
+            function toggleCervezaMenu(e) {
+                e.stopPropagation();
+                const menu = document.getElementById('cervezaMenu');
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            }
+            document.addEventListener('click', () => {
+                const menu = document.getElementById('cervezaMenu');
+                if (menu) menu.style.display = 'none';
+            });
+
+            // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
+            document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const golesRojos = formData.get('goles_rojos');
+                const golesBlancos = formData.get('goles_blancos');
+                const jugadorExperto = formData.get('jugador_experto');
+                if (!golesRojos && !golesBlancos) {
+                    alert('Ingresa al menos un marcador');
+                    return;
+                }
+                try {
+                    const response = await fetch('../api/guardar_resultado_partido.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        mostrarToast('✅ Resultado guardado');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        mostrarToast('❌ ' + data.message);
+                    }
+                } catch (error) {
+                    mostrarToast('❌ Error al guardar resultado');
+                    console.error('Error:', error);
+                }
+            });
+
+            // === CARGAR DETALLE EVENTOS ===
+            function formatDate(dateStr) {
+                if (!dateStr) return '-';
+                const [y, m, d] = dateStr.split('-');
+                return `${d}/${m}`;
+            }
+
             // === FUNCIONES DE NOTIFICACIÓN ===
             function mostrarNotificacion(mensaje, tipo = 'info') {
             const toast = document.getElementById('toast');
@@ -1322,307 +1624,12 @@
                 const rawData = atob(base64);
                 return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
             }
-            // === LIMPIAR SESIÓN ===
-            function limpiarSesion() {
-                localStorage.removeItem('cancha_session');
-                localStorage.removeItem('cancha_club');
-            }
-            // === MODAL COMPARTIR ===
-            function abrirModalCompartir() {
-                const modal = document.getElementById('modalCompartir');
-                if (modal) modal.style.display = 'flex';
-            }
-            function cerrarModalCompartir() {
-                const modal = document.getElementById('modalCompartir');
-                if (modal) modal.style.display = 'none';
-            }
-            function copiarEnlace() {
-                const url = '<?= json_encode("https://canchasport.com/pages/registro_socio.php?club=" . ($club_slug ?? '')) ?>';
-                navigator.clipboard.writeText(url)
-                .then(() => alert('✅ Enlace copiado!'))
-                .catch(err => console.error('Error al copiar:', err));
-            }
             // === CERRAR MODAL AL HACER CLICK FUERA ===
             const modalCompartir = document.getElementById('modalCompartir');
                 if (modalCompartir) {
                 modalCompartir.addEventListener('click', function(e) {
                 if (e.target === this) cerrarModalCompartir();
                 });
-            }
-            
-            // Función Anotarse
-            function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
-                console.log('🔵 Intentando anotarse:', idActividad); // Debug
-                
-                // Validación básica
-                if (!idActividad) {
-                    mostrarToast('❌ Error: ID de actividad inválido');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('action', 'anotarse');
-                formData.append('id_actividad', idActividad);
-                formData.append('tipo_actividad', tipoActividad);
-                formData.append('deporte', deporte);
-                formData.append('players_max', playersMax);
-                formData.append('monto_total', montoTotal);
-
-                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('📡 Respuesta API:', data);
-                        if (data.success) {
-                            mostrarToast(data.message, 'exito');
-                            setTimeout(() => location.reload(), 1500);
-                        } else {
-                            if (data.message === 'NO_CUOTA_GENERADA') {
-                                mostrarToast('✅ ' + data.detail, 'exito');
-                            } else {
-                                mostrarToast('❌ ' + data.message, 'error');
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('❌ Error Fetch:', error);
-                        mostrarToast('❌ Error de conexión al inscribirse', 'error');
-                    });
-            }
-
-            // Función Bajarse
-            function bajarseEvento(idReserva) {
-                if(!confirm('¿Seguro que deseas bajarte de este evento?')) return;
-                
-                const formData = new FormData();
-                formData.append('action', 'bajarse');
-                formData.append('id_reserva', idReserva);
-
-                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-                    .then(r => r.json())
-                    .then(data => {
-                        if(data.success) {
-                            mostrarToast(data.message, 'exito');
-                            setTimeout(() => location.reload(), 1500);
-                        } else {
-                            mostrarToast('❌ ' + data.message, 'error');
-                        }
-                    })
-                    .catch(err => mostrarToast('❌ Error de conexión', 'error'));
-            }
-
-            // === ARMAR EQUIPOS IA ===
-            function armarEquiposIA(idReserva) {
-                console.log('🤖 [Frontend] Iniciando armado de equipos para reserva:', idReserva);
-                fetch('../api/armar_equipos_ia.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_reserva: idReserva})
-                    })
-                .then(response => {
-                    console.log('ℹ️ [Frontend] Respuesta recibida, status:', response.status);
-                    if (!response.ok) {
-                    throw new Error('Respuesta no OK: ' + response.status);
-                }
-                return response.json();
-                })
-                .then(data => {
-                console.log('🤖 [Frontend] Datos recibidos:', data);
-                if (data.success) {
-                console.log('🤖 [Frontend] Llamando a mostrarModalEquipos()');
-                mostrarModalEquipos(data.equipos);
-                } else {
-                console.error('🤖 [Frontend] Error desde API:', data.message);
-                alert('Error: ' + data.message);
-                }
-                })
-                .catch(err => {
-                console.error('🤖 [Frontend] Error en armado de equipos:', err);
-                alert('Error al armar equipos: ' + err.message);
-                });
-            }
-            // === EDITAR PERFIL SOCIO ===
-            function editarPerfilSocio(idSocio) {
-                window.location.href = 'mantenedor_socios.php?id_socio=' + idSocio;
-            }
-            // === ELIMINAR SOCIO ===
-            function eliminarSocio(idSocio) {
-                if (!confirm('¿Estás seguro de eliminar a este socio? Esta acción es irreversible.')) return;
-                fetch('../api/eliminar_socio.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_socio: idSocio})
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast('✅ Socio eliminado');
-                setTimeout(() => location.reload(), 1500);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                });
-            }
-            // === BAJARSE DE EVENTO ===
-            function bajarseEvento(idReserva, idSocioObjetivo = null) {
-                if (!confirm('¿Estás seguro de darte de baja del evento?')) return;
-                const params = new URLSearchParams({
-                action: 'bajarse',
-                id_actividad: idReserva,
-                tipo_actividad: 'reserva'
-                });
-                if (idSocioObjetivo) {
-                params.append('id_socio_objetivo', idSocioObjetivo);
-                }
-                fetch('../api/gestion_eventos.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: params
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast(data.message);
-                setTimeout(() => location.reload(), 1500);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                })
-                .catch(err => {
-                console.error('Error:', err);
-                mostrarToast('❌ Error al procesar la baja');
-                });
-            }
-
-            // === REVISAR PAGO ===
-            function revisarPago(idCuota) {
-                fetch('../api/revisar_pago.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast('✅ Cuota en revisión');
-                setTimeout(() => cargarTabla('cuotas'), 1000);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                });
-            }
-            // === VALIDAR PAGO ===
-            function validarPago(idCuota) {
-                fetch('../api/validar_pago.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                if (data.success) {
-                mostrarToast('✅ Pago validado');
-                setTimeout(() => cargarTabla('cuotas'), 1000);
-                } else {
-                mostrarToast('❌ ' + data.message);
-                }
-                });
-            }
-            // === ASIGNAR CERVEZA ===
-            function asignarCerveza(idInscrito, estado) {
-                fetch('../api/asignar_cerveza.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: new URLSearchParams({
-                    id_inscrito: idInscrito,
-                    lleva_cerveza: estado
-                    })
-                })
-                .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            mostrarToast(estado ? '✅ ¡Llevará cervezas!' : '✅ Asignación removida');
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                    mostrarToast('❌ ' + data.message);
-                    }
-                });
-            }
-
-            // === ANOTARSE CON CERVEZA ===
-            function anotarseConCerveza(llevaCerveza, idReserva, deporte, playersMax, montoTotal) {
-                const formData = new FormData();
-                formData.append('action', 'anotarse');
-                formData.append('id_actividad', idReserva);
-                formData.append('tipo_actividad', 'reserva');
-                formData.append('deporte', deporte);
-                formData.append('players_max', playersMax);
-                formData.append('monto_total', montoTotal);
-                formData.append('lleva_cerveza', llevaCerveza ? '1' : '0');
-                
-                fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            mostrarToast(data.message);
-                            setTimeout(() => location.reload(), 1500);
-                        } else {
-                            mostrarToast('❌ ' + data.message);
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        mostrarToast('❌ Error al procesar la inscripción');
-                    });
-            }
-            
-            // === TOGGLE CERVEZA MENU ===
-            function toggleCervezaMenu(e) {
-                e.stopPropagation();
-                const menu = document.getElementById('cervezaMenu');
-                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-            }
-            document.addEventListener('click', () => {
-                const menu = document.getElementById('cervezaMenu');
-                if (menu) menu.style.display = 'none';
-            });
-
-            // === GUARDAR RESULTADO ÚLTIMO PARTIDO ===
-            document.getElementById('postPartidoForm')?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const golesRojos = formData.get('goles_rojos');
-                const golesBlancos = formData.get('goles_blancos');
-                const jugadorExperto = formData.get('jugador_experto');
-                if (!golesRojos && !golesBlancos) {
-                    alert('Ingresa al menos un marcador');
-                    return;
-                }
-                try {
-                    const response = await fetch('../api/guardar_resultado_partido.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        mostrarToast('✅ Resultado guardado');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        mostrarToast('❌ ' + data.message);
-                    }
-                } catch (error) {
-                    mostrarToast('❌ Error al guardar resultado');
-                    console.error('Error:', error);
-                }
-            });
-
-            // === CARGAR DETALLE EVENTOS ===
-            function formatDate(dateStr) {
-                if (!dateStr) return '-';
-                const [y, m, d] = dateStr.split('-');
-                return `${d}/${m}`;
             }
 
             // === MODAL EQUIPOS IA ===
@@ -2205,28 +2212,6 @@
                             }
                         });
                     }
-                });
-            }
-
-            function cambiarClub(clubSlug) {
-                fetch('../api/cambiar_club_sesion.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ club_slug: clubSlug })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        // Agregar timestamp para evitar caché
-                        const ts = Date.now();
-                        window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${ts}`;
-                    } else {
-                        alert('❌ Error al cambiar de club');
-                    }
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    alert('❌ No se pudo cambiar de club');
                 });
             }
 
