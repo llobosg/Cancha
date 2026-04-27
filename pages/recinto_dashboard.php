@@ -1523,7 +1523,7 @@ async function cargarTorneos() {
                 botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Finalizar + Upgrade</button>`;
             } else {
                 // EN CURSO / CERRADO: Ver Fixture + Resultados
-                botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-ver-fixture">Ver Fixture</button>`;
+                botones += `<button onclick="verFixture(${t.id_torneo})" class="btn-torneo btn-ver-fixture">Ver Fixture</button>`;
                 botones += `<button onclick="verResultados(${t.id_torneo})" class="btn-torneo btn-resultados">Resultados</button>`;
             }
             botones += `</div>`;
