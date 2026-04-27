@@ -1625,14 +1625,30 @@ async function cargarTorneos() {
             // Botón Invitar (siempre visible)
             botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
 
-            if (estado === 'abierto') {
-                // ABIERTO: Crear Fixture + Finalizar
-                botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-fixture">Crear Fixture</button>`;
-                botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Finalizar + Upgrade</button>`;
+            let botonesHtml = '';
+
+            if (t.estado === 'abierto') {
+                // ABIERTO: Invitar, Crear Fixture
+                botonesHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                        <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">📩 Invitar Parejas</a>
+                        <button class="btn-torneo btn-fixture" onclick="generarFixture(${t.id_torneo})">⚙️ Crear Fixture</button>
+                    </div>
+                `;
             } else {
-                // EN CURSO / CERRADO: Ver Fixture + Resultados
-                botones += `<button onclick="verFixture(${t.id_torneo})" class="btn-torneo btn-ver-fixture">Ver Fixture</button>`;
-                botones += `<button onclick="verResultados(${t.id_torneo})" class="btn-torneo btn-resultados">Resultados</button>`;
+                // EN CURSO / CERRADO: Ver Fixture, Resultados, Finalizar
+                botonesHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn-torneo btn-ver-fixture" style="flex:1;" onclick="verFixture(${t.id_torneo})">🎾 Ver Fixture</button>
+                            <button class="btn-torneo btn-resultados" style="flex:1;" onclick="verResultados(${t.id_torneo})">📊 Resultados</button>
+                        </div>
+                        ${t.estado !== 'finalizado' ? `
+                        <button class="btn-torneo" style="background:#FF9800; color:white; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
+                            ✅ Finalizar + Upgrade Ranking
+                        </button>` : ''}
+                    </div>
+                `;
             }
             botones += `</div>`;
             
@@ -2000,10 +2016,20 @@ async function abrirModalInscritos(idTorneo) {
         const res = await fetch(`../api/get_inscritos_torneos.php?id_torneo=${idTorneo}`);
         const inscritos = await res.json();
         
-        if(inscritos.length === 0) {
-            body.innerHTML = '<p style="text-align:center; padding:2rem; color:#888;">No hay parejas inscritas.</p>';
-            return;
-        }
+            // VALIDACIÓN DE SEGURIDAD
+            if (!Array.isArray(data)) {
+                console.error('❌ La API no devolvió un array:', data);
+                contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">
+                    <p>Error: ${data.error || 'Datos inválidos abrirModalInscritos'}</p>
+                    <button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button>
+                </div>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                contenido.innerHTML = `<div style="text-align:center; padding:3rem;"><p>No hay fixture generado.</p><button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button></div>`;
+                return;
+            }
         
         let html = `<table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
             <thead><tr><th>Pareja</th><th>Jugador 1</th><th>Jugador 2</th><th>Contacto</th><th>Acción</th></tr></thead>
@@ -2087,7 +2113,17 @@ function verFixture(idTorneo) {
             return fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
                 .then(r => r.json())
                 .then(data => {
-                    if (!data || data.length === 0) {
+                    // VALIDACIÓN DE SEGURIDAD
+                    if (!Array.isArray(data)) {
+                        console.error('❌ La API no devolvió un array:', data);
+                        contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">
+                            <p>Error: ${data.error || 'Datos inválidos'}</p>
+                            <button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button>
+                        </div>`;
+                        return;
+                    }
+
+                    if (data.length === 0) {
                         contenido.innerHTML = `<div style="text-align:center; padding:3rem;"><p>No hay fixture generado.</p><button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button></div>`;
                         return;
                     }
@@ -2280,6 +2316,20 @@ function verResultados(idTorneo) {
     fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
         .then(r => r.json())
         .then(data => {
+            // VALIDACIÓN DE SEGURIDAD
+            if (!Array.isArray(data)) {
+                console.error('❌ La API no devolvió un array:', data);
+                contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">
+                    <p>Error: ${data.error || 'Datos inválidos verResultados'}</p>
+                    <button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button>
+                </div>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                contenido.innerHTML = `<div style="text-align:center; padding:3rem;"><p>No hay fixture generado.</p><button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button></div>`;
+                return;
+            }
             if (!data || data.length === 0) {
                 contenido.innerHTML = '<p style="text-align:center;">No hay resultados registrados.</p><button class="action-btn" onclick="volverAFixture()">Volver</button>';
                 return;

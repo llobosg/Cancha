@@ -5,15 +5,25 @@ require_once __DIR__ . '/../includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+// Validación flexible: Admin o Asistente del recinto
 if (!isset($_SESSION['id_recinto'])) {
     http_response_code(403);
-    echo json_encode(['error' => 'Acceso no autorizado']);
+    echo json_encode(['error' => 'No autorizado: Sin ID de recinto']);
     exit;
 }
 
-$id_torneo = $_GET['id_torneo'] ?? null;
+$id_torneo = (int)($_GET['id_torneo'] ?? 0);
 if (!$id_torneo) {
     echo json_encode([]);
+    exit;
+}
+
+// Verificar que el torneo pertenezca al recinto del admin
+$stmt_check = $pdo->prepare("SELECT id_torneo FROM torneos WHERE id_torneo = ? AND id_recinto = ?");
+$stmt_check->execute([$id_torneo, $_SESSION['id_recinto']]);
+if (!$stmt_check->fetch()) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Torneo no pertenece a tu recinto']);
     exit;
 }
 

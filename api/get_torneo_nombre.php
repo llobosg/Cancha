@@ -1,14 +1,17 @@
 <?php
-header('Content-Type: application/json');
+// api/get_torneo_nombre.php
+header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($_SESSION['id_recinto'])) {
     http_response_code(403);
-    echo json_encode(['error' => 'Acceso no autorizado']);
+    echo json_encode(['error' => 'No autorizado']);
     exit;
 }
 
-$id_torneo = $_GET['id_torneo'] ?? null;
+$id_torneo = (int)($_GET['id_torneo'] ?? 0);
 if (!$id_torneo) {
     echo json_encode(['nombre' => '']);
     exit;
