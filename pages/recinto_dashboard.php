@@ -2144,116 +2144,66 @@ function cerrarSubmodalInscritos() {
 }
 
 // === 🎾 VER FIXTURE POR SETS (Agrupado por Hora + Nombres Reales) ===
-async function verFixturePorSets(idTorneo) {
-    window.torneoActualId = idTorneo;
-    const overlay = document.getElementById('submodalFixtureOverlay');
-    const body = document.getElementById('submodalFixtureBody');
-    
-    if(!overlay || !body) return;
-    
-    overlay.style.display = 'flex';
-    void overlay.offsetWidth;
-    overlay.classList.add('active');
-    
-    body.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando fixture...</p>';
-    
-    try {
-        const res = await fetch(`../api/get_fixture_torneo.php?id_torneo=${idTorneo}`);
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        
-        const partidos = await res.json();
-        console.log('[Fixture] Datos recibidos:', partidos); // Debug
-        
-        if (!Array.isArray(partidos) || partidos.length === 0) {
-            body.innerHTML = `
-                <div style="text-align:center; padding:3rem; color:#888;">
-                    <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
-                    <p>No hay partidos generados.</p>
-                    <button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodalFixture()">Cerrar</button>
-                </div>`;
-            return;
-        }
-        
-        // Agrupar por fecha_hora_programada (cada hora distinta es un SET)
-        const sets = {};
-        partidos.forEach(p => {
-            // Normalizar hora para agrupar (ej: 19:00:00 y 19:00:05 mismo set)
-            const key = p.fecha_hora_programada.substring(0, 16); // YYYY-MM-DD HH:MM
-            if (!sets[key]) sets[key] = [];
-            sets[key].push(p);
-        });
-        
-        let html = '';
-        let setCounter = 1;
-        const sortedKeys = Object.keys(sets).sort();
-        
-        sortedKeys.forEach(key => {
-            const partidosSet = sets[key];
-            const horaLegible = new Date(key).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            html += `<div class="set-container">
-                <div class="set-header">
-                    <span>SET ${setCounter} (${horaLegible})</span>
-                    <span style="font-size:0.8rem; color:#666;">${partidosSet.length} partidos</span>
-                </div>`;
-                
-            partidosSet.forEach(p => {
-                const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
-                const j1 = tieneResultado ? p.juegos_pareja_1 : '-';
-                const j2 = tieneResultado ? p.juegos_pareja_2 : '-';
-                
-                const g1 = (tieneResultado && j1 > j2) ? 'ganador-highlight' : '';
-                const g2 = (tieneResultado && j2 > j1) ? 'ganador-highlight' : '';
-                
-                // Sanitización EXTREMA para evitar errores en onclick
-                const safeP1 = (p.nombre_pareja_1 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                const safeP2 = (p.nombre_pareja_2 || 'TBD').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                
-                html += `<div class="partido-row">
-                    <div class="pareja-nombre ${g1}" style="text-align:right; padding-right:1rem;">
-                        ${p.nombre_pareja_1 || 'TBD'}
-                    </div>
-                    
-                    <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; min-width:120px;">
-                        ${tieneResultado 
-                            ? `<div class="marcador-final" 
-                                   style="cursor:pointer; padding:0.3rem 0.8rem; border-radius:12px; background:#e8f5e9; border:1px solid #c8e6c9; font-weight:bold;"
-                                   onclick="abrirModalEditarResultado(${p.id_partido}, '${safeP1}', '${safeP2}', ${j1}, ${j2})">
-                                   ${j1} - ${j2}
-                               </div>`
-                            : `<button class="btn-guardar-set" 
-                                      onclick="abrirModalEditarResultado(${p.id_partido}, '${safeP1}', '${safeP2}', 0, 0)">
-                                      Ingresar
-                               </button>`
+function verFixture(idTorneo) {
+      window.torneoActualId = idTorneo;
+        // Primero, obtener el nombre del torneo
+        fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
+            .then(r => r.json())
+            .then(torneo => {
+                const nombreTorneo = torneo.nombre || 'Torneo';
+                const rondaNum = 0;
+
+                // Luego, cargar el fixture
+                fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data || data.length === 0) {
+                            alert('No hay fixture generado');
+                            return;
                         }
-                    </div>
-                    
-                    <div class="pareja-nombre ${g2}" style="text-align:left; padding-left:1rem;">
-                        ${p.nombre_pareja_2 || 'TBD'}
-                    </div>
-                </div>`;
+
+                        let html = `<h3>🎾 Fixture - ${nombreTorneo}</h3>`;
+                        
+                        // Agrupar por fecha/hora
+                        const rondas = {};
+                        data.forEach(partido => {
+                            const key = partido.fecha_hora_programada;
+                            if (!rondas[key]) rondas[key] = [];
+                            rondas[key].push(partido);
+                        });
+
+                        let rondaNum = 1;
+                        Object.entries(rondas).forEach(([fecha, partidos]) => {
+                            const fechaObj = new Date(fecha);
+                            const fechaStr = fechaObj.toLocaleDateString('es-CL');
+                            let horaStr = '';
+                            if (rondaNum === 1) {
+                                horaStr = ' ' + fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                            }
+                            
+                            html += `<div style="margin:1.5rem 0;"><strong>📅 Set ${rondaNum} – ${fechaStr}${horaStr}</strong><br>`;
+                            partidos.forEach(p => {
+                                html += `
+                                    <div style="display:flex;justify-content:space-between;margin:0.4rem 0;background:rgba(255,255,255,0.1);padding:0.5rem;border-radius:6px;">
+                                        <span>${p.pareja1}</span>
+                                        <span>vs</span>
+                                        <span>${p.pareja2}</span>
+                                        <span style="cursor:pointer;color:#FFD700;" onclick="abrirResultado(${p.id_partido}, '${p.pareja1}', '${p.pareja2}')">✅ Resultado</span>
+                                    </div>
+                                `;
+                            });
+                            html += `</div>`;
+                            rondaNum++;
+                        });
+
+                        html += `<button class="action-btn" style="margin-top:1rem;" onclick="cerrarSubmodal()">Cerrar</button>`;
+                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#4ECDC4;" onclick="verResultados(${idTorneo})">Resultados Set</button>`;
+                        html += `<button class="action-btn" style="margin-top:0.5rem;background:#FFD700;color:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>`;
+                        document.getElementById('submodalContenido').innerHTML = html;
+                        document.getElementById('submodalGenerico').style.display = 'flex';
+                    });
             });
-            
-            html += `</div>`;
-            setCounter++;
-        });
-        
-        html += `<div style="margin-top:1.5rem; display:flex; gap:0.5rem; justify-content:space-between;">
-            <button class="action-btn" style="background:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>
-            <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodalFixture()">Cerrar</button>
-        </div>`;
-        
-        body.innerHTML = html;
-        
-    } catch (error) {
-        console.error('❌ Error cargando fixture:', error);
-        body.innerHTML = `
-            <div style="text-align:center; color:#c62828; padding:2rem;">
-                ⚠️ Error: ${error.message}<br>
-                <button class="action-btn" style="margin-top:0.5rem;" onclick="verFixturePorSets(${idTorneo})">Reintentar</button>
-            </div>`;
     }
-}
 
 // === ✏️ ABRIR MODAL PARA EDITAR/INGRESAR RESULTADO ===
 function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
@@ -2386,7 +2336,7 @@ async function guardarResultadoSet(idPartido) {
             // Recargar solo este set o todo el fixture para reflejar cambios
             // Por simplicidad, recargamos el modal completo
             const idTorneo = window.torneoActualId; 
-            if(idTorneo) verFixturePorSets(idTorneo);
+            if(idTorneo) verFixture(idTorneo);
         } else {
             alert('❌ Error: ' + data.message);
             btn.disabled = false;
