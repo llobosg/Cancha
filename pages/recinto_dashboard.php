@@ -693,6 +693,114 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
 .btn-guardar-set:disabled { background: #ccc; cursor: not-allowed; }
 .marcador-final { font-weight: 800; color: #071289; font-size: 1.1rem; text-align: center; }
 .ganador-highlight { color: #2E7D32; font-weight: 800; }
+
+/* === TARJETAS DE PARTIDO EN FIXTURE === */
+.partido-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0.8rem 0;
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 4px solid transparent;
+}
+.partido-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+.partido-card.jugado {
+    border-left-color: #4CAF50; /* Borde verde si ya se jugó */
+}
+.partido-card.pendiente {
+    border-left-color: #FFC107; /* Borde amarillo si falta jugar */
+}
+
+.pareja-nombre {
+    flex: 1;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+.pareja-nombre.ganador {
+    color: #2E7D32; /* Verde oscuro para ganador */
+    font-weight: 800;
+}
+
+.marcador-box {
+    min-width: 80px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    background: #f5f5f5;
+    color: #666;
+}
+.marcador-box.finalizado {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.btn-accion-result {
+    background: #071289;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s;
+    margin-left: 1rem;
+}
+.btn-accion-result:hover {
+    background: #050d6b;
+}
+
+/* === MODAL DE EDICIÓN DE RESULTADO (UX Mejorada) === */
+.resultado-editor {
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+.resultado-inputs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+.input-juegos {
+    width: 80px;
+    padding: 0.8rem;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    color: #071289;
+    transition: border-color 0.3s;
+}
+.input-juegos:focus {
+    border-color: #071289;
+    outline: none;
+}
+.vs-divider {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ccc;
+}
+.preview-ganador {
+    margin: 1.5rem 0;
+    font-weight: bold;
+    color: #4CAF50;
+    font-size: 1.1rem;
+    min-height: 1.5rem;
+}
 </style>
 </head>
 <body>
@@ -1959,10 +2067,9 @@ function cerrarSubmodalInscritos() {
 let contenidoFixtureAnterior = '';
 window.torneoActualId = null;
 
-// === 🎾 VER FIXTURE (Restaurado del Backup) ===
+// === 🎾 VER FIXTURE (UX Mejorada) ===
 function verFixture(idTorneo) {
     window.torneoActualId = idTorneo;
-    
     const overlay = document.getElementById('submodalGenerico');
     const contenido = document.getElementById('submodalContenido');
     
@@ -1971,28 +2078,22 @@ function verFixture(idTorneo) {
     overlay.style.display = 'flex';
     void overlay.offsetWidth;
     overlay.classList.add('active');
-    
     contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando fixture...</p>';
 
-    // 1. Obtener nombre del torneo
     fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
         .then(r => r.json())
         .then(torneo => {
             const nombreTorneo = torneo.nombre || 'Torneo';
-
-            // 2. Cargar fixture
-            fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
+            return fetch(`../api/get_fixture.php?id_torneo=${idTorneo}`)
                 .then(r => r.json())
                 .then(data => {
                     if (!data || data.length === 0) {
-                        alert('No hay fixture generado');
-                        cerrarSubmodal();
+                        contenido.innerHTML = `<div style="text-align:center; padding:3rem;"><p>No hay fixture generado.</p><button class="action-btn" onclick="cerrarSubmodal()">Cerrar</button></div>`;
                         return;
                     }
 
-                    let html = `<h3 style="color:#071289; margin-bottom:1rem;">🎾 Fixture - ${nombreTorneo}</h3>`;
+                    let html = `<h3 style="color:#071289; margin-bottom:1.5rem; text-align:center;">🎾 Fixture - ${nombreTorneo}</h3>`;
                     
-                    // Agrupar por fecha/hora (SETS)
                     const rondas = {};
                     data.forEach(partido => {
                         const key = partido.fecha_hora_programada;
@@ -2006,26 +2107,36 @@ function verFixture(idTorneo) {
                         const fechaStr = fechaObj.toLocaleDateString('es-CL');
                         const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
                         
-                        html += `<div style="margin:1.5rem 0; background:#f9f9f9; padding:1rem; border-radius:8px;">
-                                    <strong style="color:#071289;">📅 Set ${rondaNum} – ${fechaStr} ${horaStr}</strong><br>`;
+                        html += `<div style="margin-bottom:2rem;">
+                                    <div style="background:#f0f4f8; padding:0.8rem; border-radius:8px; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                                        <strong style="color:#071289;">📅 Set ${rondaNum}</strong>
+                                        <span style="color:#666; font-size:0.9rem;">${fechaStr} - ${horaStr}</span>
+                                    </div>`;
                         
                         partidos.forEach(p => {
                             const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
-                            const marcador = tieneResultado ? `${p.juegos_pareja_1} - ${p.juegos_pareja_2}` : 'vs';
-                            const estilo = tieneResultado ? 'color:#4CAF50; font-weight:bold;' : 'color:#999;';
+                            const marcador = tieneResultado ? `${p.juegos_pareja_1} - ${p.juegos_pareja_2}` : 'VS';
+                            const claseEstado = tieneResultado ? 'jugado' : 'pendiente';
+                            const claseMarcador = tieneResultado ? 'finalizado' : '';
                             
-                            // Sanitizar comillas para evitar errores en onclick
+                            // Determinar ganador para estilo visual
+                            const g1 = (tieneResultado && p.juegos_pareja_1 > p.juegos_pareja_2) ? 'ganador' : '';
+                            const g2 = (tieneResultado && p.juegos_pareja_2 > p.juegos_pareja_1) ? 'ganador' : '';
+
                             const safeP1 = (p.pareja1 || '').replace(/'/g, "\\'");
                             const safeP2 = (p.pareja2 || '').replace(/'/g, "\\'");
 
                             html += `
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin:0.6rem 0; background:white; padding:0.8rem; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                                    <div style="flex:1; text-align:right; font-weight:600;">${p.pareja1}</div>
-                                    <div style="padding:0 1rem; ${estilo}">${marcador}</div>
-                                    <div style="flex:1; text-align:left; font-weight:600;">${p.pareja2}</div>
-                                    <button style="margin-left:1rem; background:#071289; color:white; border:none; padding:0.4rem 0.8rem; border-radius:4px; cursor:pointer; font-size:0.8rem;" 
+                                <div class="partido-card ${claseEstado}">
+                                    <div class="pareja-nombre ${g1}" style="text-align:right; padding-right:1rem;">${p.pareja1}</div>
+                                    
+                                    <div class="marcador-box ${claseMarcador}">${marcador}</div>
+                                    
+                                    <div class="pareja-nombre ${g2}" style="text-align:left; padding-left:1rem;">${p.pareja2}</div>
+                                    
+                                    <button class="btn-accion-result" 
                                             onclick="abrirResultado(${p.id_partido}, '${safeP1}', '${safeP2}')">
-                                        ${tieneResultado ? 'Editar' : 'Resultado'}
+                                        ${tieneResultado ? '✏️ Editar' : '📝 Resultado'}
                                     </button>
                                 </div>
                             `;
@@ -2034,7 +2145,7 @@ function verFixture(idTorneo) {
                         rondaNum++;
                     });
 
-                    html += `<div style="margin-top:2rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    html += `<div style="margin-top:2rem; display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
                         <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button>
                         <button class="action-btn" style="background:#4ECDC4; color:#071289;" onclick="verResultados(${idTorneo})">📊 Resultados Set</button>
                         <button class="action-btn" style="background:#FFD700; color:#071289;" onclick="verPosicionesTorneo(${idTorneo})">🏆 Posiciones</button>
@@ -2045,18 +2156,15 @@ function verFixture(idTorneo) {
         })
         .catch(err => {
             console.error(err);
-            alert('Error al cargar fixture');
+            contenido.innerHTML = '<p style="color:red; text-align:center;">Error al cargar fixture.</p>';
         });
 }
 
-// === ✏️ ABRIR RESULTADO (Restaurado del Backup) ===
+// === ✏️ ABRIR RESULTADO (UX Mejorada) ===
 function abrirResultado(idPartido, pareja1, pareja2) {
     const contenido = document.getElementById('submodalContenido');
-    
-    // Guardar estado actual para poder volver
     contenidoFixtureAnterior = contenido.innerHTML;
 
-    // Cargar resultado actual si existe
     fetch(`../api/get_resultado_partido.php?id_partido=${idPartido}`)
         .then(r => r.json())
         .then(resultado => {
@@ -2064,42 +2172,43 @@ function abrirResultado(idPartido, pareja1, pareja2) {
             const j2 = resultado.juegos_pareja_2 || 0;
 
             const html = `
-                <div style="text-align:center; max-width:450px; margin:0 auto;">
-                    <h3 style="color:#071289;">📊 Editar resultado</h3>
-                    <p style="margin:1rem 0; font-weight:600;">${pareja1} <span style="color:#999;">vs</span> ${pareja2}</p>
+                <div class="resultado-editor">
+                    <h3 style="color:#071289; margin-bottom:0.5rem;">📊 Registrar Resultado</h3>
+                    <p style="color:#666; font-size:0.9rem; margin-bottom:2rem;">Ingresa los sets ganados por cada pareja</p>
                     
-                    <div style="display:flex; justify-content:center; gap:1.5rem; margin:1.5rem 0;">
-                        <div>
-                            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja1}</label>
-                            <input type="number" id="juegos1" min="0" max="7" value="${j1}" 
-                                   style="width:80px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                    <div style="font-weight:600; color:#333; margin-bottom:1rem;">${pareja1} <span style="color:#999;">vs</span> ${pareja2}</div>
+
+                    <div class="resultado-inputs">
+                        <div style="text-align:center;">
+                            <input type="number" id="juegos1" class="input-juegos" min="0" max="7" value="${j1}">
+                            <div style="font-size:0.8rem; color:#666; margin-top:0.5rem; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${pareja1}</div>
                         </div>
-                        <div style="font-size:1.5rem; align-self:center; color:#ccc;">-</div>
-                        <div>
-                            <label style="display:block; font-size:0.8rem; color:#666; margin-bottom:0.3rem;">${pareja2}</label>
-                            <input type="number" id="juegos2" min="0" max="7" value="${j2}" 
-                                   style="width:80px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                        
+                        <div class="vs-divider">-</div>
+                        
+                        <div style="text-align:center;">
+                            <input type="number" id="juegos2" class="input-juegos" min="0" max="7" value="${j2}">
+                            <div style="font-size:0.8rem; color:#666; margin-top:0.5rem; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${pareja2}</div>
                         </div>
                     </div>
                     
-                    <div id="ganadora" style="margin:1rem 0; font-weight:bold; color:#071289; height:24px;"></div>
+                    <div id="ganadora" class="preview-ganador"></div>
                     
-                    <div style="display:flex; gap:0.5rem; justify-content:center;">
-                        <button class="action-btn" style="background:#4CAF50;" onclick="guardarResultado(${idPartido}, '${pareja1.replace(/'/g, "\\'")}', '${pareja2.replace(/'/g, "\\'")}')">💾 Guardar</button>
-                        <button class="action-btn" style="background:#6c757d;" onclick="volverAFixture()">Cancelar</button>
+                    <div style="display:flex; gap:1rem; justify-content:center; margin-top:2rem;">
+                        <button class="action-btn" style="background:#4CAF50; flex:1;" onclick="guardarResultado(${idPartido}, '${pareja1.replace(/'/g, "\\'")}', '${pareja2.replace(/'/g, "\\'")}')">💾 Guardar</button>
+                        <button class="action-btn" style="background:#f5f5f5; color:#333; flex:1;" onclick="volverAFixture()">Cancelar</button>
                     </div>
                 </div>
             `;
             contenido.innerHTML = html;
 
-            // Listeners para previsualizar ganadora
             document.getElementById('juegos1').addEventListener('input', actualizarGanadora);
             document.getElementById('juegos2').addEventListener('input', actualizarGanadora);
             actualizarGanadora();
         })
         .catch(err => {
-            console.error('Error al cargar resultado:', err);
-            alert('❌ No se pudo cargar el resultado actual');
+            console.error('Error:', err);
+            alert('❌ Error al cargar datos');
             volverAFixture();
         });
 }
@@ -2107,16 +2216,15 @@ function abrirResultado(idPartido, pareja1, pareja2) {
 function actualizarGanadora() {
     const j1 = parseInt(document.getElementById('juegos1').value) || 0;
     const j2 = parseInt(document.getElementById('juegos2').value) || 0;
-    const titulo = document.querySelector('#submodalContenido p strong');
-    if(!titulo) return;
-    
-    const partes = titulo.textContent.split(' vs ');
-    const pareja1 = partes[0];
-    const pareja2 = partes[1];
-    
     const div = document.getElementById('ganadora');
-    if (j1 > j2) div.textContent = `Ganadora: ${pareja1}`;
-    else if (j2 > j1) div.textContent = `Ganadora: ${pareja2}`;
+    
+    // Obtener nombres de los labels debajo de los inputs
+    const labels = document.querySelectorAll('.resultado-inputs div div');
+    const n1 = labels[0]?.textContent || 'Pareja 1';
+    const n2 = labels[1]?.textContent || 'Pareja 2';
+
+    if (j1 > j2) div.textContent = `🏆 Ganador: ${n1}`;
+    else if (j2 > j1) div.textContent = `🏆 Ganador: ${n2}`;
     else div.textContent = 'Empate';
 }
 
@@ -2124,22 +2232,19 @@ function guardarResultado(idPartido, pareja1, pareja2) {
     const j1 = document.getElementById('juegos1').value;
     const j2 = document.getElementById('juegos2').value;
 
+    if(j1 === '' || j2 === '') { alert('Completa ambos marcadores'); return; }
+
     fetch('../api/guardar_resultado_torneo.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({
-            id_partido: idPartido,
-            juegos1: j1,
-            juegos2: j2
-        })
+        body: new URLSearchParams({ id_partido: idPartido, juegos1: j1, juegos2: j2 })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Volver al fixture automáticamente
             volverAFixture();
         } else {
-            alert('❌ ' + (data.message || 'Error al guardar'));
+            alert('❌ ' + data.message);
         }
     })
     .catch(err => {
