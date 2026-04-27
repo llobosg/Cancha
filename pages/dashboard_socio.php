@@ -1,7 +1,10 @@
 <?php
 session_start();
 
-// === VALIDACIÓN DE SESIÓN ===
+// === CONFIG GENERAL ===
+define('BASE_API', '../api/');
+define('BASE_URL', '/pages/');
+
 if (!isset($_SESSION['id_socio'])) {
     header("Location: " . BASE_URL . "login.php");
     exit;
