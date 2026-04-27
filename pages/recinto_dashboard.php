@@ -2493,8 +2493,6 @@ function verPosicionesTorneo(idTorneo) {
 
 // === 🎾 VER FIXTURE (Versión Final Corregida y Compacta) ===
 function verFixture(idTorneo) {
-    window.torneoActualId = idTorneo;
-    
     // 1. Obtener elementos del DOM con validación
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay ? overlay.querySelector('.submodal-card') : null;
@@ -2510,6 +2508,7 @@ function verFixture(idTorneo) {
     overlay.style.display = 'flex';
     void overlay.offsetWidth; // Forzar reflow para animación
     overlay.classList.add('active');
+    window.torneoActualId = idTorneo;
     
     contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">🔄 Cargando fixture...</p>';
 
