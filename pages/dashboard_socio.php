@@ -869,8 +869,9 @@
                                     <?php if ($cupos_llenos): ?>
                                         <p style="color:#FF6B6B;margin-top:1rem;font-weight:bold;">❌ No se aceptan más inscripciones...</p>
                                     <?php else: ?>
-                                        <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.5rem;width:100%;" 
-                                                onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= htmlspecialchars($deporte, ENT_QUOTES) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)"
+                                        <button 
+                                            class="btn-action"
+                                            onclick="anotarseEvento(<?= (int)$id_reserva ?>, 'reserva', '<?= htmlspecialchars($deporte, ENT_QUOTES) ?>', <?= (int)$players ?>, <?= (float)$monto_total ?>)">
                                             Anotarse
                                         </button>
                                         <button class="btn-action" style="background:#4ECDC4;color:#071289;padding:0.4rem;font-size:0.8rem;margin-top:0.3rem;width:100%;" 
