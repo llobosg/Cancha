@@ -1628,7 +1628,7 @@ function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu
 function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
 document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
 
-// === 🏆 CARGAR TORNEOS + LÓGICA DE BOTONES ===
+// === 🏆 CARGAR TORNEOS + LÓGICA DE BOTONES CORREGIDA ===
 async function cargarTorneos() {
     const container = document.getElementById('listaTorneos');
     if (!container) return;
@@ -1650,70 +1650,131 @@ async function cargarTorneos() {
         
         let html = '';
         torneos.forEach(t => {
+            // 1. Definir variables básicas
             const estado = (t.estado || '').toLowerCase();
             const fechaInicio = t.fecha_inicio ? new Date(t.fecha_inicio).toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) : '-';
-            const inscritos = parseInt(t.parejas_inscritas) || 0;
-            const maxInscritos = parseInt(t.num_parejas_max) || 0;
             const inscritosCount = parseInt(t.parejas_inscritas) || 0;
             const maxParejas = parseInt(t.num_parejas_max) || 0;
             const progreso = maxParejas > 0 ? Math.min(100, (inscritosCount / maxParejas) * 100) : 0;
             const icono = {padel:'🎾',tenis:'🎾',futbol:'⚽',futsal:'⚽'}[t.deporte?.toLowerCase()] || '🏆';
-            const estadoColor = estado === 'abierto' ? '#4CAF50' : (estado.includes('curso') || estado.includes('progreso') ? '#2196F3' : '#FF9800');
             
-            // === LÓGICA DE BOTONES POR ESTADO ===
-            let botones = `<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:auto; padding-top:0.8rem; border-top:1px solid #eee;">`;
-
-            // Botón Invitar (siempre visible)
+            // 2. DEFINIR estadoLabel y Color (Aquí estaba el error)
+            const estadoMap = {
+                'abierto': 'ABIERTO',
+                'cerrado': 'CERRADO',
+                'en_progreso': 'EN CURSO',
+                'finalizado': 'FINALIZADO'
+            };
+            const estadoLabel = estadoMap[estado] || estado.toUpperCase();
             
+            const estadoColor = estado === 'abierto' ? '#4CAF50' : 
+                               (estado === 'en_progreso' ? '#2196F3' : '#FF9800');
 
+            // 3. Lógica de Botones (Según tu requerimiento)
+            let botonesHtml = '';
+            
             if (estado === 'abierto') {
-                // ABIERTO: invitar + Crear Fixture
-                botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Cerrar Inscripciones</button>`;
-                botones += `<a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">Invitar</a>`;
-                botones += `<button onclick="abrirFixtureModal(${t.id_torneo})" class="btn-torneo btn-fixture">Crear Fixture</button>`;
-                
+                // ABIERTO: Invitar, Crear Fixture
+                botonesHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                        <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar" style="text-align:center; text-decoration:none; padding:0.6rem; border-radius:6px; background:#E0F7FA; color:#006064; font-weight:600; font-size:0.9rem;">📩 Invitar Parejas</a>
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="generarFixture(${t.id_torneo})">⚙️ Crear Fixture</button>
+                    </div>
+                `;
             } else {
-                // EN CURSO / CERRADO: Ver Fixture + Resultados + Finalizar Upgrade
-                botones += `<button onclick="verFixture(${t.id_torneo})" class="btn-torneo btn-ver-fixture">Ver Fixture</button>`;
-                botones += `<button onclick="verResultados(${t.id_torneo})" class="btn-torneo btn-resultados">Resultados</button>`;
-                botones += `<button onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" class="btn-torneo" style="background:#EF5350;color:white;">Finalizar + Upgrade</button>`;
+                // EN CURSO / CERRADO: Ver Fixture, Resultados, Finalizar
+                botonesHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#f0f0f0; color:#333; border:none; font-weight:600; cursor:pointer;" onclick="verFixture(${t.id_torneo})">🎾 Ver Fixture</button>
+                            <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="verResultadosTV(${t.id_torneo})">📺 TV Mode</button>
+                        </div>
+                        ${estado !== 'finalizado' ? `
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#FF9800; color:white; border:none; font-weight:600; cursor:pointer; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
+                            ✅ Finalizar + Upgrade Ranking
+                        </button>` : ''}
+                    </div>
+                `;
             }
-            botones += `</div>`;
             
-            html += `<div style="border-left-color:${estadoColor}; animation:fadeIn 0.3s ease-out forwards;">
-                <div style="position:absolute; top:1rem; right:1rem; display:flex; align-items:center; gap:0.5rem;">
-                    <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold;">${estadoLabel}</span>
+            // 4. Construir HTML de la Tarjeta
+            html += `
+            <div style="background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; gap: 0.8rem; border-left: 5px solid ${estadoColor}; animation: fadeIn 0.3s ease-out forwards;">
+                
+                <!-- Header: Estado y Menú 3 Puntos -->
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold;">
+                        ${estadoLabel}
+                    </span>
                     
-                    <!-- Menú de 3 puntos -->
+                    <!-- Menú de 3 Puntos -->
                     <div style="position:relative;">
-                        <button onclick="toggleMenuTorneo(${t.id_torneo}, event)" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">⋮</button>
-                        <div id="menu-torneo-${t.id_torneo}" style="display:none; position:absolute; right:0; top:100%; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:10; min-width:120px;">
-                            <div onclick="editarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem;">✏️ Editar</div>
+                        <button onclick="toggleMenuTorneo(${t.id_torneo}, event)" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666; padding:0;">⋮</button>
+                        <div id="menu-torneo-${t.id_torneo}" style="display:none; position:absolute; right:0; top:100%; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:10; min-width:120px; border:1px solid #eee;">
+                            <div onclick="editarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333;">✏️ Editar</div>
                             <div onclick="eliminarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; color:#c62828; font-size:0.9rem;">🗑️ Eliminar</div>
                         </div>
                     </div>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:start;">
+
+                <!-- Título y Fecha -->
+                <div>
                     <h4 style="margin:0; color:#071289; font-size:1.1rem; font-weight:700;">${icono} ${t.nombre || 'Sin nombre'}</h4>
-                    <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold; text-transform:uppercase;">${estado === 'en_progreso' ? 'EN CURSO' : estado}</span>
+                    <p style="margin:0.2rem 0 0 0; font-size:0.85rem; color:#666;">📅 Inicio: ${fechaInicio}</p>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-size:0.85rem; color:#555;">
-                    <div>📅 Inicio: ${fechaInicio}</div>
-                    <div>🎾 ${t.deporte || '-'}</div>
+
+                <!-- Inscritos y Ojo -->
+                <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.9rem; color:#555;">
                     <span>👥 ${inscritosCount}/${maxParejas || '∞'} parejas</span>
-                    <button onclick="abrirModalInscritos(${t.id_torneo})" 
-                    style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#071289; padding:0;" 
-                    title="Ver inscritos">👁️</button>
-                    <div>💰 ${t.valor ? '$'+parseInt(t.valor).toLocaleString() : 'Gratis'}</div>
+                    <button onclick="abrirModalInscritos(${t.id_torneo})" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#071289;" title="Ver inscritos">👁️</button>
                 </div>
+
+                <!-- Barra de Progreso -->
                 ${maxParejas > 0 ? `<div style="background:#e0e0e0; border-radius:10px; height:6px; overflow:hidden;"><div style="background:${estadoColor}; height:100%; width:${progreso}%; border-radius:10px;"></div></div>` : ''}
-                ${botones}
+
+                <!-- Botones de Acción -->
+                <div style="margin-top:auto; padding-top:0.8rem; border-top:1px solid #eee;">
+                    ${botonesHtml}
+                </div>
             </div>`;
         });
         
         container.innerHTML = html;
+        
     } catch (error) {
+        console.error(error);
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#c62828; padding:2rem;">⚠️ Error: ${error.message}<br><button onclick="cargarTorneos()" style="margin-top:0.5rem; padding:0.4rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">Reintentar</button></div>`;
+    }
+}
+
+// === FUNCIONES AUXILIARES PARA EL MENÚ ===
+function toggleMenuTorneo(id, event) {
+    event.stopPropagation();
+    document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
+    const menu = document.getElementById(`menu-torneo-${id}`);
+    if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
+});
+
+function editarTorneo(id) {
+    window.location.href = `crear_torneo.php?editar=${id}`;
+}
+
+function eliminarTorneo(id) {
+    if(confirm('¿Estás seguro de eliminar este torneo? Esta acción no se puede deshacer.')) {
+        fetch('../api/eliminar_torneo.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({id_torneo: id})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) location.reload();
+            else alert('Error: ' + data.message);
+        });
     }
 }
 
@@ -2571,41 +2632,21 @@ async function guardarResultadoSet(idPartido) {
     }
 }
 
-    // editar torneo
-    function editarTorneo(idTorneo) {
-      // Redirigir al formulario de edición
-      window.location.href = `crear_torneo.php?editar=${idTorneo}`;
-    }
 
-   // Eliminar torneo
-    function eliminarTorneo(idTorneo) {
-      if (confirm('¿Eliminar este torneo? Esta acción no se puede deshacer.')) {
-        fetch('../api/eliminar_torneo.php', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: new URLSearchParams({id_torneo: String(idTorneo)})
-        }).then(r => r.json()).then(data => {
-          if (data.success) location.reload();
-          else alert('Error: ' + data.message);
-        });
-      }
+// Cerrar torneo
+function cerrarTorneo(id) {
+    if (confirm('¿Cerrar inscripciones para este torneo?')) {
+    fetch('../api/cambiar_estado_torneo.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_torneo: String(idTorneo), estado: 'cerrado'})
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert('Error: ' + data.message);
+    });
     }
-
-    // Cerrar torneo
-    function cerrarTorneo(idTorneo) {
-      if (confirm('¿Cerrar inscripciones para este torneo?')) {
-        fetch('../api/cambiar_estado_torneo.php', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: new URLSearchParams({id_torneo: String(idTorneo), estado: 'cerrado'})
-        }).then(r => r.json()).then(data => {
-          if (data.success) location.reload();
-          else alert('Error: ' + data.message);
-        });
-      }
-    }
+}
 
 
 
@@ -2619,14 +2660,6 @@ function cerrarSubmodalFixture() {
         overlay.classList.remove('active');
         setTimeout(() => overlay.style.display = 'none', 300);
     }
-}
-function toggleMenuTorneo(id, event) {
-    event.stopPropagation();
-    // Cerrar otros menús
-    document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
-    // Abrir el actual
-    const menu = document.getElementById(`menu-torneo-${id}`);
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
 // Cerrar menús al hacer click fuera
