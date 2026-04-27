@@ -2713,33 +2713,43 @@ function cerrarSubmodalFixture() {
 document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
-// === 📺 VER RESULTADOS TV MODE (Pantalla Dividida 80/20) ===
+// === 📺 VER RESULTADOS TV MODE (Split-Screen 80/20) ===
 function verResultadosTV(idTorneo) {
     console.log('📺 Iniciando TV Mode Split-Screen para torneo:', idTorneo);
     
+    // 1. Obtener elementos del modal genérico
     const overlay = document.getElementById('submodalGenerico');
-    const card = overlay.querySelector('.submodal-card');
+    const card = overlay ? overlay.querySelector('.submodal-card') : null;
     const contenido = document.getElementById('submodalContenido');
     
-    if (!overlay || !card || !contenido) return;
+    if (!overlay || !card || !contenido) {
+        console.error('❌ Elementos del modal no encontrados para TV Mode');
+        alert('Error: No se pudo abrir el modo TV. Recarga la página.');
+        return;
+    }
 
-    // Estilos para Modo TV Split-Screen
+    // 2. Estilizar para TV (Fullscreen oscuro)
     overlay.style.zIndex = 5000;
-    card.style.maxWidth = '98%'; // Casi ancho completo
-    card.style.height = '95vh';  // Altura casi completa
-    card.style.padding = '0';    // Sin padding interno para usar todo el espacio
-    card.style.display = 'flex'; // Flexbox para dividir columnas
+    card.style.maxWidth = '98%';
+    card.style.height = '95vh';
+    card.style.padding = '0';
+    card.style.display = 'flex'; // Flex para columnas
     card.style.flexDirection = 'row';
-    card.style.background = '#1a1a1a'; // Fondo oscuro elegante
+    card.style.background = '#1a1a1a'; // Fondo oscuro
     card.style.color = 'white';
-    card.style.overflow = 'hidden'; // Evitar scroll en el contenedor principal
+    card.style.overflow = 'hidden';
+    
+    // Mostrar modal
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth; // Forzar reflow
+    if(overlay.classList) overlay.classList.add('active');
     
     contenido.style.display = 'flex';
     contenido.style.width = '100%';
     contenido.style.height = '100%';
     contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
 
-    // Fetch paralelo para Fixture y Posiciones
+    // 3. Fetch Paralelo (Resultados + Posiciones)
     Promise.all([
         fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
         fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`).then(r => r.json())
@@ -2747,17 +2757,20 @@ function verResultadosTV(idTorneo) {
     .then(([dataResultados, dataPosiciones]) => {
         
         // --- COLUMNA IZQUIERDA: FIXTURE (80%) ---
-        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333;">`;
+        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333; scrollbar-width: thin;">`;
         htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin-bottom: 2rem; text-transform:uppercase; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
         
         // Agrupar por sets
         const rondas = {};
-        dataResultados.forEach(p => {
-            const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString();
-            const key = fechaRaw.substring(0, 16); 
-            if(!rondas[key]) rondas[key] = [];
-            rondas[key].push(p);
-        });
+        if (Array.isArray(dataResultados)) {
+            dataResultados.forEach(p => {
+                // Validación segura de fecha
+                const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString();
+                const key = fechaRaw.substring(0, 16); 
+                if(!rondas[key]) rondas[key] = [];
+                rondas[key].push(p);
+            });
+        }
 
         let setNum = 1;
         Object.values(rondas).forEach(partidos => {
@@ -2817,7 +2830,7 @@ function verResultadosTV(idTorneo) {
     })
     .catch(err => {
         console.error('❌ Error TV Mode:', err);
-        contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p></div>`;
+        contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p><button onclick="verResultadosTV(${idTorneo})" style="margin-top:1rem; padding:0.5rem 1rem; background:white; color:black; border:none; border-radius:4px; cursor:pointer;">Reintentar</button></div>`;
     });
 }
 
@@ -2845,32 +2858,6 @@ function cerrarSubmodalTV() {
     }
     
     cerrarSubmodal(); // Usa tu función estándar de cierre
-}
-
-function cerrarSubmodalTV() {
-    const overlay = document.getElementById('submodalGenerico');
-    const card = overlay.querySelector('.submodal-card');
-    
-    // Restaurar estilos originales
-    overlay.style.zIndex = 4000;
-    card.style.maxWidth = '800px'; // O el ancho que uses por defecto
-    card.style.height = 'auto';
-    card.style.background = 'white';
-    card.style.color = '#333';
-    
-    cerrarSubmodal(); // Cierra el modal normal
-}
-
-function cerrarSubmodalTV() {
-    const overlay = document.getElementById('submodalGenerico');
-    const card = overlay.querySelector('.submodal-card');
-    // Restaurar estilos
-    overlay.style.zIndex = 4000;
-    card.style.maxWidth = '800px';
-    card.style.height = 'auto';
-    card.style.background = 'white';
-    card.style.color = '#333';
-    cerrarSubmodal();
 }
 // === ✅ FINALIZAR TORNEO Y CALCULAR RANKING ===
 function finalizarTorneoYCalcularRanking(idTorneo) {
