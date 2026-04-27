@@ -35,7 +35,17 @@ function getSuma($pdo, $id, $fecha_cond, $pago_cond) {
 $ingresos_act = getSuma($pdo, $id_recinto, ">= '$primer_dia_mes'", "= 'pagado'");
 $ingresos_ant = getSuma($pdo, $id_recinto, "BETWEEN '$primer_dia_mes_ant' AND '$ultimo_dia_mes_ant'", "= 'pagado'");
 $var_ing = ($ingresos_ant > 0) ? (($ingresos_act - $ingresos_ant) / $ingresos_ant) * 100 : (($ingresos_act > 0) ? 100 : 0);
-$parcial_act = getSuma($pdo, $id_recinto, ">= '$primer_dia_mes'", "= 'parcial'");
+// Consulta específica para SALDO PENDIENTE de reservas parciales
+$q_pendiente = "SELECT COALESCE(SUM(r.monto_total - r.monto_recaudacion), 0) 
+                FROM reservas r 
+                JOIN canchas c ON r.id_cancha = c.id_cancha 
+                WHERE c.id_recinto = :id 
+                AND r.fecha >= '$primer_dia_mes' 
+                AND r.estado_pago = 'parcial' 
+                AND r.estado != 'cancelada'";
+$s_pendiente = $pdo->prepare($q_pendiente);
+$s_pendiente->execute([':id' => $id_recinto]);
+$parcial_act = $s_pendiente->fetchColumn(); // Ahora esto es el monto FALTANTE
 
 $q_res = "SELECT COUNT(*) FROM reservas r JOIN canchas c ON r.id_cancha = c.id_cancha WHERE c.id_recinto = :id AND r.fecha > '$hoy' AND r.estado_pago != 'pagado' AND r.estado != 'cancelada'";
 $s_res = $pdo->prepare($q_res); $s_res->execute([':id' => $id_recinto]);
@@ -84,7 +94,6 @@ $monto_deuda = $s_deuda->fetchColumn();
         align-items: start;
     }
     
-    .action-btn-sidebar:hover { transform: translateY(-2px); }
     .planilla-column { background: transparent; display: flex; flex-direction: column; height: 100%; position: relative; justify-content: flex-start; align-items: center; }    
     .planilla-table-container { flex: 1; overflow: auto; padding: 4px; width: max-content !important; min-width: 940px; background: transparent; }
 
@@ -292,16 +301,39 @@ $monto_deuda = $s_deuda->fetchColumn();
         max-width: 200px !important;
         flex-shrink: 0; /* Evita que se encoja en pantallas pequeñas */
     }
-    /* Botones de acciones con ancho completo */
-    .action-btn-sidebar {
-        width: 100% !important;
-        justify-content: flex-start !important;
-        text-align: left !important;
-        padding: 0.8rem 1rem !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
+    /* === BOTONES OPERACIONES ESTILO PÍLDORA === */
+.action-btn-sidebar {
+    width: 100% !important;
+    justify-content: center !important; /* Centrar icono y texto */
+    text-align: center !important;
+    padding: 0.8rem 1rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    
+    /* Estilo Píldora */
+    border-radius: 50px !important; /* Bordes totalmente redondeados */
+    background: rgba(255, 255, 255, 0.9) !important; /* Fondo blanco suave */
+    color: #071289 !important; /* Texto azul oscuro */
+    border: 1px solid rgba(255,255,255,0.5) !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.action-btn-sidebar:hover {
+    transform: translateY(-2px) !important;
+    background: white !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+    color: #BA68C8 !important; /* Color morado al hover */
+}
+
+.action-btn-sidebar span {
+    font-size: 1.2rem;
+}
 
 /* === DEBUG VISUAL: Outline para ver rowspan === */
 /* (Comentar en producción) */
@@ -940,7 +972,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         <?php endif; ?>
 
         <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
-            <div>Pago Parcial</div>
+            <div>Saldo Pendiente</div>
             <div>$<?= number_format($parcial_act, 0, ',', '.') ?></div>
             <div style="color: #4A4A4A">Ver detalles</div>
         </div>
@@ -2104,7 +2136,7 @@ async function abrirModalInscritos(idTorneo) {
     contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando inscritos...</p>';
     
     try {
-        const res = await fetch(`../api/get_inscritos_torneo.php?id_torneo=${idTorneo}`);
+        const res = await fetch(`../api/get_inscritos_torneos.php?id_torneo=${idTorneo}`);
         if (!res.ok) throw new Error(`Error ${res.status}`);
         
         const data = await res.json();
@@ -2681,30 +2713,38 @@ function cerrarSubmodalFixture() {
 document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
+// === 📺 VER RESULTADOS TV MODE (Pantalla Completa - Corregida) ===
 function verResultadosTV(idTorneo) {
-    const overlay = document.getElementById('submodalGenerico');
+    console.log('📺 Iniciando TV Mode para torneo:', idTorneo);
+    
+    const overlay = document.getElementById('submodalGenerico'); // Reusamos el modal genérico
     const card = overlay.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
-    // Estilo Full Screen TV
+    if (!overlay || !card || !contenido) return;
+
+    // Estilos para modo TV
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '95%';
     card.style.height = '90vh';
     card.style.background = 'linear-gradient(rgba(0,20,10,0.9), rgba(0,30,15,0.95)), url("../assets/img/cancha_pasto2.jpg") center/cover';
     card.style.color = 'white';
     
-    contenido.innerHTML = '<p style="text-align:center; color:white;">Cargando marcador...</p>';
-    
+    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem;">🔄 Cargando marcador en vivo...</p>';
+
     fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`)
         .then(r => r.json())
         .then(data => {
-            let html = `<h2 style="text-align:center; color:#FFD700; margin-bottom:1rem; text-transform:uppercase;">🏆 Marcador en Vivo</h2>`;
+            let html = `<h2 style="text-align:center; color:#FFD700; margin-bottom:1rem; text-transform:uppercase; font-size:2rem;">🏆 Marcador en Vivo</h2>`;
             html += `<div style="overflow-y:auto; height:80%; padding:1rem;">`;
             
             // Agrupar por sets
             const rondas = {};
             data.forEach(p => {
-                const key = p.fecha_hora_programada.substring(0,16);
+                // ✅ CORRECCIÓN: Validar si fecha_hora_programada existe antes de usar substring
+                const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString(); 
+                const key = fechaRaw.substring(0,16); 
+                
                 if(!rondas[key]) rondas[key] = [];
                 rondas[key].push(p);
             });
@@ -2712,14 +2752,20 @@ function verResultadosTV(idTorneo) {
             let setNum = 1;
             Object.values(rondas).forEach(partidos => {
                 html += `<div style="margin-bottom:2rem; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:1rem;">
-                            <h3 style="color:#4ECDC4; margin-bottom:1rem;">SET ${setNum}</h3>`;
+                            <h3 style="color:#4ECDC4; margin-bottom:1rem; font-size:1.5rem;">SET ${setNum}</h3>`;
                 partidos.forEach(p => {
-                    const ganadorClass = (p.juegos1 > p.juegos2) ? 'color:#4CAF50; font-weight:bold;' : '';
+                    // Validar juegos para evitar NaN
+                    const j1 = parseInt(p.juegos1) || 0;
+                    const j2 = parseInt(p.juegos2) || 0;
+                    
+                    const ganadorClass1 = (j1 > j2) ? 'color:#4CAF50; font-weight:bold;' : '';
+                    const ganadorClass2 = (j2 > j1) ? 'color:#4CAF50; font-weight:bold;' : '';
+                    
                     html += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.8rem 0; font-size:1.2rem; background:rgba(255,255,255,0.1); padding:0.8rem; border-radius:8px;">
-                            <span style="flex:1; text-align:right; ${p.juegos1 > p.juegos2 ? 'color:#4CAF50; font-weight:bold;' : ''}">${p.pareja1}</span>
-                            <span style="padding:0 1.5rem; font-weight:bold; font-size:1.5rem;">${p.juegos1} - ${p.juegos2}</span>
-                            <span style="flex:1; text-align:left; ${p.juegos2 > p.juegos1 ? 'color:#4CAF50; font-weight:bold;' : ''}">${p.pareja2}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.8rem 0; font-size:1.5rem; background:rgba(255,255,255,0.1); padding:1rem; border-radius:12px;">
+                            <span style="flex:1; text-align:right; ${ganadorClass1}">${p.pareja1 || 'TBD'}</span>
+                            <span style="padding:0 2rem; font-weight:bold; font-size:2rem; color:white;">${j1} - ${j2}</span>
+                            <span style="flex:1; text-align:left; ${ganadorClass2}">${p.pareja2 || 'TBD'}</span>
                         </div>
                     `;
                 });
@@ -2727,10 +2773,28 @@ function verResultadosTV(idTorneo) {
                 setNum++;
             });
             html += `</div>`;
-            html += `<button style="position:absolute; bottom:1rem; right:1rem; background:rgba(255,255,255,0.2); border:none; color:white; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;" onclick="cerrarSubmodalTV()">Cerrar TV</button>`;
+            html += `<button style="position:absolute; bottom:2rem; right:2rem; background:rgba(255,255,255,0.2); border:2px solid white; color:white; padding:1rem 2rem; border-radius:50px; cursor:pointer; font-weight:bold; font-size:1.2rem;" onclick="cerrarSubmodalTV()">❌ Cerrar TV</button>`;
             
             contenido.innerHTML = html;
+        })
+        .catch(err => {
+            console.error(err);
+            contenido.innerHTML = '<p style="color:red; text-align:center;">Error al cargar resultados TV</p>';
         });
+}
+
+function cerrarSubmodalTV() {
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card');
+    
+    // Restaurar estilos originales
+    overlay.style.zIndex = 4000;
+    card.style.maxWidth = '800px'; // O el ancho que uses por defecto
+    card.style.height = 'auto';
+    card.style.background = 'white';
+    card.style.color = '#333';
+    
+    cerrarSubmodal(); // Cierra el modal normal
 }
 
 function cerrarSubmodalTV() {
