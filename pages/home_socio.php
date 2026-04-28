@@ -207,17 +207,50 @@ $ultimo_resultado = $stmt_last->fetch();
 
     <div class="container">
         
-        <!-- Hero: Próximo Partido -->
+                <!-- Hero: Próximo Partido -->
         <?php if ($proximo): ?>
+            <?php
+                // Verificar si el socio YA está inscrito en esta reserva
+                $ya_inscrito = false;
+                $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ?");
+                $stmt_check->execute([$proximo['id_reserva'], $id_socio]);
+                $ya_inscrito = $stmt_check->fetch();
+
+                // Obtener cantidad de inscritos actuales
+                $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ?");
+                $stmt_count->execute([$proximo['id_reserva']]);
+                $cant_inscritos = $stmt_count->fetchColumn();
+                
+                // Definir texto y acción del botón principal
+                $btn_text = $ya_inscrito ? '📲 Compartir Reserva' : '✅ Anotarme';
+                $btn_action = $ya_inscrito ? "compartirReserva({$proximo['id_reserva']})" : "anotarmeAlEvento({$proximo['id_reserva']})";
+                $btn_style = $ya_inscrito ? 'background:white; color:#8E24AA;' : 'background:#4CAF50; color:white;';
+            ?>
+
             <div class="hero-card">
                 <h2>Próximo Partido</h2>
                 <span class="hero-date">📅 <?= date('d M', strtotime($proximo['fecha'])) ?> • ⏰ <?= substr($proximo['hora_inicio'], 0, 5) ?></span>
                 <div class="hero-sport"><?= htmlspecialchars($proximo['nombre_cancha']) ?></div>
-                <button class="btn-share" onclick="compartirReserva(<?= $proximo['id_reserva'] ?>)">
-                    📲 Compartir Reserva
+                
+                <!-- Botón Principal Dinámico -->
+                <button class="btn-share" style="<?= $btn_style ?>" onclick="<?= $btn_action ?>">
+                    <?= $btn_text ?>
                 </button>
+
+                <!-- Barra de Inscritos y Ojo -->
+                <div style="margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 50px;">
+                    <span style="font-size: 0.9rem; font-weight: 600;">
+                        👥 <?= $cant_inscritos ?> Inscritos
+                    </span>
+                    <button onclick="verInscritosHero(<?= $proximo['id_reserva'] ?>)" 
+                            style="background: none; border: none; cursor: pointer; font-size: 1.2rem; color: white; opacity: 0.9;"
+                            title="Ver lista de inscritos">
+                        👁️
+                    </button>
+                </div>
             </div>
         <?php else: ?>
+            <!-- (Código existente para cuando no hay partido) -->
             <div class="hero-card" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);">
                 <h2>¡Hola, <?= htmlspecialchars($nombre_mostrar) ?>!</h2>
                 <p style="margin-bottom: 1.5rem; opacity: 0.9;">No tienes partidos próximos. ¿Jugamos hoy?</p>
@@ -292,6 +325,69 @@ $ultimo_resultado = $stmt_last->fetch();
                 console.error('Error al copiar: ', err);
             });
         }
+            // === ANOTARSE AL EVENTO DESDE HOME ===
+    function anotarmeAlEvento(idReserva) {
+        if(!confirm('¿Quieres anotarte a este partido?')) return;
+        
+        const formData = new FormData();
+        formData.append('action', 'anotarse');
+        formData.append('id_actividad', idReserva);
+        formData.append('tipo_actividad', 'reserva');
+        // Puedes agregar más datos si tu API los requiere (deporte, monto, etc.)
+        
+        fetch('../api/gestion_eventos.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    alert('✅ ¡Te has anotado correctamente!');
+                    location.reload(); // Recargar para ver el cambio de botón
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('❌ Error de conexión');
+            });
+    }
+
+    // === VER INSCRITOS EN MODAL SIMPLE ===
+    function verInscritosHero(idReserva) {
+        // Creamos un modal simple dinámicamente
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; display:flex; justify-content:center; align-items:center;';
+        
+        const content = document.createElement('div');
+        content.style.cssText = 'background:white; padding:2rem; border-radius:16px; max-width:400px; width:90%; max-height:80vh; overflow-y:auto;';
+        content.innerHTML = '<h3 style="text-align:center; color:#BA68C8;">👥 Inscritos</h3><p style="text-align:center;">Cargando...</p>';
+        
+        modal.appendChild(content);
+        modal.onclick = (e) => { if(e.target === modal) document.body.removeChild(modal); };
+        document.body.appendChild(modal);
+
+        // Fetch de inscritos
+        fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`)
+            .then(r => r.json())
+            .then(data => {
+                if(!data.length) {
+                    content.innerHTML = '<h3 style="text-align:center;">👥 Inscritos</h3><p style="text-align:center; color:#666;">Aún no hay nadie anotado.</p><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%; margin-top:1rem; padding:0.5rem; background:#eee; border:none; border-radius:8px;">Cerrar</button>';
+                    return;
+                }
+                
+                let html = '<h3 style="text-align:center; margin-bottom:1rem;">👥 Inscritos</h3><ul style="list-style:none; padding:0;">';
+                data.forEach(p => {
+                    html += `<li style="padding:0.8rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
+                                <span>${p.nombre}</span>
+                                ${p.es_yo ? '<span style="color:#BA68C8; font-weight:bold;">(Tú)</span>' : ''}
+                             </li>`;
+                });
+                html += '</ul><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%; margin-top:1rem; padding:0.5rem; background:#BA68C8; color:white; border:none; border-radius:8px; font-weight:bold;">Cerrar</button>';
+                content.innerHTML = html;
+            })
+            .catch(err => {
+                content.innerHTML = '<p style="color:red; text-align:center;">Error al cargar lista.</p>';
+            });
+    }
     </script>
 </body>
 </html>
