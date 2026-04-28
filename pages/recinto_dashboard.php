@@ -21,21 +21,22 @@ $stmt_recinto->execute([$id_recinto]);
 $recinto = $stmt_recinto->fetch();
 $recinto_nombre = $recinto['nombre'] ?? 'Recinto Deportivo';
 
-// === CÁLCULO KPIs - VERSIÓN CORREGIDA ===
+// === CÁLCULO KPIs - VERSIÓN CORREGIDA (SQL limpio) ===
 $hoy = date('Y-m-d');
 $primer_dia_mes = date('Y-m-01');
 $primer_dia_mes_ant = date('Y-m-01', strtotime('-1 month'));
 $ultimo_dia_mes_ant = date('Y-m-t', strtotime('-1 month'));
 
-// Función segura con prepared statements para TODOS los parámetros
+// Función helper para sumas con prepared statements
 function getSuma($pdo, $id_recinto, $fecha_op, $fecha_val, $pago_cond) {
-    // Construir condición de fecha segura
-    $fecha_clause = match($fecha_op) {
-        '>=' => "r.fecha >= :fecha_val",
-        '>'  => "DATE(r.fecha) > :fecha_val",  // Usar DATE() para comparar solo fecha
-        'between' => "r.fecha BETWEEN :fecha_start AND :fecha_end",
-        default => "r.fecha >= :fecha_val"
-    };
+    // Construir condición de fecha
+    if ($fecha_op === 'between') {
+        $fecha_clause = "r.fecha BETWEEN :fecha_start AND :fecha_end";
+    } elseif ($fecha_op === '>') {
+        $fecha_clause = "DATE(r.fecha) > :fecha_val";
+    } else {
+        $fecha_clause = "r.fecha >= :fecha_val";
+    }
     
     $q = "SELECT COALESCE(SUM(r.monto_total), 0) 
           FROM reservas r 
@@ -47,7 +48,6 @@ function getSuma($pdo, $id_recinto, $fecha_op, $fecha_val, $pago_cond) {
     
     $s = $pdo->prepare($q);
     
-    // Bind parameters según tipo de fecha
     if ($fecha_op === 'between') {
         $s->execute([
             ':id' => $id_recinto,
@@ -70,20 +70,19 @@ $ingresos_ant = getSuma($pdo, $id_recinto, 'between', [$primer_dia_mes_ant, $ult
 // Variación porcentual
 $var_ing = ($ingresos_ant > 0) ? (($ingresos_act - $ingresos_ant) / $ingresos_ant) * 100 : (($ingresos_act > 0) ? 100 : 0);
 
-// === 🔥 FIX PRINCIPAL: SALDO PENDIENTE (En Reserva) ===
-// Suma del monto TOTAL de reservas futuras NO pagadas (pendiente + parcial)
+// === EN RESERVA: Monto total de reservas futuras no pagadas ===
 $q_en_reserva = "SELECT COALESCE(SUM(r.monto_total), 0) 
                  FROM reservas r 
                  JOIN canchas c ON r.id_cancha = c.id_cancha 
                  WHERE c.id_recinto = :id 
-                 AND DATE(r.fecha) > :hoy  // ← DATE() para comparar solo día
-                 AND r.estado_pago IN ('pendiente', 'parcial')  // ← Explícito para evitar errores
+                 AND DATE(r.fecha) > :hoy 
+                 AND r.estado_pago IN ('pendiente', 'parcial') 
                  AND r.estado != 'cancelada'";
 $s_en_reserva = $pdo->prepare($q_en_reserva);
 $s_en_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-$monto_en_reserva = $s_en_reserva->fetchColumn(); // ← Ahora es el MONTO, no el COUNT
+$monto_en_reserva = $s_en_reserva->fetchColumn();
 
-// (Opcional) Si también quieres mostrar la CANTIDAD de reservas en otro lado:
+// Cantidad de reservas en reserva (para mostrar como subtexto)
 $q_cant_reserva = "SELECT COUNT(*) 
                    FROM reservas r 
                    JOIN canchas c ON r.id_cancha = c.id_cancha 
@@ -95,7 +94,7 @@ $s_cant_reserva = $pdo->prepare($q_cant_reserva);
 $s_cant_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
 $cant_reserva = $s_cant_reserva->fetchColumn();
 
-// Deuda vencida (reservas pasadas no pagadas)
+// Deuda vencida: reservas pasadas no pagadas
 $q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0) 
             FROM reservas r 
             JOIN canchas c ON r.id_cancha = c.id_cancha 
@@ -1030,10 +1029,13 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         </div>
 
         <?php if ($rol_actual === 'admin'): ?>
+        <!-- KPI: En Reserva -->
         <div class="kpi-card-mini kpi-reserva">
             <div>En Reserva</div>
-            <div><?= $cant_reserva ?></div>
-            <div style="color: #4A4A4A">Próximas no pagadas</div>
+            <div>$<?= number_format($monto_en_reserva, 0, ',', '.') ?></div>
+            <div style="color: #4A4A4A; font-size: 0.8rem;">
+                <?= $cant_reserva ?> próximas
+            </div>
         </div>
         <?php endif; ?>
 
