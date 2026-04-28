@@ -40,57 +40,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // ✅ Generar enlace de reset
                 $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/reset_password_recinto.php?token=" . $token;
                 
-                // ✅ Enviar email con Brevo
-                $email_body = "
-                <html>
-                <body style='font-family: Arial, sans-serif; color: #333;'>
-                  <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
-                    <h2 style='color: #AB47BC;'>🔐 Recuperación de Contraseña - CanchaSport</h2>
-                    <p>Hola <strong>" . htmlspecialchars($admin['nombre_completo']) . "</strong>,</p>
-                    <p>Recibimos una solicitud para restablecer tu contraseña en <strong>" . htmlspecialchars($admin['id_recinto']) . "</strong>.</p>
-                    <p style='margin: 20px 0;'>
-                      <a href='" . $reset_link . "' 
-                         style='background: #AB47BC; color: white; padding: 12px 24px; 
-                                text-decoration: none; border-radius: 8px; display: inline-block;'>
-                        🔗 Restablecer mi contraseña
-                      </a>
-                    </p>
-                    <p><small>Este enlace expira en 1 hora por seguridad.</small></p>
-                    <p><small>Si no solicitaste este cambio, ignora este mensaje. Tu contraseña permanecerá igual.</small></p>
-                    <hr style='margin: 30px 0; border: none; border-top: 1px solid #eee;'>
-                    <p style='font-size: 0.9rem; color: #666;'>Equipo CanchaSport 🏟️</p>
-                  </div>
-                </body>
-                </html>
-                ";
-                
-                // Configurar headers para email HTML
-                $headers = "MIME-Version: 1.0\r\n";
-                $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-                $headers .= "From: CanchaSport <contacto@canchasport.com>\r\n";
-                $headers .= "Reply-To: contacto@canchasport.com\r\n";
-                
-                // Enviar con mail() (Brevo configurado en php.ini/sendmail)
-                // Si usas API directa de Brevo, reemplaza esta sección con tu llamada a la API
-                $asunto = "🔐 Restablece tu contraseña - CanchaSport";
-                $sent = mail($admin['email'], $asunto, $email_body, $headers);
-                
-                if ($sent) {
-                    $exito = true;
-                    $mensaje = "✅ Si existe una cuenta asociada a <strong>'" . htmlspecialchars($identificador) . "'</strong>, recibirás un enlace de recuperación en tu email.";
-                    error_log("✅ [RESET] Email enviado a: " . $admin['email'] . " para admin_id: " . $admin['id_admin']);
+                // === ENVIAR EMAIL CON BREVO API (Reemplaza la función mail()) ===
+                $brevo_key = $_ENV['BREVO_API_KEY'] ?? $_SERVER['BREVO_API_KEY'] ?? getenv('BREVO_API_KEY') ?? '';
+
+                if (empty($brevo_key)) {
+                    error_log("❌ [BREVO] API Key no configurada en Railway");
+                    $exito = true; // Mantenemos mensaje genérico por seguridad
                 } else {
-                    // En producción, no revelamos si el email existe por seguridad
-                    $exito = true;
-                    $mensaje = "✅ Si existe una cuenta asociada a <strong>'" . htmlspecialchars($identificador) . "'</strong>, recibirás un enlace de recuperación en tu email.";
-                    error_log("⚠️ [RESET] Error enviando email a: " . $admin['email']);
+                    $email_payload = [
+                        "sender" => ["name" => "CanchaSport", "email" => "contacto@canchasport.com"],
+                        "to" => [["email" => $admin['email'], "name" => $admin['nombre_completo']]],
+                        "subject" => "🔐 Restablece tu contraseña - CanchaSport",
+                        "htmlContent" => $email_body
+                    ];
+
+                    $ch = curl_init();
+                    curl_setopt_array($ch, [
+                        CURLOPT_URL => "https://api.brevo.com/v3/smtp/email",
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_POST => true,
+                        CURLOPT_POSTFIELDS => json_encode($email_payload),
+                        CURLOPT_HTTPHEADER => [
+                            "accept: application/json",
+                            "api-key: " . $brevo_key,
+                            "content-type: application/json"
+                        ]
+                    ]);
+
+                    $response = curl_exec($ch);
+                    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($http_code >= 200 && $http_code < 300) {
+                        $exito = true;
+                        $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email. Revisa también spam.";
+                        error_log("✅ [BREVO] Email enviado a: {$admin['email']} | Response: $response");
+                    } else {
+                        error_log("❌ [BREVO] Error $http_code: $response");
+                        // Por seguridad, no revelamos si el email existe ni si falló el envío
+                        $exito = true;
+                        $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
+                    }
                 }
-            } else {
-                // Por seguridad, no revelamos si el usuario existe
-                $exito = true;
-                $mensaje = "✅ Si existe una cuenta asociada a <strong>'" . htmlspecialchars($identificador) . "'</strong>, recibirás un enlace de recuperación en tu email.";
-                error_log("ℹ️ [RESET] Intento con identificador no encontrado: " . $identificador);
-            }
         } catch (PDOException $e) {
             error_log("❌ [RESET] Error DB: " . $e->getMessage());
             $error = 'Error en el sistema. Intenta más tarde.';
