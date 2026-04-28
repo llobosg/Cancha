@@ -1103,7 +1103,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         <!-- KPI: Ingreso Mes -->
         <div class="kpi-card-mini kpi-ingreso">
             <div>Ingreso Mes</div>
-            <div>$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
+            <div style="color: #0e3b02; font-weight: bold;">$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
             <div style="color: <?= $var_ing >= 0 ? '#2E7D32' : '#C62828' ?>; font-size: 0.8rem;">
                 <?= $var_ing >= 0 ? '▲' : '▼' ?> <?= abs($var_ing) ?>%
             </div>
@@ -1113,7 +1113,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         <!-- KPI: Saldo Pendiente (pagos parciales) -->
         <div class="kpi-card-mini kpi-pendiente">
             <div>Saldo Pendiente</div>
-            <div>$<?= number_format($monto_pendiente, 0, ',', '.') ?></div>
+            <div style="color: #e2b619; font-weight: bold;">$<?= number_format($monto_pendiente, 0, ',', '.') ?></div>
             <div style="color: #4A4A4A; font-size: 0.8rem;">Por cobrar (parciales)</div>
         </div>
 
