@@ -2422,30 +2422,32 @@ function verPosicionesTorneo(idTorneo) {
         });
 }
 
-// === 🎾 VER FIXTURE (Versión FINAL Definitiva) ===
+// === 🎾 VER FIXTURE (Versión Estable Restaurada) ===
 function verFixture(idTorneo) {
-    // 1. Asignar ID global
     window.torneoActualId = idTorneo;
-
-    // 2. Obtener elementos del DOM
+    
     const overlay = document.getElementById('submodalGenerico');
-    const card = overlay ? overlay.querySelector('.submodal-card') : null;
+    const card = overlay.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
-    if (!overlay || !card || !contenido) {
-        console.error('❌ Error: Elementos del modal no encontrados');
-        return;
-    }
-    
-    // 3. Configurar Modal (Ancho controlado + Animación)
-    card.classList.add('fixture-width'); 
+    if (!overlay || !card || !contenido) return;
+
+    // Resetear estilos TV si quedaron activos
+    card.style.maxWidth = '600px'; 
+    card.style.height = 'auto';
+    card.style.display = 'block';
+    card.style.background = 'white';
+    card.style.color = '#333';
+    contenido.style.display = 'block';
+    contenido.style.width = 'auto';
+    contenido.style.height = 'auto';
+
     overlay.style.display = 'flex';
-    void overlay.offsetWidth; 
+    void overlay.offsetWidth;
     overlay.classList.add('active');
     
     contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">🔄 Cargando fixture...</p>';
 
-    // 4. Fetch Datos
     fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
         .then(r => r.json())
         .then(torneoData => {
@@ -2457,7 +2459,6 @@ function verFixture(idTorneo) {
                     return r.json();
                 })
                 .then(data => {
-                    // Validación estricta
                     if (!Array.isArray(data) || data.length === 0) {
                         contenido.innerHTML = `
                             <div style="text-align:center; padding:3rem;">
@@ -2470,7 +2471,6 @@ function verFixture(idTorneo) {
 
                     let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-size:1.2rem;">🎾 Fixture - ${nombreTorneo}</h3>`;
                     
-                    // Agrupar por SETS
                     const rondas = {};
                     data.forEach(partido => {
                         const key = partido.fecha_hora_programada;
@@ -2713,9 +2713,10 @@ function cerrarSubmodalFixture() {
 document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
-// === 📺 VER RESULTADOS TV MODE (Full Screen Sin Scroll) ===
+
+/// === 📺 VER RESULTADOS TV MODE (Split-Screen 80/20 - Todos los Sets) ===
 function verResultadosTV(idTorneo) {
-    console.log('📺 Iniciando TV Mode Full-Screen para torneo:', idTorneo);
+    console.log('📺 Iniciando TV Mode Split-Screen para torneo:', idTorneo);
     
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay.querySelector('.submodal-card');
@@ -2723,33 +2724,32 @@ function verResultadosTV(idTorneo) {
     
     if (!overlay || !card || !contenido) return;
 
-    // Estilos para Modo TV Full Screen
+    // 1. Estilos TV Full Screen
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '98%';
     card.style.height = '95vh';
     card.style.padding = '0';
-    card.style.display = 'flex'; 
+    card.style.display = 'flex'; // Flex horizontal
     card.style.flexDirection = 'row';
-    card.style.background = '#1a1a1a'; 
+    card.style.background = '#1a1a1a'; // Fondo oscuro
     card.style.color = 'white';
-    card.style.overflow = 'hidden'; // ❌ Sin scroll general
+    card.style.overflow = 'hidden'; // Sin scroll general
     
     contenido.style.display = 'flex';
     contenido.style.width = '100%';
     contenido.style.height = '100%';
     contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
 
-    // Fetch paralelo
+    // 2. Fetch Paralelo
     Promise.all([
         fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
         fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`).then(r => r.json())
     ])
     .then(([dataResultados, dataPosiciones]) => {
         
-        // --- COLUMNA IZQUIERDA: RESULTADOS (80%) ---
-        // Usamos flex-column para distribuir los sets verticalmente sin scroll
-        let htmlFixture = `<div style="width: 80%; height: 100%; display: flex; flex-direction: column; padding: 1.5rem; border-right: 1px solid #333; overflow: hidden;">`;
-        htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin: 0 0 1rem 0; text-transform:uppercase; font-size: 2rem;">🏆 Marcador en Vivo</h2>`;
+        // --- COLUMNA IZQUIERDA: FIXTURE (80%) ---
+        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333; scrollbar-width: thin;">`;
+        htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin-bottom: 2rem; text-transform:uppercase; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
         
         // Agrupar por sets
         const rondas = {};
@@ -2762,45 +2762,38 @@ function verResultadosTV(idTorneo) {
             });
         }
 
-        // Convertir a array para iterar y calcular altura dinámica si fuera necesario
-        const setsArray = Object.values(rondas);
-        const totalSets = setsArray.length;
-        
-        setsArray.forEach((partidos, index) => {
-            // Altura flexible para cada set para que quepan todos
-            htmlFixture += `<div style="flex: 1; margin-bottom: 0.5rem; display: flex; flex-direction: column; justify-content: center;">
-                                <h3 style="color:#4ECDC4; margin: 0 0 0.5rem 0; font-size: 1.2rem; text-align: center; border-bottom: 1px solid #4ECDC4; padding-bottom: 0.2rem;">SET ${index + 1}</h3>
-                                <div style="display: flex; flex-direction: column; gap: 0.3rem; overflow: hidden;">`;
+        let setNum = 1;
+        Object.values(rondas).forEach(partidos => {
+            htmlFixture += `<div style="margin-bottom: 3rem;">
+                                <h3 style="color:#4ECDC4; margin-bottom: 1.5rem; font-size: 1.8rem; border-bottom: 2px solid #4ECDC4; padding-bottom: 0.5rem; display:inline-block;">SET ${setNum}</h3>`;
             
             partidos.forEach(p => {
                 const j1 = parseInt(p.juegos1) || 0;
                 const j2 = parseInt(p.juegos2) || 0;
                 
-                const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900;' : 'color:rgba(255,255,255,0.8);';
-                const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900;' : 'color:rgba(255,255,255,0.8);';
+                const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
+                const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
                 
-                // Fuente más pequeña para que quepan muchos partidos
                 htmlFixture += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size: 1.1rem; background:rgba(255,255,255,0.05); padding:0.4rem 0.8rem; border-radius:6px;">
-                        <span style="flex:1; text-align:right; padding-right:0.5rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
-                        <span style="padding:0 1rem; font-weight:bold; font-size: 1.3rem; color:white; background:rgba(0,0,0,0.3); border-radius:4px; min-width:80px; text-align:center;">${j1} - ${j2}</span>
-                        <span style="flex:1; text-align:left; padding-left:0.5rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; font-size: 1.6rem; background:rgba(255,255,255,0.05); padding:1.2rem; border-radius:12px; border: 1px solid rgba(255,255,255,0.1);">
+                        <span style="flex:1; text-align:right; padding-right:1.5rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
+                        <span style="padding:0 2rem; font-weight:bold; font-size: 2.2rem; color:white; background:rgba(0,0,0,0.4); border-radius:12px; min-width:140px; text-align:center; letter-spacing: 2px;">${j1} - ${j2}</span>
+                        <span style="flex:1; text-align:left; padding-left:1.5rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
                     </div>
                 `;
             });
-            htmlFixture += `</div></div>`;
+            htmlFixture += `</div>`;
+            setNum++;
         });
         htmlFixture += `</div>`;
 
         // --- COLUMNA DERECHA: POSICIONES (20%) ---
-        let htmlPosiciones = `<div style="width: 20%; height: 100%; padding: 1.5rem; background: rgba(0,0,0,0.2); display: flex; flex-direction: column;">`;
-        htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin: 0 0 1rem 0; font-size: 1.5rem; text-transform:uppercase;">Posiciones</h3>`;
-        
-        // Contenedor con scroll SOLO si hay demasiadas parejas, pero intentamos mostrar todas
-        htmlPosiciones += `<div style="flex: 1; overflow-y: auto;">`;
+        let htmlPosiciones = `<div style="width: 20%; height: 100%; overflow-y: auto; padding: 1.5rem; background: rgba(0,0,0,0.2);">`;
+        htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin-bottom: 1.5rem; font-size: 1.4rem; text-transform:uppercase;">Posiciones</h3>`;
         
         if (dataPosiciones && dataPosiciones.posiciones && dataPosiciones.posiciones.length > 0) {
-            htmlPosiciones += `<table style="width:100%; border-collapse:collapse; font-size: 1.35rem;">`; // ✅ Letra 50% más grande
+            // Letra aumentada 50% (de 0.9rem a ~1.35rem)
+            htmlPosiciones += `<table style="width:100%; border-collapse:collapse; font-size: 1.35rem;">`; 
             
             dataPosiciones.posiciones.forEach((p, index) => {
                 const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}.`));
@@ -2816,18 +2809,44 @@ function verResultadosTV(idTorneo) {
             });
             htmlPosiciones += `</table>`;
         } else {
-            htmlPosiciones += `<p style="text-align:center; color:#666; font-size:1rem;">Sin datos</p>`;
+            htmlPosiciones += `<p style="text-align:center; color:#666; font-size:1rem;">Sin datos de posiciones aún.</p>`;
         }
         
-        htmlPosiciones += `</div></div>`;
+        htmlPosiciones += `</div>`;
 
-        // Unir
+        // Unir columnas
         contenido.innerHTML = htmlFixture + htmlPosiciones;
     })
     .catch(err => {
         console.error('❌ Error TV Mode:', err);
         contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p></div>`;
     });
+}
+
+function cerrarSubmodalTV() {
+    const overlay = document.getElementById('submodalGenerico');
+    const card = overlay.querySelector('.submodal-card');
+    const contenido = document.getElementById('submodalContenido');
+    
+    // Restaurar estilos originales
+    if(overlay) overlay.style.zIndex = 4000;
+    if(card) {
+        card.style.maxWidth = ''; 
+        card.style.height = '';
+        card.style.padding = '';
+        card.style.display = '';
+        card.style.flexDirection = '';
+        card.style.background = '';
+        card.style.color = '';
+        card.style.overflow = '';
+    }
+    if(contenido) {
+        contenido.style.display = '';
+        contenido.style.width = '';
+        contenido.style.height = '';
+    }
+    
+    cerrarSubmodal();
 }
 
 function cerrarSubmodalTV() {
