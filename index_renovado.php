@@ -1,7 +1,7 @@
 <?php
 // pages/mockups/index_renovado.php
 // ⚠️ ARCHIVO DE PRUEBA - NO TOCAR index.php PRODUCTIVO
-require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/includes/config.php';
 
 // === MANTENEMOS LA LÓGICA DE LOGIN EXACTAMENTE IGUAL ===
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
