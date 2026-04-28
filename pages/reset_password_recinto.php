@@ -90,6 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin) {
     .btn-secondary:hover { background: rgba(255,255,255,0.1); }
     .password-requirements { font-size: 0.8rem; color: rgba(255,255,255,0.85); margin-top: 0.3rem; }
     @media (max-width: 480px) { .container { padding: 1.5rem; } }
+
+    @media (min-width: 480px) {
+        .btn-group {
+            flex-direction: row;
+            justify-content: center;
+        }
+        .btn-group .btn {
+            width: auto;
+            min-width: 180px;
+        }
+    }
   </style>
 </head>
 <body>
@@ -109,22 +120,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin) {
       <div class="alert alert-error">❌ <?= $error ?: 'Token no válido.' ?></div>
       <a href="recuperar_contraseña_recinto.php" class="btn btn-secondary">🔄 Solicitar enlace de recuperación</a>
       
-    <?php else: ?>
-      <p style="text-align:center; margin-bottom:1.5rem;">Hola <strong><?= htmlspecialchars($admin['nombre_completo']) ?></strong>, establece tu nueva contraseña:</p>
-      
-      <form method="POST">
-        <div class="form-group">
-          <label for="nueva">Nueva Contraseña *</label>
-          <input type="password" id="nueva" name="nueva" required minlength="6" autocomplete="new-password">
-          <div class="password-requirements">Mínimo 6 caracteres</div>
-        </div>
-        <div class="form-group">
-          <label for="confirmar">Confirmar Contraseña *</label>
-          <input type="password" id="confirmar" name="confirmar" required autocomplete="new-password">
-        </div>
-        <button type="submit" class="btn">💾 Guardar nueva contraseña</button>
-      </form>
-      <a href="login_recintos.php" class="btn btn-secondary" style="margin-top:1rem;">Cancelar</a>
+    <?php else: // Si el token es válido y no hay éxito aún ?>
+        <p style="text-align:center; margin-bottom:1.5rem;">
+            Hola <strong><?= htmlspecialchars($admin['nombre_completo']) ?></strong>, 
+            establece tu nueva contraseña:
+        </p>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="nueva">Nueva Contraseña *</label>
+                <input type="password" id="nueva" name="nueva" required minlength="6" autocomplete="new-password">
+                <div class="password-requirements">Mínimo 6 caracteres</div>
+            </div>
+            <div class="form-group">
+                <label for="confirmar">Confirmar Contraseña *</label>
+                <input type="password" id="confirmar" name="confirmar" required autocomplete="new-password">
+            </div>
+            
+            <!-- === BOTONES CORREGIDOS === -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn" style="width: 100%;">💾 Guardar nueva contraseña</button>
+                <a href="login_recintos.php" class="btn btn-secondary" style="width: 100%; text-align: center; text-decoration: none;">Cancelar</a>
+            </div>
+        </form>
     <?php endif; ?>
   </div>
 </body>
