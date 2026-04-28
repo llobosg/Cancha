@@ -1,12 +1,13 @@
 <?php
 // pages/recuperar_contraseña_recinto.php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/brevo_mailer.php';
 
 $mensaje = '';
 $error = '';
 $exito = false;
 
-// Verificación de columnas (Hotfix producción)
+// Verificación de columnas para recovery (Hotfix producción)
 $columns_missing = false;
 try {
     $check = $pdo->query("SHOW COLUMNS FROM admin_recintos LIKE 'reset_token'")->fetch();
@@ -40,72 +41,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$columns_missing) {
                 $update = $pdo->prepare("UPDATE admin_recintos SET reset_token = ?, reset_token_expires = ? WHERE id_admin = ?");
                 $update->execute([$token, $expires, $admin['id_admin']]);
                 
+                // 3. Generar enlace de reset
                 $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/reset_password_recinto.php?token=" . $token;
                 
-                // 3. Cuerpo del email
+                // 4. Cuerpo del email HTML
                 $email_body = "
-                <html><body style='font-family: Arial, sans-serif; color: #333;'>
-                  <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
-                    <h2 style='color: #AB47BC;'>🔐 Recuperación - CanchaSport</h2>
-                    <p>Hola <strong>" . htmlspecialchars($admin['nombre_completo']) . "</strong>,</p>
-                    <p>Recibimos una solicitud para restablecer tu contraseña.</p>
-                    <p style='margin: 20px 0;'>
-                      <a href='" . $reset_link . "' style='background: #AB47BC; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;'>
-                        🔗 Restablecer mi contraseña
-                      </a>
-                    </p>
-                    <p><small>Este enlace expira en 1 hora por seguridad.</small></p>
-                    <hr style='margin: 30px 0; border: none; border-top: 1px solid #eee;'>
-                    <p style='font-size: 0.9rem; color: #666;'>Equipo CanchaSport 🏟️</p>
+                <html><body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                  <div style='max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 12px;'>
+                    <div style='text-align: center; padding: 15px; background: linear-gradient(135deg, #CE93D8, #AB47BC); border-radius: 8px 8px 0 0;'>
+                      <h2 style='color: white; margin: 0;'>🔐 CanchaSport</h2>
+                    </div>
+                    <div style='padding: 25px; background: white; border-radius: 0 0 8px 8px;'>
+                      <p>Hola <strong>" . htmlspecialchars($admin['nombre_completo']) . "</strong>,</p>
+                      <p>Recibimos una solicitud para restablecer tu contraseña de administrador.</p>
+                      <div style='text-align: center; margin: 30px 0;'>
+                        <a href='" . $reset_link . "' 
+                           style='background: #AB47BC; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;'>
+                          🔗 Restablecer mi contraseña
+                        </a>
+                      </div>
+                      <p style='font-size: 0.9rem; color: #666;'><strong>⏰ Este enlace expira en 1 hora</strong> por seguridad.</p>
+                      <p style='font-size: 0.9rem; color: #666;'>Si no solicitaste este cambio, ignora este mensaje. Tu contraseña permanecerá igual.</p>
+                      <hr style='margin: 30px 0; border: none; border-top: 1px solid #eee;'>
+                      <p style='font-size: 0.85rem; color: #999; text-align: center;'>Equipo CanchaSport 🏟️</p>
+                    </div>
                   </div>
                 </body></html>";
                 
-                // 4. Envío vía API Brevo
-                $brevo_key = $_ENV['BREVO_API_KEY'] ?? $_SERVER['BREVO_API_KEY'] ?? getenv('BREVO_API_KEY') ?? '';
+                // 5. Enviar email usando BrevoMailer (tu clase existente)
+                $mailer = new BrevoMailer();
+                $sent = $mailer
+                    ->setTo($admin['email'], $admin['nombre_completo'])
+                    ->setSubject('🔐 Restablece tu contraseña - CanchaSport')
+                    ->setHtmlBody($email_body)
+                    ->setReplyTo('contacto@canchasport.com', 'Soporte CanchaSport')
+                    ->send();
                 
-                if (!empty($brevo_key)) {
-                    $payload = [
-                        "sender" => ["name" => "CanchaSport", "email" => "contacto@canchasport.com"],
-                        "to" => [["email" => $admin['email'], "name" => $admin['nombre_completo']]],
-                        "subject" => "🔐 Restablece tu contraseña - CanchaSport",
-                        "htmlContent" => $email_body
-                    ];
-                    
-                    $ch = curl_init();
-                    curl_setopt_array($ch, [
-                        CURLOPT_URL => "https://api.brevo.com/v3/smtp/email",
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_POST => true,
-                        CURLOPT_POSTFIELDS => json_encode($payload),
-                        CURLOPT_HTTPHEADER => [
-                            "accept: application/json",
-                            "api-key: " . $brevo_key,
-                            "content-type: application/json"
-                        ]
-                    ]);
-                    
-                    $response = curl_exec($ch);
-                    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-                    
-                    if ($http_code >= 200 && $http_code < 300) {
-                        $exito = true;
-                        $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email. Revisa spam.";
-                        error_log("✅ [BREVO] Email enviado a: {$admin['email']}");
-                    } else {
-                        error_log("❌ [BREVO] Error $http_code: $response");
-                        $exito = true; // Por seguridad no revelamos fallos
-                        $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
-                    }
+                if ($sent) {
+                    $exito = true;
+                    $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email. Revisa también la carpeta de spam.";
+                    error_log("✅ [RESET] Email enviado vía BrevoMailer a: {$admin['email']}");
                 } else {
-                    error_log("⚠️ [BREVO] API Key no configurada en entorno");
+                    // Por seguridad, no revelamos si falló el envío
                     $exito = true;
                     $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
+                    error_log("⚠️ [RESET] BrevoMailer retornó false para: {$admin['email']}");
                 }
             } else {
-                // Usuario no existe → mensaje genérico por seguridad
+                // Usuario no existe → mensaje genérico por seguridad (previene enumeración)
                 $exito = true;
                 $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
+                error_log("ℹ️ [RESET] Intento con identificador no encontrado: " . substr($identificador, 0, 10) . "...");
             }
         } catch (PDOException $e) {
             error_log("❌ [RESET] Error DB: " . $e->getMessage());
@@ -113,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$columns_missing) {
         }
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $columns_missing) {
-    $error = 'Función en mantenimiento. Contacta al administrador.';
+    $error = 'Función en mantenimiento. Contacta al administrador para restablecer tu acceso.';
 }
 ?>
 <!DOCTYPE html>
