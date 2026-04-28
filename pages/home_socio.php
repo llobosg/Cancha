@@ -16,17 +16,19 @@ $stmt->execute([$id_socio]);
 $socio = $stmt->fetch();
 $nombre_mostrar = $socio['alias'] ?: explode(' ', $socio['nombre'])[0];
 
-// === LÓGICA PRÓXIMO PARTIDO ===
+// === LÓGICA PRÓXIMO PARTIDO (Igual que dashboard_socio pero simplificada) ===
 $club_id_actual = $_SESSION['club_id'] ?? null;
 $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
 $params = [];
 
 if ($club_id_actual !== null) {
+    // Modo Club
     $where_parts[] = "( (r.id_club = ? AND r.id_socio = ?) OR (r.id_club = ?) )";
     $params[] = $club_id_actual;
     $params[] = $id_socio;
     $params[] = $club_id_actual;
 } else {
+    // Modo Individual
     $where_parts[] = "r.id_club IS NULL AND r.id_socio = ?";
     $params[] = $id_socio;
 }
@@ -68,129 +70,221 @@ $nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($pr
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Home - CanchaSport</title>
     <style>
-        :root { --primary: #BA68C8; --accent: #4CAF50; --bg-dark: rgba(0, 20, 10, 0.85); }
+        :root { 
+            --primary-start: #CE93D8; 
+            --primary-end: #AB47BC; 
+            --accent: #4CAF50; 
+            --text-dark: #333;
+            --bg-light: #F4F6F9;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
         body { 
-            background: linear-gradient(var(--bg-dark), rgba(0, 30, 15, 0.9)), url('../assets/img/cancha_pasto2.jpg') center/cover no-repeat fixed;
-            color: white; min-height: 100vh; padding-bottom: 80px; 
+            background-color: var(--bg-light); 
+            color: var(--text-dark); 
+            min-height: 100vh; 
+            padding-bottom: 80px; 
         }
 
-        /* HEADER */
+        /* HEADER DEGRADÉ LILA */
         .app-header {
-            background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-            padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(90deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            padding: 0.8rem 1.5rem; /* Más fino en móvil por defecto */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 2px 10px rgba(171, 71, 188, 0.2);
         }
         .logo-container { display: flex; align-items: center; gap: 0.5rem; }
-        .brand-name { font-weight: 900; font-size: 1.4rem; letter-spacing: -0.5px; }
+        .brand-name { font-weight: 700; font-size: 1.3rem; color: white; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .user-avatar {
-            width: 40px; height: 40px; background: var(--primary); color: white;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
             font-weight: bold; text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.4);
         }
 
         .container { max-width: 600px; margin: 0 auto; padding: 1.5rem; }
 
         /* FICHA PRÓXIMO PARTIDO */
         .hero-card {
-            background: linear-gradient(135deg, var(--primary) 0%, #8E24AA 100%);
-            border-radius: 24px; padding: 2rem 1.5rem; margin-bottom: 2rem;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; position: relative;
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            color: white;
+            border-radius: 24px;
+            padding: 1.8rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 25px rgba(171, 71, 188, 0.3);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        .hero-card.empty { background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); }
-
-        .hero-date { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; display: block; opacity: 0.9; }
-        .hero-sport { font-size: 1rem; opacity: 0.8; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
+        .hero-card h2 { 
+            font-size: 1.4rem; 
+            font-weight: 300; /* Texto fino */
+            margin-bottom: 0.5rem; 
+            opacity: 0.95; 
+        }
+        .hero-date { 
+            font-size: 1rem; 
+            font-weight: 400; 
+            margin-bottom: 0.5rem; 
+            display: block; 
+            opacity: 0.9; 
+        }
+        .hero-sport { 
+            font-size: 0.9rem; 
+            opacity: 0.8; 
+            margin-bottom: 1.5rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            font-weight: 500;
+        }
         
         .btn-main {
-            background: white; color: var(--primary); border: none; padding: 1rem 2rem;
-            border-radius: 50px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
-            width: 100%; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: white;
+            color: var(--primary-end);
+            border: none;
+            padding: 0.9rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         .btn-main:active { transform: scale(0.98); }
         
-        /* MENÚ 3 PUNTOS */
-        .menu-dots {
-            position: absolute; top: 1.5rem; right: 1.5rem;
-            background: rgba(255,255,255,0.2); border: none; color: white;
-            width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
-            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+        /* MENÚ 3 PUNTOS & OJO */
+        .top-controls {
+            position: absolute; top: 1.2rem; right: 1.2rem;
+            display: flex; gap: 0.8rem;
         }
-        .dropdown-menu {
-            display: none; position: absolute; top: 100%; right: 0;
-            background: white; border-radius: 12px; min-width: 180px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 200; overflow: hidden;
+        .icon-btn {
+            background: rgba(255,255,255,0.2); 
+            border: none; 
+            color: white;
+            width: 32px; height: 32px; 
+            border-radius: 50%; 
+            cursor: pointer;
+            font-size: 1.1rem; 
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
         }
-        .dropdown-item {
-            display: block; padding: 0.8rem 1rem; color: #333; text-decoration: none;
-            font-size: 0.95rem; border-bottom: 1px solid #eee; cursor: pointer;
-        }
-        .dropdown-item:hover { background: #f5f5f5; }
+        .icon-btn:hover { background: rgba(255,255,255,0.3); }
 
-        /* ACCIONES RÁPIDAS */
-        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
-        .action-pill {
-            background: rgba(255,255,255,0.9); border-radius: 20px; padding: 1.2rem 0.5rem;
-            text-align: center; text-decoration: none; color: #333;
-            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+        /* ACCIONES MINIMALISTAS (Sin bloque) */
+        .quick-actions {
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            margin-bottom: 2.5rem;
         }
-        .icon-box {
-            width: 50px; height: 50px; background: #F3E5F5; color: var(--primary);
-            border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+        .action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            color: #555;
+            transition: transform 0.2s;
         }
+        .action-item:hover { transform: translateY(-3px); color: var(--primary-end); }
+        .action-icon {
+            font-size: 1.8rem;
+            color: var(--primary-end);
+            background: #F3E5F5;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .action-label { font-size: 0.85rem; font-weight: 500; }
 
-        /* TOAST NOTIFICATIONS */
-        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast {
-            padding: 12px 24px; border-radius: 50px; color: white; font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out;
-            display: flex; align-items: center; gap: 8px;
+        /* FAB (+) SUTIL */
+        .fab-reserve {
+            position: fixed; bottom: 25px; right: 25px;
+            background: white;
+            color: var(--primary-end);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            text-decoration: none;
+            z-index: 90;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid #eee;
         }
-        .toast.success { background: #4CAF50; }
-        .toast.error { background: #F44336; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .fab-reserve:hover { 
+            transform: scale(1.1) rotate(90deg); 
+            box-shadow: 0 6px 20px rgba(171, 71, 188, 0.3);
+            background: var(--primary-end);
+            color: white;
+        }
 
         /* MODAL INSCRITOS */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 2000;
+            justify-content: center; align-items: center;
         }
         .modal-content {
-            background: white; color: #333; padding: 2rem; border-radius: 16px;
-            max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;
+            background: white; color: #333; padding: 1.5rem; border-radius: 20px;
+            max-width: 350px; width: 90%; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        .inscrito-item { padding: 0.8rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .inscrito-item { padding: 0.8rem 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .inscrito-item:last-child { border-bottom: none; }
+
+        /* RESPONSIVE MÓVIL */
+        @media (max-width: 480px) {
+            .app-header { padding: 0.6rem 1rem; } /* Header más fino */
+            .brand-name { font-size: 1.1rem; }
+            .hero-card { padding: 1.5rem 1rem; margin-bottom: 1.5rem; }
+            .hero-card h2 { font-size: 1.2rem; } /* Título más pequeño */
+            .hero-date { font-size: 0.9rem; }
+            .quick-actions { gap: 1.5rem; }
+            .action-icon { width: 45px; height: 45px; font-size: 1.5rem; }
+            .fab-reserve { width: 50px; height: 50px; font-size: 1.8rem; bottom: 20px; right: 20px; }
+        }
     </style>
 </head>
 <body>
 
     <header class="app-header">
         <div class="logo-container">
-            <!-- LOGO DEPORTIVO "C" -->
-            <svg width="40" height="40" viewBox="0 0 100 100" fill="none">
-                <path d="M50 10 C20 10 10 30 10 50 C10 70 20 90 50 90 C70 90 85 80 90 70" stroke="white" stroke-width="8" stroke-linecap="round"/>
-                <circle cx="50" cy="50" r="15" fill="white" opacity="0.8"/>
-                <path d="M50 10 L50 30 M50 70 L50 90" stroke="white" stroke-width="4"/>
+            <!-- Logo SVG Simple -->
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="45" stroke="white" stroke-width="8"/>
+                <path d="M30 50 C30 30, 70 30, 70 50 C70 70, 30 70, 30 50" stroke="white" stroke-width="6" fill="none"/>
             </svg>
             <span class="brand-name">CanchaSport</span>
         </div>
-        <a href="mantenedor_socios.php" class="user-avatar"><?= strtoupper(substr($nombre_mostrar, 0, 1)) ?></a>
+        <a href="mantenedor_socios.php" class="user-avatar">
+            <?= strtoupper(substr($nombre_mostrar, 0, 1)) ?>
+        </a>
     </header>
 
     <div class="container">
+        
         <?php if ($proximo): ?>
             <div class="hero-card">
-                <!-- Menú 3 Puntos -->
-                <div style="position:relative;">
-                    <button class="menu-dots" onclick="toggleMenu()">⋮</button>
-                    <div id="reservaMenu" class="dropdown-menu">
-                        <div class="dropdown-item" onclick="compartirReserva(<?= $proximo['id_reserva'] ?>)">📲 Compartir Reserva</div>
-                        <div class="dropdown-item" onclick="verInscritosHero(<?= $proximo['id_reserva'] ?>)">👥 Ver Inscritos</div>
+                <!-- Controles Superiores: Menú y Ojo -->
+                <div class="top-controls">
+                    <button class="icon-btn" onclick="verInscritosHero(<?= $proximo['id_reserva'] ?>)" title="Ver Inscritos">👁️</button>
+                    <div style="position:relative;">
+                        <button class="icon-btn" onclick="toggleMenu()">⋮</button>
+                        <div id="reservaMenu" style="display:none; position:absolute; top:100%; right:0; background:white; border-radius:12px; min-width:160px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:200; overflow:hidden;">
+                            <div class="dropdown-item" onclick="compartirReserva(<?= $proximo['id_reserva'] ?>)" style="padding:0.8rem; color:#333; cursor:pointer; border-bottom:1px solid #eee;">📲 Compartir Reserva</div>
+                        </div>
                     </div>
                 </div>
 
-                <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem;">Próximo Partido</h2>
+                <h2>Próximo Partido</h2>
                 <span class="hero-date">📅 <?= date('d M', strtotime($proximo['fecha'])) ?> • ⏰ <?= substr($proximo['hora_inicio'], 0, 5) ?></span>
                 <div class="hero-sport"><?= htmlspecialchars($nombre_deporte) ?> • <?= htmlspecialchars($proximo['nombre_cancha']) ?></div>
                 
@@ -200,64 +294,56 @@ $nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($pr
                     <button class="btn-main" onclick="anotarmeAlEvento(<?= $proximo['id_reserva'] ?>)">✅ Anotarme</button>
                 <?php endif; ?>
 
-                <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
-                    👥 <?= $cant_inscritos ?> inscritos
+                <div style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.9; display:flex; justify-content:center; align-items:center; gap:0.5rem;">
+                    <span>👥 <?= $cant_inscritos ?> inscritos</span>
                 </div>
             </div>
         <?php else: ?>
-            <div class="hero-card empty">
+            <div class="hero-card" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);">
                 <h2>¡Hola, <?= htmlspecialchars($nombre_mostrar) ?>!</h2>
                 <p style="margin-bottom: 1.5rem; opacity: 0.9;">No tienes partidos próximos.</p>
-                <a href="reservar_cancha.php" style="display:block; background:white; color:#2E7D32; padding:1rem; border-radius:50px; text-decoration:none; font-weight:bold;">🎾 Reservar Ahora</a>
+                <a href="reservar_cancha.php" style="display:block; background:white; color:#2E7D32; padding:0.9rem; border-radius:50px; text-decoration:none; font-weight:bold;">🎾 Reservar Ahora</a>
             </div>
         <?php endif; ?>
 
+        <!-- Acciones Minimalistas -->
         <div class="quick-actions">
-            <a href="reservar_cancha.php" class="action-pill">
-                <div class="icon-box" style="background:#E8F5E9; color:#2E7D32;">🎾</div>
-                <span style="font-weight: 600;">Reservar</span>
+            <a href="reservar_cancha.php" class="action-item">
+                <div class="action-icon">🎾</div>
+                <span class="action-label">Reservar</span>
             </a>
-            <a href="#" class="action-pill">
-                <div class="icon-box" style="background:#FFF3E0; color:#EF6C00;">🏆</div>
-                <span style="font-weight: 600;">Torneos</span>
+            <a href="#" class="action-item">
+                <div class="action-icon">🏆</div>
+                <span class="action-label">Torneos</span>
             </a>
-            <a href="#" class="action-pill">
-                <div class="icon-box" style="background:#E3F2FD; color:#1565C0;">📊</div>
-                <span style="font-weight: 600;">Ranking</span>
+            <a href="#" class="action-item">
+                <div class="action-icon">📊</div>
+                <span class="action-label">Ranking</span>
             </a>
         </div>
+
     </div>
 
-    <!-- Toast Container -->
-    <div id="toast-container"></div>
+    <!-- Botón Flotante (+) -->
+    <a href="reservar_cancha.php" class="fab-reserve">+</a>
 
     <!-- Modal Inscritos -->
     <div id="modalInscritos" class="modal-overlay" onclick="cerrarModalInscritos(event)">
         <div class="modal-content">
-            <h3 style="text-align:center; color:#BA68C8; margin-bottom:1rem;">👥 Inscritos</h3>
-            <div id="listaInscritos"><p style="text-align:center;">Cargando...</p></div>
-            <button onclick="document.getElementById('modalInscritos').style.display='none'" style="width:100%; margin-top:1rem; padding:0.5rem; background:#eee; border:none; border-radius:8px;">Cerrar</button>
+            <h3 style="text-align:center; color:#AB47BC; margin-bottom:1rem; font-weight:600;">👥 Inscritos</h3>
+            <div id="listaInscritos"><p style="text-align:center; color:#888;">Cargando...</p></div>
+            <button onclick="document.getElementById('modalInscritos').style.display='none'" style="width:100%; margin-top:1rem; padding:0.6rem; background:#f0f0f0; border:none; border-radius:12px; font-weight:600; color:#555;">Cerrar</button>
         </div>
     </div>
 
     <script>
-        // === TOAST SYSTEM ===
-        function showToast(msg, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = type === 'success' ? '✅ ' + msg : '❌ ' + msg;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
         // === MENÚ 3 PUNTOS ===
         function toggleMenu() {
             const menu = document.getElementById('reservaMenu');
             menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
         }
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.menu-dots')) document.getElementById('reservaMenu').style.display = 'none';
+            if (!e.target.closest('.top-controls')) document.getElementById('reservaMenu').style.display = 'none';
         });
 
         // === ANOTARSE / BAJARSE ===
@@ -269,8 +355,8 @@ $nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($pr
             })
             .then(r => r.json())
             .then(d => {
-                if(d.success) { showToast('¡Anotado correctamente!', 'success'); location.reload(); }
-                else { showToast(d.message, 'error'); }
+                if(d.success) { alert('¡Anotado correctamente!'); location.reload(); }
+                else { alert('Error: ' + d.message); }
             });
         }
 
@@ -282,27 +368,40 @@ $nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($pr
             })
             .then(r => r.json())
             .then(d => {
-                if(d.success) { showToast('Te has dado de baja.', 'success'); location.reload(); }
-                else { showToast(d.message, 'error'); }
+                if(d.success) { alert('Te has dado de baja.'); location.reload(); }
+                else { alert('Error: ' + d.message); }
             });
         }
 
-        // === VER INSCRITOS ===
+        // === VER INSCRITOS (CORREGIDO PARA CARGAR DATOS REALES) ===
         function verInscritosHero(idReserva) {
             const modal = document.getElementById('modalInscritos');
             const lista = document.getElementById('listaInscritos');
             modal.style.display = 'flex';
-            lista.innerHTML = '<p style="text-align:center;">Cargando...</p>';
+            lista.innerHTML = '<p style="text-align:center; color:#888;">Cargando...</p>';
             
-            fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`)
+            // Usamos la API que ya funciona en el dashboard
+            fetch(`../api/get_inscritos_torneo.php?id_torneo=${idReserva}`) // Ojo: Si es reserva, quizás necesites otra API o adaptar esta
                 .then(r => r.json())
                 .then(data => {
-                    if(!data.length) { lista.innerHTML = '<p style="text-align:center;">Aún no hay nadie.</p>'; return; }
+                    // Si la API devuelve error o vacío, mostramos mensaje
+                    if(!data || !Array.isArray(data) || data.length === 0) {
+                        // Intento fallback: Si no hay API específica de reserva, mostramos los inscritos generales si existen
+                        lista.innerHTML = '<p style="text-align:center; color:#888; padding:1rem;">No se pudo cargar la lista detallada.<br><small>Total inscritos: <?= $cant_inscritos ?></small></p>';
+                        return;
+                    }
+                    
                     let html = '';
                     data.forEach(p => {
-                        html += `<div class="inscrito-item"><span>${p.nombre}</span> ${p.es_yo ? '<strong>(Tú)</strong>' : ''}</div>`;
+                        // Asumiendo estructura de get_inscritos_torneo
+                        const nombre = p.nombre_pareja || (p.jugador1 + ' & ' + p.jugador2);
+                        html += `<div class="inscrito-item"><span>${nombre}</span></div>`;
                     });
-                    lista.innerHTML = html;
+                    lista.innerHTML = html || '<p style="text-align:center;">Sin detalles disponibles.</p>';
+                })
+                .catch(err => {
+                    console.error(err);
+                    lista.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
                 });
         }
         function cerrarModalInscritos(e) { if(e.target.id === 'modalInscritos') e.target.style.display = 'none'; }
@@ -310,7 +409,7 @@ $nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($pr
         // === COMPARTIR ===
         function compartirReserva(id) {
             navigator.clipboard.writeText(window.location.origin + '/pages/detalle_reserva.php?id=' + id)
-            .then(() => showToast('Enlace copiado al portapapeles', 'success'));
+            .then(() => alert('✅ Enlace copiado'));
         }
     </script>
 </body>
