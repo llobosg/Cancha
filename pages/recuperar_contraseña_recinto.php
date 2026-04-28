@@ -1,7 +1,11 @@
 <?php
 // pages/recuperar_contraseña_recinto.php
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/brevo_mailer.php';
+require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← ✅ ARCHIVO CORRECTO
+
+// === DEBUG: Verificar carga de clase ===
+error_log("🔍 [RESET] reserva_mailer.php incluido: " . (file_exists(__DIR__ . '/../includes/reserva_mailer.php') ? 'Sí' : 'NO'));
+error_log("🔍 [RESET] BrevoMailer existe: " . (class_exists('BrevoMailer') ? 'Sí' : 'NO'));
 
 $mensaje = '';
 $error = '';
@@ -44,51 +48,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$columns_missing) {
                 // 3. Generar enlace de reset
                 $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/reset_password_recinto.php?token=" . $token;
                 
-                // 4. Cuerpo del email HTML
+                // 4. Cuerpo del email HTML (mismo estilo que mover_reserva)
                 $email_body = "
-                <html><body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
-                  <div style='max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 12px;'>
-                    <div style='text-align: center; padding: 15px; background: linear-gradient(135deg, #CE93D8, #AB47BC); border-radius: 8px 8px 0 0;'>
-                      <h2 style='color: white; margin: 0;'>🔐 CanchaSport</h2>
+                <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:20px;border-radius:12px;'>
+                    <div style='text-align:center;background:linear-gradient(135deg,#CE93D8,#AB47BC);color:white;padding:15px;border-radius:8px;margin-bottom:20px;'>
+                        <h2 style='margin:0;'>🔐 Recuperación de Contraseña</h2>
                     </div>
-                    <div style='padding: 25px; background: white; border-radius: 0 0 8px 8px;'>
-                      <p>Hola <strong>" . htmlspecialchars($admin['nombre_completo']) . "</strong>,</p>
-                      <p>Recibimos una solicitud para restablecer tu contraseña de administrador.</p>
-                      <div style='text-align: center; margin: 30px 0;'>
+                    <p style='font-size:1.1rem;'>Hola <strong>" . htmlspecialchars($admin['nombre_completo']) . "</strong>,</p>
+                    <p>Recibimos una solicitud para restablecer tu contraseña de administrador.</p>
+                    
+                    <div style='background:white;padding:20px;border-radius:8px;border-left:4px solid #AB47BC;margin:20px 0;text-align:center;'>
                         <a href='" . $reset_link . "' 
-                           style='background: #AB47BC; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;'>
-                          🔗 Restablecer mi contraseña
+                           style='background:#AB47BC;color:white;padding:14px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:bold;font-size:1rem;'>
+                            🔗 Restablecer mi contraseña
                         </a>
-                      </div>
-                      <p style='font-size: 0.9rem; color: #666;'><strong>⏰ Este enlace expira en 1 hora</strong> por seguridad.</p>
-                      <p style='font-size: 0.9rem; color: #666;'>Si no solicitaste este cambio, ignora este mensaje. Tu contraseña permanecerá igual.</p>
-                      <hr style='margin: 30px 0; border: none; border-top: 1px solid #eee;'>
-                      <p style='font-size: 0.85rem; color: #999; text-align: center;'>Equipo CanchaSport 🏟️</p>
                     </div>
-                  </div>
-                </body></html>";
+                    
+                    <p style='font-size:0.9rem;color:#666;'><strong>⏰ Este enlace expira en 1 hora</strong> por seguridad.</p>
+                    <p style='font-size:0.9rem;color:#666;'>Si no solicitaste este cambio, ignora este mensaje.</p>
+                    
+                    <hr style='margin:25px 0;border:0;border-top:1px solid #eee;'>
+                    <p style='text-align:center;font-size:0.9rem;color:#888;'>
+                        ¿Necesitas ayuda? <a href='mailto:contacto@canchasport.com' style='color:#AB47BC;'>contacto@canchasport.com</a>
+                    </p>
+                </div>";
                 
-                // 5. Enviar email usando BrevoMailer (tu clase existente)
-                $mailer = new BrevoMailer();
-                $sent = $mailer
-                    ->setTo($admin['email'], $admin['nombre_completo'])
-                    ->setSubject('🔐 Restablece tu contraseña - CanchaSport')
-                    ->setHtmlBody($email_body)
-                    ->setReplyTo('contacto@canchasport.com', 'Soporte CanchaSport')
-                    ->send();
-                
-                if ($sent) {
-                    $exito = true;
-                    $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email. Revisa también la carpeta de spam.";
-                    error_log("✅ [RESET] Email enviado vía BrevoMailer a: {$admin['email']}");
-                } else {
-                    // Por seguridad, no revelamos si falló el envío
+                // 5. ✅ ENVIAR CON EL MISMO PATRÓN QUE mover_reserva.php
+                try {
+                    $mail = new BrevoMailer();
+                    $sent = $mail
+                        ->setTo($admin['email'], $admin['nombre_completo'])
+                        ->setSubject('🔐 Restablece tu contraseña - CanchaSport')
+                        ->setReplyTo('contacto@canchasport.com', 'Soporte CanchaSport')
+                        ->setHtmlBody($email_body)
+                        ->send();
+                    
+                    if ($sent) {
+                        $exito = true;
+                        $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email. Revisa también spam.";
+                        error_log("✅ [RESET] Email enviado vía reserva_mailer.php a: {$admin['email']}");
+                    } else {
+                        $exito = true; // Por seguridad no revelamos fallos
+                        $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
+                        error_log("⚠️ [RESET] BrevoMailer->send() retornó false para: {$admin['email']}");
+                    }
+                } catch (Exception $e) {
+                    error_log("❌ [RESET] Excepción en BrevoMailer: " . $e->getMessage());
                     $exito = true;
                     $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
-                    error_log("⚠️ [RESET] BrevoMailer retornó false para: {$admin['email']}");
                 }
             } else {
-                // Usuario no existe → mensaje genérico por seguridad (previene enumeración)
+                // Usuario no existe → mensaje genérico por seguridad
                 $exito = true;
                 $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
                 error_log("ℹ️ [RESET] Intento con identificador no encontrado: " . substr($identificador, 0, 10) . "...");
