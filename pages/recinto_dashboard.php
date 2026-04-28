@@ -61,50 +61,135 @@ function getSuma($pdo, $id_recinto, $fecha_op, $fecha_val, $pago_cond) {
     return $s->fetchColumn();
 }
 
-// Ingresos del mes actual (pagados)
-$ingresos_act = getSuma($pdo, $id_recinto, '>=', $primer_dia_mes, "= 'pagado'");
+// === CÁLCULO KPIs - VERSIÓN PRODUCCIÓN (variables inicializadas + SQL limpio) ===
+$hoy = date('Y-m-d');
+$primer_dia_mes = date('Y-m-01');
+$primer_dia_mes_ant = date('Y-m-01', strtotime('-1 month'));
+$ultimo_dia_mes_ant = date('Y-m-t', strtotime('-1 month'));
 
-// Ingresos del mes anterior (pagados)
-$ingresos_ant = getSuma($pdo, $id_recinto, 'between', [$primer_dia_mes_ant, $ultimo_dia_mes_ant], "= 'pagado'");
+// Inicializar TODAS las variables por defecto (evita warnings)
+$ingresos_act = 0;
+$ingresos_ant = 0;
+$var_ing = 0;
+$monto_pendiente = 0;      // Saldo pendiente de pagos parciales
+$monto_en_reserva = 0;     // Monto total de reservas futuras no pagadas
+$cant_en_reserva = 0;      // Cantidad de reservas futuras no pagadas
+$monto_deuda = 0;          // Deuda vencida (reservas pasadas no pagadas)
 
-// Variación porcentual
-$var_ing = ($ingresos_ant > 0) ? (($ingresos_act - $ingresos_ant) / $ingresos_ant) * 100 : (($ingresos_act > 0) ? 100 : 0);
+try {
+    // === INGRESOS MES ACTUAL (pagados) ===
+    $q_act = "SELECT COALESCE(SUM(r.monto_total), 0) 
+              FROM reservas r 
+              JOIN canchas c ON r.id_cancha = c.id_cancha 
+              WHERE c.id_recinto = :id 
+              AND r.fecha >= :fecha 
+              AND r.estado_pago = 'pagado' 
+              AND r.estado != 'cancelada'";
+    $s_act = $pdo->prepare($q_act);
+    $s_act->execute([':id' => $id_recinto, ':fecha' => $primer_dia_mes]);
+    $ingresos_act = $s_act->fetchColumn() ?: 0;
 
-// === EN RESERVA: Monto total de reservas futuras no pagadas ===
-$q_en_reserva = "SELECT COALESCE(SUM(r.monto_total), 0) 
-                 FROM reservas r 
-                 JOIN canchas c ON r.id_cancha = c.id_cancha 
-                 WHERE c.id_recinto = :id 
-                 AND DATE(r.fecha) > :hoy 
-                 AND r.estado_pago IN ('pendiente', 'parcial') 
-                 AND r.estado != 'cancelada'";
-$s_en_reserva = $pdo->prepare($q_en_reserva);
-$s_en_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-$monto_en_reserva = $s_en_reserva->fetchColumn();
+    // === INGRESOS MES ANTERIOR (pagados) ===
+    $q_ant = "SELECT COALESCE(SUM(r.monto_total), 0) 
+              FROM reservas r 
+              JOIN canchas c ON r.id_cancha = c.id_cancha 
+              WHERE c.id_recinto = :id 
+              AND r.fecha BETWEEN :start AND :end 
+              AND r.estado_pago = 'pagado' 
+              AND r.estado != 'cancelada'";
+    $s_ant = $pdo->prepare($q_ant);
+    $s_ant->execute([
+        ':id' => $id_recinto, 
+        ':start' => $primer_dia_mes_ant, 
+        ':end' => $ultimo_dia_mes_ant
+    ]);
+    $ingresos_ant = $s_ant->fetchColumn() ?: 0;
 
-// Cantidad de reservas en reserva (para mostrar como subtexto)
-$q_cant_reserva = "SELECT COUNT(*) 
-                   FROM reservas r 
-                   JOIN canchas c ON r.id_cancha = c.id_cancha 
-                   WHERE c.id_recinto = :id 
-                   AND DATE(r.fecha) > :hoy 
-                   AND r.estado_pago IN ('pendiente', 'parcial') 
-                   AND r.estado != 'cancelada'";
-$s_cant_reserva = $pdo->prepare($q_cant_reserva);
-$s_cant_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-$cant_reserva = $s_cant_reserva->fetchColumn();
+    // === VARIACIÓN PORCENTUAL ===
+    if ($ingresos_ant > 0) {
+        $var_ing = round((($ingresos_act - $ingresos_ant) / $ingresos_ant) * 100, 1);
+    } elseif ($ingresos_act > 0) {
+        $var_ing = 100;
+    }
 
-// Deuda vencida: reservas pasadas no pagadas
-$q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0) 
+    // === SALDO PENDIENTE (pagos parciales: monto faltante por cobrar) ===
+    $q_parcial = "SELECT COALESCE(SUM(r.monto_total - r.monto_recaudacion), 0) 
+                  FROM reservas r 
+                  JOIN canchas c ON r.id_cancha = c.id_cancha 
+                  WHERE c.id_recinto = :id 
+                  AND r.fecha >= :fecha 
+                  AND r.estado_pago = 'parcial' 
+                  AND r.estado != 'cancelada'";
+    $s_parcial = $pdo->prepare($q_parcial);
+    $s_parcial->execute([':id' => $id_recinto, ':fecha' => $primer_dia_mes]);
+    $monto_pendiente = $s_parcial->fetchColumn() ?: 0;
+
+    // === EN RESERVA: Monto total de reservas FUTURAS no pagadas (pendiente + parcial) ===
+    $q_reserva = "SELECT COALESCE(SUM(r.monto_total), 0) 
+                  FROM reservas r 
+                  JOIN canchas c ON r.id_cancha = c.id_cancha 
+                  WHERE c.id_recinto = :id 
+                  AND DATE(r.fecha) > :hoy 
+                  AND r.estado_pago IN ('pendiente', 'parcial') 
+                  AND r.estado != 'cancelada'";
+    $s_reserva = $pdo->prepare($q_reserva);
+    $s_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+    $monto_en_reserva = $s_reserva->fetchColumn() ?: 0;
+
+    // Cantidad de reservas en reserva (para subtexto)
+    $q_cant_reserva = "SELECT COUNT(*) 
+                       FROM reservas r 
+                       JOIN canchas c ON r.id_cancha = c.id_cancha 
+                       WHERE c.id_recinto = :id 
+                       AND DATE(r.fecha) > :hoy 
+                       AND r.estado_pago IN ('pendiente', 'parcial') 
+                       AND r.estado != 'cancelada'";
+    $s_cant_reserva = $pdo->prepare($q_cant_reserva);
+    $s_cant_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+    $cant_en_reserva = $s_cant_reserva->fetchColumn() ?: 0;
+
+    // === DEUDA VENCIDA: reservas PASADAS no pagadas ===
+    $q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0) 
+                FROM reservas r 
+                JOIN canchas c ON r.id_cancha = c.id_cancha 
+                WHERE c.id_recinto = :id 
+                AND DATE(r.fecha) < :hoy 
+                AND r.estado_pago IN ('pendiente', 'parcial') 
+                AND r.estado != 'cancelada'";
+    $s_deuda = $pdo->prepare($q_deuda);
+    $s_deuda->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+    $monto_deuda = $s_deuda->fetchColumn() ?: 0;
+
+} catch (PDOException $e) {
+    // Logging seguro sin exponer detalles en producción
+    error_log("❌ [KPI ERROR] " . $e->getMessage() . " | recinto: $id_recinto");
+    // Las variables ya están inicializadas en 0, así que no rompe la UI
+}
+
+// === DEBUG KPIs (descomentar solo para pruebas) ===
+error_log("🔍 [KPI DEBUG] recinto: $id_recinto | hoy: $hoy");
+error_log("🔍 [KPI DEBUG] monto_en_reserva: $monto_en_reserva | cant: $cant_en_reserva");
+error_log("🔍 [KPI DEBUG] monto_pendiente: $monto_pendiente | deuda: $monto_deuda");
+
+// Verificar si hay reservas futuras no pagadas
+$debug_q = "SELECT r.id_reserva, r.fecha, r.monto_total, r.estado_pago, r.monto_recaudacion
             FROM reservas r 
             JOIN canchas c ON r.id_cancha = c.id_cancha 
-            WHERE c.id_recinto = :id 
-            AND DATE(r.fecha) < :hoy 
+            WHERE c.id_recinto = ? 
+            AND DATE(r.fecha) > ? 
             AND r.estado_pago IN ('pendiente', 'parcial') 
-            AND r.estado != 'cancelada'";
-$s_deuda = $pdo->prepare($q_deuda);
-$s_deuda->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-$monto_deuda = $s_deuda->fetchColumn();
+            AND r.estado != 'cancelada'
+            ORDER BY r.fecha ASC LIMIT 5";
+$debug_s = $pdo->prepare($debug_q);
+$debug_s->execute([$id_recinto, $hoy]);
+$debug_rows = $debug_s->fetchAll();
+if ($debug_rows) {
+    foreach ($debug_rows as $row) {
+        error_log("   ✅ Reserva ID:{$row['id_reserva']} Fecha:{$row['fecha']} Monto:{$row['monto_total']} Estado:{$row['estado_pago']}");
+    }
+} else {
+    error_log("   ⚠️ No se encontraron reservas futuras no pagadas para este recinto");
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -1015,34 +1100,39 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
         <?php if ($rol_actual === 'admin'): ?>
-        <div class="kpi-card-mini kpi-ingresos">
-            <div>Ingresos Mes</div>
+        <!-- KPI: Ingreso Mes -->
+        <div class="kpi-card-mini kpi-ingreso">
+            <div>Ingreso Mes</div>
             <div>$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
-            <div style="color: #4A4A4A"><?= $var_ing >= 0 ? '▲' : '▼' ?> <?= number_format(abs($var_ing), 1) ?>%</div>
-        </div>
-        <?php endif; ?>
-
-        <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
-            <div>Saldo Pendiente</div>
-            <div>$<?= number_format($parcial_act, 0, ',', '.') ?></div>
-            <div style="color: #4A4A4A">Ver detalles</div>
-        </div>
-
-        <?php if ($rol_actual === 'admin'): ?>
-        <!-- KPI: En Reserva -->
-        <div class="kpi-card-mini kpi-reserva">
-            <div>En Reserva</div>
-            <div>$<?= number_format($monto_en_reserva, 0, ',', '.') ?></div>
-            <div style="color: #4A4A4A; font-size: 0.8rem;">
-                <?= $cant_reserva ?> próximas
+            <div style="color: <?= $var_ing >= 0 ? '#2E7D32' : '#C62828' ?>; font-size: 0.8rem;">
+                <?= $var_ing >= 0 ? '▲' : '▼' ?> <?= abs($var_ing) ?>%
             </div>
         </div>
         <?php endif; ?>
 
-        <div class="kpi-card-mini kpi-deuda" onclick="abrirListaKPI('deuda')">
+        <!-- KPI: Saldo Pendiente (pagos parciales) -->
+        <div class="kpi-card-mini kpi-pendiente">
+            <div>Saldo Pendiente</div>
+            <div>$<?= number_format($monto_pendiente, 0, ',', '.') ?></div>
+            <div style="color: #4A4A4A; font-size: 0.8rem;">Por cobrar (parciales)</div>
+        </div>
+
+        <?php if ($rol_actual === 'admin'): ?>
+        <!-- KPI: En Reserva (futuras no pagadas) -->
+        <div class="kpi-card-mini kpi-reserva">
+            <div>En Reserva</div>
+            <div>$<?= number_format($monto_en_reserva, 0, ',', '.') ?></div>
+            <div style="color: #4A4A4A; font-size: 0.8rem;">
+                <?= $cant_en_reserva ?> próximas
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- KPI: Deuda Vencida -->
+        <div class="kpi-card-mini kpi-deuda">
             <div>Deuda Vencida</div>
             <div>$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
-            <div style="color: #4A4A4A">Ver deudores</div>
+            <div style="color: #C62828; font-size: 0.8rem;">Por regularizar</div>
         </div>
     </div>
 
