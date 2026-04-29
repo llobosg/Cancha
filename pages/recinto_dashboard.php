@@ -2511,6 +2511,24 @@ async function guardarReservaAdmin(e) {
     try {
         if (isRecurrent) {
             // Flujo recurrente
+            // === VALIDACIÓN DE FECHAS RECURRENTES ===
+            const startDate = document.getElementById('startDate')?.value;
+            const endDate = document.getElementById('endDate')?.value;
+            const repeatDay = document.getElementById('repeatDay')?.value;
+            
+            if (!startDate || !endDate || !repeatDay) {
+                showToast('⚠️ Completa: día de repetición, fecha inicio y fecha fin', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;  // Detener envío
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                showToast('⚠️ La fecha inicio debe ser anterior a la fecha fin', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
             const payload = {
                 action: 'create_recurrent',
                 id_cancha: document.getElementById('admin_cancha_id').value,
@@ -3715,11 +3733,11 @@ async function registrarLogReserva(idReserva, accion, descripcion, metadata = nu
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
                 <div class="form-group">
                 <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
-                <input type="date" id="startDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                <input type="date" id="startDate" name="start_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
                 </div>
                 <div class="form-group">
                 <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
-                <input type="date" id="endDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                <input type="date" id="endDate" name="end_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
                 </div>
             </div>
             
