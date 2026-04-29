@@ -2093,30 +2093,6 @@ document.getElementById('panelTorneos')?.addEventListener('click', (e) => {
     if (e.target.id === 'panelTorneos') cerrarModalTorneos();
 });
 
-function buscarSocioAdmin(query) {
-  clearTimeout(debounceTimer);
-  if(query.length < 2) { document.getElementById('searchResultsAdmin').style.display='none'; return; }
-  
-  debounceTimer = setTimeout(async () => {
-    try {
-      const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      const container = document.getElementById('searchResultsAdmin');
-      container.innerHTML = '';
-      
-      if(data.length === 0) { container.innerHTML = '<div style="padding:10px; color:#666;">Sin coincidencias. Crear nuevo registro.</div>'; }
-      else {
-        data.forEach(s => {
-          container.innerHTML += `<div onclick="seleccionarSocioAdmin(${s.id_socio}, '${s.nombre}', '${s.email}', '${s.celular}')" 
-            style="padding:10px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:0.9rem;">
-            <strong>${s.nombre}</strong> <span style="color:#666; font-size:0.8rem;">| ${s.email}</span></div>`;
-        });
-      }
-      container.style.display = 'block';
-    } catch(e) { console.error(e); }
-  }, 300);
-}
-
 // === ACTUALIZAR EL SUBMIT DEL FORMULARIO ===
 document.getElementById('formReservaManual')?.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -2180,161 +2156,6 @@ async function handleRecurrentReservation() {
         btn.textContent = originalText;
     }
 }
-
-// === BUSCADOR INTELIGENTE (TU CÓDIGO INTEGRADO) ===
-let debounceTimer;
-function debounceBuscar(val) {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => buscarSocioAdmin(val), 300);
-}
-
-async function buscarSocioAdmin(query) {
-    const container = document.getElementById('searchResultsAdmin');
-    if (!container) return;
-    if (query.length < 2) { container.style.display = 'none'; return; }
-
-    try {
-        const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
-        const text = await res.text();
-        
-        let data;
-        try { data = JSON.parse(text); } catch (e) {
-            console.error('❌ API search_socios devolvió JSON inválido:', text.substring(0, 150));
-            container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda.</div>';
-            container.style.display = 'block';
-            return;
-        }
-
-        container.innerHTML = '';
-        if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div style="padding:10px; color:#666; font-size:0.85rem;">Sin coincidencias.</div>';
-        } else {
-            data.forEach(s => {
-                const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
-                const safeEmail = (s.email || '').replace(/'/g, "\\'");
-                const safeCel = (s.celular || '').replace(/'/g, "\\'");
-                container.innerHTML += `
-                    <div onclick="seleccionarSocioAdmin(${s.id_socio}, '${safeNombre}', '${safeEmail}', '${safeCel}')"
-                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333; background:#fff;">
-                        <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
-                    </div>`;
-            });
-        }
-        container.style.display = 'block';
-    } catch (err) {
-        console.error('Error en buscarSocioAdmin:', err);
-    }
-}
-
-function seleccionarSocioAdmin(id, nombre, email, celular) {
-    document.getElementById('admin_socio_id').value = id;
-    document.getElementById('admin_nombre').value = nombre;
-    document.getElementById('admin_email').value = email;
-    document.getElementById('admin_celular').value = celular;
-    document.getElementById('searchResultsAdmin').style.display = 'none';
-    document.getElementById('searchAdmin').value = nombre;
-}
-
-// === SUBMIT DEL FORMULARIO (con soporte recurrente) ===
-async function guardarReservaAdmin(e) {
-    e.preventDefault();
-    
-    const isRecurrent = document.getElementById('isRecurrent')?.checked;
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-    
-    btn.disabled = true;
-    btn.textContent = isRecurrent ? '🔄 Generando...' : '💾 Guardando...';
-    
-    try {
-        if (isRecurrent) {
-            // Flujo recurrente
-            const payload = {
-                action: 'create_recurrent',
-                id_cancha: document.getElementById('admin_cancha_id').value,
-                hora_inicio: document.getElementById('admin_hora_inicio').value,
-                hora_fin: document.getElementById('admin_hora_fin').value,
-                id_socio: document.getElementById('admin_socio_id').value,
-                repeat_day: parseInt(document.getElementById('repeatDay').value),
-                start_date: document.getElementById('startDate').value,
-                end_date: document.getElementById('endDate').value,
-                monto_total: parseFloat(document.getElementById('admin_monto_base').value) * (document.getElementById('admin_duracion').value === '90' ? 1.5 : 1),
-                duracion_bloque: parseInt(document.getElementById('admin_duracion').value)
-            };
-            
-            const response = await fetch('../api/reserva_recurrente.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(`✅ ${result.created} reservas creadas` + (result.skipped > 0 ? ` | ⚠️ ${result.skipped} saltadas` : ''));
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                showToast(`❌ ${result.message}`, 'error');
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        } else {
-            // Flujo reserva única (tu lógica existente)
-            const formData = new FormData(e.target);
-            formData.append('action', 'crear_manual');
-            
-            const response = await fetch('../api/gestion_reservas.php', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast('✅ Reserva creada correctamente');
-                setTimeout(() => location.reload(), 1200);
-            } else {
-                showToast(`❌ ${result.message}`, 'error');
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('❌ Error de conexión', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
-}
-
-// === PREVENIR CIERRE AL CLICK INTERNO ===
-// === EVENTOS GLOBALES (DOMContentLoaded) ===
-document.addEventListener('DOMContentLoaded', function() {
-    // Prevenir cerrar modal al hacer click dentro del contenido
-    const modalContent = document.querySelector('#modalReservaAdmin .modal-content');
-    modalContent?.addEventListener('click', function(e) { e.stopPropagation(); });
-    
-    // Soporte tecla ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('modalReservaAdmin');
-            if (modal && modal.style.display !== 'none') {
-                cerrarModalReservaAdmin({ target: modal });
-            }
-        }
-    });
-    
-    // Actualizar preview de fechas recurrentes al cambiar inputs
-    ['repeatDay', 'startDate', 'endDate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('change', updatePreviewDates);
-    });
-    
-    // Cerrar resultados de búsqueda al hacer click fuera
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('#searchAdmin') && !e.target.closest('#searchResultsAdmin')) {
-            const results = document.getElementById('searchResultsAdmin');
-            if (results) results.style.display = 'none';
-        }
-    });
-});
 
 // === ABRIR MODAL CON DATOS ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
@@ -2428,6 +2249,69 @@ function actualizarDuracionReserva(duracion) {
     document.getElementById('admin_duracion').value = duracion;
 }
 
+// === TOGGLE SECCIÓN RECURRENTE (FIX: usar onchange en HTML + función global) ===
+function toggleRecurrentFields(mostrar) {
+    const fields = document.getElementById('recurrentFields');
+    if (fields) {
+        fields.style.display = mostrar ? 'block' : 'none';
+        if (mostrar) updatePreviewDates();
+    }
+}
+
+// === BUSCADOR INTELIGENTE (TU CÓDIGO INTEGRADO) ===
+let debounceTimer;
+function debounceBuscar(val) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => buscarSocioAdmin(val), 300);
+}
+
+async function buscarSocioAdmin(query) {
+    const container = document.getElementById('searchResultsAdmin');
+    if (!container) return;
+    if (query.length < 2) { container.style.display = 'none'; return; }
+
+    try {
+        const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
+        const text = await res.text();
+        
+        let data;
+        try { data = JSON.parse(text); } catch (e) {
+            console.error('❌ API search_socios devolvió JSON inválido:', text.substring(0, 150));
+            container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda.</div>';
+            container.style.display = 'block';
+            return;
+        }
+
+        container.innerHTML = '';
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<div style="padding:10px; color:#666; font-size:0.85rem;">Sin coincidencias.</div>';
+        } else {
+            data.forEach(s => {
+                const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
+                const safeEmail = (s.email || '').replace(/'/g, "\\'");
+                const safeCel = (s.celular || '').replace(/'/g, "\\'");
+                container.innerHTML += `
+                    <div onclick="seleccionarSocioAdmin(${s.id_socio}, '${safeNombre}', '${safeEmail}', '${safeCel}')"
+                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333; background:#fff;">
+                        <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
+                    </div>`;
+            });
+        }
+        container.style.display = 'block';
+    } catch (err) {
+        console.error('Error en buscarSocioAdmin:', err);
+    }
+}
+
+function seleccionarSocioAdmin(id, nombre, email, celular) {
+    document.getElementById('admin_socio_id').value = id;
+    document.getElementById('admin_nombre').value = nombre;
+    document.getElementById('admin_email').value = email;
+    document.getElementById('admin_celular').value = celular;
+    document.getElementById('searchResultsAdmin').style.display = 'none';
+    document.getElementById('searchAdmin').value = nombre;
+}
+
 // === VISTA PREVIA DE FECHAS RECURRENTES ===
 function updatePreviewDates() {
     const day = parseInt(document.getElementById('repeatDay')?.value);
@@ -2484,6 +2368,106 @@ function cerrarModalReservaAdmin(e) {
         }
     }
     e.stopPropagation();
+}
+
+// === EVENTOS GLOBALES (DOMContentLoaded) ===
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevenir cerrar modal al hacer click dentro del contenido
+    const modalContent = document.querySelector('#modalReservaAdmin .modal-content');
+    modalContent?.addEventListener('click', function(e) { e.stopPropagation(); });
+    
+    // Soporte tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('modalReservaAdmin');
+            if (modal && modal.style.display !== 'none') {
+                cerrarModalReservaAdmin({ target: modal });
+            }
+        }
+    });
+    
+    // Actualizar preview de fechas recurrentes al cambiar inputs
+    ['repeatDay', 'startDate', 'endDate'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', updatePreviewDates);
+    });
+    
+    // Cerrar resultados de búsqueda al hacer click fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#searchAdmin') && !e.target.closest('#searchResultsAdmin')) {
+            const results = document.getElementById('searchResultsAdmin');
+            if (results) results.style.display = 'none';
+        }
+    });
+});
+
+// === SUBMIT DEL FORMULARIO (con soporte recurrente) ===
+async function guardarReservaAdmin(e) {
+    e.preventDefault();
+    
+    const isRecurrent = document.getElementById('isRecurrent')?.checked;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    
+    btn.disabled = true;
+    btn.textContent = isRecurrent ? '🔄 Generando...' : '💾 Guardando...';
+    
+    try {
+        if (isRecurrent) {
+            // Flujo recurrente
+            const payload = {
+                action: 'create_recurrent',
+                id_cancha: document.getElementById('admin_cancha_id').value,
+                hora_inicio: document.getElementById('admin_hora_inicio').value,
+                hora_fin: document.getElementById('admin_hora_fin').value,
+                id_socio: document.getElementById('admin_socio_id').value,
+                repeat_day: parseInt(document.getElementById('repeatDay').value),
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value,
+                monto_total: parseFloat(document.getElementById('admin_monto_base').value) * (document.getElementById('admin_duracion').value === '90' ? 1.5 : 1),
+                duracion_bloque: parseInt(document.getElementById('admin_duracion').value)
+            };
+            
+            const response = await fetch('../api/reserva_recurrente.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(`✅ ${result.created} reservas creadas` + (result.skipped > 0 ? ` | ⚠️ ${result.skipped} saltadas` : ''));
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(`❌ ${result.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        } else {
+            // Flujo reserva única (tu lógica existente)
+            const formData = new FormData(e.target);
+            formData.append('action', 'crear_manual');
+            
+            const response = await fetch('../api/gestion_reservas.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('✅ Reserva creada correctamente');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(`❌ ${result.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 function abrirModalMover() {
