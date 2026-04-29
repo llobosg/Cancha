@@ -2228,79 +2228,85 @@ async function handleRecurrentReservation() {
     }
 }
 
-// === ABRIR MODAL CON DATOS ===
+// === ABRIR MODAL RESERVA ADMIN (VERSIÓN BLINDADA - SIN CRASHES) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
-    // Verificar elementos críticos
-    const elCancha = document.getElementById('admin_cancha_id');
-    const elFecha = document.getElementById('admin_fecha');
-    const elHora = document.getElementById('admin_hora_inicio');
-    const elModal = document.getElementById('modalReservaAdmin');
-    
-    if (!elCancha || !elFecha || !elHora || !elModal) {
-        console.error('❌ Faltan campos del modal');
-        showToast('⚠️ Error al abrir formulario', 'error');
-        return;
+    // Helper seguro: devuelve el elemento o null con aviso en consola
+    const getEl = (id) => {
+        const el = document.getElementById(id);
+        if (!el) console.warn(`⚠️ Elemento #${id} no encontrado en el DOM`);
+        return el;
+    };
+
+    // 1. Asignar campos ocultos solo si existen
+    const elCancha = getEl('admin_cancha_id');
+    if (elCancha) elCancha.value = canchaId;
+
+    const elFecha = getEl('admin_fecha');
+    if (elFecha) elFecha.value = fecha;
+
+    const elHora = getEl('admin_hora_inicio');
+    if (elHora) elHora.value = hora;
+
+    // 2. Calcular hora fin (60 min base)
+    const [h, m] = hora.split(':').map(Number);
+    const fin = new Date();
+    fin.setHours(h, m + 60, 0, 0);
+    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+
+    const elHoraFin = getEl('admin_hora_fin');
+    if (elHoraFin) elHoraFin.value = horaFin;
+
+    // 3. Actualizar displays visuales
+    const elFechaDisp = document.getElementById('modalFechaDisplay');
+    if (elFechaDisp) {
+        const p = fecha.split('-');
+        elFechaDisp.textContent = `${p[2]}/${p[1]}`;
     }
 
-    // Buscar cancha con comparación flexible (string/number)
-    let cancha = null;
+    const elHoraDisp = document.getElementById('modalHoraDisplay');
+    if (elHoraDisp) elHoraDisp.textContent = `${hora} - ${horaFin}`;
+
+    // 4. Cargar precio desde canchasData
+    let montoTotal = 0;
     if (typeof canchasData !== 'undefined' && Array.isArray(canchasData)) {
-        cancha = canchasData.find(c => 
-            String(c.id_cancha) === String(canchaId) || 
-            c.id_cancha == canchaId  // Doble-check con == para tipos mixtos
-        );
+        const cancha = canchasData.find(c => String(c.id_cancha) === String(canchaId));
+        const elCanchaDisp = document.getElementById('modalCanchaDisplay');
+        
+        if (cancha) {
+            const nombre = cancha.nombre_cancha || cancha.nro_cancha || `Cancha ${canchaId}`;
+            if (elCanchaDisp) elCanchaDisp.textContent = `🏟️ ${nombre}`;
+
+            const valor = parseFloat(cancha.valor_arriendo) || 0;
+            const es90 = document.querySelector('input[name="duracion"][value="90"]')?.checked;
+            montoTotal = Math.round(valor * (es90 ? 1.5 : 1));
+        } else {
+            console.warn(`⚠️ Cancha ID ${canchaId} no encontrada en canchasData`);
+            if (elCanchaDisp) elCanchaDisp.textContent = `🏟️ Cancha #${canchaId}`;
+        }
     }
 
-    // Si se encontró, poblar datos visuales
-    if (cancha) {
-        const nombreCancha = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${cancha.id_cancha}`;
-        document.getElementById('modalCanchaDisplay').textContent = `🏟️ ${nombreCancha}`;
-        
-        // Guardar monto base y actualizar display
-        const montoBase = parseFloat(cancha.valor_arriendo) || 0;
-        document.getElementById('admin_monto_base').value = montoBase;
-        
-        // Calcular monto inicial según duración seleccionada
-        const duracion = document.querySelector('input[name="duracion"]:checked')?.value || '60';
-        actualizarMontoDisplay(montoBase, parseInt(duracion));
-    } else {
-        // Fallback si no se encuentra la cancha (pero no bloquear)
-        console.warn('⚠️ Cancha no encontrada en canchasData:', canchaId);
-        document.getElementById('modalCanchaDisplay').textContent = `🏟️ Cancha #${canchaId}`;
-        document.getElementById('admin_monto_base').value = 0;
-        document.getElementById('modalMontoDisplay').textContent = '$0';
-    }
-    
-    // Asignar valores base
-    elCancha.value = canchaId;
-    elFecha.value = fecha;
-    elHora.value = hora;
-    
-    // Calcular hora fin inicial (60 min)
-    actualizarHoraFin(hora, 60);
-    
-    // Actualizar vista previa visual
-    const fechaParts = fecha.split('-');
-    document.getElementById('modalFechaDisplay').textContent = `${fechaParts[2]}/${fechaParts[1]}`;
-    document.getElementById('modalHoraDisplay').textContent = `${hora} - ${document.getElementById('admin_hora_fin').value}`;
-    
-    // Resetear buscador y sección recurrente
-    document.getElementById('searchAdmin').value = '';
+    // 5. Actualizar monto en hidden + visual
+    const elMonto = getEl('admin_monto_total');
+    if (elMonto) elMonto.value = montoTotal;
+
+    const elMontoDisp = document.getElementById('modalMontoDisplay');
+    if (elMontoDisp) elMontoDisp.textContent = `$${montoTotal}`;
+
+    // 6. Limpiar búsqueda y socio
+    const elSearch = document.getElementById('searchAdmin');
+    if (elSearch) elSearch.value = '';
     document.getElementById('searchResultsAdmin').style.display = 'none';
-    document.getElementById('admin_socio_id').value = '';
-    
-    document.getElementById('isRecurrent').checked = false;
-    toggleRecurrentFields(false);
-    
-    // Resetear duración a 60 min
-    document.querySelector('input[name="duracion"][value="60"]').checked = true;
-    
-    // Mostrar modal con animación
-    elModal.style.display = 'flex';
-    setTimeout(() => document.getElementById('searchAdmin')?.focus(), 100);
-    
-    // Prevenir scroll del body
-    document.body.style.overflow = 'hidden';
+
+    const elSocio = getEl('admin_socio_id');
+    if (elSocio) elSocio.value = '';
+
+    // 7. Mostrar modal
+    const modal = document.getElementById('modalReservaAdmin');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => elSearch?.focus(), 100);
+    }
 }
 
 // === ACTUALIZAR HORA FIN SEGÚN DURACIÓN ===
