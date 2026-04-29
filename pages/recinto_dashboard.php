@@ -1016,7 +1016,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     width: 95% !important;
 }
 /* === Estilos para sección recurrente === */
-#recurrentSection {
+#modalReservaAdmin {
     animation: slideDown 0.3s ease;
 }
 @keyframes slideDown {
@@ -3102,52 +3102,8 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
     });
 }
 </script>
-    <div id="modalReservaAdmin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:3000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
-        <div style="background:white; padding:2rem; border-radius:16px; max-width:480px; width:90%; position:relative; color:#333; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-            <!-- BOTÓN X PARA CERRAR -->
-            <span onclick="cerrarModalReservaAdmin()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999; line-height:1;">&times;</span>
-            
-            <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">📅 Reserva Manual</h3>
-            
-            <form id="formReservaManual">
-            <input type="hidden" id="admin_cancha_id">
-            <input type="hidden" id="admin_fecha">
-            <input type="hidden" id="admin_hora">
-            <input type="hidden" id="admin_socio_id">
-            
-            <!-- Buscador Inteligente -->
-            <div style="position:relative; margin-bottom:1rem;">
-                <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
-                    oninput="debounceBuscar(this.value)" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px;">
-                <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
-                <input type="text" id="admin_nombre" placeholder="Nombre completo" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-                <input type="email" id="admin_email" placeholder="Email" required style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-                <input type="text" id="admin_celular" placeholder="Celular (+569...)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-            </div>
-
-            <div style="margin: 1rem 0; background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #071289;">
-            <label style="font-weight:bold; color:#333; display:block; margin-bottom:6px;">⏱️ Duración a reservar:</label>
-            <div style="display:flex; gap:15px;">
-                <label style="cursor:pointer; color:#333;">
-                <input type="radio" name="duracion_manual" value="60" checked style="margin-right:5px;"> 60 min
-                </label>
-                <label style="cursor:pointer; color:#333;">
-                <input type="radio" name="duracion_manual" value="90" style="margin-right:5px;"> 90 min
-                </label>
-            </div>
-            </div>
-            
-            <button type="submit" onclick="event.preventDefault(); alert('Funcionalidad de guardado en desarrollo. Integra tu API aquí.')" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Confirmar Reserva</button>
-            </form>
-            <p style="font-size:0.7rem; color:#888; margin-top:0.5rem; text-align:center;">* Si el socio no existe, se creará como "Individual" y recibirá link de registro.</p>
-        </div>
-    </div>
-
     <!-- === SECCIÓN RESERVA RECURRENTE (nuevo) === -->
-    <div id="recurrentSection" style="display: none; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eee;">
+    <div id="modalReservaAdmin" style="display: none; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eee;">
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
             <input type="checkbox" id="isRecurrent" style="width: 18px; height: 18px;">
             <label for="isRecurrent" style="font-weight: 600; color: #333; cursor: pointer;">
