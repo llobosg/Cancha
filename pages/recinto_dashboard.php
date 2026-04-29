@@ -1677,10 +1677,34 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             
             let estadoColor = 'red';
             if (detalle.estado_pago === 'pagado') estadoColor = 'green';
-            else if (detalle.estado_pago === 'parcial') estadoColor = '#F57F17';
+            else if (detalle.estado_pago === 'parcial') estadoColor = '#f4e346';
 
             // Construcción del HTML principal
             let html = `
+                <!-- === MENÚ DE 3 PUNTOS (SOLO ADMIN) === -->
+                <?php if (($_SESSION['recinto_rol'] ?? '') === 'admin'): ?>
+                <div style="position:absolute; top:8px; right:8px; z-index:5;">
+                    <div style="position:relative; display:inline-block;">
+                        <button onclick="toggleLogMenu(event, <?= $reserva['id_reserva'] ?>)" 
+                                style="background:rgba(255,255,255,0.9); border:none; border-radius:6px; 
+                                    width:28px; height:28px; cursor:pointer; font-size:1.1rem; 
+                                    display:grid; place-items:center; color:#666; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                            ⋮
+                        </button>
+                        <div id="logMenu_<?= $reserva['id_reserva'] ?>" 
+                            style="display:none; position:absolute; top:100%; right:0; 
+                                    background:white; border-radius:10px; min-width:180px; 
+                                    box-shadow:0 8px 25px rgba(0,0,0,0.15); z-index:10; overflow:hidden; border:1px solid #eee;">
+                            <div onclick="abrirLogReserva(<?= $reserva['id_reserva'] ?>)" 
+                                style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; 
+                                        display:flex; align-items:center; gap:8px; border-bottom:1px solid #f5f5f5;">
+                                📋 Ver bitácora
+                            </div>
+                            <!-- Aquí puedes agregar más acciones admin en el futuro -->
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
                     <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
                         <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
@@ -1691,6 +1715,13 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
                         <div style="grid-column: span 2;"><strong>Cliente:</strong> ${val(detalle.nombre_cliente || detalle.nombre_responsable)}</div>
                         <div style="grid-column: span 2;"><strong>Contacto:</strong> ${val(detalle.telefono_cliente)}</div>
+                        <!-- === CREADO POR (visible para todos) === -->
+                        <div style="font-size:0.75rem; color:#888; margin-top:4px; display:flex; align-items:center; gap:4px;">
+                            <span>👤</span>
+                            <span id="creado_por_<?= $reserva['id_reserva'] ?>">
+                                <?= htmlspecialchars($reserva['usuario_creacion'] ?? 'Sistema') ?>
+                            </span>
+                        </div>
                     </div>
                     <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
                         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
@@ -2499,8 +2530,22 @@ async function guardarReservaAdmin(e) {
             const result = await response.json();
             
             if (result.success) {
+                const idReservaCreada = result.id_reserva || null;  // Asegúrate que tu API devuelva el ID
+    
+        // Registrar log de creación
+        if (idReservaCreada) {
+            registrarLogReserva(
+                idReservaCreada,
+                'creada',
+                `Reserva manual creada para ${horaInicio} - ${horaFin}`,
+                { cancha_id: canchaId, socio_id: socioId },
+                { nuevo: montoFinal }
+                 );
+            }
+                
                 showToast('✅ Reserva creada correctamente');
                 setTimeout(() => location.reload(), 1200);
+         
             } else {
                 showToast(`❌ ${result.message}`, 'error');
                 btn.disabled = false;
@@ -3228,12 +3273,6 @@ function cerrarTorneo(idTorneo) {
     }
 }
 
-
-
-
-
-
-
 function cerrarSubmodalFixture() {
     const overlay = document.getElementById('submodalFixtureOverlay');
     if(overlay) {
@@ -3446,6 +3485,124 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
         alert('❌ Error de conexión al finalizar el torneo');
     });
 }
+// === MENÚ DE 3 PUNTOS: TOGGLE ===
+function toggleLogMenu(event, idReserva) {
+    event.stopPropagation();
+    // Cerrar otros menús abiertos
+    document.querySelectorAll('[id^="logMenu_"]').forEach(menu => {
+        if (menu.id !== `logMenu_${idReserva}`) menu.style.display = 'none';
+    });
+    // Toggle del menú actual
+    const menu = document.getElementById(`logMenu_${idReserva}`);
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+// Cerrar menús al hacer click fuera
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[onclick*="toggleLogMenu"]')) {
+        document.querySelectorAll('[id^="logMenu_"]').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+// === ABRIR MODAL DE BITÁCORA ===
+async function abrirLogReserva(idReserva) {
+    const modal = document.getElementById('modalLogReserva');
+    const tbody = document.getElementById('logReservaBody');
+    const titleId = document.getElementById('logReservaId');
+    
+    if (!modal || !tbody) return;
+    
+    // Mostrar modal y cargar datos
+    titleId.textContent = idReserva;
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">🔄 Cargando...</td></tr>';
+    modal.style.display = 'flex';
+    
+    try {
+        const res = await fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`);
+        const data = await res.json();
+        
+        if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
+            tbody.innerHTML = data.logs.map(log => `
+                <tr style="border-bottom:1px solid #F1F5F9;">
+                    <td style="padding:10px; color:#4A5568; font-weight:500;">${log.fecha}</td>
+                    <td style="padding:10px; color:#2D3748;">${log.usuario}</td>
+                    <td style="padding:10px;">
+                        <span style="padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:500; background:${getAccionColor(log.accion)}; color:white;">
+                            ${formatAccion(log.accion)}
+                        </span>
+                    </td>
+                    <td style="padding:10px; color:#4A5568; font-size:0.9rem;">
+                        ${log.descripcion || '-'}
+                        ${log.monto_anterior || log.monto_nuevo ? 
+                            `<br><small style="color:#666;">$${log.monto_anterior || '?'} → $${log.monto_nuevo || '?'}</small>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Sin registros de auditoría</td></tr>';
+        }
+    } catch (err) {
+        console.error('Error cargando log:', err);
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#C62828;">Error al cargar historial</td></tr>';
+    }
+}
+
+// Helpers para formato visual
+function formatAccion(accion) {
+    const map = {
+        'creada': '✅ Creada',
+        'movida': '🔄 Movida',
+        'anulada': '❌ Anulada',
+        'cobro_parcial': '💰 Pago parcial',
+        'cobro_total': '✅ Pagada',
+        'editada': '✏️ Editada',
+        'reembolso': '↩️ Reembolso'
+    };
+    return map[accion] || accion;
+}
+
+function getAccionColor(accion) {
+    const colors = {
+        'creada': '#4CAF50',
+        'movida': '#2196F3',
+        'anulada': '#F44336',
+        'cobro_parcial': '#FF9800',
+        'cobro_total': '#4CAF50',
+        'editada': '#9C27B0',
+        'reembolso': '#607D8B'
+    };
+    return colors[accion] || '#9E9E9E';
+}
+
+// === CERRAR MODAL ===
+function cerrarModalLog(e) {
+    if (e.target.id === 'modalLogReserva' || e.target.closest('.modal-content button')) {
+        document.getElementById('modalLogReserva').style.display = 'none';
+    }
+}
+
+// === REGISTRAR LOG DESDE JS (para acciones futuras) ===
+async function registrarLogReserva(idReserva, accion, descripcion, metadata = null, montos = {}) {
+    try {
+        await fetch('../api/registrar_log_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_reserva: idReserva,
+                accion: accion,
+                descripcion: descripcion,
+                metadata: metadata,
+                monto_anterior: montos.anterior || null,
+                monto_nuevo: montos.nuevo || null
+            })
+        });
+    } catch (err) {
+        console.error('Error registrando log:', err);
+        // No bloquear la acción principal si falla el log
+    }
+}
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
@@ -3625,6 +3782,43 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
             </div>
             <div id="submodalFixtureBody" class="torneo-body"></div>
         </div>
+    </div>
+
+    <!-- === MODAL BITÁCORA DE RESERVA === -->
+    <div id="modalLogReserva" class="modal-overlay" style="display:none;" onclick="cerrarModalLog(event)">
+    <div class="modal-content" style="max-width:580px; padding:1.5rem; border-radius:16px;">
+        
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="margin:0; color:#AB47BC; font-size:1.1rem;">📋 Bitácora de Reserva #<span id="logReservaId"></span></h3>
+        <button onclick="cerrarModalLog(event)" 
+                style="background:none; border:none; font-size:1.3rem; color:#999; cursor:pointer; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;">
+            &times;
+        </button>
+        </div>
+        
+        <!-- Tabla de logs -->
+        <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead style="position:sticky; top:0; background:#F7FAFC; z-index:1;">
+            <tr>
+                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Fecha</th>
+                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Usuario</th>
+                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Acción</th>
+                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Detalle</th>
+            </tr>
+            </thead>
+            <tbody id="logReservaBody">
+            <tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Cargando historial...</td></tr>
+            </tbody>
+        </table>
+        </div>
+        
+        <!-- Footer -->
+        <div style="margin-top:1rem; text-align:right; font-size:0.8rem; color:#888;">
+        Ordenado por fecha (más reciente primero)
+        </div>
+    </div>
     </div>
 </body>
 </html>

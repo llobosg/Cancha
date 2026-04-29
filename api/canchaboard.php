@@ -151,13 +151,16 @@
                 r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
                 r.tipo_reserva, r.id_convenio, r.notas,
                 cl.nombre as nombre_club, s.alias as nombre_responsable,
-                r.telefono_cliente, r.email_cliente
+                r.telefono_cliente, r.email_cliente,
+                lc.usuario_nombre as usuario_creacion
             FROM disponibilidad_canchas dc
             LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
             LEFT JOIN clubs cl ON r.id_club = cl.id_club
             LEFT JOIN socios s ON r.id_socio = s.id_socio
-            WHERE dc.fecha BETWEEN ? AND ? 
-            AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
+            LEFT JOIN (
+                SELECT id_reserva, usuario_nombre FROM reservas_log WHERE accion = 'creada'
+            ) lc ON r.id_reserva = lc.id_reserva
+            WHERE dc.fecha BETWEEN ? AND ? AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
         ");
         $stmt_reservas->execute([$fecha_inicio, $fecha_fin, $id_recinto]);
         $reservas_reales = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
@@ -301,19 +304,23 @@
         
         // 3. Obtener reservas reales en ese rango
         $stmt_reservas = $pdo->prepare("
-            SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin,
-                dc.estado as estado_disponibilidad,
-                r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total, r.monto_recaudacion,
-                r.tipo_reserva, r.id_convenio, r.notas,
-                cl.nombre as nombre_club, s.alias as nombre_responsable,
-                r.telefono_cliente, r.email_cliente
-            FROM disponibilidad_canchas dc
-            LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
-            LEFT JOIN clubs cl ON r.id_club = cl.id_club
-            LEFT JOIN socios s ON r.id_socio = s.id_socio
-            WHERE dc.fecha BETWEEN ? AND ? 
-            AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
-        ");
+            $stmt_reservas = $pdo->prepare("
+                SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin,
+                    dc.estado as estado_disponibilidad,
+                    r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
+                    r.tipo_reserva, r.id_convenio, r.notas,
+                    cl.nombre as nombre_club, s.alias as nombre_responsable,
+                    r.telefono_cliente, r.email_cliente,
+                    lc.usuario_nombre as usuario_creacion
+                FROM disponibilidad_canchas dc
+                LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
+                LEFT JOIN clubs cl ON r.id_club = cl.id_club
+                LEFT JOIN socios s ON r.id_socio = s.id_socio
+                LEFT JOIN (
+                    SELECT id_reserva, usuario_nombre FROM reservas_log WHERE accion = 'creada'
+                ) lc ON r.id_reserva = lc.id_reserva
+                WHERE dc.fecha BETWEEN ? AND ? AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
+            ");
         $stmt_reservas->execute([$fecha_inicio, $fecha_fin, $id_recinto]);
         $reservas_reales = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
         
@@ -416,7 +423,23 @@
             $todas_disponibilidades = array_merge($todas_disponibilidades, $disponibilidades);
         }
         
-        $stmt_reservas = $pdo->prepare("SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin, dc.estado as estado_disponibilidad, r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total, r.tipo_reserva, r.id_convenio, r.notas, cl.nombre as nombre_club, s.alias as nombre_responsable, r.telefono_cliente, r.email_cliente FROM disponibilidad_canchas dc LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva LEFT JOIN clubs cl ON r.id_club = cl.id_club LEFT JOIN socios s ON r.id_socio = s.id_socio WHERE dc.fecha BETWEEN ? AND ? AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)");
+        $stmt_reservas = $pdo->prepare("
+            SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin,
+                dc.estado as estado_disponibilidad,
+                r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
+                r.tipo_reserva, r.id_convenio, r.notas,
+                cl.nombre as nombre_club, s.alias as nombre_responsable,
+                r.telefono_cliente, r.email_cliente,
+                lc.usuario_nombre as usuario_creacion
+            FROM disponibilidad_canchas dc
+            LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
+            LEFT JOIN clubs cl ON r.id_club = cl.id_club
+            LEFT JOIN socios s ON r.id_socio = s.id_socio
+            LEFT JOIN (
+                SELECT id_reserva, usuario_nombre FROM reservas_log WHERE accion = 'creada'
+            ) lc ON r.id_reserva = lc.id_reserva
+            WHERE dc.fecha BETWEEN ? AND ? AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
+        ");
         $stmt_reservas->execute([$fecha_inicio_custom, $fecha_fin_custom, $id_recinto]);
         $reservas_reales = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
         
@@ -533,14 +556,16 @@
         $stmt_reservas = $pdo->prepare("
             SELECT r.id_reserva, r.id_cancha, r.hora_inicio, r.hora_fin, r.estado, r.estado_pago, 
                 r.monto_recaudacion, r.nombre_cliente, r.telefono_cliente, r.notas,
-                s.alias as nombre_socio, cl.nombre as nombre_club, c.id_deporte
+                s.alias as nombre_socio, cl.nombre as nombre_club, c.id_deporte,
+                lc.usuario_nombre as usuario_creacion
             FROM reservas r
             JOIN canchas c ON r.id_cancha = c.id_cancha
             LEFT JOIN socios s ON r.id_socio = s.id_socio
             LEFT JOIN clubs cl ON r.id_club = cl.id_club
-            WHERE r.fecha = ? 
-            AND r.id_cancha IN ($placeholders)
-            AND r.estado != 'cancelada'
+            LEFT JOIN (
+                SELECT id_reserva, usuario_nombre FROM reservas_log WHERE accion = 'creada'
+            ) lc ON r.id_reserva = lc.id_reserva
+            WHERE r.fecha = ? AND r.id_cancha IN ($placeholders) AND r.estado != 'cancelada'
             ORDER BY r.hora_inicio
         ");
         

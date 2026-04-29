@@ -33,7 +33,9 @@ try {
             echo json_encode(procesarPagoParcial($pdo, $_POST));
             break;
             
-        // Agrega aquí otros casos si los tienes (anular, cancelar, etc.)
+        case 'crear_manual':
+            echo json_encode(crearReservaManualConLog($pdo, $_POST));
+            break;
             
         default:
             throw new Exception('Acción no válida: ' . $action);
@@ -172,5 +174,47 @@ function procesarPagoParcial($pdo, $data) {
         'estado_nuevo' => $nuevo_estado_pago,
         'monto_recaudado' => $nuevo_monto_recaudado
     ];
+}
+// === FUNCIÓN NUEVA: Crear reserva + registrar log (mínimo código) ===
+function crearReservaManualConLog($pdo, $data) {
+    $id_cancha = (int)($data['id_cancha'] ?? 0);
+    $id_socio = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
+    $fecha = $data['fecha'] ?? '';
+    $hora_inicio = $data['hora_inicio'] ?? '';
+    $hora_fin = $data['hora_fin'] ?? '';
+    $monto_total = (float)($data['monto_total'] ?? 0);
+    
+    if (!$id_cancha || !$fecha || !$hora_inicio) {
+        throw new Exception('Datos incompletos');
+    }
+    
+    // Verificar cancha pertenece al recinto
+    $stmt = $pdo->prepare("SELECT id_recinto FROM canchas WHERE id_cancha = ?");
+    $stmt->execute([$id_cancha]);
+    if ($stmt->fetchColumn() != $_SESSION['id_recinto']) {
+        throw new Exception('Cancha no válida');
+    }
+    
+    // Verificar disponibilidad
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
+    $stmt->execute([$id_cancha, $fecha, $hora_inicio]);
+    if ($stmt->fetchColumn() > 0) {
+        throw new Exception('Horario ocupado');
+    }
+    
+    // Insertar reserva
+    $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
+    $stmt->execute([$id_cancha, $id_socio, $fecha, $hora_inicio, $hora_fin, $monto_total]);
+    
+    $id_reserva = $pdo->lastInsertId();
+    
+    // ✅ Registrar log (solo 1 query extra)
+    if ($id_reserva) {
+        $usuario = $_SESSION['recinto_usuario'] ?? $_SESSION['recinto_rol'] ?? 'Sistema';
+        $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual creada', NOW())");
+        $stmt_log->execute([$id_reserva, $usuario]);
+    }
+    
+    return ['success' => true, 'id_reserva' => $id_reserva];
 }
 ?>
