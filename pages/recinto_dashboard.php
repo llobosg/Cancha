@@ -2392,6 +2392,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     // Prevenir scroll del body
     document.body.style.overflow = 'hidden';
 }
+
 // === ACTUALIZAR HORA FIN SEGÚN DURACIÓN ===
 function actualizarHoraFin(horaInicio, duracionMin) {
     const [h, m] = horaInicio.split(':').map(Number);
@@ -2493,7 +2494,7 @@ function abrirModalMover() {
     document.getElementById('modalMoverReserva').style.display = 'flex';
     
     // Llenar datos originales
-    consfunction updatePreviewDates()t tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('orig_resumen').textContent = `${res.fecha} | ${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)} | ${res.nombre_cancha || 'Cancha'}`;
     document.getElementById('moverFecha').value = res.fecha; // o tomorrow.toISOString().split('T')[0]
     document.getElementById('moverFecha').min = tomorrow.toISOString().split('T')[0];
