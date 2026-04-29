@@ -36,6 +36,10 @@ try {
         case 'crear_manual':
             echo json_encode(crearReservaManualConLog($pdo, $_POST));
             break;
+
+        case 'crear_manual':
+            echo json_encode(crearReservaManualConSocioNuevo($pdo, $_POST));
+            break;
             
         default:
             throw new Exception('Acción no válida: ' . $action);
@@ -216,5 +220,71 @@ function crearReservaManualConLog($pdo, $data) {
     }
     
     return ['success' => true, 'id_reserva' => $id_reserva];
+}
+function crearReservaManualConSocioNuevo($pdo, $data) {
+    $id_cancha = (int)($data['id_cancha'] ?? 0);
+    $fecha = $data['fecha'] ?? '';
+    $hora_inicio = $data['hora_inicio'] ?? '';
+    $hora_fin = $data['hora_fin'] ?? '';
+    $monto_total = (float)($data['monto_total'] ?? 0);
+    $id_socio = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
+    
+    // 1. Si no viene id_socio, crear nuevo socio
+    if (!$id_socio) {
+        $email = trim($data['emailNuevoSocio'] ?? '');
+        $nombre = trim($data['nombreNuevoSocio'] ?? 'Nuevo Socio');
+        $tel = trim($data['telNuevoSocio'] ?? '');
+        if (!$email) throw new Exception('Email requerido para nuevo socio');
+        
+        // Verificar si ya existe
+        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+        $stmt->execute([$email]);
+        $existente = $stmt->fetch();
+        
+        if ($existente) {
+            $id_socio = $existente['id_socio'];
+        } else {
+            $alias = strtolower(explode('@', $email)[0]);
+            $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
+            $stmt->execute([$email, $nombre, $alias, $tel]);
+            $id_socio = $pdo->lastInsertId();
+        }
+    }
+    
+    // 2. Crear reserva
+    $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
+    $stmt->execute([$id_cancha, $id_socio, $fecha, $hora_inicio, $hora_fin, $monto_total]);
+    $id_reserva = $pdo->lastInsertId();
+    
+    // 3. Log de creación (bitácora)
+    $usuario = $_SESSION['recinto_usuario'] ?? $_SESSION['recinto_rol'] ?? 'Sistema';
+    $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual + nuevo socio', NOW())")
+        ->execute([$id_reserva, $usuario]);
+    
+    // 4. Emails (Reserva + Bienvenida)
+    require_once __DIR__ . '/../includes/reserva_mailer.php';
+    $stmt_socio = $pdo->prepare("SELECT email, nombre FROM socios WHERE id_socio = ?");
+    $stmt_socio->execute([$id_socio]);
+    $socio = $stmt_socio->fetch();
+    
+    if ($socio && $socio['email']) {
+        $link_perfil = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_perfil.php?id=" . $id_socio; // Ajusta ruta si es distinta
+        
+        // Email 1: Reserva confirmada
+        $mail1 = new BrevoMailer();
+        $mail1->setTo($socio['email'], $socio['nombre'])
+              ->setSubject("✅ Reserva confirmada - CanchaSport")
+              ->setHtmlBody("<p>Reserva para el <strong>$fecha $hora_inicio-$hora_fin</strong> confirmada.</p>")
+              ->send();
+              
+        // Email 2: Bienvenida + completar perfil
+        $mail2 = new BrevoMailer();
+        $mail2->setTo($socio['email'], $socio['nombre'])
+              ->setSubject("🎉 ¡Bienvenido a CanchaSport! Completa tu perfil")
+              ->setHtmlBody("<p>Gracias por registrarte. <a href='$link_perfil'>Haz clic aquí para completar tu perfil</a> y disfrutar de todos los beneficios.</p>")
+              ->send();
+    }
+    
+    return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio];
 }
 ?>

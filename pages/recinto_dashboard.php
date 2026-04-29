@@ -1274,6 +1274,10 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
                 <input type="number" id="montoPagar" name="monto_pagar" step="100" required style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:8px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
             </div>
             <div style="margin-bottom:1rem;">
+                <label style="font-weight:bold;">🎒 Extras (palas, bebidas, etc.)</label>
+                <input type="number" id="extrasPago" name="extras" step="100" value="0" style="width:100%; padding:0.7rem; border:1px solid #ccc; border-radius:8px;">
+            </div>
+            <div style="margin-bottom:1rem;">
                 <label>Método de Pago</label>
                 <select name="metodo_pago" id="metodoPago" required style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #ccc;">
                     <option value="">Seleccionar...</option>
@@ -1478,6 +1482,10 @@ function renderizarPlanilla(data, filtroEstado) {
                                 onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
                                 <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
                                 <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                                let notasHtml = '';
+                                    if (r.notas && r.notas.trim() !== '') {
+                                        notasHtml = `<div style="font-size:0.7rem; color:#666; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.notas.replace(/"/g, '&quot;')}">📝 ${r.notas}</div>`;
+                                }
                             </td>`;
                     
                     celdasPintadas++;
@@ -1872,6 +1880,7 @@ document.getElementById('formPago')?.addEventListener('submit', async function(e
         formData.append('metodo_pago', metodo);
         formData.append('transaccion_id', transaccion || '');
         formData.append('notas_pago', notas);
+        formData.append('extras', document.getElementById('extrasPago')?.value || 0);
 
         const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
         const data = await res.json();
@@ -2236,10 +2245,30 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (!el) console.warn(`⚠️ Elemento #${id} no encontrado en el DOM`);
         return el;
     };
+    // 1. Buscar cancha y actualizar nombre/precio
+    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData)) 
+        ? canchasData.find(c => String(c.id_cancha) === String(canchaId)) 
+        : null;
 
-    // 1. Asignar campos ocultos solo si existen
-    const elCancha = getEl('admin_cancha_id');
-    if (elCancha) elCancha.value = canchaId;
+    const elNombre = document.getElementById('modalCanchaDisplay');
+    const elMonto = document.getElementById('admin_monto_total');
+    const elDisplayMonto = document.getElementById('modalMontoDisplay');
+
+    if (cancha) {
+        if (elNombre) elNombre.textContent = `🏟️ ${cancha.nombre_cancha || cancha.nro_cancha || 'Cancha ' + canchaId}`;
+        
+        const base = parseFloat(cancha.valor_arriendo) || 0;
+        const es90 = document.querySelector('input[name="duracion"][value="90"]')?.checked;
+        const total = Math.round(base * (es90 ? 1.5 : 1));
+        
+        if (elMonto) elMonto.value = total;
+        if (elDisplayMonto) elDisplayMonto.textContent = `$${total.toLocaleString('es-CL')}`;
+    } else {
+        console.warn(`⚠️ Cancha ${canchaId} no en canchasData`);
+        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
+        if (elMonto) elMonto.value = 0;
+        if (elDisplayMonto) elDisplayMonto.textContent = `$0`;
+    }
 
     const elFecha = getEl('admin_fecha');
     if (elFecha) elFecha.value = fecha;
@@ -2387,7 +2416,8 @@ async function buscarSocioAdmin(query) {
 
         container.innerHTML = '';
         if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div style="padding:10px; color:#666; font-size:0.85rem;">Sin coincidencias.</div>';
+            container.innerHTML = '<div style="padding:10px; color:#856404; font-size:0.85rem; background:#fff3cd;">⚠️ Sin coincidencias. Complete datos abajo para crear nuevo socio.</div>';
+            document.getElementById('nuevoSocioFields').style.display = 'block';
         } else {
             data.forEach(s => {
                 const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
@@ -2399,6 +2429,7 @@ async function buscarSocioAdmin(query) {
                         <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
                     </div>`;
             });
+            document.getElementById('nuevoSocioFields').style.display = 'none';
         }
         container.style.display = 'block';
     } catch (err) {
@@ -3737,6 +3768,13 @@ async function registrarLogReserva(idReserva, accion, descripcion, metadata = nu
             <input type="hidden" id="admin_nombre">
             <input type="hidden" id="admin_email">
             <input type="hidden" id="admin_celular">
+        </div>
+        <!-- ✅ datos para nuevo socio -->
+        <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#FFF3CD; border-radius:8px; border:1px solid #FFE69C;">
+            <p style="font-size:0.8rem; color:#856404; margin:0 0 0.5rem;">📝 Socio no encontrado. Complete para registrarlo:</p>
+            <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
+            <input type="email" id="emailNuevoSocio" placeholder="Email *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
+            <input type="tel" id="telNuevoSocio" placeholder="Teléfono" style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
         </div>
 
         <!-- Resumen de monto -->
