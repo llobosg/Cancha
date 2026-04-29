@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $admin) {
             <!-- === BOTONES CORREGIDOS === -->
             <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
                 <button type="submit" class="btn" style="width: 100%;">💾 Guardar nueva contraseña</button>
-                <a href="login_recintos.php" class="btn btn-secondary" style="width: 100%; text-align: center; text-decoration: none;">Cancelar</a>
+                <a href="login_recintos.php" class="btn btn-secondary" style="width: 80%; text-align: center; text-decoration: none;">Cancelar</a>
             </div>
         </form>
     <?php endif; ?>
