@@ -1456,7 +1456,7 @@ function renderizarPlanilla(data, filtroEstado) {
                                     data-cancha-id="${cancha.id_cancha}"
                                     ondragover="dragOver(event)" 
                                     ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                                    onclick="abrirModalReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                     }
                 }
             });
