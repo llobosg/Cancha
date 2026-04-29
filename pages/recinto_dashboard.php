@@ -2427,7 +2427,8 @@ function actualizarDuracionReserva(duracion) {
     document.getElementById('admin_duracion').value = duracion;
 }
 
- {
+// === VISTA PREVIA DE FECHAS RECURRENTES ===
+function updatePreviewDates() {
     const day = parseInt(document.getElementById('repeatDay')?.value);
     const start = document.getElementById('startDate')?.value;
     const end = document.getElementById('endDate')?.value;
@@ -2467,35 +2468,6 @@ function generateRecurringDates(startDate, endDate, dayOfWeek) {
         current.setDate(current.getDate() + 1);
     }
     return dates;
-}
-
-// === VISTA PREVIA DE FECHAS RECURRENTES ===
-function updatePreviewDates() {
-    const day = parseInt(document.getElementById('repeatDay')?.value);
-    const start = document.getElementById('startDate')?.value;
-    const end = document.getElementById('endDate')?.value;
-    const preview = document.getElementById('previewDates');
-    
-    if (!day || !start || !end || isNaN(day)) {
-        if (preview) preview.textContent = 'Selecciona fechas para ver las fechas generadas';
-        return;
-    }
-    
-    const dates = generateRecurringDates(start, end, day);
-    const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-    
-    if (!preview) return;
-    
-    if (dates.length === 0) {
-        preview.textContent = '⚠️ No hay fechas válidas en este rango';
-        preview.style.color = '#C62828';
-    } else {
-        preview.textContent = `📅 ${dates.length} fechas: ` + dates.slice(0, 3).map(d => {
-            const dateObj = new Date(d + 'T00:00:00');
-            return `${dayNames[dateObj.getDay()]} ${d.split('-')[2]}/${d.split('-')[1]}`;
-        }).join(', ') + (dates.length > 3 ? '...' : '');
-        preview.style.color = '#2E7D32';
-    }
 }
 
 // === CERRAR MODAL ===
