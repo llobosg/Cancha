@@ -1096,6 +1096,25 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         border-radius: 16px;
     }
 }
+/* === TEXTOS DENTRO DEL MODAL - CONTRASTE GARANTIZADO === */
+.modal-content label,
+.modal-content span,
+.modal-content strong,
+.modal-content div[id*="Display"] {
+    color: #2D3748 !important;  /* Gris oscuro casi negro */
+}
+
+/* Excepción: títulos principales pueden mantener color púrpura */
+.modal-content h3,
+.modal-content [id="modalCanchaDisplay"] {
+    color: #6A1B9A !important;
+}
+
+/* Asegurar que los inputs tengan texto oscuro */
+.modal-content input,
+.modal-content select {
+    color: #2D3748 !important;
+}
 </style>
 </head>
 <body>
@@ -2170,6 +2189,35 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         showToast('⚠️ Error al abrir formulario', 'error');
         return;
     }
+
+    // Buscar cancha con comparación flexible (string/number)
+    let cancha = null;
+    if (typeof canchasData !== 'undefined' && Array.isArray(canchasData)) {
+        cancha = canchasData.find(c => 
+            String(c.id_cancha) === String(canchaId) || 
+            c.id_cancha == canchaId  // Doble-check con == para tipos mixtos
+        );
+    }
+
+    // Si se encontró, poblar datos visuales
+    if (cancha) {
+        const nombreCancha = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${cancha.id_cancha}`;
+        document.getElementById('modalCanchaDisplay').textContent = `🏟️ ${nombreCancha}`;
+        
+        // Guardar monto base y actualizar display
+        const montoBase = parseFloat(cancha.valor_arriendo) || 0;
+        document.getElementById('admin_monto_base').value = montoBase;
+        
+        // Calcular monto inicial según duración seleccionada
+        const duracion = document.querySelector('input[name="duracion"]:checked')?.value || '60';
+        actualizarMontoDisplay(montoBase, parseInt(duracion));
+    } else {
+        // Fallback si no se encuentra la cancha (pero no bloquear)
+        console.warn('⚠️ Cancha no encontrada en canchasData:', canchaId);
+        document.getElementById('modalCanchaDisplay').textContent = `🏟️ Cancha #${canchaId}`;
+        document.getElementById('admin_monto_base').value = 0;
+        document.getElementById('modalMontoDisplay').textContent = '$0';
+    }
     
     // Asignar valores base
     elCancha.value = canchaId;
@@ -2183,17 +2231,6 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const fechaParts = fecha.split('-');
     document.getElementById('modalFechaDisplay').textContent = `${fechaParts[2]}/${fechaParts[1]}`;
     document.getElementById('modalHoraDisplay').textContent = `${hora} - ${document.getElementById('admin_hora_fin').value}`;
-    
-    // Mostrar nombre de cancha (si existe canchasData)
-    if (typeof canchasData !== 'undefined') {
-        const cancha = canchasData.find(c => c.id_cancha == canchaId);
-        if (cancha) {
-            const nombreCancha = cancha.nombre_cancha || `Cancha ${cancha.nro_cancha}`;
-            document.getElementById('modalCanchaDisplay').textContent = `🏟️ ${nombreCancha}`;
-            document.getElementById('admin_monto_base').value = cancha.valor_arriendo || 0;
-            actualizarMontoDisplay(cancha.valor_arriendo || 0, 60);
-        }
-    }
     
     // Resetear buscador y sección recurrente
     document.getElementById('searchAdmin').value = '';
@@ -2234,12 +2271,20 @@ function actualizarHoraFin(horaInicio, duracionMin) {
     actualizarMontoDisplay(montoBase, duracionMin);
 }
 
-// === ACTUALIZAR MONTO SEGÚN DURACIÓN ===
+// === ACTUALIZAR MONTO SEGÚN DURACIÓN (función global) ===
 function actualizarMontoDisplay(montoBase, duracionMin) {
-    // Si es 90 min, multiplicar por 1.5 (ajusta según tu lógica de precios)
+    // Factor de precio: 90 min = 1.5x el valor de 60 min (ajusta según tu regla de negocio)
     const factor = duracionMin === 90 ? 1.5 : 1;
     const total = Math.round(montoBase * factor);
-    document.getElementById('modalMontoDisplay').textContent = `$${total.toLocaleString('es-CL')}`;
+    
+    const elMonto = document.getElementById('modalMontoDisplay');
+    if (elMonto) {
+        elMonto.textContent = `$${total.toLocaleString('es-CL')}`;
+        // Efecto visual de actualización
+        elMonto.style.transition = 'transform 0.2s';
+        elMonto.style.transform = 'scale(1.05)';
+        setTimeout(() => elMonto.style.transform = 'scale(1)', 200);
+    }
 }
 
 // === CAMBIO DE DURACIÓN (60/90 min) ===
@@ -3429,10 +3474,10 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
 
         <!-- ✅ Resumen visual con fecha, hora y cancha -->
         <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
-            <div style="font-weight:700; color:#6A1B9A; font-size:1.05rem; margin-bottom:0.3rem;" id="modalCanchaDisplay">🏟️ Cargando cancha...</div>
-            <div style="display:flex; justify-content:center; gap:1rem; font-size:0.95rem; color:#4A148C;">
-            <span>📅 <strong id="modalFechaDisplay">--/--</strong></span>
-            <span>⏰ <strong id="modalHoraDisplay">--:--</strong></span>
+            <div style="font-weight:700; color:#4A148C; font-size:1.05rem; margin-bottom:0.3rem;" id="modalCanchaDisplay">🏟️ Cargando...</div>
+            <div style="display:flex; justify-content:center; gap:1rem; font-size:0.95rem;">
+                <span style="color:#4A148C;">📅 <strong id="modalFechaDisplay" style="color:#6A1B9A;">--/--</strong></span>
+                <span style="color:#4A148C;">⏰ <strong id="modalHoraDisplay" style="color:#6A1B9A;">--:--</strong></span>
             </div>
         </div>
 
