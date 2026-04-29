@@ -1456,7 +1456,7 @@ function renderizarPlanilla(data, filtroEstado) {
                                     data-cancha-id="${cancha.id_cancha}"
                                     ondragover="dragOver(event)" 
                                     ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                                    onclick="abrirModalReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                     }
                 }
             });
@@ -1874,15 +1874,36 @@ async function verDetalleDesdeLista(idReserva) {
     await abrirDetalleDesdePlanilla(idReserva);
 }
 
-// Toast System
+// === TOAST NOTIFICATIONS ===
 function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
+    // Remover toast anterior si existe
+    const existing = document.getElementById('toastNotification');
+    if (existing) existing.remove();
+    
     const toast = document.createElement('div');
-    const bg = type === 'success' ? '#4CAF50' : (type === 'warning' ? '#FF9800' : '#F44336');
-    toast.style.cssText = `background: ${bg}; color: white; padding: 15px 25px; border-radius: 8px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; animation: slideIn 0.3s ease-out forwards;`;
+    toast.id = 'toastNotification';
     toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: ${type === 'error' ? '#C62828' : '#2E7D32'}; color: white;
+        padding: 0.85rem 1.5rem; border-radius: 14px; font-size: 0.9rem; font-weight: 500;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2); z-index: 3000; max-width: 90%; text-align: center;
+        opacity: 0; transition: all 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+    
+    // Animar entrada
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    // Auto-ocultar
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 // Menú Admin
@@ -2160,7 +2181,7 @@ async function handleRecurrentReservation() {
     }
 }
 
-// === MODAL RESERVA MANUAL ADMIN ===
+// === BUSCADOR INTELIGENTE (TU CÓDIGO INTEGRADO) ===
 let debounceTimer;
 function debounceBuscar(val) {
     clearTimeout(debounceTimer);
@@ -2174,19 +2195,19 @@ async function buscarSocioAdmin(query) {
 
     try {
         const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
-        const text = await res.text(); // Leer como texto primero para evitar crash si viene HTML
+        const text = await res.text();
         
         let data;
         try { data = JSON.parse(text); } catch (e) {
-            console.error('❌ API search_socios devolvió HTML/JSON inválido:', text.substring(0, 150));
-            container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda. Revisa consola.</div>';
+            console.error('❌ API search_socios devolvió JSON inválido:', text.substring(0, 150));
+            container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda.</div>';
             container.style.display = 'block';
             return;
         }
 
         container.innerHTML = '';
         if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div style="padding:10px; color:#666; font-size:0.85rem;">Sin coincidencias. Se creará socio nuevo.</div>';
+            container.innerHTML = '<div style="padding:10px; color:#666; font-size:0.85rem;">Sin coincidencias.</div>';
         } else {
             data.forEach(s => {
                 const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
@@ -2214,44 +2235,84 @@ function seleccionarSocioAdmin(id, nombre, email, celular) {
     document.getElementById('searchAdmin').value = nombre;
 }
 
-// === ABRIR MODAL CON ANIMACIÓN ===
-function abrirModalReservaAdmin() {
-    const modal = document.getElementById('modalReservaAdmin');
-    if (modal) {
-        modal.style.display = 'flex';  // Primero mostrar para que flex funcione
-        // Pequeño delay para que la transición CSS se aplique
-        setTimeout(() => modal.classList.add('active'), 10);
-        // Prevenir scroll del body
-        document.body.style.overflow = 'hidden';
-    }
-}
-
-// === CERRAR MODAL CON ANIMACIÓN ===
-function cerrarModalReservaAdmin(e) {
-    // Cerrar si se hace click en el overlay (fuera del contenido)
-    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
-        const modal = document.getElementById('modalReservaAdmin');
-        if (modal) {
-            modal.classList.remove('active');
-            // Esperar a que termine la animación antes de ocultar
-            setTimeout(() => {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';  // Restaurar scroll
-            }, 250);
+// === SUBMIT DEL FORMULARIO (con soporte recurrente) ===
+async function guardarReservaAdmin(e) {
+    e.preventDefault();
+    
+    const isRecurrent = document.getElementById('isRecurrent')?.checked;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    
+    btn.disabled = true;
+    btn.textContent = isRecurrent ? '🔄 Generando...' : '💾 Guardando...';
+    
+    try {
+        if (isRecurrent) {
+            // Flujo recurrente
+            const payload = {
+                action: 'create_recurrent',
+                id_cancha: document.getElementById('admin_cancha_id').value,
+                hora_inicio: document.getElementById('admin_hora_inicio').value,
+                hora_fin: document.getElementById('admin_hora_fin').value,
+                id_socio: document.getElementById('admin_socio_id').value,
+                repeat_day: parseInt(document.getElementById('repeatDay').value),
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value,
+                monto_total: parseFloat(document.getElementById('admin_monto_base').value) * (document.getElementById('admin_duracion').value === '90' ? 1.5 : 1),
+                duracion_bloque: parseInt(document.getElementById('admin_duracion').value)
+            };
+            
+            const response = await fetch('../api/reserva_recurrente.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(`✅ ${result.created} reservas creadas` + (result.skipped > 0 ? ` | ⚠️ ${result.skipped} saltadas` : ''));
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(`❌ ${result.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        } else {
+            // Flujo reserva única (tu lógica existente)
+            const formData = new FormData(e.target);
+            formData.append('action', 'crear_manual');
+            
+            const response = await fetch('../api/gestion_reservas.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('✅ Reserva creada correctamente');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(`❌ ${result.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
-    // Prevenir propagación si se hace click dentro del contenido
-    e.stopPropagation();
 }
 
 // === PREVENIR CIERRE AL CLICK INTERNO ===
+// === EVENTOS GLOBALES (DOMContentLoaded) ===
 document.addEventListener('DOMContentLoaded', function() {
+    // Prevenir cerrar modal al hacer click dentro del contenido
     const modalContent = document.querySelector('#modalReservaAdmin .modal-content');
-    modalContent?.addEventListener('click', function(e) {
-        e.stopPropagation();  // No cerrar si se hace click dentro del modal
-    });
+    modalContent?.addEventListener('click', function(e) { e.stopPropagation(); });
     
-    // Soporte para tecla ESC
+    // Soporte tecla ESC
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             const modal = document.getElementById('modalReservaAdmin');
@@ -2260,9 +2321,113 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    
+    // Actualizar preview de fechas recurrentes al cambiar inputs
+    ['repeatDay', 'startDate', 'endDate'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', updatePreviewDates);
+    });
+    
+    // Cerrar resultados de búsqueda al hacer click fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#searchAdmin') && !e.target.closest('#searchResultsAdmin')) {
+            const results = document.getElementById('searchResultsAdmin');
+            if (results) results.style.display = 'none';
+        }
+    });
 });
 
-function updatePreviewDates() {
+// === ABRIR MODAL CON DATOS ===
+function abrirReservaAdmin(canchaId, fecha, hora) {
+    // Verificar elementos críticos
+    const elCancha = document.getElementById('admin_cancha_id');
+    const elFecha = document.getElementById('admin_fecha');
+    const elHora = document.getElementById('admin_hora_inicio');
+    const elModal = document.getElementById('modalReservaAdmin');
+    
+    if (!elCancha || !elFecha || !elHora || !elModal) {
+        console.error('❌ Faltan campos del modal');
+        showToast('⚠️ Error al abrir formulario', 'error');
+        return;
+    }
+    
+    // Asignar valores base
+    elCancha.value = canchaId;
+    elFecha.value = fecha;
+    elHora.value = hora;
+    
+    // Calcular hora fin inicial (60 min)
+    actualizarHoraFin(hora, 60);
+    
+    // Actualizar vista previa visual
+    const fechaParts = fecha.split('-');
+    document.getElementById('modalFechaDisplay').textContent = `${fechaParts[2]}/${fechaParts[1]}`;
+    document.getElementById('modalHoraDisplay').textContent = `${hora} - ${document.getElementById('admin_hora_fin').value}`;
+    
+    // Mostrar nombre de cancha (si existe canchasData)
+    if (typeof canchasData !== 'undefined') {
+        const cancha = canchasData.find(c => c.id_cancha == canchaId);
+        if (cancha) {
+            const nombreCancha = cancha.nombre_cancha || `Cancha ${cancha.nro_cancha}`;
+            document.getElementById('modalCanchaDisplay').textContent = `🏟️ ${nombreCancha}`;
+            document.getElementById('admin_monto_base').value = cancha.valor_arriendo || 0;
+            actualizarMontoDisplay(cancha.valor_arriendo || 0, 60);
+        }
+    }
+    
+    // Resetear buscador y sección recurrente
+    document.getElementById('searchAdmin').value = '';
+    document.getElementById('searchResultsAdmin').style.display = 'none';
+    document.getElementById('admin_socio_id').value = '';
+    
+    document.getElementById('isRecurrent').checked = false;
+    toggleRecurrentFields(false);
+    
+    // Resetear duración a 60 min
+    document.querySelector('input[name="duracion"][value="60"]').checked = true;
+    
+    // Mostrar modal con animación
+    elModal.style.display = 'flex';
+    setTimeout(() => document.getElementById('searchAdmin')?.focus(), 100);
+    
+    // Prevenir scroll del body
+    document.body.style.overflow = 'hidden';
+}
+// === ACTUALIZAR HORA FIN SEGÚN DURACIÓN ===
+function actualizarHoraFin(horaInicio, duracionMin) {
+    const [h, m] = horaInicio.split(':').map(Number);
+    const fin = new Date();
+    fin.setHours(h, m + duracionMin, 0, 0);
+    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+    
+    document.getElementById('admin_hora_fin').value = horaFin;
+    
+    // Actualizar display visual
+    const fecha = document.getElementById('admin_fecha').value;
+    const fechaParts = fecha.split('-');
+    document.getElementById('modalFechaDisplay').textContent = `${fechaParts[2]}/${fechaParts[1]}`;
+    document.getElementById('modalHoraDisplay').textContent = `${horaInicio} - ${horaFin}`;
+    
+    // Recalcular monto si hay valor base
+    const montoBase = parseFloat(document.getElementById('admin_monto_base').value) || 0;
+    actualizarMontoDisplay(montoBase, duracionMin);
+}
+
+// === ACTUALIZAR MONTO SEGÚN DURACIÓN ===
+function actualizarMontoDisplay(montoBase, duracionMin) {
+    // Si es 90 min, multiplicar por 1.5 (ajusta según tu lógica de precios)
+    const factor = duracionMin === 90 ? 1.5 : 1;
+    const total = Math.round(montoBase * factor);
+    document.getElementById('modalMontoDisplay').textContent = `$${total.toLocaleString('es-CL')}`;
+}
+
+// === CAMBIO DE DURACIÓN (60/90 min) ===
+function actualizarDuracionReserva(duracion) {
+    const horaInicio = document.getElementById('admin_hora_inicio').value;
+    actualizarHoraFin(horaInicio, parseInt(duracion));
+    document.getElementById('admin_duracion').value = duracion;
+}
+
+ {
     const day = parseInt(document.getElementById('repeatDay')?.value);
     const start = document.getElementById('startDate')?.value;
     const end = document.getElementById('endDate')?.value;
@@ -2304,6 +2469,50 @@ function generateRecurringDates(startDate, endDate, dayOfWeek) {
     return dates;
 }
 
+// === VISTA PREVIA DE FECHAS RECURRENTES ===
+function updatePreviewDates() {
+    const day = parseInt(document.getElementById('repeatDay')?.value);
+    const start = document.getElementById('startDate')?.value;
+    const end = document.getElementById('endDate')?.value;
+    const preview = document.getElementById('previewDates');
+    
+    if (!day || !start || !end || isNaN(day)) {
+        if (preview) preview.textContent = 'Selecciona fechas para ver las fechas generadas';
+        return;
+    }
+    
+    const dates = generateRecurringDates(start, end, day);
+    const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    
+    if (!preview) return;
+    
+    if (dates.length === 0) {
+        preview.textContent = '⚠️ No hay fechas válidas en este rango';
+        preview.style.color = '#C62828';
+    } else {
+        preview.textContent = `📅 ${dates.length} fechas: ` + dates.slice(0, 3).map(d => {
+            const dateObj = new Date(d + 'T00:00:00');
+            return `${dayNames[dateObj.getDay()]} ${d.split('-')[2]}/${d.split('-')[1]}`;
+        }).join(', ') + (dates.length > 3 ? '...' : '');
+        preview.style.color = '#2E7D32';
+    }
+}
+
+// === CERRAR MODAL ===
+function cerrarModalReservaAdmin(e) {
+    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
+        const modal = document.getElementById('modalReservaAdmin');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 250);
+        }
+    }
+    e.stopPropagation();
+}
+
 function abrirModalMover() {
     const res = window.reservaActualSeleccionada;
     if(!res) return;
@@ -2312,7 +2521,7 @@ function abrirModalMover() {
     document.getElementById('modalMoverReserva').style.display = 'flex';
     
     // Llenar datos originales
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    consfunction updatePreviewDates()t tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('orig_resumen').textContent = `${res.fecha} | ${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)} | ${res.nombre_cancha || 'Cancha'}`;
     document.getElementById('moverFecha').value = res.fecha; // o tomorrow.toISOString().split('T')[0]
     document.getElementById('moverFecha').min = tomorrow.toISOString().split('T')[0];
@@ -3236,8 +3445,8 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
     });
 }
 </script>
-    <!-- === MODAL RESERVA MANUAL ADMIN === -->
-    <div id="modalReservaAdmin" class="modal-overlay" style="display:none;">
+    <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
+    <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
     <div class="modal-content">
         
         <!-- Header -->
@@ -3258,56 +3467,90 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
         <input type="hidden" id="admin_hora_inicio" name="hora_inicio">
         <input type="hidden" id="admin_hora_fin" name="hora_fin">
         <input type="hidden" id="admin_socio_id" name="id_socio">
-        <input type="hidden" id="admin_monto" name="monto_total">
+        <input type="hidden" id="admin_monto_base" name="monto_base">
+        <input type="hidden" id="admin_duracion" name="duracion_bloque" value="60">
 
-        <!-- Resumen visual -->
-        <div style="background:#F3E5F5; padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center;">
-            <div style="font-weight:600; color:#AB47BC;" id="modalFechaDisplay">--/--/----</div>
-            <div style="font-size:1.1rem;" id="modalHoraDisplay">--:-- - --:--</div>
-            <div style="font-size:0.9rem; color:#666;" id="modalCanchaDisplay">Cancha</div>
+        <!-- ✅ Resumen visual con fecha, hora y cancha -->
+        <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
+            <div style="font-weight:700; color:#6A1B9A; font-size:1.05rem; margin-bottom:0.3rem;" id="modalCanchaDisplay">🏟️ Cargando cancha...</div>
+            <div style="display:flex; justify-content:center; gap:1rem; font-size:0.95rem; color:#4A148C;">
+            <span>📅 <strong id="modalFechaDisplay">--/--</strong></span>
+            <span>⏰ <strong id="modalHoraDisplay">--:--</strong></span>
+            </div>
         </div>
 
-        <!-- Buscador de socio -->
+        <!-- ✅ Selector de duración (60/90 min) -->
         <div style="margin-bottom:1rem;">
+            <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>
+            <div style="display:flex; gap:0.5rem;">
+            <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
+                <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 60 min
+            </label>
+            <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
+                <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 90 min
+            </label>
+            </div>
+        </div>
+
+        <!-- ✅ Buscador Inteligente de Socio (con tu código integrado) -->
+        <div style="position:relative; margin-bottom:1rem;">
             <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
-            <input type="text" id="searchAdmin" placeholder="Buscar por nombre, alias o email..." 
+            <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
+                oninput="debounceBuscar(this.value)" 
                 style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
-            <div id="searchResultsAdmin" style="max-height:200px; overflow-y:auto; margin-top:0.5rem; display:none; background:white; border:1px solid #E2E8F0; border-radius:8px;"></div>
+            <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+            <input type="hidden" id="admin_socio_id">
+            <input type="hidden" id="admin_nombre">
+            <input type="hidden" id="admin_email">
+            <input type="hidden" id="admin_celular">
         </div>
 
-        <!-- Duración y monto -->
-        <div style="display:flex; gap:1rem; margin-bottom:1.25rem;">
-            <div style="flex:1;">
-            <label style="font-size:0.85rem; font-weight:600; color:#666;">Duración</label>
-            <div style="padding:0.6rem; background:#F7FAFC; border-radius:8px; font-weight:500;" id="modalDuracion">60 min</div>
-            </div>
-            <div style="flex:1;">
-            <label style="font-size:0.85rem; font-weight:600; color:#666;">Monto</label>
-            <div style="padding:0.6rem; background:#F7FAFC; border-radius:8px; font-weight:600; color:#2E7D32;" id="modalMontoDisplay">$0</div>
-            </div>
+        <!-- Resumen de monto -->
+        <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #4CAF50;">
+            <span style="font-weight:600; color:#2E7D32;">💰 Total a pagar:</span>
+            <span style="font-size:1.2rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
         </div>
 
-        <!-- Sección recurrente -->
+        <!-- ✅ Sección Reserva Recurrente (con evento fijo) -->
         <div style="margin:1.25rem 0; padding-top:1rem; border-top:1px solid #eee;">
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
-            <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;">
-            <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Reserva recurrente</label>
+            <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;" onchange="toggleRecurrentFields(this.checked)">
+            <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Crear reserva recurrente</label>
             </div>
-            <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px;">
-            <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-bottom:0.75rem;">
-                <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option>
-                <option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option>
-            </select>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                <input type="date" id="startDate" required style="padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
-                <input type="date" id="endDate" required style="padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+            
+            <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
+            <div class="form-group">
+                <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
+                <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                <option value="1">Lunes</option>
+                <option value="2">Martes</option>
+                <option value="3">Miércoles</option>
+                <option value="4">Jueves</option>
+                <option value="5">Viernes</option>
+                <option value="6">Sábado</option>
+                <option value="0">Domingo</option>
+                </select>
             </div>
-            <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;" id="previewDates">Selecciona fechas...</div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+                <div class="form-group">
+                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
+                <input type="date" id="startDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                </div>
+                <div class="form-group">
+                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
+                <input type="date" id="endDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                </div>
+            </div>
+            
+            <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
+                <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
+            </div>
             </div>
         </div>
 
         <!-- Botón submit -->
-        <button type="submit" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer;">
+        <button type="submit" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem; transition:transform 0.2s;">
             💾 Crear Reserva
         </button>
         </form>
