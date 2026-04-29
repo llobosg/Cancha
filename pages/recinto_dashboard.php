@@ -1357,7 +1357,7 @@ function irAHoyPlanilla() {
     cargarPlanillaReservas();
 }
 
-// === CARGA DE PLANILLA ===
+// === CARGA DE PLANILLA (con validación de respuesta) ===
 async function cargarPlanillaReservas() {
     const deporte = document.getElementById('filtroDeporte')?.value || "todos";
     console.log(`📡 Cargando... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
@@ -1366,19 +1366,40 @@ async function cargarPlanillaReservas() {
         const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
         const response = await fetch(url, { credentials: 'include' });
         
+        // Verificar estado HTTP primero
         if (response.status === 401) {
             showToast("Sesión expirada. Redirigiendo...", "warning");
             setTimeout(() => window.location.href = 'login_recintos.php', 2000);
             return;
         }
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // === VALIDAR QUE LA RESPUESTA ES JSON ANTES DE PARSEAR ===
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Si no es JSON, leer como texto para debug
+            const text = await response.text();
+            console.error('❌ Respuesta no es JSON:', text.substring(0, 200));
+            throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs.');
+        }
+        
         const data = await response.json();
+        
         if (data.error) throw new Error(data.error);
         
         renderizarPlanilla(data, estadoSeleccionadoPlanilla);
+        
     } catch (error) {
-        console.error(error);
-        document.getElementById('tablaPlanilla').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red;">Error: ${error.message}</td></tr>`;
+        console.error('❌ Error en cargarPlanillaReservas:', error);
+        showToast(`Error: ${error.message}`, 'error');
+        document.getElementById('tablaPlanilla').innerHTML = 
+            `<tr><td colspan="100%" style="padding:2rem; color:#c62828; text-align:center;">
+                ⚠️ ${error.message}<br>
+                <small style="color:#666;">Revisa consola (F12) para más detalles</small>
+            </td></tr>`;
     }
 }
 

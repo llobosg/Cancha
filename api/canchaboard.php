@@ -1,4 +1,15 @@
 <?php
+// api/canchaboard.php
+// === LIMPIEZA DE OUTPUT PARA EVITAR JSON ROTO ===
+if (ob_get_level() > 0) { ob_clean(); }  // Limpia buffer previo
+header('Content-Type: application/json; charset=utf-8');
+
+// Manejar errores de PHP para que no rompan el JSON
+error_reporting(E_ALL);
+ini_set('display_errors', 0);  // ❌ No mostrar errores en pantalla (rompe JSON)
+ini_set('log_errors', 1);      // ✅ Loguear errores en archivo
+ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
+
     header('Content-Type: application/json; charset=utf-8');
     require_once __DIR__ . '/../includes/config.php';
 
