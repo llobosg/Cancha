@@ -1038,6 +1038,64 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
     font-weight: 500;
     transition: color 0.2s;
 }
+/* === MODAL OVERLAY - CENTRADO PERFECTO === */
+.modal-overlay {
+    position: fixed;           /* Fijo respecto a la ventana */
+    inset: 0;                  /* Top:0, Right:0, Bottom:0, Left:0 */
+    background: rgba(0, 0, 0, 0.55);  /* Fondo semitransparente */
+    backdrop-filter: blur(4px);       /* Efecto blur opcional */
+    display: flex;                   /* Flexbox para centrar */
+    justify-content: center;         /* Centrado horizontal */
+    align-items: center;             /* Centrado vertical */
+    z-index: 2000;                   /* Por encima de todo */
+    padding: 1rem;                   /* Espacio en móviles */
+    opacity: 0;                      /* Para animación de entrada */
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+/* Cuando el modal está activo */
+.modal-overlay.active,
+.modal-overlay[style*="display: flex"] {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* === CONTENIDO DEL MODAL === */
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 1.75rem;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;        /* Para que quepa en pantallas pequeñas */
+    overflow-y: auto;        /* Scroll interno si es necesario */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);  /* Sombra profunda */
+    position: relative;
+    animation: modalSlideUp 0.3s ease-out;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Animación de entrada suave */
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsive móvil */
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 1.5rem;
+        margin: 0.5rem;
+        border-radius: 16px;
+    }
+}
 </style>
 </head>
 <body>
@@ -2156,86 +2214,51 @@ function seleccionarSocioAdmin(id, nombre, email, celular) {
     document.getElementById('searchAdmin').value = nombre;
 }
 
-// === ABRIR MODAL RESERVA ADMIN (versión segura) ===
-function abrirReservaAdmin(canchaId, fecha, hora) {
-    // Obtener elementos con verificación
-    const elCancha = document.getElementById('admin_cancha_id');
-    const elFecha = document.getElementById('admin_fecha');
-    const elHora = document.getElementById('admin_hora_inicio');
-    const elSearch = document.getElementById('searchAdmin');
-    const elSocio = document.getElementById('admin_socio_id');
-    const elModal = document.getElementById('modalReservaAdmin');
-    
-    // Si falta algún elemento crítico, mostrar error amigable
-    if (!elCancha || !elFecha || !elHora || !elModal) {
-        console.error('❌ ModalReservaAdmin: faltan campos requeridos');
-        showToast('⚠️ Error al abrir el formulario. Recarga la página.', 'error');
-        return;
+// === ABRIR MODAL CON ANIMACIÓN ===
+function abrirModalReservaAdmin() {
+    const modal = document.getElementById('modalReservaAdmin');
+    if (modal) {
+        modal.style.display = 'flex';  // Primero mostrar para que flex funcione
+        // Pequeño delay para que la transición CSS se aplique
+        setTimeout(() => modal.classList.add('active'), 10);
+        // Prevenir scroll del body
+        document.body.style.overflow = 'hidden';
     }
-    
-    // Asignar valores (solo si el elemento existe)
-    elCancha.value = canchaId;
-    elFecha.value = fecha;
-    elHora.value = hora;
-    
-    // Calcular hora fin (asumiendo 60 min por defecto, ajustar según tu lógica)
-    const [h, m] = hora.split(':').map(Number);
-    const fin = new Date();
-    fin.setHours(h, m + 60, 0, 0);
-    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
-    document.getElementById('admin_hora_fin').value = horaFin;
-    
-    // Resetear campos visibles
-    if (elSearch) elSearch.value = '';
-    if (elSocio) elSocio.value = '';
-    
-    // Actualizar vista previa
-    document.getElementById('modalFechaDisplay').textContent = fecha.split('-').reverse().join('/');
-    document.getElementById('modalHoraDisplay').textContent = `${hora} - ${horaFin}`;
-    
-    // Obtener nombre de cancha (si tienes el array canchasData disponible)
-    if (typeof canchasData !== 'undefined') {
-        const cancha = canchasData.find(c => c.id_cancha == canchaId);
-        if (cancha) {
-            document.getElementById('modalCanchaDisplay').textContent = cancha.nombre_cancha || `Cancha ${cancha.nro_cancha}`;
-            document.getElementById('modalDuracion').textContent = `${cancha.duracion_bloque} min`;
-            document.getElementById('modalMontoDisplay').textContent = `$${cancha.valor_arriendo?.toLocaleString('es-CL') || '0'}`;
-            document.getElementById('admin_monto').value = cancha.valor_arriendo || 0;
+}
+
+// === CERRAR MODAL CON ANIMACIÓN ===
+function cerrarModalReservaAdmin(e) {
+    // Cerrar si se hace click en el overlay (fuera del contenido)
+    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
+        const modal = document.getElementById('modalReservaAdmin');
+        if (modal) {
+            modal.classList.remove('active');
+            // Esperar a que termine la animación antes de ocultar
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';  // Restaurar scroll
+            }, 250);
         }
     }
-    
-    // Resetear sección recurrente
-    document.getElementById('isRecurrent').checked = false;
-    document.getElementById('recurrentFields').style.display = 'none';
-    document.getElementById('previewDates').textContent = 'Selecciona fechas para ver las fechas generadas';
-    
-    // Mostrar modal
-    elModal.style.display = 'flex';
-    
-    // Focus en buscador
-    setTimeout(() => elSearch?.focus(), 100);
+    // Prevenir propagación si se hace click dentro del contenido
+    e.stopPropagation();
 }
 
-// === CERRAR MODAL ===
-function cerrarModalReservaAdmin(e) {
-    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
-        document.getElementById('modalReservaAdmin').style.display = 'none';
-    }
-}
-
-// === TOGGLE SECCIÓN RECURRENTE ===
+// === PREVENIR CIERRE AL CLICK INTERNO ===
 document.addEventListener('DOMContentLoaded', function() {
-    const chkRecurrent = document.getElementById('isRecurrent');
-    const fieldsRecurrent = document.getElementById('recurrentFields');
-    
-    chkRecurrent?.addEventListener('change', function(e) {
-        fieldsRecurrent.style.display = e.target.checked ? 'block' : 'none';
-        if (e.target.checked) updatePreviewDates();
+    const modalContent = document.querySelector('#modalReservaAdmin .modal-content');
+    modalContent?.addEventListener('click', function(e) {
+        e.stopPropagation();  // No cerrar si se hace click dentro del modal
     });
     
-    // Actualizar preview al cambiar fechas
-    ['repeatDay', 'startDate', 'endDate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('change', updatePreviewDates);
+    // Soporte para tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('modalReservaAdmin');
+            if (modal && modal.style.display !== 'none') {
+                cerrarModalReservaAdmin({ target: modal });
+            }
+        }
     });
 });
 
@@ -3213,20 +3236,23 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
     });
 }
 </script>
-    <!-- === MODAL RESERVA MANUAL ADMIN (COMPLETO + RECURRENTE) === -->
-    <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
-    <div class="modal-content" style="max-width:520px; padding:1.75rem; border-radius:20px;">
+    <!-- === MODAL RESERVA MANUAL ADMIN === -->
+    <div id="modalReservaAdmin" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
         
-        <!-- Header del modal -->
+        <!-- Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
         <h3 style="margin:0; color:#AB47BC; font-size:1.2rem;">🎾 Nueva Reserva</h3>
-        <button onclick="cerrarModalReservaAdmin(event)" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer;">&times;</button>
+        <button onclick="cerrarModalReservaAdmin(event)" 
+                style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; width:32px; height:32px; border-radius:50%; display:grid; place-items:center;">
+            &times;
+        </button>
         </div>
 
         <!-- Formulario -->
         <form id="formReservaManual" onsubmit="guardarReservaAdmin(event)">
         
-        <!-- Campos ocultos (CRÍTICOS para abrirReservaAdmin) -->
+        <!-- Campos ocultos (CRÍTICOS) -->
         <input type="hidden" id="admin_cancha_id" name="id_cancha">
         <input type="hidden" id="admin_fecha" name="fecha">
         <input type="hidden" id="admin_hora_inicio" name="hora_inicio">
@@ -3234,23 +3260,22 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
         <input type="hidden" id="admin_socio_id" name="id_socio">
         <input type="hidden" id="admin_monto" name="monto_total">
 
-        <!-- Resumen visual de la reserva -->
+        <!-- Resumen visual -->
         <div style="background:#F3E5F5; padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center;">
-            <div style="font-weight:600; color:#AB47BC; margin-bottom:0.25rem;">📅 <span id="modalFechaDisplay"></span></div>
-            <div style="font-size:1.1rem;">⏰ <span id="modalHoraDisplay"></span></div>
-            <div style="font-size:0.9rem; color:#666; margin-top:0.25rem;">🏟️ <span id="modalCanchaDisplay"></span></div>
+            <div style="font-weight:600; color:#AB47BC;" id="modalFechaDisplay">--/--/----</div>
+            <div style="font-size:1.1rem;" id="modalHoraDisplay">--:-- - --:--</div>
+            <div style="font-size:0.9rem; color:#666;" id="modalCanchaDisplay">Cancha</div>
         </div>
 
         <!-- Buscador de socio -->
-        <div class="form-group" style="margin-bottom:1rem;">
+        <div style="margin-bottom:1rem;">
             <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
             <input type="text" id="searchAdmin" placeholder="Buscar por nombre, alias o email..." 
-                style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;"
-                oninput="buscarSocioAdmin(this.value)">
-            <div id="searchResultsAdmin" style="max-height:200px; overflow-y:auto; margin-top:0.5rem; display:none;"></div>
+                style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+            <div id="searchResultsAdmin" style="max-height:200px; overflow-y:auto; margin-top:0.5rem; display:none; background:white; border:1px solid #E2E8F0; border-radius:8px;"></div>
         </div>
 
-        <!-- Duración (solo lectura, se calcula desde la cancha) -->
+        <!-- Duración y monto -->
         <div style="display:flex; gap:1rem; margin-bottom:1.25rem;">
             <div style="flex:1;">
             <label style="font-size:0.85rem; font-weight:600; color:#666;">Duración</label>
@@ -3262,48 +3287,27 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
             </div>
         </div>
 
-        <!-- === SECCIÓN RESERVA RECURRENTE === -->
+        <!-- Sección recurrente -->
         <div style="margin:1.25rem 0; padding-top:1rem; border-top:1px solid #eee;">
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
             <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;">
-            <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer; font-size:0.95rem;">
-                🔄 Crear reserva recurrente
-            </label>
+            <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Reserva recurrente</label>
             </div>
-            
             <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px;">
-            <div class="form-group">
-                <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
-                <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
-                <option value="1">Lunes</option>
-                <option value="2">Martes</option>
-                <option value="3">Miércoles</option>
-                <option value="4">Jueves</option>
-                <option value="5">Viernes</option>
-                <option value="6">Sábado</option>
-                <option value="0">Domingo</option>
-                </select>
+            <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-bottom:0.75rem;">
+                <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option>
+                <option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option>
+            </select>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <input type="date" id="startDate" required style="padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
+                <input type="date" id="endDate" required style="padding:0.6rem; border-radius:6px; border:1px solid #ccc;">
             </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
-                <div class="form-group">
-                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
-                <input type="date" id="startDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
-                </div>
-                <div class="form-group">
-                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
-                <input type="date" id="endDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
-                </div>
-            </div>
-            
-            <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
-                <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
-            </div>
+            <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;" id="previewDates">Selecciona fechas...</div>
             </div>
         </div>
 
         <!-- Botón submit -->
-        <button type="submit" class="btn-modal" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem;">
+        <button type="submit" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer;">
             💾 Crear Reserva
         </button>
         </form>
