@@ -1111,7 +1111,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         <?php endif; ?>
 
         <!-- KPI: Saldo Pendiente (pagos parciales) -->
-        <div class="kpi-card-mini kpi-pendiente">
+        <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
             <div>Saldo Pendiente</div>
             <div style="color: #e2b619; font-weight: bold;">$<?= number_format($monto_pendiente, 0, ',', '.') ?></div>
             <div style="color: #4A4A4A; font-size: 0.8rem;">Por cobrar (parciales)</div>
@@ -1129,7 +1129,7 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
         <?php endif; ?>
 
         <!-- KPI: Deuda Vencida -->
-        <div class="kpi-card-mini kpi-deuda">
+        <div class="kpi-card-mini kpi-deuda" onclick="abrirListaKPI('deuda')">
             <div>Deuda Vencida</div>
             <div>$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
             <div style="color: #C62828; font-size: 0.8rem;">Por regularizar</div>
