@@ -1472,21 +1472,26 @@ function renderizarPlanilla(data, filtroEstado) {
 
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
                     
-                    // ✅ IMPORTANTE: rowspan="${rowspan}" como atributo HTML
-                  html += `<td class="${bgClass} cell-reserva" 
-                                rowspan="${rowspan}" 
-                                draggable="true" 
-                                ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
-                                ondragend="dragEnd(event)"
-                                style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
-                                onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                                <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
-                                <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
-                                let notasHtml = '';
-                                    if (r.notas && r.notas.trim() !== '') {
-                                        notasHtml = `<div style="font-size:0.7rem; color:#666; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.notas.replace(/"/g, '&quot;')}">📝 ${r.notas}</div>`;
-                                }
-                            </td>`;
+                // 1. Preparar notas (fuera del template literal)
+                let notasHtml = '';
+                if (res.notas && res.notas.trim() !== '') {
+                    // Escapar comillas para evitar romper el atributo title
+                    const notasEscapadas = res.notas.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    notasHtml = `<div style="font-size:0.7rem; color:#666; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${notasEscapadas}">📝 ${res.notas}</div>`;
+                }
+
+                // 2. Ahora sí, construir el HTML con ${notasHtml} interpolado
+                html += `<td class="${bgClass} cell-reserva" 
+                            rowspan="${rowspan}" 
+                            draggable="true" 
+                            ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
+                            ondragend="dragEnd(event)"
+                            style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
+                            onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
+                            <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
+                            <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                            ${notasHtml}
+                        </td>`;
                     
                     celdasPintadas++;
                     
