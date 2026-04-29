@@ -1532,7 +1532,7 @@ function renderizarPlanilla(data, filtroEstado) {
     console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas`);
 }
 
-// === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ===
+// === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ==
 let draggedReservaId = null;
 let draggedElement = null;
 
@@ -2320,7 +2320,6 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     }
 
     // 5. Actualizar monto en hidden + visual
-    const elMonto = getEl('admin_monto_total');
     if (elMonto) elMonto.value = montoTotal;
 
     const elMontoDisp = document.getElementById('modalMontoDisplay');
@@ -2369,13 +2368,13 @@ function actualizarMontoDisplay(montoBase, duracionMin) {
     const factor = duracionMin === 90 ? 1.5 : 1;
     const total = Math.round(montoBase * factor);
     
-    const elMonto = document.getElementById('modalMontoDisplay');
-    if (elMonto) {
-        elMonto.textContent = `$${total.toLocaleString('es-CL')}`;
+    const elMontoDisplay = document.getElementById('modalMontoDisplay');
+    if (elMontoDisplay) {
+        elMontoDisplay.textContent = `$${total.toLocaleString('es-CL')}`;
         // Efecto visual de actualización
-        elMonto.style.transition = 'transform 0.2s';
-        elMonto.style.transform = 'scale(1.05)';
-        setTimeout(() => elMonto.style.transform = 'scale(1)', 200);
+        elMontoDisplay.style.transition = 'transform 0.2s';
+        elMontoDisplay.style.transform = 'scale(1.05)';
+        setTimeout(() => elMontoDisplay.style.transform = 'scale(1)', 200);
     }
 }
 
