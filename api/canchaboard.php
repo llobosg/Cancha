@@ -314,26 +314,27 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
         }
         
         // 3. Obtener reservas reales en ese rango
-        $stmt_reservas = $pdo->prepare("
-            $stmt_reservas = $pdo->prepare("
-                SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin,
-                    dc.estado as estado_disponibilidad,
-                    r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
-                    r.tipo_reserva, r.id_convenio, r.notas,
-                    cl.nombre as nombre_club, s.alias as nombre_responsable,
-                    r.telefono_cliente, r.email_cliente,
-                    lc.usuario_nombre as usuario_creacion
-                FROM disponibilidad_canchas dc
-                LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
-                LEFT JOIN clubs cl ON r.id_club = cl.id_club
-                LEFT JOIN socios s ON r.id_socio = s.id_socio
-                LEFT JOIN (
-                    SELECT id_reserva, usuario_nombre FROM reservas_log WHERE accion = 'creada'
-                ) lc ON r.id_reserva = lc.id_reserva
-                WHERE dc.fecha BETWEEN ? AND ? AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
-            ");
+        $sql = <<<SQL
+        SELECT dc.id_disponibilidad, dc.id_cancha, dc.fecha, dc.hora_inicio, dc.hora_fin,
+            dc.estado as estado_disponibilidad,
+            r.id_reserva, r.estado as estado_reserva, r.estado_pago, r.monto_total,
+            r.tipo_reserva, r.id_convenio, r.notas,
+            cl.nombre as nombre_club, s.alias as nombre_responsable,
+            r.telefono_cliente, r.email_cliente,
+            lc.usuario_nombre as usuario_creacion
+        FROM disponibilidad_canchas dc
+        LEFT JOIN reservas r ON dc.id_reserva = r.id_reserva
+        LEFT JOIN clubs cl ON r.id_club = cl.id_club
+        LEFT JOIN socios s ON r.id_socio = s.id_socio
+        LEFT JOIN (
+            SELECT id_reserva, usuario_nombre FROM reservas_log WHERE accion = 'creada'
+        ) lc ON r.id_reserva = lc.id_reserva
+        WHERE dc.fecha BETWEEN ? AND ? 
+        AND dc.id_cancha IN (SELECT id_cancha FROM canchas WHERE id_recinto = ?)
+        SQL;
+
+        $stmt_reservas = $pdo->prepare($sql);
         $stmt_reservas->execute([$fecha_inicio, $fecha_fin, $id_recinto]);
-        $reservas_reales = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
         
         // 4. Fusionar datos
         $reservas_map = [];
@@ -416,6 +417,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
         error_log("✅ [FILTRO] Resultado final: " . count($datos_filtrados));
         return $datos_filtrados;
     }
+
 
     // NUEVA FUNCIÓN AUXILIAR PARA PERMITIR FECHA INICIO CUSTOM (PASADO)
     function getReservasDataOptimizadaConRangoCustom($pdo, $id_recinto, $fecha_inicio_custom, $fecha_fin_custom) {
