@@ -2156,18 +2156,129 @@ function seleccionarSocioAdmin(id, nombre, email, celular) {
     document.getElementById('searchAdmin').value = nombre;
 }
 
+// === ABRIR MODAL RESERVA ADMIN (versión segura) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
-    document.getElementById('admin_cancha_id').value = canchaId;
-    document.getElementById('admin_fecha').value = fecha;
-    document.getElementById('admin_hora').value = hora;
-    document.getElementById('searchAdmin').value = '';
-    document.getElementById('formReservaManual')?.reset();
-    document.getElementById('admin_socio_id').value = '';
-    document.getElementById('modalReservaAdmin').style.display = 'flex';
+    // Obtener elementos con verificación
+    const elCancha = document.getElementById('admin_cancha_id');
+    const elFecha = document.getElementById('admin_fecha');
+    const elHora = document.getElementById('admin_hora_inicio');
+    const elSearch = document.getElementById('searchAdmin');
+    const elSocio = document.getElementById('admin_socio_id');
+    const elModal = document.getElementById('modalReservaAdmin');
+    
+    // Si falta algún elemento crítico, mostrar error amigable
+    if (!elCancha || !elFecha || !elHora || !elModal) {
+        console.error('❌ ModalReservaAdmin: faltan campos requeridos');
+        showToast('⚠️ Error al abrir el formulario. Recarga la página.', 'error');
+        return;
+    }
+    
+    // Asignar valores (solo si el elemento existe)
+    elCancha.value = canchaId;
+    elFecha.value = fecha;
+    elHora.value = hora;
+    
+    // Calcular hora fin (asumiendo 60 min por defecto, ajustar según tu lógica)
+    const [h, m] = hora.split(':').map(Number);
+    const fin = new Date();
+    fin.setHours(h, m + 60, 0, 0);
+    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('admin_hora_fin').value = horaFin;
+    
+    // Resetear campos visibles
+    if (elSearch) elSearch.value = '';
+    if (elSocio) elSocio.value = '';
+    
+    // Actualizar vista previa
+    document.getElementById('modalFechaDisplay').textContent = fecha.split('-').reverse().join('/');
+    document.getElementById('modalHoraDisplay').textContent = `${hora} - ${horaFin}`;
+    
+    // Obtener nombre de cancha (si tienes el array canchasData disponible)
+    if (typeof canchasData !== 'undefined') {
+        const cancha = canchasData.find(c => c.id_cancha == canchaId);
+        if (cancha) {
+            document.getElementById('modalCanchaDisplay').textContent = cancha.nombre_cancha || `Cancha ${cancha.nro_cancha}`;
+            document.getElementById('modalDuracion').textContent = `${cancha.duracion_bloque} min`;
+            document.getElementById('modalMontoDisplay').textContent = `$${cancha.valor_arriendo?.toLocaleString('es-CL') || '0'}`;
+            document.getElementById('admin_monto').value = cancha.valor_arriendo || 0;
+        }
+    }
+    
+    // Resetear sección recurrente
+    document.getElementById('isRecurrent').checked = false;
+    document.getElementById('recurrentFields').style.display = 'none';
+    document.getElementById('previewDates').textContent = 'Selecciona fechas para ver las fechas generadas';
+    
+    // Mostrar modal
+    elModal.style.display = 'flex';
+    
+    // Focus en buscador
+    setTimeout(() => elSearch?.focus(), 100);
 }
 
-function cerrarModalReservaAdmin() {
-    document.getElementById('modalReservaAdmin').style.display = 'none';
+// === CERRAR MODAL ===
+function cerrarModalReservaAdmin(e) {
+    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
+        document.getElementById('modalReservaAdmin').style.display = 'none';
+    }
+}
+
+// === TOGGLE SECCIÓN RECURRENTE ===
+document.addEventListener('DOMContentLoaded', function() {
+    const chkRecurrent = document.getElementById('isRecurrent');
+    const fieldsRecurrent = document.getElementById('recurrentFields');
+    
+    chkRecurrent?.addEventListener('change', function(e) {
+        fieldsRecurrent.style.display = e.target.checked ? 'block' : 'none';
+        if (e.target.checked) updatePreviewDates();
+    });
+    
+    // Actualizar preview al cambiar fechas
+    ['repeatDay', 'startDate', 'endDate'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', updatePreviewDates);
+    });
+});
+
+function updatePreviewDates() {
+    const day = parseInt(document.getElementById('repeatDay')?.value);
+    const start = document.getElementById('startDate')?.value;
+    const end = document.getElementById('endDate')?.value;
+    const preview = document.getElementById('previewDates');
+    
+    if (!day || !start || !end || isNaN(day)) {
+        if (preview) preview.textContent = 'Selecciona fechas para ver las fechas generadas';
+        return;
+    }
+    
+    const dates = generateRecurringDates(start, end, day);
+    const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    
+    if (!preview) return;
+    
+    if (dates.length === 0) {
+        preview.textContent = '⚠️ No hay fechas válidas en este rango';
+        preview.style.color = '#C62828';
+    } else {
+        preview.textContent = `📅 ${dates.length} fechas: ` + dates.slice(0, 3).map(d => {
+            const dateObj = new Date(d + 'T00:00:00');
+            return `${dayNames[dateObj.getDay()]} ${d.split('-')[2]}/${d.split('-')[1]}`;
+        }).join(', ') + (dates.length > 3 ? '...' : '');
+        preview.style.color = '#2E7D32';
+    }
+}
+
+function generateRecurringDates(startDate, endDate, dayOfWeek) {
+    const dates = [];
+    let current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    
+    while (current <= end) {
+        if (current.getDay() === dayOfWeek) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
 }
 
 function abrirModalMover() {
@@ -3102,102 +3213,102 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
     });
 }
 </script>
-    <!-- === SECCIÓN RESERVA RECURRENTE (nuevo) === -->
-    <div id="modalReservaAdmin" style="display: none; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #eee;">
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-            <input type="checkbox" id="isRecurrent" style="width: 18px; height: 18px;">
-            <label for="isRecurrent" style="font-weight: 600; color: #333; cursor: pointer;">
+    <!-- === MODAL RESERVA MANUAL ADMIN (COMPLETO + RECURRENTE) === -->
+    <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
+    <div class="modal-content" style="max-width:520px; padding:1.75rem; border-radius:20px;">
+        
+        <!-- Header del modal -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <h3 style="margin:0; color:#AB47BC; font-size:1.2rem;">🎾 Nueva Reserva</h3>
+        <button onclick="cerrarModalReservaAdmin(event)" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer;">&times;</button>
+        </div>
+
+        <!-- Formulario -->
+        <form id="formReservaManual" onsubmit="guardarReservaAdmin(event)">
+        
+        <!-- Campos ocultos (CRÍTICOS para abrirReservaAdmin) -->
+        <input type="hidden" id="admin_cancha_id" name="id_cancha">
+        <input type="hidden" id="admin_fecha" name="fecha">
+        <input type="hidden" id="admin_hora_inicio" name="hora_inicio">
+        <input type="hidden" id="admin_hora_fin" name="hora_fin">
+        <input type="hidden" id="admin_socio_id" name="id_socio">
+        <input type="hidden" id="admin_monto" name="monto_total">
+
+        <!-- Resumen visual de la reserva -->
+        <div style="background:#F3E5F5; padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center;">
+            <div style="font-weight:600; color:#AB47BC; margin-bottom:0.25rem;">📅 <span id="modalFechaDisplay"></span></div>
+            <div style="font-size:1.1rem;">⏰ <span id="modalHoraDisplay"></span></div>
+            <div style="font-size:0.9rem; color:#666; margin-top:0.25rem;">🏟️ <span id="modalCanchaDisplay"></span></div>
+        </div>
+
+        <!-- Buscador de socio -->
+        <div class="form-group" style="margin-bottom:1rem;">
+            <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
+            <input type="text" id="searchAdmin" placeholder="Buscar por nombre, alias o email..." 
+                style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;"
+                oninput="buscarSocioAdmin(this.value)">
+            <div id="searchResultsAdmin" style="max-height:200px; overflow-y:auto; margin-top:0.5rem; display:none;"></div>
+        </div>
+
+        <!-- Duración (solo lectura, se calcula desde la cancha) -->
+        <div style="display:flex; gap:1rem; margin-bottom:1.25rem;">
+            <div style="flex:1;">
+            <label style="font-size:0.85rem; font-weight:600; color:#666;">Duración</label>
+            <div style="padding:0.6rem; background:#F7FAFC; border-radius:8px; font-weight:500;" id="modalDuracion">60 min</div>
+            </div>
+            <div style="flex:1;">
+            <label style="font-size:0.85rem; font-weight:600; color:#666;">Monto</label>
+            <div style="padding:0.6rem; background:#F7FAFC; border-radius:8px; font-weight:600; color:#2E7D32;" id="modalMontoDisplay">$0</div>
+            </div>
+        </div>
+
+        <!-- === SECCIÓN RESERVA RECURRENTE === -->
+        <div style="margin:1.25rem 0; padding-top:1rem; border-top:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
+            <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;">
+            <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer; font-size:0.95rem;">
                 🔄 Crear reserva recurrente
             </label>
-        </div>
-        
-        <div id="recurrentFields" style="display: none; background: #F7FAFC; padding: 1rem; border-radius: 10px;">
+            </div>
+            
+            <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px;">
             <div class="form-group">
-                <label style="font-size: 0.9rem; font-weight: 600; color: #333;">Repetir cada:</label>
-                <select id="repeatDay" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid #ccc; margin-top: 0.3rem;">
-                    <option value="1">Lunes</option>
-                    <option value="2">Martes</option>
-                    <option value="3">Miércoles</option>
-                    <option value="4">Jueves</option>
-                    <option value="5">Viernes</option>
-                    <option value="6">Sábado</option>
-                    <option value="0">Domingo</option>
+                <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
+                <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                <option value="1">Lunes</option>
+                <option value="2">Martes</option>
+                <option value="3">Miércoles</option>
+                <option value="4">Jueves</option>
+                <option value="5">Viernes</option>
+                <option value="6">Sábado</option>
+                <option value="0">Domingo</option>
                 </select>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
                 <div class="form-group">
-                    <label style="font-size: 0.9rem; font-weight: 600; color: #333;">Fecha inicio *</label>
-                    <input type="date" id="startDate" required style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid #ccc; margin-top: 0.3rem;">
+                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
+                <input type="date" id="startDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
                 </div>
                 <div class="form-group">
-                    <label style="font-size: 0.9rem; font-weight: 600; color: #333;">Fecha fin *</label>
-                    <input type="date" id="endDate" required style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid #ccc; margin-top: 0.3rem;">
+                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
+                <input type="date" id="endDate" required style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
                 </div>
             </div>
             
-            <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #666;">
+            <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
                 <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
             </div>
+            </div>
         </div>
+
+        <!-- Botón submit -->
+        <button type="submit" class="btn-modal" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem;">
+            💾 Crear Reserva
+        </button>
+        </form>
     </div>
-
-    <script>
-    // === LÓGICA PARA TOGGLE DE RESERVA RECURRENTE ===
-    document.getElementById('isRecurrent')?.addEventListener('change', function(e) {
-        const fields = document.getElementById('recurrentFields');
-        fields.style.display = e.target.checked ? 'block' : 'none';
-        if (e.target.checked) updatePreviewDates();
-    });
-
-    // Actualizar vista previa de fechas al cambiar inputs
-    ['repeatDay', 'startDate', 'endDate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('change', updatePreviewDates);
-    });
-
-    function updatePreviewDates() {
-        const day = parseInt(document.getElementById('repeatDay')?.value);
-        const start = document.getElementById('startDate')?.value;
-        const end = document.getElementById('endDate')?.value;
-        const preview = document.getElementById('previewDates');
-        
-        if (!day || !start || !end) {
-            preview.textContent = 'Selecciona fechas para ver las fechas generadas';
-            return;
-        }
-        
-        const dates = generateRecurringDates(start, end, day);
-        const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-        
-        if (dates.length === 0) {
-            preview.textContent = '⚠️ No hay fechas válidas en este rango';
-            preview.style.color = '#C62828';
-        } else {
-            preview.textContent = `📅 ${dates.length} fechas: ` + dates.slice(0, 3).map(d => {
-                const dateObj = new Date(d + 'T00:00:00');
-                return `${dayNames[dateObj.getDay()]} ${d.split('-')[2]}/${d.split('-')[1]}`;
-            }).join(', ') + (dates.length > 3 ? '...' : '');
-            preview.style.color = '#2E7D32';
-        }
-    }
-
-    // === FUNCIÓN PARA GENERAR FECHAS RECURRENTES (mismo día de semana) ===
-    function generateRecurringDates(startDate, endDate, dayOfWeek) {
-        const dates = [];
-        let current = new Date(startDate + 'T00:00:00');
-        const end = new Date(endDate + 'T00:00:00');
-        
-        while (current <= end) {
-            if (current.getDay() === dayOfWeek) {
-                dates.push(current.toISOString().split('T')[0]);
-            }
-            current.setDate(current.getDate() + 1);
-        }
-        return dates;
-    }
-    </script>
-
-    
+    </div>
 
     <div id="modalMoverReserva" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
         <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative; color:#333;">
