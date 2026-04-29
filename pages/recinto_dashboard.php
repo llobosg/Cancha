@@ -2498,8 +2498,24 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // === SUBMIT DEL FORMULARIO (con soporte recurrente) ===
+// === SUBMIT DEL FORMULARIO (versión corregida - sin variables huérfanas) ===
 async function guardarReservaAdmin(e) {
     e.preventDefault();
+    
+    // === 1. LEER VARIABLES DEL DOM (todas definidas localmente) ===
+    const id_cancha = document.getElementById('admin_cancha_id')?.value;
+    const fecha = document.getElementById('admin_fecha')?.value;
+    const hora_inicio = document.getElementById('admin_hora_inicio')?.value;  // ← snake_case consistente
+    const hora_fin = document.getElementById('admin_hora_fin')?.value;
+    const id_socio = document.getElementById('admin_socio_id')?.value;
+    const monto_total = parseFloat(document.getElementById('admin_monto_total')?.value) || 0;
+    const duracion = parseInt(document.getElementById('admin_duracion_bloque')?.value) || 60;
+    
+    // Validación básica
+    if (!id_cancha || !fecha || !hora_inicio) {
+        showToast('⚠️ Faltan datos de la reserva', 'error');
+        return;
+    }
     
     const isRecurrent = document.getElementById('isRecurrent')?.checked;
     const btn = e.target.querySelector('button[type="submit"]');
@@ -2510,36 +2526,37 @@ async function guardarReservaAdmin(e) {
     
     try {
         if (isRecurrent) {
-            // Flujo recurrente
-            // === VALIDACIÓN DE FECHAS RECURRENTES ===
-            const startDate = document.getElementById('startDate')?.value;
-            const endDate = document.getElementById('endDate')?.value;
-            const repeatDay = document.getElementById('repeatDay')?.value;
+            // === 2. FLUJO RECURRENTE ===
+            const repeat_day = parseInt(document.getElementById('repeatDay')?.value);
+            const start_date = document.getElementById('startDate')?.value;
+            const end_date = document.getElementById('endDate')?.value;
             
-            if (!startDate || !endDate || !repeatDay) {
-                showToast('⚠️ Completa: día de repetición, fecha inicio y fecha fin', 'error');
-                btn.disabled = false;
-                btn.textContent = originalText;
-                return;  // Detener envío
-            }
-            
-            if (new Date(startDate) > new Date(endDate)) {
-                showToast('⚠️ La fecha inicio debe ser anterior a la fecha fin', 'error');
+            // Validación de fechas recurrentes
+            if (!repeat_day || !start_date || !end_date) {
+                showToast('⚠️ Completa día de repetición y fechas', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
                 return;
             }
+            if (new Date(start_date) > new Date(end_date)) {
+                showToast('⚠️ Fecha inicio debe ser anterior a fecha fin', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+            
+            // Payload para API
             const payload = {
                 action: 'create_recurrent',
-                id_cancha: document.getElementById('admin_cancha_id').value,
-                hora_inicio: document.getElementById('admin_hora_inicio').value,
-                hora_fin: document.getElementById('admin_hora_fin').value,
-                id_socio: document.getElementById('admin_socio_id').value,
-                repeat_day: parseInt(document.getElementById('repeatDay').value),
-                start_date: document.getElementById('startDate').value,
-                end_date: document.getElementById('endDate').value,
-                monto_total: parseFloat(document.getElementById('admin_monto_base').value) * (document.getElementById('admin_duracion').value === '90' ? 1.5 : 1),
-                duracion_bloque: parseInt(document.getElementById('admin_duracion').value)
+                id_cancha: id_cancha,
+                hora_inicio: hora_inicio,  // ← Variable definida arriba
+                hora_fin: hora_fin,
+                id_socio: id_socio,
+                repeat_day: repeat_day,
+                start_date: start_date,
+                end_date: end_date,
+                monto_total: monto_total,
+                duracion_bloque: duracion
             };
             
             const response = await fetch('../api/reserva_recurrente.php', {
@@ -2550,41 +2567,54 @@ async function guardarReservaAdmin(e) {
             const result = await response.json();
             
             if (result.success) {
-                showToast(`✅ ${result.created} reservas creadas` + (result.skipped > 0 ? ` | ⚠️ ${result.skipped} saltadas` : ''));
+                showToast(`✅ ${result.created} reservas creadas` + 
+                         (result.skipped > 0 ? ` | ⚠️ ${result.skipped} saltadas` : ''));
                 setTimeout(() => location.reload(), 1500);
             } else {
                 showToast(`❌ ${result.message}`, 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
+            
         } else {
-            // Flujo reserva única (tu lógica existente)
-            const formData = new FormData(e.target);
+            // === 3. FLUJO RESERVA ÚNICA ===
+            const formData = new FormData();
             formData.append('action', 'crear_manual');
+            formData.append('id_cancha', id_cancha);
+            formData.append('fecha', fecha);
+            formData.append('hora_inicio', hora_inicio);  // ← Variable definida arriba
+            formData.append('hora_fin', hora_fin);
+            formData.append('id_socio', id_socio);
+            formData.append('monto_total', monto_total);
+            formData.append('duracion_bloque', duracion);
             
             const response = await fetch('../api/gestion_reservas.php', {
                 method: 'POST',
                 body: formData
             });
             const result = await response.json();
+
+            console.log('🔍 [DEBUG] Variables leídas del DOM:');
+            console.log('  id_cancha:', id_cancha);
+            console.log('  fecha:', fecha);
+            console.log('  hora_inicio:', hora_inicio);  // ← Debería mostrar "19:00" o similar
+            console.log('  monto_total:', monto_total);
             
             if (result.success) {
-                const idReservaCreada = result.id_reserva || null;  // Asegúrate que tu API devuelva el ID
-    
-        // Registrar log de creación
-        if (idReservaCreada) {
-            registrarLogReserva(
-                idReservaCreada,
-                'creada',
-                `Reserva manual creada para ${horaInicio} - ${horaFin}`,
-                { cancha_id: canchaId, socio_id: socioId },
-                { nuevo: montoFinal }
-                 );
-            }
+                // ✅ Registrar log de creación (bitácora)
+                const idReservaCreada = result.id_reserva;
+                if (idReservaCreada) {
+                    registrarLogReserva(
+                        idReservaCreada,
+                        'creada',
+                        `Reserva manual creada para ${hora_inicio} - ${hora_fin}`,
+                        { cancha_id: id_cancha, socio_id: id_socio },
+                        { nuevo: monto_total }
+                    );
+                }
                 
                 showToast('✅ Reserva creada correctamente');
                 setTimeout(() => location.reload(), 1200);
-         
             } else {
                 showToast(`❌ ${result.message}`, 'error');
                 btn.disabled = false;
@@ -2592,8 +2622,8 @@ async function guardarReservaAdmin(e) {
             }
         }
     } catch (error) {
-        console.error('Error:', error);
-        showToast('❌ Error de conexión', 'error');
+        console.error('❌ Error en guardarReservaAdmin:', error);
+        showToast('❌ Error de conexión: ' + error.message, 'error');
         btn.disabled = false;
         btn.textContent = originalText;
     }
@@ -3665,8 +3695,8 @@ async function registrarLogReserva(idReserva, accion, descripcion, metadata = nu
         <input type="hidden" id="admin_hora_inicio" name="hora_inicio">
         <input type="hidden" id="admin_hora_fin" name="hora_fin">
         <input type="hidden" id="admin_socio_id" name="id_socio">
-        <input type="hidden" id="admin_monto_base" name="monto_base">
-        <input type="hidden" id="admin_duracion" name="duracion_bloque" value="60">
+        <input type="hidden" id="admin_monto_total" name="monto_total">
+        <input type="hidden" id="admin_duracion_bloque" name="duracion_bloque" value="60">
 
         <!-- ✅ Resumen visual con fecha, hora y cancha -->
         <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
