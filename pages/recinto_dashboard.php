@@ -3985,17 +3985,14 @@ function toggleNuevoSocioPanel(mostrar) {
                     </div>
                 </div>
 
-                <!-- ✅ Buscador Inteligente de Socio (con tu código integrado) -->
+                <!-- === BUSCADOR INTELIGENTE DE SOCIO (SIN INPUTS DUPLICADOS) === -->
                 <div style="position:relative; margin-bottom:1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
-                    <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
-                        oninput="debounceBuscar(this.value)" 
+                    <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..."
+                        oninput="debounceBuscar(this.value)"
                         style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
                     <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
-                    <input type="hidden" id="admin_socio_id">
-                    <input type="hidden" id="admin_nombre">
-                    <input type="hidden" id="admin_email">
-                    <input type="hidden" id="admin_celular">
+                    <!-- ✅ NO agregar inputs hidden aquí: ya existen en la sección de campos ocultos -->
                 </div>
                 <!-- ✅ datos para nuevo socio -->
                 <!-- === CHECKBOX PARA NUEVO SOCIO (colapsable) === -->
