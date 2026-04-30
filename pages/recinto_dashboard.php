@@ -191,23 +191,20 @@ if ($debug_rows) {
     error_log("   ⚠️ No se encontraron reservas futuras no pagadas para este recinto");
 }
 
-// === 🔍 CARGA DE CANCHAS (CORRECCIÓN DEL ERROR) ===
-$canchas_js = []; // Inicializar vacío por seguridad
+// === 🔍 CARGA DE CANCHAS PARA JS (CORRECCIÓN DEL ERROR) ===
+$canchas_js = []; // Inicializar por seguridad
 try {
-    // 1. Obtener todas las canchas del recinto
-    $stmt = $pdo->prepare("SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado FROM canchas WHERE id_recinto = ?");
-    $stmt->execute([$id_recinto]);
-    $raw_canchas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // 2. Filtrar solo las activas y operativas para el JS
+    $stmt_canchas = $pdo->prepare("SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado FROM canchas WHERE id_recinto = ?");
+    $stmt_canchas->execute([$id_recinto]);
+    $raw_canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
+    
     if (is_array($raw_canchas)) {
-        // array_values() reindexa el array para que JS lo lea correctamente
+        // Filtrar solo activas y operativas, luego reindexar con array_values
         $canchas_js = array_values(array_filter($raw_canchas, function($c) {
             return ($c['activa'] == 1 && $c['estado'] === 'Operativa');
         }));
     }
-    
-    // Log de diagnóstico para Railway
+    // Log para Railway
     error_log("DEBUG Canchas: BD=" . count($raw_canchas) . " | JS=" . count($canchas_js));
 } catch (Exception $e) {
     error_log("ERROR Carga Canchas: " . $e->getMessage());
@@ -1162,9 +1159,6 @@ td.cell-reserva {
     background: #FFE69C;
 }
 </style>
-<script>
-    const USUARIO_ACTIVO = <?= json_encode($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin') ?>;
-</script>
 </head>
 <body>
 
@@ -1365,38 +1359,22 @@ td.cell-reserva {
 
 <script>
 // === VARIABLES GLOBALES ===
-const USUARIO_ACTIVO = "<?= addslashes($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin') ?>";
+const USUARIO_ACTIVO = <?= json_encode($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin', JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const iconosDeporte = { 1: '🎾', 2: '🎾', 3: '🏐', 10: '⚽', 11: '⚽', 'default': '🏟️' };
 let fechaPlanillaActual = new Date().toISOString().split('T')[0];
 let estadoSeleccionadoPlanilla = "";
 let reservaActualSeleccionada = null;
 let tipoListaActual = '';
 
-// Forzar carga de datos de canchas desde PHP para evitar problemas de sincronización con la API
-// 🔍 DEBUG: Ver qué devuelve la BD
-$stmt = $pdo->prepare("
-    SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado 
-    FROM canchas 
-    WHERE id_recinto = ? 
-");
-$stmt->execute([$id_recinto]);
-$raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Filtrar solo activas para el dashboard, pero LOGUEAR todas para debug
-$canchas_js = array_filter($raw, fn($c) => $c['activa'] == 1 && $c['estado'] === 'Operativa');
-error_log("🔍 DEBUG PHP: Canchas totales BD: " . count($raw) . " | Canchas activas JS: " . count($canchas_js));
-error_log("🔍 DEBUG PHP: ¿Cancha 26 en JS? " . (json_encode(array_search(26, array_column($canchas_js, 'id_cancha'))) ?: 'NO'));
-
-// Inyección segura al JS
+// ✅ Inyección segura de canchasData (la variable $canchas_js ya fue procesada en PHP)
 const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-console.log("🔍 DEBUG JS: canchasData.length =", canchasData.length);
 
+// 🔍 Logs de debug (solo JS)
 console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
-// 🔍 LOG JS: Ver si el array se inyecta correctamente
 console.log("🔍 DEBUG JS canchasData:", {
     length: canchasData?.length || 0,
     primera: canchasData?.[0] || "vacio",
-    id_25: canchasData?.find(c => String(c.id_cancha) === '25') || "no encontrada"
+    id_26: canchasData?.find(c => String(c.id_cancha) === '26') || "no encontrada"
 });
 
 // === INICIALIZACIÓN ===
