@@ -1346,6 +1346,10 @@ let estadoSeleccionadoPlanilla = "";
 let reservaActualSeleccionada = null;
 let tipoListaActual = '';
 
+// Forzar carga de datos de canchas desde PHP
+const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
+
 // === INICIALIZACIÓN ===
 document.addEventListener('DOMContentLoaded', () => {
     // Fecha
