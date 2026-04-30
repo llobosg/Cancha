@@ -25,25 +25,22 @@ try {
     error_log("🎯 [API GESTIÓN RESERVAS] Acción: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
 
     switch ($action) {
-        case 'procesar_pago':
-            echo json_encode(procesarPagoReserva($pdo, $_POST));
-            break;
-            
-        case 'procesar_pago_parcial':
-            echo json_encode(procesarPagoParcial($pdo, $_POST));
-            break;
-            
-        case 'crear_manual':
-            echo json_encode(crearReservaManualConLog($pdo, $_POST));
-            break;
-
-        case 'crear_manual':
-            echo json_encode(crearReservaManualConSocioNuevo($pdo, $_POST));
-            break;
-            
-        default:
-            throw new Exception('Acción no válida: ' . $action);
-    }
+    case 'procesar_pago':
+        echo json_encode(procesarPagoReserva($pdo, $_POST));
+        break;
+        
+    case 'procesar_pago_parcial':
+        echo json_encode(procesarPagoParcial($pdo, $_POST));
+        break;
+        
+    // ✅ UN SOLO CASE para crear reserva manual (maneja socio existente o nuevo)
+    case 'crear_manual':
+        echo json_encode(crearReservaManualUnificada($pdo, $_POST));
+        break;
+        
+    default:
+        throw new Exception('Acción no válida: ' . $action);
+}
     
 } catch (Exception $e) {
     http_response_code($e->getCode() ?: 400);
@@ -199,17 +196,17 @@ function procesarPagoParcial($pdo, $data) {
         'monto_recaudado' => $nuevo_monto_recaudado
     ];
 }
-// === FUNCIÓN NUEVA: Crear reserva + registrar log (mínimo código) ===
-function crearReservaManualConLog($pdo, $data) {
+// === FUNCIÓN UNIFICADA: Crear reserva manual (socio existente o nuevo) ===
+function crearReservaManualUnificada($pdo, $data) {
     $id_cancha = (int)($data['id_cancha'] ?? 0);
-    $id_socio = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
     $fecha = $data['fecha'] ?? '';
     $hora_inicio = $data['hora_inicio'] ?? '';
     $hora_fin = $data['hora_fin'] ?? '';
     $monto_total = (float)($data['monto_total'] ?? 0);
     
+    // Validaciones básicas
     if (!$id_cancha || !$fecha || !$hora_inicio) {
-        throw new Exception('Datos incompletos');
+        throw new Exception('Datos incompletos para crear reserva');
     }
     
     // Verificar cancha pertenece al recinto
@@ -226,80 +223,86 @@ function crearReservaManualConLog($pdo, $data) {
         throw new Exception('Horario ocupado');
     }
     
-    // Insertar reserva
-    $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
-    $stmt->execute([$id_cancha, $id_socio, $fecha, $hora_inicio, $hora_fin, $monto_total]);
-    
-    $id_reserva = $pdo->lastInsertId();
-    
-    // ✅ Registrar log (solo 1 query extra)
-    if ($id_reserva) {
-        $usuario = $_SESSION['recinto_usuario'] ?? $_SESSION['recinto_rol'] ?? 'Sistema';
-        $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual creada', NOW())");
-        $stmt_log->execute([$id_reserva, $usuario]);
-    }
-    
-    return ['success' => true, 'id_reserva' => $id_reserva];
-}
-function crearReservaManualConSocioNuevo($pdo, $data) {
-    $id_cancha = (int)($data['id_cancha'] ?? 0);
-    $fecha = $data['fecha'] ?? '';
-    $hora_inicio = $data['hora_inicio'] ?? '';
-    $hora_fin = $data['hora_fin'] ?? '';
-    $monto_total = (float)($data['monto_total'] ?? 0);
+    // === 1. DETERMINAR ID_SOCIO Y DATOS DEL CLIENTE ===
     $id_socio = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
+    $nombre_cliente = '';
+    $email_cliente = '';
+    $telefono_cliente = '';
     
-    // 1. Si no viene id_socio, crear nuevo socio
-    if (!$id_socio) {
-        $email = trim($data['emailNuevoSocio'] ?? '');
-        $nombre = trim($data['nombreNuevoSocio'] ?? 'Nuevo Socio');
-        $tel = trim($data['telNuevoSocio'] ?? '');
-        if (!$email) throw new Exception('Email requerido para nuevo socio');
+    if ($id_socio) {
+        // ✅ SOCIO EXISTENTE: Obtener datos de la tabla socios
+        $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
+        $stmt_s->execute([$id_socio]);
+        $socio_data = $stmt_s->fetch(PDO::FETCH_ASSOC);
+        if ($socio_data) {
+            $nombre_cliente = $socio_data['nombre'] ?? '';
+            $email_cliente = $socio_data['email'] ?? '';
+            $telefono_cliente = $socio_data['celular'] ?? '';
+        }
+    } else {
+        // ✅ NUEVO SOCIO: Crear registro y usar datos del formulario
+        $email_nuevo = trim($data['emailNuevoSocio'] ?? '');
+        $nombre_nuevo = trim($data['nombreNuevoSocio'] ?? 'Nuevo Socio');
+        $tel_nuevo = trim($data['telNuevoSocio'] ?? '');
         
-        // Verificar si ya existe
+        if (!$email_nuevo) throw new Exception('Email requerido para nuevo socio');
+        
+        // Verificar si ya existe por email
         $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-        $stmt->execute([$email]);
+        $stmt->execute([$email_nuevo]);
         $existente = $stmt->fetch();
         
         if ($existente) {
             $id_socio = $existente['id_socio'];
+            $nombre_cliente = $nombre_nuevo;
+            $email_cliente = $email_nuevo;
+            $telefono_cliente = $tel_nuevo;
         } else {
-            $alias = strtolower(explode('@', $email)[0]);
+            // Crear nuevo socio
+            $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
             $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
-            $stmt->execute([$email, $nombre, $alias, $tel]);
+            $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
             $id_socio = $pdo->lastInsertId();
+            
+            $nombre_cliente = $nombre_nuevo;
+            $email_cliente = $email_nuevo;
+            $telefono_cliente = $tel_nuevo;
         }
     }
     
-    // 2. Crear reserva
-    $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
-    $stmt->execute([$id_cancha, $id_socio, $fecha, $hora_inicio, $hora_fin, $monto_total]);
+    // === 2. INSERTAR RESERVA CON DATOS DE CLIENTE ===
+    $stmt = $pdo->prepare("
+        INSERT INTO reservas (
+            id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente,
+            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+    ");
+    $stmt->execute([
+        $id_cancha, $id_socio, $nombre_cliente, $email_cliente, $telefono_cliente,
+        $fecha, $hora_inicio, $hora_fin, $monto_total
+    ]);
     $id_reserva = $pdo->lastInsertId();
     
-    // 3. Log de creación (bitácora)
+    // === 3. REGISTRAR LOG DE BITÁCORA ===
     $usuario = $_SESSION['recinto_usuario'] ?? $_SESSION['recinto_rol'] ?? 'Sistema';
-    $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual + nuevo socio', NOW())")
-        ->execute([$id_reserva, $usuario]);
+    $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual', NOW())");
+    $stmt_log->execute([$id_reserva, $usuario]);
     
-    // 4. Emails (Reserva + Bienvenida)
-    require_once __DIR__ . '/../includes/reserva_mailer.php';
-    $stmt_socio = $pdo->prepare("SELECT email, nombre FROM socios WHERE id_socio = ?");
-    $stmt_socio->execute([$id_socio]);
-    $socio = $stmt_socio->fetch();
-    
-    if ($socio && $socio['email']) {
-        $link_perfil = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_perfil.php?id=" . $id_socio; // Ajusta ruta si es distinta
+    // === 4. EMAILS (solo si es socio NUEVO) ===
+    if (empty($data['id_socio']) && $email_cliente) {
+        require_once __DIR__ . '/../includes/reserva_mailer.php';
+        $link_perfil = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_perfil.php?id=" . $id_socio;
         
-        // Email 1: Reserva confirmada
+        // Email 1: Confirmación de reserva
         $mail1 = new BrevoMailer();
-        $mail1->setTo($socio['email'], $socio['nombre'])
+        $mail1->setTo($email_cliente, $nombre_cliente)
               ->setSubject("✅ Reserva confirmada - CanchaSport")
-              ->setHtmlBody("<p>Reserva para el <strong>$fecha $hora_inicio-$hora_fin</strong> confirmada.</p>")
+              ->setHtmlBody("<p>Hola <strong>$nombre_cliente</strong>,<br>Tu reserva para el <strong>$fecha $hora_inicio-$hora_fin</strong> ha sido confirmada.</p>")
               ->send();
-              
+        
         // Email 2: Bienvenida + completar perfil
         $mail2 = new BrevoMailer();
-        $mail2->setTo($socio['email'], $socio['nombre'])
+        $mail2->setTo($email_cliente, $nombre_cliente)
               ->setSubject("🎉 ¡Bienvenido a CanchaSport! Completa tu perfil")
               ->setHtmlBody("<p>Gracias por registrarte. <a href='$link_perfil'>Haz clic aquí para completar tu perfil</a> y disfrutar de todos los beneficios.</p>")
               ->send();
