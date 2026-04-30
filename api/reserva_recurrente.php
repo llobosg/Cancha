@@ -74,15 +74,41 @@ try {
     
     foreach ($fechas_disponibles as $item) {
         $fecha = $item['fecha'];
+        
+        // === 1. MANEJAR CREACIÓN DE SOCIO NUEVO (ANTES DEL INSERT) ===
+        $id_socio_final = $id_socio; // Copia del valor original
+        
+        if (!$id_socio_final && !empty($input['emailNuevoSocio'])) {
+            $email_nuevo = trim($input['emailNuevoSocio']);
+            $nombre_nuevo = trim($input['nombreNuevoSocio'] ?? 'Nuevo Socio');
+            $tel_nuevo = trim($input['telNuevoSocio'] ?? '');
+            
+            if ($email_nuevo) {
+                // Verificar si ya existe
+                $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+                $stmt->execute([$email_nuevo]);
+                $existente = $stmt->fetch();
+                
+                if ($existente) {
+                    $id_socio_final = $existente['id_socio'];
+                } else {
+                    $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
+                    $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
+                    $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
+                    $id_socio_final = $pdo->lastInsertId();
+                }
+            }
+        }
+        
         try {
-            // Doble-check de disponibilidad (concurrencia)
+            // Doble-check de disponibilidad
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
             $stmt->execute([$id_cancha, $fecha, $hora_inicio]);
             if ($stmt->fetchColumn() > 0) { $skipped++; continue; }
             
-            // Insertar reserva
+            // === 2. INSERTAR RESERVA CON $id_socio_final YA DEFINIDO ===
             $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
-            $stmt->execute([$id_cancha, $id_socio, $fecha, $hora_inicio, $hora_fin, $monto_total, $jugadores]);
+            $stmt->execute([$id_cancha, $id_socio_final, $fecha, $hora_inicio, $hora_fin, $monto_total, $jugadores]);
             
             $reservas_creadas[] = [
                 'fecha' => $fecha,
@@ -96,35 +122,6 @@ try {
             $skipped++;
             error_log("[Recurrente] Error en $fecha: " . $e->getMessage());
         }
-        // === DENTRO DEL FOREACH DE FECHAS, ANTES DEL INSERT ===
-
-        // Manejar creación de socio nuevo si viene en el payload
-        $id_socio = $input['id_socio'] ?? null;
-
-        if (!$id_socio && !empty($input['emailNuevoSocio'])) {
-            // Crear nuevo socio (lógica similar a gestion_reservas.php)
-            $email_nuevo = trim($input['emailNuevoSocio']);
-            $nombre_nuevo = trim($input['nombreNuevoSocio'] ?? 'Nuevo Socio');
-            $tel_nuevo = trim($input['telNuevoSocio'] ?? '');
-            
-            // Verificar si ya existe
-            $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-            $stmt->execute([$email_nuevo]);
-            $existente = $stmt->fetch();
-            
-            if ($existente) {
-                $id_socio = $existente['id_socio'];
-            } else {
-                $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
-                $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
-                $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
-                $id_socio = $pdo->lastInsertId();
-            }
-        }
-
-        // Ahora usar $id_socio en el INSERT de la reserva
-        $stmt = $pdo->prepare("INSERT INTO reservas (...) VALUES (...)");
-        $stmt->execute([... , $id_socio, ...]);
     }
     $pdo->commit();
     

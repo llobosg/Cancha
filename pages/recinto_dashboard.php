@@ -2684,6 +2684,13 @@ async function guardarReservaAdmin(e) {
     const dur    = getVal('admin_duracion_bloque') || '60';
     const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
 
+    console.log('🔍 DEBUG SOCIO:', {
+        admin_socio_id_raw: document.getElementById('admin_socio_id')?.value,
+        admin_socio_id_trim: getVal('admin_socio_id'),
+        checkNuevoSocio: document.getElementById('checkNuevoSocio')?.checked,
+        searchAdmin_value: document.getElementById('searchAdmin')?.value
+    });
+
     // 2. === VALIDACIÓN DE SOCIO (COMÚN PARA ÚNICA Y RECURRENTE) ===
     let id_socio = getVal('admin_socio_id');
     let datosNuevoSocio = null;
