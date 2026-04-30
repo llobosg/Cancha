@@ -2490,7 +2490,7 @@ function toggleRecurrentFields(mostrar) {
 }
 
 // === BUSCADOR INTELIGENTE (TU CÓDIGO INTEGRADO) ===
-// === BUSCADOR INTELIGENTE DE SOCIO (VERSIÓN COMPLETA - SIN PLACEHOLDERS) ===
+// === BUSCADOR INTELIGENTE (VERSIÓN ROBUSTA) ===
 let debounceTimer;
 
 function debounceBuscar(val) {
@@ -2499,8 +2499,12 @@ function debounceBuscar(val) {
 }
 
 async function buscarSocioAdmin(query) {
+    // 1. Obtener referencias seguras
     const container = document.getElementById('searchResultsAdmin');
-    if (!container) return;
+    const nuevoSocioFields = document.getElementById('nuevoSocioFields');
+    const avisoNuevoSocio = document.getElementById('avisoNuevoSocio');
+
+    if (!container) return; // Si no existe el contenedor, salimos
     
     // Si la búsqueda está vacía, ocultar resultados
     if (query.length < 2) { 
@@ -2512,84 +2516,58 @@ async function buscarSocioAdmin(query) {
         const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
         const text = await res.text();
         
-        // Parsear JSON con manejo de errores
         let data;
-        try { 
-            data = JSON.parse(text); 
-        } catch (e) {
-            console.error('❌ API search_socios devolvió JSON inválido:', text.substring(0, 150));
-            container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda.</div>';
+        try { data = JSON.parse(text); } catch (e) {
+            console.error('❌ API search_socios inválida:', text.substring(0, 100));
+            container.innerHTML = '<div style="padding:8px; color:red;">Error en búsqueda.</div>';
             container.style.display = 'block';
             return;
         }
 
-        // Limpiar contenedor
         container.innerHTML = '';
-        
-        // === MANEJO DE RESULTADOS ===
+
         if (!Array.isArray(data) || data.length === 0) {
-            // Caso: Sin coincidencias → mostrar mensaje + habilitar panel nuevo socio
-            container.innerHTML = '<div style="padding:8px; color:#856404; font-size:0.85rem;">⚠️ Sin coincidencias.</div>';
+            // CASO: Sin coincidencias
+            container.innerHTML = '<div style="padding:8px; color:#856404;">Sin coincidencias.</div>';
             
-            // Mostrar panel para registrar nuevo socio
-            document.getElementById('nuevoSocioFields').style.display = 'block';
-            document.getElementById('avisoNuevoSocio').style.opacity = '1';
+            // Mostrar campos para nuevo socio (si existen)
+            if (nuevoSocioFields) nuevoSocioFields.style.display = 'block';
+            if (avisoNuevoSocio) avisoNuevoSocio.style.opacity = '1';
             
-            // Limpiar campos de nuevo socio por si había datos previos
-            ['nombreNuevoSocio','emailNuevoSocio','telNuevoSocio'].forEach(id => {
-                const el = document.getElementById(id); 
-                if(el) el.value = '';
-            });
+            // Limpiar inputs de nuevo socio
+            const ids = ['nombreNuevoSocio', 'emailNuevoSocio', 'telNuevoSocio'];
+            ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+            
         } else {
-            // Caso: Hay coincidencias → renderizar lista clickeable
-            container.innerHTML = data.map(s => {
-                // Escapar comillas para evitar romper el HTML
-                const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
-                const safeEmail = (s.email || '').replace(/'/g, "\\'");
-                const safeCel = (s.celular || '').replace(/'/g, "\\'");
-                
-                return `
-                    <div onclick="seleccionarSocioAdmin(${s.id_socio}, '${safeNombre}', '${safeEmail}', '${safeCel}')"
-                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333; background:#fff;">
-                        <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
-                    </div>
-                `;
-            }).join('');
+            // CASO: Hay resultados
+            container.innerHTML = data.map(s => 
+                `<div onclick="seleccionarSocioAdmin(${s.id_socio}, '${s.nombre}', '${s.email}', '${s.celular}')"
+                     style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem;">
+                    <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
+                </div>`
+            ).join('');
             
-            // Ocultar panel de nuevo socio (porque sí encontró resultados)
-            document.getElementById('nuevoSocioFields').style.display = 'none';
-            document.getElementById('avisoNuevoSocio').style.opacity = '1';
-            
-            // Limpiar campos de nuevo socio por seguridad
-            ['nombreNuevoSocio','emailNuevoSocio','telNuevoSocio'].forEach(id => {
-                const el = document.getElementById(id); 
-                if(el) el.value = '';
-            });
+            // Ocultar campos de nuevo socio
+            if (nuevoSocioFields) nuevoSocioFields.style.display = 'none';
+            if (avisoNuevoSocio) avisoNuevoSocio.style.opacity = '1'; // Reset opacity
         }
         
-        // Mostrar el contenedor de resultados
         container.style.display = 'block';
         
     } catch (err) {
         console.error('Error en buscarSocioAdmin:', err);
-        // No romper la UI, solo loguear
     }
 }
 
-// === FUNCIÓN PARA SELECCIONAR SOCIO DE LA LISTA ===
+// === FUNCIÓN PARA SELECCIONAR SOCIO ===
 function seleccionarSocioAdmin(id, nombre, email, celular) {
-    // Llenar campos ocultos con los datos del socio seleccionado
     document.getElementById('admin_socio_id').value = id;
-    document.getElementById('admin_nombre').value = nombre;
-    document.getElementById('admin_email').value = email;
-    document.getElementById('admin_celular').value = celular;
-    
-    // Ocultar resultados y limpiar búsqueda
     document.getElementById('searchResultsAdmin').style.display = 'none';
     document.getElementById('searchAdmin').value = nombre;
     
-    // Asegurar que el panel de nuevo socio esté oculto
-    document.getElementById('nuevoSocioFields').style.display = 'none';
+    // Asegurar ocultar panel nuevo socio
+    const elNuevo = document.getElementById('nuevoSocioFields');
+    if (elNuevo) elNuevo.style.display = 'none';
 }
 
 
@@ -3955,8 +3933,7 @@ function toggleNuevoSocioPanel(mostrar) {
 
         <!-- Formulario -->
         <form id="formReservaManual" onsubmit="guardarReservaAdmin(event)">
-        
-                <!-- Campos ocultos (CRÍTICOS) -->
+                <!-- === CAMPOS OCULTOS (ÚNICOS Y AGRUPADOS) === -->
                 <input type="hidden" id="admin_usuario_creacion" name="usuario_creacion" value="">
                 <input type="hidden" id="admin_cancha_id">
                 <input type="hidden" id="admin_fecha">
@@ -3966,6 +3943,11 @@ function toggleNuevoSocioPanel(mostrar) {
                 <input type="hidden" id="admin_monto_total" value="0">
                 <input type="hidden" id="admin_monto_base" value="0">
                 <input type="hidden" id="admin_duracion_bloque" value="60">
+                
+                <!-- ✅ RECUERDOS (para que seleccionarSocioAdmin no falle) -->
+                <input type="hidden" id="admin_nombre">
+                <input type="hidden" id="admin_email">
+                <input type="hidden" id="admin_celular">
 
                 <!-- ✅ Resumen visual con fecha, hora y cancha -->
                 <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
