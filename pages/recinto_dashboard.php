@@ -3949,7 +3949,7 @@ function toggleNuevoSocioPanel(mostrar) {
 
         <!-- Formulario -->
         <form id="formReservaManual" onsubmit="guardarReservaAdmin(event)">
-                <!-- === CAMPOS OCULTOS (ÚNICOS Y AGRUPADOS) === -->
+                <!-- Campos ocultos (CRÍTICOS - ÚNICOS) -->
                 <input type="hidden" id="admin_usuario_creacion" name="usuario_creacion" value="">
                 <input type="hidden" id="admin_cancha_id">
                 <input type="hidden" id="admin_fecha">
@@ -3994,7 +3994,7 @@ function toggleNuevoSocioPanel(mostrar) {
                         oninput="debounceBuscar(this.value)"
                         style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
                     <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
-                    <!-- ✅ NO agregar inputs hidden aquí: ya existen en la sección de campos ocultos -->
+                    <!-- ✅ NO agregar inputs hidden aquí: ya existen en la sección de campos ocultos al inicio del form -->
                 </div>
                 <!-- ✅ datos para nuevo socio -->
                 <!-- === CHECKBOX PARA NUEVO SOCIO (colapsable) === -->
