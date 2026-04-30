@@ -626,7 +626,6 @@ td.estado-disponible { background: rgba(255,255,255,0.1) !important; border: 1px
 td.estado-pendiente { background: #FF5252 !important; color: white !important; border: none !important; }
 td.estado-pagado { background: #4CAF50 !important; color: white !important; border: none !important; }
 td.estado-parcial { background: #FFEB3B !important; color: #333 !important; border: none !important; }
-td.cell-reserva { cursor: grab !important; vertical-align: middle !important; text-align: center !important; }
 
 /* Hover */
 .planilla-table td:hover {
@@ -1115,6 +1114,31 @@ td.cell-reserva { cursor: grab !important; vertical-align: middle !important; te
 .modal-content select {
     color: #2D3748 !important;
 }
+/* === CELDAS DE RESERVA - ANCHO CONTROLADO === */
+td.cell-reserva {
+    max-width: 140px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Badge de extras */
+.badge-extras {
+    display: inline-block;
+    background: #FFF3CD;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-top: 2px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.badge-extras:hover {
+    background: #FFE69C;
+}
 </style>
 </head>
 <body>
@@ -1471,28 +1495,47 @@ function renderizarPlanilla(data, filtroEstado) {
                     if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
                     const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
-                    
-                // 1. Preparar notas (fuera del template literal)
-                let notasHtml = '';
-                if (res.notas && res.notas.trim() !== '') {
-                    // Escapar comillas para evitar romper el atributo title
-                    const notasEscapadas = res.notas.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                    notasHtml = `<div style="font-size:0.7rem; color:#666; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${notasEscapadas}">📝 ${res.notas}</div>`;
+
+                // 1. Parsear extras desde notas (formato [EXTRAS:5000])
+                let extrasMonto = 0;
+                if (res.notas && typeof res.notas === 'string') {
+                    const match = res.notas.match(/\[EXTRAS:(\d+(?:\.\d+)?)\]/);
+                    if (match) extrasMonto = parseFloat(match[1]);
                 }
 
-                // 2. Ahora sí, construir el HTML con ${notasHtml} interpolado
+                // 2. Badge compacto y clickeable (BONUS)
+                let extrasHtml = '';
+                if (extrasMonto > 0) {
+                    extrasHtml = `
+                        <div class="badge-extras" 
+                            style="cursor:pointer; display:inline-block; background:#FFF3CD; color:#856404; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:600; margin-top:2px; white-space:nowrap;"
+                            title="Click para ver detalle de extras"
+                            onclick="event.stopPropagation(); verDetalleExtras(${res.id_reserva}, ${extrasMonto})">
+                            🎒 Extras $${Math.round(extrasMonto).toLocaleString('es-CL')}
+                        </div>`;
+                }
+
+                // 3. Notas visibles (solo si NO hay extras, para no duplicar)
+                let notasHtml = '';
+                if (res.notas && res.notas.trim() !== '' && extrasMonto === 0) {
+                    const notasCortas = res.notas.length > 15 ? res.notas.substring(0, 15) + '...' : res.notas;
+                    const notasEscapadas = notasCortas.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    notasHtml = `<div style="font-size:0.65rem; color:#666; margin-top:2px;" title="${res.notas.replace(/"/g, '&quot;')}">📝 ${notasCortas}</div>`;
+                }
+
+                // 4. Construir celda (con max-width para no desplazar grilla)
                 html += `<td class="${bgClass} cell-reserva" 
                             rowspan="${rowspan}" 
                             draggable="true" 
                             ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
                             ondragend="dragEnd(event)"
-                            style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab;" 
+                            style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; max-width:140px; overflow:hidden;" 
                             onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                            <div style="font-size:0.7rem; font-weight:bold; line-height:1.2;">${nombre}</div>
+                            <div style="font-size:0.7rem; font-weight:bold; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nombre}</div>
                             <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                            ${extrasHtml}
                             ${notasHtml}
                         </td>`;
-                    
                     celdasPintadas++;
                     
                 } else {
@@ -3712,6 +3755,35 @@ async function registrarLogReserva(idReserva, accion, descripcion, metadata = nu
         console.error('Error registrando log:', err);
         // No bloquear la acción principal si falla el log
     }
+}
+// === FUNCION PARA VER DETALLE DE EXTRAS (TOAST MODAL) ===
+function verDetalleExtras(idReserva, montoExtras) {
+    // Toast personalizado con más info
+    const toast = document.createElement('div');
+    toast.innerHTML = `
+        <div style="text-align:left;">
+            <strong>🎒 Extras - Reserva #${idReserva}</strong><br>
+            <span style="font-size:0.9rem;">Monto: $${Math.round(montoExtras).toLocaleString('es-CL')}</span><br>
+            <small style="color:#888;">Detalle completo en ficha de reserva</small>
+        </div>
+    `;
+    toast.style.cssText = `
+        position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+        background:white; color:#333; padding:0.8rem 1.2rem; border-radius:12px;
+        box-shadow:0 8px 25px rgba(0,0,0,0.2); z-index:4000; max-width:280px;
+        border-left:4px solid #FFC107; font-size:0.9rem;
+    `;
+    document.body.appendChild(toast);
+    
+    // Auto-ocultar
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+    
+    // Opcional: abrir modal de detalle si prefieres
+    // abrirDetalleDesdePlanilla(idReserva);
 }
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->

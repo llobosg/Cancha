@@ -79,17 +79,37 @@ function procesarPagoReserva($pdo, $data) {
         throw new Exception('Esta reserva ya está pagada');
     }
     
-    // Actualizar estado de pago (PAGO COMPLETO)
+    // === AGREGAR EXTRAS A NOTAS (formato estructurado) ===
+    $extras = floatval($data['extras'] ?? 0);
+    if ($extras > 0) {
+        // Obtener notas actuales
+        $stmt_notas = $pdo->prepare("SELECT notas FROM reservas WHERE id_reserva = ?");
+        $stmt_notas->execute([$id_reserva]);
+        $notas_actuales = $stmt_notas->fetchColumn() ?? '';
+        
+        // Verificar si ya hay extras registrados (evitar duplicados)
+        if (!preg_match('/\[EXTRAS:\d+(\.\d+)?\]/', $notas_actuales)) {
+            $nota_extras = "\n[EXTRAS:$extras]";
+            $notas_finales = trim($notas_actuales . $nota_extras);
+        } else {
+            $notas_finales = $notas_actuales; // Ya tiene extras, no duplicar
+        }
+    } else {
+        $notas_finales = $data['notas'] ?? '';
+    }
+
+    // Luego, en el UPDATE, usa $notas_finales en lugar de $notas_actuales
     $stmt_update = $pdo->prepare("
         UPDATE reservas 
-        SET estado_pago = 'pagado',
+        SET estado_pago = ?,
             metodo_pago = ?,
             transaccion_id = ?,
-            monto_recaudacion = ?, -- Actualizamos el monto recaudado
+            monto_recaudacion = ?,
+            notas = ?,  -- ← Aquí van las notas con extras si aplica
             updated_at = NOW()
         WHERE id_reserva = ?
     ");
-    $stmt_update->execute([$metodo_pago, $transaccion_id ?: null, $monto_total, $id_reserva]);
+    $stmt_update->execute([$nuevo_estado_pago, $metodo_pago, $transaccion_id ?: null, $nuevo_monto_recaudado, $notas_finales, $id_reserva]);
     
     // NOTA: Función enviarEmailConfirmacionPago eliminada porque no existe.
     // Si necesitas enviar emails, debes crear esa función o usar mail() directamente.
