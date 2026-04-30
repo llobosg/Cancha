@@ -1,6 +1,8 @@
 <?php
 // includes/config.php
 // Configuración centralizada - Compatible con Railway (MYSQL*) + Local
+// === CONFIGURACIÓN DE ZONA HORARIA (Chile) ===
+date_default_timezone_set('America/Santiago');
 
 // 1. Manejo de sesión CENTRALIZADO (UNA SOLA VEZ)
 if (session_status() === PHP_SESSION_NONE) {

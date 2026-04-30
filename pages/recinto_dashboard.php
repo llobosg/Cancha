@@ -3798,6 +3798,14 @@ async function abrirLogReserva(idReserva) {
             tbody.innerHTML = data.logs.map(log => `
                 <tr style="border-bottom:1px solid #F1F5F9;">
                     <td style="padding:10px; color:#4A5568; font-weight:500;">${log.fecha}</td>
+                    ${new Date(log.created_at).toLocaleString('es-CL', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Santiago'
+                    })}
                     <td style="padding:10px; color:#2D3748;">${log.usuario}</td>
                     <td style="padding:10px;">
                         <span style="padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:500; background:${getAccionColor(log.accion)}; color:white;">
