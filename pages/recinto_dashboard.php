@@ -1140,6 +1140,9 @@ td.cell-reserva {
     background: #FFE69C;
 }
 </style>
+<script>
+    const USUARIO_ACTIVO = <?= json_encode($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin') ?>;
+</script>
 </head>
 <body>
 
@@ -1348,7 +1351,16 @@ let tipoListaActual = '';
 
 // Forzar carga de datos de canchas desde PHP
 const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
 console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
+// 🔍 LOG PHP: Ver qué IDs y campos llegan al array JS
+error_log("🔍 DEBUG canchas_js PHP: " . json_encode($canchas_js));
+// 🔍 LOG JS: Ver si el array se inyecta correctamente
+console.log("🔍 DEBUG JS canchasData:", {
+    length: canchasData?.length || 0,
+    primera: canchasData?.[0] || "vacio",
+    id_25: canchasData?.find(c => String(c.id_cancha) === '25') || "no encontrada"
+});
 
 // === INICIALIZACIÓN ===
 document.addEventListener('DOMContentLoaded', () => {
@@ -1761,6 +1773,9 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             else if (detalle.estado_pago === 'parcial') estadoColor = '#f4e346';
 
             // Construcción del HTML principal
+            const userCreacion = detalle.usuario_creacion || USUARIO_ACTIVO || 'Admin';
+            const tituloModal = document.querySelector('#modalDetalleReserva h3');
+
             let html = `
                 <!-- === MENÚ DE 3 PUNTOS (SOLO ADMIN) === -->
                 <?php if (($_SESSION['recinto_rol'] ?? '') === 'admin'): ?>
@@ -1772,6 +1787,11 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                                     display:grid; place-items:center; color:#666; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
                             ⋮
                         </button>
+                        
+                        <?php if  (tituloModal) {
+                            tituloModal.innerHTML = `📋 Detalle de Reserva <span style="font-weight:400; font-size:0.95rem; color:#666; margin-left:0.5rem;">by ${userCreacion}</span>`;
+                        }
+                        <?php endif; ?>
                         <div id="logMenu_<?= $reserva['id_reserva'] ?>" 
                             style="display:none; position:absolute; top:100%; right:0; 
                                     background:white; border-radius:10px; min-width:180px; 
@@ -2289,103 +2309,71 @@ async function handleRecurrentReservation() {
     }
 }
 
-// === ABRIR MODAL RESERVA ADMIN (VERSIÓN BLINDADA - SIN CRASHES) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
-    // Helper seguro: devuelve el elemento o null con aviso en consola
-    const getEl = (id) => {
-        const el = document.getElementById(id);
-        if (!el) console.warn(`⚠️ Elemento #${id} no encontrado en el DOM`);
-        return el;
-    };
-    // 1. Buscar cancha y actualizar nombre/precio
-    // === DENTRO DE abrirReservaAdmin() ===
+    console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
+
+    // 1. ASIGNAR OCULTOS INMEDIATAMENTE (evita error "Faltan campos")
+    const setC = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; else console.warn(`⚠️ FALTA INPUT: #${id}`); };
+    
+    setC('admin_cancha_id', canchaId);
+    setC('admin_fecha', fecha);
+    setC('admin_hora_inicio', hora);
+    setC('admin_socio_id', ''); // Resetear socio al abrir
+    setC('admin_monto_total', '0');
+    setC('admin_monto_base', '0');
+
+    // 2. Calcular hora fin (60 min base)
+    const [h, m] = hora.split(':').map(Number);
+    const fin = new Date(); fin.setHours(h, m + 60, 0, 0);
+    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+    setC('admin_hora_fin', horaFin);
+    setC('admin_duracion_bloque', '60');
+
+    // Actualizar displays visuales
+    const fParts = fecha.split('-');
+    const elFD = document.getElementById('modalFechaDisplay');
+    if(elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
+    const elHD = document.getElementById('modalHoraDisplay');
+    if(elHD) elHD.textContent = `${hora} - ${horaFin}`;
+
+    // 3. Buscar precio y nombre en canchasData
     const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
         ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
         : null;
 
     const elNombre = document.getElementById('modalCanchaDisplay');
     const elMonto = document.getElementById('admin_monto_total');
-    const elDisplayMonto = document.getElementById('modalMontoDisplay');
+    const elBase = document.getElementById('admin_monto_base');
+    const elDMonto = document.getElementById('modalMontoDisplay');
 
     if (cancha) {
-        // Prioriza nombre_cancha, luego nro_cancha, fallback seguro
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
+        if(elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
         const base = parseFloat(cancha.valor_arriendo) || 0;
-        const es90 = document.querySelector('input[name="duracion"][value="90"]')?.checked;
-        const total = Math.round(base * (es90 ? 1.5 : 1));
+        if(elBase) elBase.value = base;
         
-        if (elMonto) elMonto.value = total;
-        if (elDisplayMonto) elDisplayMonto.textContent = `$${total.toLocaleString('es-CL')}`;
+        const total = Math.round(base * 1); // 60 min = x1
+        if(elMonto) elMonto.value = total;
+        if(elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
+        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Total: $${total}`);
     } else {
-        console.warn(`⚠️ Cancha ${canchaId} no encontrada en canchasData`);
-        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
-        if (elMonto) elMonto.value = 0;
-        if (elDisplayMonto) elDisplayMonto.textContent = `$0`;
+        console.warn(`⚠️ Cancha ID ${canchaId} NO está en canchasData. Verifica query PHP.`);
+        if(elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
-    const elFecha = getEl('admin_fecha');
-    if (elFecha) elFecha.value = fecha;
-
-    const elHora = getEl('admin_hora_inicio');
-    if (elHora) elHora.value = hora;
-
-    // 2. Calcular hora fin (60 min base)
-    const [h, m] = hora.split(':').map(Number);
-    const fin = new Date();
-    fin.setHours(h, m + 60, 0, 0);
-    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
-
-    const elHoraFin = getEl('admin_hora_fin');
-    if (elHoraFin) elHoraFin.value = horaFin;
-
-    // 3. Actualizar displays visuales
-    const elFechaDisp = document.getElementById('modalFechaDisplay');
-    if (elFechaDisp) {
-        const p = fecha.split('-');
-        elFechaDisp.textContent = `${p[2]}/${p[1]}`;
-    }
-
-    const elHoraDisp = document.getElementById('modalHoraDisplay');
-    if (elHoraDisp) elHoraDisp.textContent = `${hora} - ${horaFin}`;
-
-    // 4. Cargar precio desde canchasData
-    let montoTotal = 0;
-    if (typeof canchasData !== 'undefined' && Array.isArray(canchasData)) {
-        const cancha = canchasData.find(c => String(c.id_cancha) === String(canchaId));
-        const elCanchaDisp = document.getElementById('modalCanchaDisplay');
-        
-        if (cancha) {
-            const nombre = cancha.nombre_cancha || cancha.nro_cancha || `Cancha ${canchaId}`;
-            if (elCanchaDisp) elCanchaDisp.textContent = `🏟️ ${nombre}`;
-
-            const valor = parseFloat(cancha.valor_arriendo) || 0;
-            const es90 = document.querySelector('input[name="duracion"][value="90"]')?.checked;
-            montoTotal = Math.round(valor * (es90 ? 1.5 : 1));
-        } else {
-            console.warn(`⚠️ Cancha ID ${canchaId} no encontrada en canchasData`);
-            if (elCanchaDisp) elCanchaDisp.textContent = `🏟️ Cancha #${canchaId}`;
-        }
-    }
-
-    // 5. Actualizar monto en hidden + visual
-    if (elMonto) elMonto.value = montoTotal;
-
-    const elMontoDisp = document.getElementById('modalMontoDisplay');
-    if (elMontoDisp) elMontoDisp.textContent = `$${montoTotal}`;
-
-    // 6. Limpiar búsqueda y socio
+    // 4. Limpiar UI
     const elSearch = document.getElementById('searchAdmin');
-    if (elSearch) elSearch.value = '';
+    if(elSearch) elSearch.value = '';
     document.getElementById('searchResultsAdmin').style.display = 'none';
+    document.getElementById('nuevoSocioFields').style.display = 'none';
 
-    const elSocio = getEl('admin_socio_id');
-    if (elSocio) elSocio.value = '';
+    const elUser = document.getElementById('admin_usuario_creacion');
+    if (elUser) elUser.value = USUARIO_ACTIVO;
 
-    // 7. Mostrar modal
+    // 5. Mostrar modal
     const modal = document.getElementById('modalReservaAdmin');
-    if (modal) {
+    if(modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         setTimeout(() => elSearch?.focus(), 100);
@@ -2606,87 +2594,115 @@ document.addEventListener('DOMContentLoaded', function() {
 // === SUBMIT DEL FORMULARIO (VALIDACIÓN BLINDADA) ===
 async function guardarReservaAdmin(e) {
     e.preventDefault();
-    
-    // 1. Leer valores DIRECTAMENTE del DOM en este momento
-    const ids = {
-        cancha: 'admin_cancha_id',
-        fecha: 'admin_fecha',
-        hora: 'admin_hora_inicio',
-        socio: 'admin_socio_id',
-        monto: 'admin_monto_total',
-        duracion: 'admin_duracion_bloque'
-    };
-    
-    const valores = {};
-    let faltan = [];
-    for (const [key, id] of Object.entries(ids)) {
-        const el = document.getElementById(id);
-        valores[key] = el?.value?.trim() || '';
-        if (!valores[key]) faltan.push(id);
-    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '💾 Guardando...';
 
-    // Validación estricta
-    if (faltan.length > 0) {
-        console.warn('⚠️ Faltan datos de la reserva:', faltan);
-        showToast(`⚠️ Faltan campos: ${faltan.join(', ')}`, 'error');
+    // 🔹 Helper seguro para leer inputs
+    const getVal = (id) => { const el = document.getElementById(id); return el?.value?.trim() || ''; };
+    
+    // 1. Leer valores actuales del DOM
+    const cancha = getVal('admin_cancha_id');
+    const fecha  = getVal('admin_fecha');
+    const hora   = getVal('admin_hora_inicio');
+    const horaF  = getVal('admin_hora_fin');
+    const socio  = getVal('admin_socio_id');
+    const monto  = parseFloat(getVal('admin_monto_total')) || 0;
+    const dur    = getVal('admin_duracion_bloque') || '60';
+    const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
+
+    console.log('🔍 DEBUG GUARDAR ->', { cancha, fecha, hora, socio, monto, dur, user });
+
+    // 2. Validaciones mínimas
+    if (!cancha || !fecha || !hora) {
+        showToast('⚠️ Faltan datos básicos de la reserva', 'error');
+        btn.disabled = false; btn.textContent = originalText;
         return;
     }
 
     const isRecurrent = document.getElementById('isRecurrent')?.checked;
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn?.textContent || 'Guardando...';
-    
-    btn.disabled = true;
-    btn.textContent = isRecurrent ? '🔄 Generando...' : '💾 Guardando...';
 
     try {
         if (isRecurrent) {
-            // ... (tu lógica de recurrente aquí, sin cambios) ...
+            // === FLUJO RECURRENTE ===
+            btn.textContent = '🔄 Generando...';
+            const day  = parseInt(document.getElementById('repeatDay')?.value);
+            const sDate = document.getElementById('startDate')?.value;
+            const eDate = document.getElementById('endDate')?.value;
+
+            if (!day || !sDate || !eDate) {
+                showToast('⚠️ Complete día de repetición y fechas', 'error');
+                btn.disabled = false; btn.textContent = originalText; return;
+            }
+            if (new Date(sDate) > new Date(eDate)) {
+                showToast('⚠️ Fecha inicio debe ser anterior a fecha fin', 'error');
+                btn.disabled = false; btn.textContent = originalText; return;
+            }
+
+            const payload = {
+                action: 'create_recurrent', id_cancha: cancha, hora_inicio: hora, hora_fin: horaF,
+                id_socio: socio, repeat_day: day, start_date: sDate, end_date: eDate,
+                monto_total: monto, duracion_bloque: dur
+            };
+            const res = await fetch('../api/reserva_recurrente.php', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`✅ ${data.created} reservas creadas${data.skipped > 0 ? ` | ⚠️ ${data.skipped} saltadas` : ''}`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(`❌ ${data.message}`, 'error');
+                btn.disabled = false; btn.textContent = originalText;
+            }
         } else {
             // === FLUJO RESERVA ÚNICA ===
             const formData = new FormData(e.target);
             formData.set('action', 'crear_manual');
-            formData.set('id_cancha', valores.cancha);
-            formData.set('fecha', valores.fecha);
-            formData.set('hora_inicio', valores.hora);
-            formData.set('monto_total', valores.monto);
-            formData.set('duracion_bloque', valores.duracion);
+            formData.set('id_cancha', cancha);
+            formData.set('fecha', fecha);
+            formData.set('hora_inicio', hora);
+            formData.set('hora_fin', horaF);
+            formData.set('monto_total', monto);
+            formData.set('duracion_bloque', dur);
+            formData.set('usuario_creacion', user);
 
-            // Si NO hay socio seleccionado, agregar datos nuevo socio
-            if (!valores.socio) {
-                const nNombre = document.getElementById('nombreNuevoSocio')?.value?.trim();
-                const nEmail = document.getElementById('emailNuevoSocio')?.value?.trim();
+            // Si NO hay socio seleccionado, enviar datos de nuevo registro
+            if (!socio) {
+                const nNom = document.getElementById('nombreNuevoSocio')?.value?.trim();
+                const nMail = document.getElementById('emailNuevoSocio')?.value?.trim();
                 const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
 
-                if (!nEmail || !nNombre) {
+                if (!nMail || !nNom) {
                     showToast('⚠️ Ingrese Nombre y Email para registrar nuevo socio', 'error');
-                    btn.disabled = false; btn.textContent = originalText;
-                    return;
+                    btn.disabled = false; btn.textContent = originalText; return;
                 }
-                formData.set('nombreNuevoSocio', nNombre);
-                formData.set('emailNuevoSocio', nEmail);
+                formData.set('nombreNuevoSocio', nNom);
+                formData.set('emailNuevoSocio', nMail);
                 formData.set('telNuevoSocio', nTel);
             }
 
-            const response = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
-            const result = await response.json();
+            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+            const data = await res.json();
 
-            if (result.success) {
-                showToast('✅ Reserva creada correctamente');
-                // Registrar log (si tu función registrarLogReserva existe)
-                if (typeof registrarLogReserva === 'function' && result.id_reserva) {
-                    registrarLogReserva(result.id_reserva, 'creada', `Reserva manual`, null, { nuevo: valores.monto });
+            if (data.success) {
+                // Registrar log de bitácora
+                if (typeof registrarLogReserva === 'function' && data.id_reserva) {
+                    registrarLogReserva(data.id_reserva, 'creada', `Reserva manual creada`, null, { nuevo: monto });
                 }
+                showToast('✅ Reserva creada correctamente');
                 setTimeout(() => location.reload(), 1200);
             } else {
-                showToast(`❌ ${result.message || 'Error desconocido'}`, 'error');
+                showToast(`❌ ${data.message || 'Error al guardar'}`, 'error');
                 btn.disabled = false; btn.textContent = originalText;
             }
         }
-    } catch (error) {
-        console.error('❌ Error guardarReservaAdmin:', error);
+    } catch (err) {
+        console.error('❌ Error en guardarReservaAdmin:', err);
         showToast('❌ Error de conexión', 'error');
-        btn.disabled = false; btn.textContent = originalText;
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
@@ -3779,106 +3795,111 @@ function verDetalleExtras(idReserva, montoExtras) {
         <!-- Formulario -->
         <form id="formReservaManual" onsubmit="guardarReservaAdmin(event)">
         
-        <!-- Campos ocultos (CRÍTICOS) -->
-        <input type="hidden" id="admin_cancha_id">
-        <input type="hidden" id="admin_fecha">
-        <input type="hidden" id="admin_hora_inicio">
-        <input type="hidden" id="admin_hora_fin">
-        <input type="hidden" id="admin_socio_id">
-        <input type="hidden" id="admin_monto_total" value="0">
-        <input type="hidden" id="admin_monto_base" value="0">
-        <input type="hidden" id="admin_duracion_bloque" value="60">
+                <!-- Campos ocultos (CRÍTICOS) -->
+                <input type="hidden" id="admin_usuario_creacion" name="usuario_creacion" value="">
+                <input type="hidden" id="admin_cancha_id">
+                <input type="hidden" id="admin_fecha">
+                <input type="hidden" id="admin_hora_inicio">
+                <input type="hidden" id="admin_hora_fin">
+                <input type="hidden" id="admin_socio_id">
+                <input type="hidden" id="admin_monto_total" value="0">
+                <input type="hidden" id="admin_monto_base" value="0">
+                <input type="hidden" id="admin_duracion_bloque" value="60">
 
-        <!-- ✅ Resumen visual con fecha, hora y cancha -->
-        <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
-            <div style="font-weight:700; color:#4A148C; font-size:1.05rem; margin-bottom:0.3rem;" id="modalCanchaDisplay">🏟️ Cargando...</div>
-            <div style="display:flex; justify-content:center; gap:1rem; font-size:0.95rem;">
-                <span style="color:#4A148C;">📅 <strong id="modalFechaDisplay" style="color:#6A1B9A;">--/--</strong></span>
-                <span style="color:#4A148C;">⏰ <strong id="modalHoraDisplay" style="color:#6A1B9A;">--:--</strong></span>
-            </div>
-        </div>
-
-        <!-- ✅ Selector de duración (60/90 min) -->
-        <div style="margin-bottom:1rem;">
-            <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>
-            <div style="display:flex; gap:0.5rem;">
-            <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
-                <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 60 min
-            </label>
-            <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
-                <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 90 min
-            </label>
-            </div>
-        </div>
-
-        <!-- ✅ Buscador Inteligente de Socio (con tu código integrado) -->
-        <div style="position:relative; margin-bottom:1rem;">
-            <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
-            <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
-                oninput="debounceBuscar(this.value)" 
-                style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
-            <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
-            <input type="hidden" id="admin_socio_id">
-            <input type="hidden" id="admin_nombre">
-            <input type="hidden" id="admin_email">
-            <input type="hidden" id="admin_celular">
-        </div>
-        <!-- ✅ datos para nuevo socio -->
-        <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#FFF3CD; border-radius:8px; border:1px solid #FFE69C;">
-            <p id="avisoNuevoSocio" style="font-size:0.8rem; color:#856404; margin:0 0 0.5rem; transition: opacity 0.2s;">⚠️ Sin coincidencias. Complete datos para registrarlo.</p>
-            <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;" onfocus="document.getElementById('avisoNuevoSocio').style.opacity='0'">
-            <input type="email" id="emailNuevoSocio" placeholder="Email *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
-            <input type="tel" id="telNuevoSocio" placeholder="Teléfono" style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
-        </div>
-
-        <!-- Resumen de monto -->
-        <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #4CAF50;">
-            <span style="font-weight:600; color:#2E7D32;">💰 Total a pagar:</span>
-            <span style="font-size:1.2rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
-        </div>
-
-        <!-- ✅ Sección Reserva Recurrente (con evento fijo) -->
-        <div style="margin:1.25rem 0; padding-top:1rem; border-top:1px solid #eee;">
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
-            <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;" onchange="toggleRecurrentFields(this.checked)">
-            <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Crear reserva recurrente</label>
-            </div>
-            
-            <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
-            <div class="form-group">
-                <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
-                <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
-                <option value="1">Lunes</option>
-                <option value="2">Martes</option>
-                <option value="3">Miércoles</option>
-                <option value="4">Jueves</option>
-                <option value="5">Viernes</option>
-                <option value="6">Sábado</option>
-                <option value="0">Domingo</option>
-                </select>
-            </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
-                <div class="form-group">
-                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
-                <input type="date" id="startDate" name="start_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                <!-- ✅ Resumen visual con fecha, hora y cancha -->
+                <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
+                    <div style="font-weight:700; color:#4A148C; font-size:1.05rem; margin-bottom:0.3rem;" id="modalCanchaDisplay">🏟️ Cargando...</div>
+                    <div style="display:flex; justify-content:center; gap:1rem; font-size:0.95rem;">
+                        <span style="color:#4A148C;">📅 <strong id="modalFechaDisplay" style="color:#6A1B9A;">--/--</strong></span>
+                        <span style="color:#4A148C;">⏰ <strong id="modalHoraDisplay" style="color:#6A1B9A;">--:--</strong></span>
+                    </div>
                 </div>
-                <div class="form-group">
-                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
-                <input type="date" id="endDate" name="end_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
-                </div>
-            </div>
-            
-            <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
-                <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
-            </div>
-            </div>
-        </div>
 
-        <!-- Botón submit -->
-        <button type="submit" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem; transition:transform 0.2s;">
-            💾 Crear Reserva
-        </button>
+                <!-- ✅ Selector de duración (60/90 min) -->
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>
+                    <div style="display:flex; gap:0.5rem;">
+                    <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
+                        <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 60 min
+                    </label>
+                    <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
+                        <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 90 min
+                    </label>
+                    </div>
+                </div>
+
+                <!-- ✅ Buscador Inteligente de Socio (con tu código integrado) -->
+                <div style="position:relative; margin-bottom:1rem;">
+                    <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
+                    <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..." 
+                        oninput="debounceBuscar(this.value)" 
+                        style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+                    <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+                    <input type="hidden" id="admin_socio_id">
+                    <input type="hidden" id="admin_nombre">
+                    <input type="hidden" id="admin_email">
+                    <input type="hidden" id="admin_celular">
+                </div>
+                <!-- ✅ datos para nuevo socio -->
+                <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#FFF3CD; border-radius:8px; border:1px solid #FFE69C;">
+                    <p id="avisoNuevoSocio" style="font-size:0.8rem; color:#856404; margin:0 0 0.5rem; transition: opacity 0.2s;">⚠️ Sin coincidencias. Complete datos para registrarlo.</p>
+                    <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" 
+                        style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;"
+                        onfocus="document.getElementById('avisoNuevoSocio').style.display='none'">
+                    <input type="email" id="emailNuevoSocio" placeholder="Email *" 
+                        style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
+                    <input type="tel" id="telNuevoSocio" placeholder="Teléfono" 
+                        style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
+                </div>
+
+                <!-- Resumen de monto -->
+                <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #4CAF50;">
+                    <span style="font-weight:600; color:#2E7D32;">💰 Total a pagar:</span>
+                    <span style="font-size:1.2rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
+                </div>
+
+                <!-- ✅ Sección Reserva Recurrente (con evento fijo) -->
+                <div style="margin:1.25rem 0; padding-top:1rem; border-top:1px solid #eee;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
+                    <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;" onchange="toggleRecurrentFields(this.checked)">
+                    <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Crear reserva recurrente</label>
+                    </div>
+                    
+                    <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
+                    <div class="form-group">
+                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
+                        <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                        <option value="1">Lunes</option>
+                        <option value="2">Martes</option>
+                        <option value="3">Miércoles</option>
+                        <option value="4">Jueves</option>
+                        <option value="5">Viernes</option>
+                        <option value="6">Sábado</option>
+                        <option value="0">Domingo</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+                        <div class="form-group">
+                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
+                        <input type="date" id="startDate" name="start_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                        </div>
+                        <div class="form-group">
+                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
+                        <input type="date" id="endDate" name="end_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
+                        <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Botón submit -->
+                <button type="submit" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem; transition:transform 0.2s;">
+                    💾 Crear Reserva
+                </button>
         </form>
     </div>
     </div>
