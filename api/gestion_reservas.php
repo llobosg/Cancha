@@ -303,15 +303,36 @@ function crearReservaManualUnificada($pdo, $data) {
     $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual', NOW())");
     $stmt_log->execute([$id_reserva, $usuario]);
     
-    // === 4. EMAILS (OPCIONAL - COMENTADO POR AHORA) ===
-    // Para evitar error por email_template.php no existente
-    /*
+        // ... (Código anterior de la función se mantiene igual hasta el INSERT de la reserva) ...
+
+    // === 4. EMAILS (SOLO SI ES SOCIO NUEVO) ===
     if (empty($data['id_socio']) && $email_cliente) {
         require_once __DIR__ . '/../includes/reserva_mailer.php';
-        // require_once __DIR__ . '/../includes/email_template.php'; // <- COMENTADO
-        // ... código de emails ...
+        require_once __DIR__ . '/../includes/email_helper.php'; // Importamos nuestra plantilla nueva
+
+        // A. Generar Token de Seguridad para crear contraseña
+        $token = bin2hex(random_bytes(32));
+        $link_registro = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_registro.php?token=" . $token;
+        
+        // Guardar token en la BD
+        $stmt_token = $pdo->prepare("UPDATE socios SET registro_token = ? WHERE id_socio = ?");
+        $stmt_token->execute([$token, $id_socio]);
+
+        // B. Configurar contenido del correo
+        $titulo = "¡Bienvenido a CanchaSport, {$nombre_cliente}! 🎾";
+        $mensaje = "<p>Hemos creado tu cuenta para la reserva de hoy.</p>
+                    <p>Para gestionar tus reservas, historial y datos, solo necesitas definir una contraseña:</p>";
+        $texto_boton = "Crear mi contraseña";
+        
+        // C. Enviar
+        $html = generarEmailHTML($titulo, $mensaje, $texto_boton, $link_registro);
+
+        $mail = new BrevoMailer();
+        $mail->setTo($email_cliente, $nombre_cliente)
+             ->setSubject("👋 ¡Bienvenido! Completa tu registro en CanchaSport")
+             ->setHtmlBody($html)
+             ->send();
     }
-    */
     
     return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio];
 }
