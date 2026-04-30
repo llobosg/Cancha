@@ -2,6 +2,9 @@
 // api/gestion_reservas.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
+// === EMAILS CON DISEÑO CANCHASPORT ===
+require_once __DIR__ . '/../includes/reserva_mailer.php';
+require_once __DIR__ . '/../includes/email_template.php';
 
 try {
     
@@ -300,20 +303,61 @@ function crearReservaManualUnificada($pdo, $data) {
         require_once __DIR__ . '/../includes/reserva_mailer.php';
         $link_perfil = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_perfil.php?id=" . $id_socio;
         
-        // Email 1: Confirmación de reserva
+        // === Email 1: Confirmación de Reserva ===
+        $cuerpo_reserva = "
+            <p>Hola <strong>{$nombre_cliente}</strong>,</p>
+            <p>Tu reserva ha sido confirmada exitosamente:</p>
+            <div class='info-box' style='background: #F3E5F5; border-left: 4px solid #AB47BC; padding: 1rem; border-radius: 8px; margin: 1.5rem 0;'>
+                <p style='margin: 0.3rem 0'><strong>📅 Fecha:</strong> {$fecha}</p>
+                <p style='margin: 0.3rem 0'><strong>⏰ Hora:</strong> {$hora_inicio} - {$hora_fin}</p>
+                <p style='margin: 0.3rem 0'><strong>🏟️ Cancha:</strong> {$cancha_nombre ?? 'Consultar en app'}</p>
+            </div>
+            <p style='color: #666; font-size: 0.95rem;'>Puedes ver todas tus reservas en tu perfil de CanchaSport.</p>
+        ";
+        
+        $email_reserva = generarEmailCanchaSport(
+            '✅ Reserva Confirmada',
+            'Tu cancha te espera',
+            $cuerpo_reserva,
+            'Ver mis reservas',
+            'https://' . $_SERVER['HTTP_HOST'] . '/pages/dashboard_socio.php'
+        );
+        
         $mail1 = new BrevoMailer();
         $mail1->setTo($email_cliente, $nombre_cliente)
-              ->setSubject("✅ Reserva confirmada - CanchaSport")
-              ->setHtmlBody("<p>Hola <strong>$nombre_cliente</strong>,<br>Tu reserva para el <strong>$fecha $hora_inicio-$hora_fin</strong> ha sido confirmada.</p>")
-              ->send();
+            ->setSubject("✅ Reserva confirmada - CanchaSport")
+            ->setHtmlBody($email_reserva)
+            ->send();
         
-        // Email 2: Bienvenida + completar perfil
-        $mail2 = new BrevoMailer();
-        $mail2->setTo($email_cliente, $nombre_cliente)
-              ->setSubject("🎉 ¡Bienvenido a CanchaSport! Completa tu perfil")
-              ->setHtmlBody("<p>Gracias por registrarte. <a href='$link_perfil'>Haz clic aquí para completar tu perfil</a> y disfrutar de todos los beneficios.</p>")
-              ->send();
-    }
+        // === Email 2: Bienvenida + Completar Perfil (SOLO si es socio nuevo) ===
+        if (empty($data['id_socio']) && isset($registro_link)) {
+            $cuerpo_bienvenida = "
+                <p>¡Bienvenido a <strong>CanchaSport</strong>! 🎉</p>
+                <p>Para disfrutar de todos los beneficios, completa tu perfil en menos de 1 minuto:</p>
+                <ul style='color: #4A4A4A; padding-left: 1.2rem;'>
+                    <li>Establece tu contraseña segura</li>
+                    <li>Agrega tu número de teléfono</li>
+                    <li>Personaliza tus preferencias deportivas</li>
+                </ul>
+                <p style='color: #888; font-size: 0.9rem; margin-top: 1.5rem;'><strong>⏰ Este enlace expira en 7 días</strong> por seguridad.</p>
+            ";
+            
+            $email_bienvenida = generarEmailCanchaSport(
+                '🎉 ¡Bienvenido a CanchaSport!',
+                'Completa tu perfil en 1 minuto',
+                $cuerpo_bienvenida,
+                '✨ Completar mi perfil',
+                $registro_link,
+                "<p style='color: #888; font-size: 0.85rem; margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1rem;'>Si no creaste esta cuenta, ignora este mensaje.</p>"
+            );
+            
+            $mail2 = new BrevoMailer();
+            $mail2->setTo($email_cliente, $nombre_cliente)
+                ->setSubject("🎉 ¡Bienvenido! Completa tu perfil - CanchaSport")
+                ->setHtmlBody($email_bienvenida)
+                ->send();
+        }
+    }   
     
     return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio];
 }
