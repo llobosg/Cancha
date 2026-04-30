@@ -35,6 +35,11 @@ try {
     // Log de auditoría para saber qué acción se intenta
     error_log("🎯 [API GESTIÓN RESERVAS] Acción: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
 
+    // Logging para debug (remover en producción)
+    error_log("🔍 [API] Action: " . ($action ?? 'NULL'));
+    error_log("🔍 [API] POST keys: " . implode(', ', array_keys($_POST)));
+    error_log("🔍 [API] Session: id_recinto=" . ($_SESSION['id_recinto'] ?? 'NULL'));
+
     switch ($action) {
     case 'procesar_pago':
         echo json_encode(procesarPagoReserva($pdo, $_POST));
