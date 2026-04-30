@@ -2661,6 +2661,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // === SUBMIT DEL FORMULARIO (VALIDACIÓN BLINDADA + NUEVO SOCIO) ===
+// === SUBMIT DEL FORMULARIO (VALIDACIÓN UNIFICADA SOCIO + TIPO RESERVA) ===
 async function guardarReservaAdmin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
@@ -2674,23 +2675,49 @@ async function guardarReservaAdmin(e) {
         return el?.value?.trim() || '';
     };
     
-    // 1. Leer valores actuales del DOM
+    // 1. Leer valores básicos (comunes a ambos flujos)
     const cancha = getVal('admin_cancha_id');
     const fecha  = getVal('admin_fecha');
     const hora   = getVal('admin_hora_inicio');
     const horaF  = getVal('admin_hora_fin');
-    const socio  = getVal('admin_socio_id');
     const monto  = parseFloat(getVal('admin_monto_total')) || 0;
     const dur    = getVal('admin_duracion_bloque') || '60';
     const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
 
-   console.log('🔍 DEBUG SOCIO ->', {
-        socio_raw: document.getElementById('admin_socio_id')?.value,
-        socio_trim: getVal('admin_socio_id'),
-        searchValue: document.getElementById('searchAdmin')?.value
-    });
+    // 2. === VALIDACIÓN DE SOCIO (COMÚN PARA ÚNICA Y RECURRENTE) ===
+    let id_socio = getVal('admin_socio_id');
+    let datosNuevoSocio = null;
+    
+    const checkNuevoSocio = document.getElementById('checkNuevoSocio')?.checked;
+    
+    if (id_socio) {
+        // ✅ Socio existente seleccionado
+        console.log('🔍 Socio existente:', id_socio);
+    } 
+    else if (checkNuevoSocio) {
+        // ✅ Registrar nuevo socio: validar y capturar datos
+        const nNom = document.getElementById('nombreNuevoSocio')?.value?.trim();
+        const nMail = document.getElementById('emailNuevoSocio')?.value?.trim();
+        const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
 
-    // 2. Validaciones mínimas obligatorias
+        if (!nMail || !nNom) {
+            showToast('⚠️ Complete Nombre y Email para registrar nuevo socio', 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+        datosNuevoSocio = { nombre: nNom, email: nMail, tel: nTel };
+        console.log('🔍 Nuevo socio:', datosNuevoSocio);
+    } 
+    else {
+        // ❌ No hay socio Y no se marcó nuevo socio → error
+        showToast('⚠️ Seleccione un socio existente o marque "Registrar nuevo socio"', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+    }
+
+    // 3. Validaciones mínimas obligatorias (después de validar socio)
     if (!cancha || !fecha || !hora) {
         showToast('⚠️ Faltan datos básicos de la reserva', 'error');
         btn.disabled = false;
@@ -2721,17 +2748,22 @@ async function guardarReservaAdmin(e) {
                 return;
             }
 
+            // Payload para API recurrente (incluye datos de nuevo socio si aplica)
             const payload = {
                 action: 'create_recurrent',
                 id_cancha: cancha,
                 hora_inicio: hora,
                 hora_fin: horaF,
-                id_socio: socio,
+                id_socio: id_socio || null,
                 repeat_day: day,
                 start_date: sDate,
                 end_date: eDate,
                 monto_total: monto,
-                duracion_bloque: dur
+                duracion_bloque: dur,
+                // Datos de nuevo socio (si aplica)
+                nombreNuevoSocio: datosNuevoSocio?.nombre || null,
+                emailNuevoSocio: datosNuevoSocio?.email || null,
+                telNuevoSocio: datosNuevoSocio?.tel || null
             };
 
             const res = await fetch('../api/reserva_recurrente.php', {
@@ -2762,46 +2794,17 @@ async function guardarReservaAdmin(e) {
             formData.set('duracion_bloque', dur);
             formData.set('usuario_creacion', user);
 
-            // === MANEJO DE NUEVO SOCIO (checkbox colapsable) ===
-            const checkNuevoSocio = document.getElementById('checkNuevoSocio')?.checked;
-            
-            if (checkNuevoSocio) {
-                // El admin marcó "Registrar nuevo socio" → validar y enviar datos
-                const nNom = document.getElementById('nombreNuevoSocio')?.value?.trim();
-                const nMail = document.getElementById('emailNuevoSocio')?.value?.trim();
-                const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
-
-                if (!nMail || !nNom) {
-                    showToast('⚠️ Complete Nombre y Email para registrar nuevo socio', 'error');
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                    return;
-                }
-                formData.set('nombreNuevoSocio', nNom);
-                formData.set('emailNuevoSocio', nMail);
-                formData.set('telNuevoSocio', nTel);
-            }
-            // Si NO hay socio Y NO está marcado el checkbox → error
-            else if (!socio) {
-                showToast('⚠️ Seleccione un socio existente o marque "Registrar nuevo socio"', 'error');
-                btn.disabled = false;
-                btn.textContent = originalText;
-                return;
+            // Agregar datos de nuevo socio si aplica
+            if (datosNuevoSocio) {
+                formData.set('nombreNuevoSocio', datosNuevoSocio.nombre);
+                formData.set('emailNuevoSocio', datosNuevoSocio.email);
+                formData.set('telNuevoSocio', datosNuevoSocio.tel);
             }
 
             const res = await fetch('../api/gestion_reservas.php', {
                 method: 'POST',
                 body: formData
             });
-
-            // ✅ VALIDAR QUE LA RESPUESTA ES JSON ANTES DE PARSEAR
-            const contentType = res.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await res.text();
-                console.error('❌ Respuesta no es JSON:', text.substring(0, 300));
-                throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs de PHP.');
-            }
-
             const data = await res.json();
 
             if (data.success) {
@@ -2810,7 +2813,7 @@ async function guardarReservaAdmin(e) {
                     registrarLogReserva(
                         data.id_reserva,
                         'creada',
-                        `Reserva manual creada${checkNuevoSocio ? ' + nuevo socio' : ''}`,
+                        `Reserva manual creada${datosNuevoSocio ? ' + nuevo socio' : ''}`,
                         null,
                         { nuevo: monto }
                     );

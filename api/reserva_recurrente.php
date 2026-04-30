@@ -96,6 +96,35 @@ try {
             $skipped++;
             error_log("[Recurrente] Error en $fecha: " . $e->getMessage());
         }
+        // === DENTRO DEL FOREACH DE FECHAS, ANTES DEL INSERT ===
+
+        // Manejar creación de socio nuevo si viene en el payload
+        $id_socio = $input['id_socio'] ?? null;
+
+        if (!$id_socio && !empty($input['emailNuevoSocio'])) {
+            // Crear nuevo socio (lógica similar a gestion_reservas.php)
+            $email_nuevo = trim($input['emailNuevoSocio']);
+            $nombre_nuevo = trim($input['nombreNuevoSocio'] ?? 'Nuevo Socio');
+            $tel_nuevo = trim($input['telNuevoSocio'] ?? '');
+            
+            // Verificar si ya existe
+            $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+            $stmt->execute([$email_nuevo]);
+            $existente = $stmt->fetch();
+            
+            if ($existente) {
+                $id_socio = $existente['id_socio'];
+            } else {
+                $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
+                $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
+                $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
+                $id_socio = $pdo->lastInsertId();
+            }
+        }
+
+        // Ahora usar $id_socio en el INSERT de la reserva
+        $stmt = $pdo->prepare("INSERT INTO reservas (...) VALUES (...)");
+        $stmt->execute([... , $id_socio, ...]);
     }
     $pdo->commit();
     
