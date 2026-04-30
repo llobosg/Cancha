@@ -2344,66 +2344,83 @@ async function handleRecurrentReservation() {
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
+    // Helper seguro para asignar valores
+    const setC = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+        else console.warn(`⚠️ Elemento #${id} no encontrado`);
+    };
+
     // 1. Asignar ocultos inmediatamente
-    const setC = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; else console.warn(`⚠️ FALTA: #${id}`); };
-    
     setC('admin_cancha_id', canchaId);
     setC('admin_fecha', fecha);
     setC('admin_hora_inicio', hora);
     setC('admin_socio_id', '');
     setC('admin_monto_total', '0');
     setC('admin_monto_base', '0');
-    setC('admin_usuario_creacion', USUARIO_ACTIVO);
 
-    // 2. Hora fin (base 60 min)
+    // 2. Calcular hora fin (60 min base)
     const [h, m] = hora.split(':').map(Number);
-    const fin = new Date(); fin.setHours(h, m + 60, 0, 0);
-    const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
-    setC('admin_hora_fin', horaFin);
-    setC('admin_duracion_bloque', '60');
+    if (!isNaN(h) && !isNaN(m)) {
+        const fin = new Date();
+        fin.setHours(h, m + 60, 0, 0);
+        const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+        setC('admin_hora_fin', horaFin);
+        setC('admin_duracion_bloque', '60');
 
-    // Displays
-    const fParts = fecha.split('-');
-    const elFD = document.getElementById('modalFechaDisplay');
-    if(elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
-    const elHD = document.getElementById('modalHoraDisplay');
-    if(elHD) elHD.textContent = `${hora} - ${horaFin}`;
+        // Actualizar displays visuales
+        const fParts = fecha.split('-');
+        const elFD = document.getElementById('modalFechaDisplay');
+        if (elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
+        const elHD = document.getElementById('modalHoraDisplay');
+        if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
+    }
 
-    // 3. Buscar cancha en JS (comparación flexible para string/number)
-    const cancha = canchasData?.find(c => c.id_cancha == canchaId);
+    // 3. Buscar cancha en canchasData
+    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
+        ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
+        : null;
+
     const elNombre = document.getElementById('modalCanchaDisplay');
-    const elMonto  = document.getElementById('admin_monto_total');
-    const elBase   = document.getElementById('admin_monto_base');
+    const elMonto = document.getElementById('admin_monto_total');
+    const elBase = document.getElementById('admin_monto_base');
     const elDMonto = document.getElementById('modalMontoDisplay');
 
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        if(elNombre) elNombre.textContent = `🏟️ ${nombre}`;
+        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
         const base = parseFloat(cancha.valor_arriendo) || 0;
-        if(elBase) elBase.value = base;
+        if (elBase) elBase.value = base;
         
-        const total = Math.round(base); // 60 min = x1
-        if(elMonto) elMonto.value = total;
-        if(elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
+        const total = Math.round(base * 1);
+        if (elMonto) elMonto.value = total;
+        if (elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
         console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Total: $${total}`);
     } else {
-        console.warn(`⚠️ Cancha ID ${canchaId} NO en canchasData. Verifica activa/estado en BD.`);
-        if(elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
+        console.warn(`⚠️ Cancha ID ${canchaId} NO está en canchasData`);
+        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
-    // 4. Limpiar UI
+    // 4. Limpiar UI (CON VERIFICACIONES)
     const elSearch = document.getElementById('searchAdmin');
-    if(elSearch) elSearch.value = '';
-    document.getElementById('searchResultsAdmin').style.display = 'none';
-    document.getElementById('nuevoSocioFields').style.display = 'none';
+    if (elSearch) elSearch.value = '';
+
+    const elResults = document.getElementById('searchResultsAdmin');
+    if (elResults) elResults.style.display = 'none';
+
+    const elNuevoSocio = document.getElementById('nuevoSocioFields');
+    if (elNuevoSocio) elNuevoSocio.style.display = 'none';
+
+    const elUser = document.getElementById('admin_usuario_creacion');
+    if (elUser) elUser.value = USUARIO_ACTIVO;
 
     // 5. Mostrar modal
     const modal = document.getElementById('modalReservaAdmin');
-    if(modal) {
+    if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        setTimeout(() => elSearch?.focus(), 100);
+        setTimeout(() => { if (elSearch) elSearch.focus(); }, 100);
     }
 }
 
