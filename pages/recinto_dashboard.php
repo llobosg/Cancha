@@ -3797,7 +3797,6 @@ async function abrirLogReserva(idReserva) {
         if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => `
                 <tr style="border-bottom:1px solid #F1F5F9;">
-                    <td style="padding:10px; color:#4A5568; font-weight:500;">${log.fecha}</td>
                     ${new Date(log.created_at).toLocaleString('es-CL', {
                         day: '2-digit',
                         month: '2-digit',
