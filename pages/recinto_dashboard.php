@@ -2294,8 +2294,9 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         return el;
     };
     // 1. Buscar cancha y actualizar nombre/precio
-    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData)) 
-        ? canchasData.find(c => String(c.id_cancha) === String(canchaId)) 
+    // === DENTRO DE abrirReservaAdmin() ===
+    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
+        ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
         : null;
 
     const elNombre = document.getElementById('modalCanchaDisplay');
@@ -2303,7 +2304,9 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const elDisplayMonto = document.getElementById('modalMontoDisplay');
 
     if (cancha) {
-        if (elNombre) elNombre.textContent = `🏟️ ${cancha.nombre_cancha || cancha.nro_cancha || 'Cancha ' + canchaId}`;
+        // Prioriza nombre_cancha, luego nro_cancha, fallback seguro
+        const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
+        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
         const base = parseFloat(cancha.valor_arriendo) || 0;
         const es90 = document.querySelector('input[name="duracion"][value="90"]')?.checked;
@@ -2312,7 +2315,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elMonto) elMonto.value = total;
         if (elDisplayMonto) elDisplayMonto.textContent = `$${total.toLocaleString('es-CL')}`;
     } else {
-        console.warn(`⚠️ Cancha ${canchaId} no en canchasData`);
+        console.warn(`⚠️ Cancha ${canchaId} no encontrada en canchasData`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
         if (elMonto) elMonto.value = 0;
         if (elDisplayMonto) elDisplayMonto.textContent = `$0`;
@@ -2463,20 +2466,22 @@ async function buscarSocioAdmin(query) {
 
         container.innerHTML = '';
         if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div style="padding:10px; color:#856404; font-size:0.85rem; background:#fff3cd;">⚠️ Sin coincidencias. Complete datos abajo para crear nuevo socio.</div>';
+            container.innerHTML = '<div style="padding:8px; color:#856404;">Sin coincidencias.</div>';
             document.getElementById('nuevoSocioFields').style.display = 'block';
+            document.getElementById('avisoNuevoSocio').style.opacity = '1';
         } else {
-            data.forEach(s => {
-                const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
-                const safeEmail = (s.email || '').replace(/'/g, "\\'");
-                const safeCel = (s.celular || '').replace(/'/g, "\\'");
-                container.innerHTML += `
-                    <div onclick="seleccionarSocioAdmin(${s.id_socio}, '${safeNombre}', '${safeEmail}', '${safeCel}')"
-                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333; background:#fff;">
-                        <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
-                    </div>`;
-            });
+            container.innerHTML = data.map(s => 
+                `<div onclick="seleccionarSocioAdmin(${s.id_socio}, '${s.nombre}', '${s.email}', '${s.celular}')"
+                    style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem;">
+                    <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
+                </div>`
+            ).join('');
+            
+            // Ocultar campos nuevo socio y limpiar valores viejos
             document.getElementById('nuevoSocioFields').style.display = 'none';
+            ['nombreNuevoSocio','emailNuevoSocio','telNuevoSocio'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.value = '';
+            });
         }
         container.style.display = 'block';
     } catch (err) {
@@ -2662,20 +2667,32 @@ async function guardarReservaAdmin(e) {
             
         } else {
             // === 3. FLUJO RESERVA ÚNICA ===
-            const formData = new FormData();
-            formData.append('action', 'crear_manual');
-            formData.append('id_cancha', id_cancha);
-            formData.append('fecha', fecha);
-            formData.append('hora_inicio', hora_inicio);  // ← Variable definida arriba
-            formData.append('hora_fin', hora_fin);
-            formData.append('id_socio', id_socio);
-            formData.append('monto_total', monto_total);
-            formData.append('duracion_bloque', duracion);
-            
-            const response = await fetch('../api/gestion_reservas.php', {
-                method: 'POST',
-                body: formData
-            });
+            const formData = new FormData(e.target);
+            formData.set('action', 'crear_manual');
+            formData.set('id_cancha', id_cancha);
+            formData.set('fecha', fecha);
+            formData.set('hora_inicio', hora_inicio);
+            formData.set('hora_fin', hora_fin);
+            formData.set('monto_total', monto_total);
+            formData.set('duracion_bloque', duracion);
+
+            // Si NO hay socio seleccionado, adjuntar datos de nuevo registro
+            if (!id_socio) {
+                const nNombre = document.getElementById('nombreNuevoSocio')?.value?.trim();
+                const nEmail = document.getElementById('emailNuevoSocio')?.value?.trim();
+                const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
+
+                if (!nEmail || !nNombre) {
+                    showToast('⚠️ Ingrese Nombre y Email para registrar nuevo socio', 'error');
+                    btn.disabled = false; btn.textContent = originalText;
+                    return;
+                }
+                formData.append('nombreNuevoSocio', nNombre);
+                formData.append('emailNuevoSocio', nEmail);
+                formData.append('telNuevoSocio', nTel);
+            }
+
+            const response = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData })
             const result = await response.json();
 
             console.log('🔍 [DEBUG] Variables leídas del DOM:');
@@ -3847,8 +3864,8 @@ function verDetalleExtras(idReserva, montoExtras) {
         </div>
         <!-- ✅ datos para nuevo socio -->
         <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#FFF3CD; border-radius:8px; border:1px solid #FFE69C;">
-            <p style="font-size:0.8rem; color:#856404; margin:0 0 0.5rem;">📝 Socio no encontrado. Complete para registrarlo:</p>
-            <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
+            <p id="avisoNuevoSocio" style="font-size:0.8rem; color:#856404; margin:0 0 0.5rem; transition: opacity 0.2s;">⚠️ Sin coincidencias. Complete datos para registrarlo.</p>
+            <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;" onfocus="document.getElementById('avisoNuevoSocio').style.opacity='0'">
             <input type="email" id="emailNuevoSocio" placeholder="Email *" style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
             <input type="tel" id="telNuevoSocio" placeholder="Teléfono" style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
         </div>
