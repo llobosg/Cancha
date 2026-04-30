@@ -1788,7 +1788,6 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                             ⋮
                         </button>
                         
-                        tituloModal.innerHTML = `📋 Detalle de Reserva <span style="font-weight:400; font-size:0.95rem; color:#666; margin-left:0.5rem;">by ${userCreacion}</span>`;
                         <div id="logMenu_<?= $reserva['id_reserva'] ?>" 
                             style="display:none; position:absolute; top:100%; right:0; 
                                     background:white; border-radius:10px; min-width:180px; 
