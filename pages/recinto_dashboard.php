@@ -1343,14 +1343,31 @@ td.cell-reserva {
 
 <script>
 // === VARIABLES GLOBALES ===
+const USUARIO_ACTIVO = "<?= addslashes($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin') ?>";
 const iconosDeporte = { 1: '🎾', 2: '🎾', 3: '🏐', 10: '⚽', 11: '⚽', 'default': '🏟️' };
 let fechaPlanillaActual = new Date().toISOString().split('T')[0];
 let estadoSeleccionadoPlanilla = "";
 let reservaActualSeleccionada = null;
 let tipoListaActual = '';
 
-// Forzar carga de datos de canchas desde PHP
-const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+// Forzar carga de datos de canchas desde PHP para evitar problemas de sincronización con la API
+// 🔍 DEBUG: Ver qué devuelve la BD
+$stmt = $pdo->prepare("
+    SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado 
+    FROM canchas 
+    WHERE id_recinto = ? 
+");
+$stmt->execute([$id_recinto]);
+$raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Filtrar solo activas para el dashboard, pero LOGUEAR todas para debug
+$canchas_js = array_filter($raw, fn($c) => $c['activa'] == 1 && $c['estado'] === 'Operativa');
+error_log("🔍 DEBUG PHP: Canchas totales BD: " . count($raw) . " | Canchas activas JS: " . count($canchas_js));
+error_log("🔍 DEBUG PHP: ¿Cancha 26 en JS? " . (json_encode(array_search(26, array_column($canchas_js, 'id_cancha'))) ?: 'NO'));
+
+// Inyección segura al JS
+const canchasData = <?= json_encode(array_values($canchas_js), JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+console.log("🔍 DEBUG JS: canchasData.length =", canchasData.length);
 
 console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
 // 🔍 LOG JS: Ver si el array se inyecta correctamente
@@ -2306,38 +2323,36 @@ async function handleRecurrentReservation() {
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
-    // 1. ASIGNAR OCULTOS INMEDIATAMENTE (evita error "Faltan campos")
-    const setC = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; else console.warn(`⚠️ FALTA INPUT: #${id}`); };
+    // 1. Asignar ocultos inmediatamente
+    const setC = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; else console.warn(`⚠️ FALTA: #${id}`); };
     
     setC('admin_cancha_id', canchaId);
     setC('admin_fecha', fecha);
     setC('admin_hora_inicio', hora);
-    setC('admin_socio_id', ''); // Resetear socio al abrir
+    setC('admin_socio_id', '');
     setC('admin_monto_total', '0');
     setC('admin_monto_base', '0');
+    setC('admin_usuario_creacion', USUARIO_ACTIVO);
 
-    // 2. Calcular hora fin (60 min base)
+    // 2. Hora fin (base 60 min)
     const [h, m] = hora.split(':').map(Number);
     const fin = new Date(); fin.setHours(h, m + 60, 0, 0);
     const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
     setC('admin_hora_fin', horaFin);
     setC('admin_duracion_bloque', '60');
 
-    // Actualizar displays visuales
+    // Displays
     const fParts = fecha.split('-');
     const elFD = document.getElementById('modalFechaDisplay');
     if(elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
     const elHD = document.getElementById('modalHoraDisplay');
     if(elHD) elHD.textContent = `${hora} - ${horaFin}`;
 
-    // 3. Buscar precio y nombre en canchasData
-    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
-        ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
-        : null;
-
+    // 3. Buscar cancha en JS (comparación flexible para string/number)
+    const cancha = canchasData?.find(c => c.id_cancha == canchaId);
     const elNombre = document.getElementById('modalCanchaDisplay');
-    const elMonto = document.getElementById('admin_monto_total');
-    const elBase = document.getElementById('admin_monto_base');
+    const elMonto  = document.getElementById('admin_monto_total');
+    const elBase   = document.getElementById('admin_monto_base');
     const elDMonto = document.getElementById('modalMontoDisplay');
 
     if (cancha) {
@@ -2347,12 +2362,12 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         const base = parseFloat(cancha.valor_arriendo) || 0;
         if(elBase) elBase.value = base;
         
-        const total = Math.round(base * 1); // 60 min = x1
+        const total = Math.round(base); // 60 min = x1
         if(elMonto) elMonto.value = total;
         if(elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
         console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Total: $${total}`);
     } else {
-        console.warn(`⚠️ Cancha ID ${canchaId} NO está en canchasData. Verifica query PHP.`);
+        console.warn(`⚠️ Cancha ID ${canchaId} NO en canchasData. Verifica activa/estado en BD.`);
         if(elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
@@ -2361,9 +2376,6 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     if(elSearch) elSearch.value = '';
     document.getElementById('searchResultsAdmin').style.display = 'none';
     document.getElementById('nuevoSocioFields').style.display = 'none';
-
-    const elUser = document.getElementById('admin_usuario_creacion');
-    if (elUser) elUser.value = USUARIO_ACTIVO;
 
     // 5. Mostrar modal
     const modal = document.getElementById('modalReservaAdmin');
@@ -2590,13 +2602,11 @@ async function guardarReservaAdmin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = '💾 Guardando...';
+    btn.disabled = true; btn.textContent = '💾 Guardando...';
 
-    // 🔹 Helper seguro para leer inputs
     const getVal = (id) => { const el = document.getElementById(id); return el?.value?.trim() || ''; };
     
-    // 1. Leer valores actuales del DOM
+    // Leer valores actuales
     const cancha = getVal('admin_cancha_id');
     const fecha  = getVal('admin_fecha');
     const hora   = getVal('admin_hora_inicio');
@@ -2606,52 +2616,32 @@ async function guardarReservaAdmin(e) {
     const dur    = getVal('admin_duracion_bloque') || '60';
     const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
 
-    console.log('🔍 DEBUG GUARDAR ->', { cancha, fecha, hora, socio, monto, dur, user });
+    console.log("🔍 DEBUG ENVIAR:", { cancha, fecha, hora, socio, monto, dur, user });
 
-    // 2. Validaciones mínimas
     if (!cancha || !fecha || !hora) {
         showToast('⚠️ Faltan datos básicos de la reserva', 'error');
-        btn.disabled = false; btn.textContent = originalText;
-        return;
+        btn.disabled = false; btn.textContent = originalText; return;
     }
 
     const isRecurrent = document.getElementById('isRecurrent')?.checked;
 
     try {
         if (isRecurrent) {
-            // === FLUJO RECURRENTE ===
             btn.textContent = '🔄 Generando...';
-            const day  = parseInt(document.getElementById('repeatDay')?.value);
+            const day = parseInt(document.getElementById('repeatDay')?.value);
             const sDate = document.getElementById('startDate')?.value;
             const eDate = document.getElementById('endDate')?.value;
-
-            if (!day || !sDate || !eDate) {
-                showToast('⚠️ Complete día de repetición y fechas', 'error');
+            if (!day || !sDate || !eDate || new Date(sDate) > new Date(eDate)) {
+                showToast('⚠️ Verifique día y rango de fechas', 'error');
                 btn.disabled = false; btn.textContent = originalText; return;
             }
-            if (new Date(sDate) > new Date(eDate)) {
-                showToast('⚠️ Fecha inicio debe ser anterior a fecha fin', 'error');
-                btn.disabled = false; btn.textContent = originalText; return;
-            }
-
-            const payload = {
-                action: 'create_recurrent', id_cancha: cancha, hora_inicio: hora, hora_fin: horaF,
-                id_socio: socio, repeat_day: day, start_date: sDate, end_date: eDate,
-                monto_total: monto, duracion_bloque: dur
-            };
-            const res = await fetch('../api/reserva_recurrente.php', {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
-            });
+            const payload = { action:'create_recurrent', id_cancha:cancha, hora_inicio:hora, hora_fin:horaF, id_socio:socio, repeat_day:day, start_date:sDate, end_date:eDate, monto_total:monto, duracion_bloque:dur };
+            const res = await fetch('../api/reserva_recurrente.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
             const data = await res.json();
-            if (data.success) {
-                showToast(`✅ ${data.created} reservas creadas${data.skipped > 0 ? ` | ⚠️ ${data.skipped} saltadas` : ''}`);
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                showToast(`❌ ${data.message}`, 'error');
-                btn.disabled = false; btn.textContent = originalText;
-            }
+            if(data.success) { showToast(`✅ ${data.created} creadas${data.skipped>0?` | ⚠️ ${data.skipped} saltadas`:''}`); setTimeout(()=>location.reload(),1500); }
+            else { showToast(`❌ ${data.message}`, 'error'); btn.disabled=false; btn.textContent=originalText; }
         } else {
-            // === FLUJO RESERVA ÚNICA ===
+            // === RESERVA ÚNICA ===
             const formData = new FormData(e.target);
             formData.set('action', 'crear_manual');
             formData.set('id_cancha', cancha);
@@ -2662,42 +2652,25 @@ async function guardarReservaAdmin(e) {
             formData.set('duracion_bloque', dur);
             formData.set('usuario_creacion', user);
 
-            // Si NO hay socio seleccionado, enviar datos de nuevo registro
             if (!socio) {
                 const nNom = document.getElementById('nombreNuevoSocio')?.value?.trim();
                 const nMail = document.getElementById('emailNuevoSocio')?.value?.trim();
                 const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
-
-                if (!nMail || !nNom) {
-                    showToast('⚠️ Ingrese Nombre y Email para registrar nuevo socio', 'error');
-                    btn.disabled = false; btn.textContent = originalText; return;
-                }
+                if (!nMail || !nNom) { showToast('⚠️ Ingrese Nombre y Email para nuevo socio', 'error'); btn.disabled=false; btn.textContent=originalText; return; }
                 formData.set('nombreNuevoSocio', nNom);
                 formData.set('emailNuevoSocio', nMail);
                 formData.set('telNuevoSocio', nTel);
             }
 
-            const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+            const res = await fetch('../api/gestion_reservas.php', { method:'POST', body:formData });
             const data = await res.json();
-
             if (data.success) {
-                // Registrar log de bitácora
-                if (typeof registrarLogReserva === 'function' && data.id_reserva) {
-                    registrarLogReserva(data.id_reserva, 'creada', `Reserva manual creada`, null, { nuevo: monto });
-                }
+                if(typeof registrarLogReserva==='function' && data.id_reserva) registrarLogReserva(data.id_reserva, 'creada', 'Reserva manual', null, {nuevo:monto});
                 showToast('✅ Reserva creada correctamente');
-                setTimeout(() => location.reload(), 1200);
-            } else {
-                showToast(`❌ ${data.message || 'Error al guardar'}`, 'error');
-                btn.disabled = false; btn.textContent = originalText;
-            }
+                setTimeout(()=>location.reload(), 1200);
+            } else { showToast(`❌ ${data.message||'Error'}`, 'error'); btn.disabled=false; btn.textContent=originalText; }
         }
-    } catch (err) {
-        console.error('❌ Error en guardarReservaAdmin:', err);
-        showToast('❌ Error de conexión', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
+    } catch(err) { console.error(err); showToast('❌ Error de conexión', 'error'); btn.disabled=false; btn.textContent=originalText; }
 }
 
 function abrirModalMover() {
@@ -3835,11 +3808,13 @@ function verDetalleExtras(idReserva, montoExtras) {
                     <input type="hidden" id="admin_celular">
                 </div>
                 <!-- ✅ datos para nuevo socio -->
-                <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#FFF3CD; border-radius:8px; border:1px solid #FFE69C;">
-                    <p id="avisoNuevoSocio" style="font-size:0.8rem; color:#856404; margin:0 0 0.5rem; transition: opacity 0.2s;">⚠️ Sin coincidencias. Complete datos para registrarlo.</p>
+                <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#F8F9FA; border-radius:8px; border:1px solid #E9ECEF;">
+                    <div id="avisoNuevoSocio" style="background:#FFF3CD; color:#856404; padding:0.5rem; border-radius:6px; font-size:0.8rem; margin-bottom:0.6rem; border-left:3px solid #FFC107;">
+                        ⚠️ Sin coincidencias. Complete datos para registrarlo.
+                    </div>
                     <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" 
                         style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;"
-                        onfocus="document.getElementById('avisoNuevoSocio').style.display='none'">
+                        onfocus="document.getElementById('avisoNuevoSocio').style.opacity='0'; document.getElementById('avisoNuevoSocio').style.height='0'; document.getElementById('avisoNuevoSocio').style.padding='0'; document.getElementById('avisoNuevoSocio').style.margin='0';">
                     <input type="email" id="emailNuevoSocio" placeholder="Email *" 
                         style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
                     <input type="tel" id="telNuevoSocio" placeholder="Teléfono" 
