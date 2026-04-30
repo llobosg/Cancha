@@ -2706,7 +2706,11 @@ async function guardarReservaAdmin(e) {
     const dur    = getVal('admin_duracion_bloque') || '60';
     const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
 
-    console.log('🔍 DEBUG GUARDAR ->', { cancha, fecha, hora, socio, monto, dur, user });
+   console.log('🔍 DEBUG SOCIO ->', {
+        socio_raw: document.getElementById('admin_socio_id')?.value,
+        socio_trim: getVal('admin_socio_id'),
+        searchValue: document.getElementById('searchAdmin')?.value
+    });
 
     // 2. Validaciones mínimas obligatorias
     if (!cancha || !fecha || !hora) {
