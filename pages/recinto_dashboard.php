@@ -1158,6 +1158,18 @@ td.cell-reserva {
 .badge-extras:hover {
     background: #FFE69C;
 }
+/* Animación para panel nuevo socio */
+#panelNuevoSocio {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+#panelNuevoSocio[style*="display: block"] {
+    max-height: 200px;
+    opacity: 1;
+    padding: 0.75rem;
+}
 </style>
 </head>
 <body>
@@ -1791,6 +1803,10 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             const userCreacion = detalle.usuario_creacion || USUARIO_ACTIVO || 'Admin';
             const tituloModal = document.querySelector('#modalDetalleReserva h3');
 
+            if (tituloModal) {
+                tituloModal.innerHTML = `📋 Detalle de Reserva <span style="font-weight:400; font-size:0.95rem; color:#666; margin-left:0.5rem;">by ${userCreacion}</span>`;
+            }
+
             let html = `
                 <!-- === MENÚ DE 3 PUNTOS (SOLO ADMIN) === -->
                 <?php if (($_SESSION['recinto_rol'] ?? '') === 'admin'): ?>
@@ -1821,6 +1837,10 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                     <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
                         <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
                         <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    </div>
+                    <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
+                        👤 Creado por: <strong>${userCreacion}</strong> 
+                        ${detalle.created_at ? `• ${new Date(detalle.created_at).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})}` : ''}
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
@@ -1855,6 +1875,7 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         </div>
                     </div>
             `;
+            
 
             // === SECCIÓN DE NOTAS (CORREGIDA PARA EVITAR SYNTAX ERROR) ===
             const notas = val(detalle.notas, '');
@@ -2452,7 +2473,9 @@ function toggleRecurrentFields(mostrar) {
 }
 
 // === BUSCADOR INTELIGENTE (TU CÓDIGO INTEGRADO) ===
+// === BUSCADOR INTELIGENTE DE SOCIO (VERSIÓN COMPLETA - SIN PLACEHOLDERS) ===
 let debounceTimer;
+
 function debounceBuscar(val) {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => buscarSocioAdmin(val), 300);
@@ -2461,53 +2484,98 @@ function debounceBuscar(val) {
 async function buscarSocioAdmin(query) {
     const container = document.getElementById('searchResultsAdmin');
     if (!container) return;
-    if (query.length < 2) { container.style.display = 'none'; return; }
+    
+    // Si la búsqueda está vacía, ocultar resultados
+    if (query.length < 2) { 
+        container.style.display = 'none'; 
+        return; 
+    }
 
     try {
         const res = await fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`);
         const text = await res.text();
         
+        // Parsear JSON con manejo de errores
         let data;
-        try { data = JSON.parse(text); } catch (e) {
+        try { 
+            data = JSON.parse(text); 
+        } catch (e) {
             console.error('❌ API search_socios devolvió JSON inválido:', text.substring(0, 150));
             container.innerHTML = '<div style="padding:8px; color:#d32f2f; font-size:0.85rem;">Error en búsqueda.</div>';
             container.style.display = 'block';
             return;
         }
 
+        // Limpiar contenedor
         container.innerHTML = '';
+        
+        // === MANEJO DE RESULTADOS ===
         if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div style="padding:8px; color:#856404;">Sin coincidencias.</div>';
+            // Caso: Sin coincidencias → mostrar mensaje + habilitar panel nuevo socio
+            container.innerHTML = '<div style="padding:8px; color:#856404; font-size:0.85rem;">⚠️ Sin coincidencias.</div>';
+            
+            // Mostrar panel para registrar nuevo socio
             document.getElementById('nuevoSocioFields').style.display = 'block';
             document.getElementById('avisoNuevoSocio').style.opacity = '1';
-        } else {
-            container.innerHTML = data.map(s => 
-                `<div onclick="seleccionarSocioAdmin(${s.id_socio}, '${s.nombre}', '${s.email}', '${s.celular}')"
-                    style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem;">
-                    <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
-                </div>`
-            ).join('');
             
-            // Ocultar campos nuevo socio y limpiar valores viejos
-            document.getElementById('nuevoSocioFields').style.display = 'none';
+            // Limpiar campos de nuevo socio por si había datos previos
             ['nombreNuevoSocio','emailNuevoSocio','telNuevoSocio'].forEach(id => {
-                const el = document.getElementById(id); if(el) el.value = '';
+                const el = document.getElementById(id); 
+                if(el) el.value = '';
+            });
+        } else {
+            // Caso: Hay coincidencias → renderizar lista clickeable
+            container.innerHTML = data.map(s => {
+                // Escapar comillas para evitar romper el HTML
+                const safeNombre = (s.nombre || '').replace(/'/g, "\\'");
+                const safeEmail = (s.email || '').replace(/'/g, "\\'");
+                const safeCel = (s.celular || '').replace(/'/g, "\\'");
+                
+                return `
+                    <div onclick="seleccionarSocioAdmin(${s.id_socio}, '${safeNombre}', '${safeEmail}', '${safeCel}')"
+                         style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333; background:#fff;">
+                        <strong>${s.nombre}</strong> <span style="color:#666;">| ${s.email}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            // Ocultar panel de nuevo socio (porque sí encontró resultados)
+            document.getElementById('nuevoSocioFields').style.display = 'none';
+            document.getElementById('avisoNuevoSocio').style.opacity = '1';
+            
+            // Limpiar campos de nuevo socio por seguridad
+            ['nombreNuevoSocio','emailNuevoSocio','telNuevoSocio'].forEach(id => {
+                const el = document.getElementById(id); 
+                if(el) el.value = '';
             });
         }
+        
+        // Mostrar el contenedor de resultados
         container.style.display = 'block';
+        
     } catch (err) {
         console.error('Error en buscarSocioAdmin:', err);
+        // No romper la UI, solo loguear
     }
 }
 
+// === FUNCIÓN PARA SELECCIONAR SOCIO DE LA LISTA ===
 function seleccionarSocioAdmin(id, nombre, email, celular) {
+    // Llenar campos ocultos con los datos del socio seleccionado
     document.getElementById('admin_socio_id').value = id;
     document.getElementById('admin_nombre').value = nombre;
     document.getElementById('admin_email').value = email;
     document.getElementById('admin_celular').value = celular;
+    
+    // Ocultar resultados y limpiar búsqueda
     document.getElementById('searchResultsAdmin').style.display = 'none';
     document.getElementById('searchAdmin').value = nombre;
+    
+    // Asegurar que el panel de nuevo socio esté oculto
+    document.getElementById('nuevoSocioFields').style.display = 'none';
 }
+
+
 
 // === VISTA PREVIA DE FECHAS RECURRENTES ===
 function updatePreviewDates() {
@@ -2597,16 +2665,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// === SUBMIT DEL FORMULARIO (VALIDACIÓN BLINDADA) ===
+// === SUBMIT DEL FORMULARIO (VALIDACIÓN BLINDADA + NUEVO SOCIO) ===
 async function guardarReservaAdmin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
-    btn.disabled = true; btn.textContent = '💾 Guardando...';
+    btn.disabled = true;
+    btn.textContent = '💾 Guardando...';
 
-    const getVal = (id) => { const el = document.getElementById(id); return el?.value?.trim() || ''; };
+    // 🔹 Helper seguro para leer inputs
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el?.value?.trim() || '';
+    };
     
-    // Leer valores actuales
+    // 1. Leer valores actuales del DOM
     const cancha = getVal('admin_cancha_id');
     const fecha  = getVal('admin_fecha');
     const hora   = getVal('admin_hora_inicio');
@@ -2616,32 +2689,70 @@ async function guardarReservaAdmin(e) {
     const dur    = getVal('admin_duracion_bloque') || '60';
     const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
 
-    console.log("🔍 DEBUG ENVIAR:", { cancha, fecha, hora, socio, monto, dur, user });
+    console.log('🔍 DEBUG GUARDAR ->', { cancha, fecha, hora, socio, monto, dur, user });
 
+    // 2. Validaciones mínimas obligatorias
     if (!cancha || !fecha || !hora) {
         showToast('⚠️ Faltan datos básicos de la reserva', 'error');
-        btn.disabled = false; btn.textContent = originalText; return;
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
     }
 
     const isRecurrent = document.getElementById('isRecurrent')?.checked;
 
     try {
         if (isRecurrent) {
+            // === FLUJO RECURRENTE ===
             btn.textContent = '🔄 Generando...';
             const day = parseInt(document.getElementById('repeatDay')?.value);
             const sDate = document.getElementById('startDate')?.value;
             const eDate = document.getElementById('endDate')?.value;
-            if (!day || !sDate || !eDate || new Date(sDate) > new Date(eDate)) {
-                showToast('⚠️ Verifique día y rango de fechas', 'error');
-                btn.disabled = false; btn.textContent = originalText; return;
+
+            if (!day || !sDate || !eDate) {
+                showToast('⚠️ Complete día de repetición y fechas', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
             }
-            const payload = { action:'create_recurrent', id_cancha:cancha, hora_inicio:hora, hora_fin:horaF, id_socio:socio, repeat_day:day, start_date:sDate, end_date:eDate, monto_total:monto, duracion_bloque:dur };
-            const res = await fetch('../api/reserva_recurrente.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            if (new Date(sDate) > new Date(eDate)) {
+                showToast('⚠️ Fecha inicio debe ser anterior a fecha fin', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
+            const payload = {
+                action: 'create_recurrent',
+                id_cancha: cancha,
+                hora_inicio: hora,
+                hora_fin: horaF,
+                id_socio: socio,
+                repeat_day: day,
+                start_date: sDate,
+                end_date: eDate,
+                monto_total: monto,
+                duracion_bloque: dur
+            };
+
+            const res = await fetch('../api/reserva_recurrente.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
             const data = await res.json();
-            if(data.success) { showToast(`✅ ${data.created} creadas${data.skipped>0?` | ⚠️ ${data.skipped} saltadas`:''}`); setTimeout(()=>location.reload(),1500); }
-            else { showToast(`❌ ${data.message}`, 'error'); btn.disabled=false; btn.textContent=originalText; }
+
+            if (data.success) {
+                showToast(`✅ ${data.created} reservas creadas${data.skipped > 0 ? ` | ⚠️ ${data.skipped} saltadas` : ''}`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(`❌ ${data.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+
         } else {
-            // === RESERVA ÚNICA ===
+            // === FLUJO RESERVA ÚNICA ===
             const formData = new FormData(e.target);
             formData.set('action', 'crear_manual');
             formData.set('id_cancha', cancha);
@@ -2652,25 +2763,64 @@ async function guardarReservaAdmin(e) {
             formData.set('duracion_bloque', dur);
             formData.set('usuario_creacion', user);
 
-            if (!socio) {
+            // === MANEJO DE NUEVO SOCIO (checkbox colapsable) ===
+            const checkNuevoSocio = document.getElementById('checkNuevoSocio')?.checked;
+            
+            if (checkNuevoSocio) {
+                // El admin marcó "Registrar nuevo socio" → validar y enviar datos
                 const nNom = document.getElementById('nombreNuevoSocio')?.value?.trim();
                 const nMail = document.getElementById('emailNuevoSocio')?.value?.trim();
                 const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
-                if (!nMail || !nNom) { showToast('⚠️ Ingrese Nombre y Email para nuevo socio', 'error'); btn.disabled=false; btn.textContent=originalText; return; }
+
+                if (!nMail || !nNom) {
+                    showToast('⚠️ Complete Nombre y Email para registrar nuevo socio', 'error');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    return;
+                }
                 formData.set('nombreNuevoSocio', nNom);
                 formData.set('emailNuevoSocio', nMail);
                 formData.set('telNuevoSocio', nTel);
             }
+            // Si NO hay socio Y NO está marcado el checkbox → error
+            else if (!socio) {
+                showToast('⚠️ Seleccione un socio existente o marque "Registrar nuevo socio"', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
 
-            const res = await fetch('../api/gestion_reservas.php', { method:'POST', body:formData });
+            const res = await fetch('../api/gestion_reservas.php', {
+                method: 'POST',
+                body: formData
+            });
             const data = await res.json();
+
             if (data.success) {
-                if(typeof registrarLogReserva==='function' && data.id_reserva) registrarLogReserva(data.id_reserva, 'creada', 'Reserva manual', null, {nuevo:monto});
+                // Registrar log de bitácora (si la función existe)
+                if (typeof registrarLogReserva === 'function' && data.id_reserva) {
+                    registrarLogReserva(
+                        data.id_reserva,
+                        'creada',
+                        `Reserva manual creada${checkNuevoSocio ? ' + nuevo socio' : ''}`,
+                        null,
+                        { nuevo: monto }
+                    );
+                }
                 showToast('✅ Reserva creada correctamente');
-                setTimeout(()=>location.reload(), 1200);
-            } else { showToast(`❌ ${data.message||'Error'}`, 'error'); btn.disabled=false; btn.textContent=originalText; }
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(`❌ ${data.message || 'Error al guardar'}`, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
-    } catch(err) { console.error(err); showToast('❌ Error de conexión', 'error'); btn.disabled=false; btn.textContent=originalText; }
+    } catch (err) {
+        console.error('❌ Error en guardarReservaAdmin:', err);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 function abrirModalMover() {
@@ -3745,6 +3895,29 @@ function verDetalleExtras(idReserva, montoExtras) {
     // Opcional: abrir modal de detalle si prefieres
     // abrirDetalleDesdePlanilla(idReserva);
 }
+// === TOGGLE PANEL NUEVO SOCIO ===
+function toggleNuevoSocioPanel(mostrar) {
+    const panel = document.getElementById('panelNuevoSocio');
+    if (panel) {
+        if (mostrar) {
+            panel.style.display = 'block';
+            // Forzar reflow para activar transición
+            void panel.offsetWidth;
+            panel.style.maxHeight = '200px';
+            panel.style.opacity = '1';
+        } else {
+            panel.style.maxHeight = '0';
+            panel.style.opacity = '0';
+            setTimeout(() => { panel.style.display = 'none'; }, 300);
+        }
+        // Limpiar campos si se oculta
+        if (!mostrar) {
+            ['nombreNuevoSocio','emailNuevoSocio','telNuevoSocio'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.value = '';
+            });
+        }
+    }
+}
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
@@ -3808,16 +3981,22 @@ function verDetalleExtras(idReserva, montoExtras) {
                     <input type="hidden" id="admin_celular">
                 </div>
                 <!-- ✅ datos para nuevo socio -->
-                <div id="nuevoSocioFields" style="display:none; margin-top:0.75rem; padding:0.75rem; background:#F8F9FA; border-radius:8px; border:1px solid #E9ECEF;">
-                    <div id="avisoNuevoSocio" style="background:#FFF3CD; color:#856404; padding:0.5rem; border-radius:6px; font-size:0.8rem; margin-bottom:0.6rem; border-left:3px solid #FFC107;">
-                        ⚠️ Sin coincidencias. Complete datos para registrarlo.
-                    </div>
+                <!-- === CHECKBOX PARA NUEVO SOCIO (colapsable) === -->
+                <div style="margin:0.5rem 0 0.75rem 0; display:flex; align-items:center; gap:0.5rem;">
+                    <input type="checkbox" id="checkNuevoSocio" style="width:16px; height:16px;" onchange="toggleNuevoSocioPanel(this.checked)">
+                    <label for="checkNuevoSocio" style="font-size:0.9rem; color:#333; cursor:pointer; font-weight:500;">
+                        ✨ Registrar nuevo socio
+                    </label>
+                </div>
+
+                <!-- Panel colapsable para datos de nuevo socio (inicialmente oculto) -->
+                <div id="panelNuevoSocio" style="display:none; margin:0.75rem 0; padding:0.75rem; background:#F8F9FA; border-radius:8px; border:1px solid #E9ECEF; transition: all 0.3s ease;">
+                    <p style="font-size:0.8rem; color:#666; margin:0 0 0.75rem 0;">Complete los datos para crear el nuevo socio:</p>
                     <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" 
-                        style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;"
-                        onfocus="document.getElementById('avisoNuevoSocio').style.opacity='0'; document.getElementById('avisoNuevoSocio').style.height='0'; document.getElementById('avisoNuevoSocio').style.padding='0'; document.getElementById('avisoNuevoSocio').style.margin='0';">
+                        style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
                     <input type="email" id="emailNuevoSocio" placeholder="Email *" 
                         style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
-                    <input type="tel" id="telNuevoSocio" placeholder="Teléfono" 
+                    <input type="tel" id="telNuevoSocio" placeholder="Teléfono (opcional)" 
                         style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
                 </div>
 
