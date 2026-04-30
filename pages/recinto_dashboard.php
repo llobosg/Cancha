@@ -190,6 +190,28 @@ if ($debug_rows) {
 } else {
     error_log("   ⚠️ No se encontraron reservas futuras no pagadas para este recinto");
 }
+
+// === 🔍 CARGA DE CANCHAS (CORRECCIÓN DEL ERROR) ===
+$canchas_js = []; // Inicializar vacío por seguridad
+try {
+    // 1. Obtener todas las canchas del recinto
+    $stmt = $pdo->prepare("SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado FROM canchas WHERE id_recinto = ?");
+    $stmt->execute([$id_recinto]);
+    $raw_canchas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 2. Filtrar solo las activas y operativas para el JS
+    if (is_array($raw_canchas)) {
+        // array_values() reindexa el array para que JS lo lea correctamente
+        $canchas_js = array_values(array_filter($raw_canchas, function($c) {
+            return ($c['activa'] == 1 && $c['estado'] === 'Operativa');
+        }));
+    }
+    
+    // Log de diagnóstico para Railway
+    error_log("DEBUG Canchas: BD=" . count($raw_canchas) . " | JS=" . count($canchas_js));
+} catch (Exception $e) {
+    error_log("ERROR Carga Canchas: " . $e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -1366,7 +1388,7 @@ error_log("🔍 DEBUG PHP: Canchas totales BD: " . count($raw) . " | Canchas act
 error_log("🔍 DEBUG PHP: ¿Cancha 26 en JS? " . (json_encode(array_search(26, array_column($canchas_js, 'id_cancha'))) ?: 'NO'));
 
 // Inyección segura al JS
-const canchasData = <?= json_encode(array_values($canchas_js), JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 console.log("🔍 DEBUG JS: canchasData.length =", canchasData.length);
 
 console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
