@@ -257,16 +257,23 @@ function crearReservaManualUnificada($pdo, $data) {
             $nombre_cliente = $nombre_nuevo;
             $email_cliente = $email_nuevo;
             $telefono_cliente = $tel_nuevo;
+        // === DENTRO DEL BLOQUE "NUEVO SOCIO" ===
         } else {
-            // Crear nuevo socio
+            // Crear nuevo socio con token de registro
             $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
-            $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
-            $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
+            $registro_token = bin2hex(random_bytes(32)); // Token único de 64 caracteres
+            $registro_expires = date('Y-m-d H:i:s', strtotime('+7 days')); // Válido por 7 días
+            
+            $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, registro_token, registro_token_expires, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo, $registro_token, $registro_expires]);
             $id_socio = $pdo->lastInsertId();
             
             $nombre_cliente = $nombre_nuevo;
             $email_cliente = $email_nuevo;
             $telefono_cliente = $tel_nuevo;
+            
+            // === GENERAR LINK DE COMPLETAR REGISTRO ===
+            $registro_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_registro.php?token=" . $registro_token;
         }
     }
     
