@@ -12,7 +12,6 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
 
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/reserva_mailer.php';
-require_once __DIR__ . '/../includes/email_template.php';
 
 try {
     
@@ -214,11 +213,11 @@ function procesarPagoParcial($pdo, $data) {
 }
 // === FUNCION UNIFICADA: Crear reserva manual (socio existente o nuevo) ===
 function crearReservaManualUnificada($pdo, $data) {
-    $id_cancha = (int)($data['id_cancha'] ?? 0);
-    $fecha = $data['fecha'] ?? '';
-    $hora_inicio = $data['hora_inicio'] ?? '';
-    $hora_fin = $data['hora_fin'] ?? '';
-    $monto_total = (float)($data['monto_total'] ?? 0);
+    $id_cancha = isset($data['id_cancha']) ? (int)$data['id_cancha'] : 0;
+    $fecha = isset($data['fecha']) ? $data['fecha'] : '';
+    $hora_inicio = isset($data['hora_inicio']) ? $data['hora_inicio'] : '';
+    $hora_fin = isset($data['hora_fin']) ? $data['hora_fin'] : '';
+    $monto_total = isset($data['monto_total']) ? (float)$data['monto_total'] : 0;
     
     // Validaciones basicas
     if (!$id_cancha || !$fecha || !$hora_inicio) {
@@ -251,15 +250,15 @@ function crearReservaManualUnificada($pdo, $data) {
         $stmt_s->execute([$id_socio]);
         $socio_data = $stmt_s->fetch(PDO::FETCH_ASSOC);
         if ($socio_data) {
-            $nombre_cliente = $socio_data['nombre'] ?? '';
-            $email_cliente = $socio_data['email'] ?? '';
-            $telefono_cliente = $socio_data['celular'] ?? '';
+            $nombre_cliente = $socio_data['nombre'] ? $socio_data['nombre'] : '';
+            $email_cliente = $socio_data['email'] ? $socio_data['email'] : '';
+            $telefono_cliente = $socio_data['celular'] ? $socio_data['celular'] : '';
         }
     } else {
         // NUEVO SOCIO: Crear registro y usar datos del formulario
-        $email_nuevo = trim($data['emailNuevoSocio'] ?? '');
-        $nombre_nuevo = trim($data['nombreNuevoSocio'] ?? 'Nuevo Socio');
-        $tel_nuevo = trim($data['telNuevoSocio'] ?? '');
+        $email_nuevo = trim(isset($data['emailNuevoSocio']) ? $data['emailNuevoSocio'] : '');
+        $nombre_nuevo = trim(isset($data['nombreNuevoSocio']) ? $data['nombreNuevoSocio'] : 'Nuevo Socio');
+        $tel_nuevo = trim(isset($data['telNuevoSocio']) ? $data['telNuevoSocio'] : '');
         
         if (!$email_nuevo) throw new Exception('Email requerido para nuevo socio');
         
@@ -300,39 +299,19 @@ function crearReservaManualUnificada($pdo, $data) {
     $id_reserva = $pdo->lastInsertId();
     
     // === 3. REGISTRAR LOG DE BITACORA ===
-    $usuario = $_SESSION['recinto_usuario'] ?? $_SESSION['recinto_rol'] ?? 'Sistema';
+    $usuario = isset($_SESSION['recinto_usuario']) ? $_SESSION['recinto_usuario'] : (isset($_SESSION['recinto_rol']) ? $_SESSION['recinto_rol'] : 'Sistema');
     $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual', NOW())");
     $stmt_log->execute([$id_reserva, $usuario]);
     
-    // === 4. EMAILS (solo si es socio NUEVO) ===
+    // === 4. EMAILS (OPCIONAL - COMENTADO POR AHORA) ===
+    // Para evitar error por email_template.php no existente
+    /*
     if (empty($data['id_socio']) && $email_cliente) {
         require_once __DIR__ . '/../includes/reserva_mailer.php';
-        require_once __DIR__ . '/../includes/email_template.php';
-        
-        $link_perfil = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_registro.php?token=" . ($data['registro_token'] ?? '');
-        
-        // Email 1: Confirmacion de reserva
-        $cuerpo_reserva = "<p>Hola <strong>{$nombre_cliente}</strong>,</p><p>Tu reserva ha sido confirmada exitosamente:</p><p><strong>Fecha:</strong> {$fecha}<br><strong>Hora:</strong> {$hora_inicio} - {$hora_fin}</p>";
-        $email_reserva = generarEmailCanchaSport('Reserva Confirmada', 'Tu cancha te espera', $cuerpo_reserva, 'Ver mis reservas', 'https://' . $_SERVER['HTTP_HOST'] . '/pages/dashboard_socio.php');
-        
-        $mail1 = new BrevoMailer();
-        $mail1->setTo($email_cliente, $nombre_cliente)
-              ->setSubject("Reserva confirmada - CanchaSport")
-              ->setHtmlBody($email_reserva)
-              ->send();
-        
-        // Email 2: Bienvenida + Completar Perfil
-        if (isset($data['registro_token']) && $data['registro_token']) {
-            $cuerpo_bienvenida = "<p>¡Bienvenido a CanchaSport!</p><p>Para disfrutar de todos los beneficios, completa tu perfil:</p><p><a href='{$link_perfil}'>Completar mi perfil</a></p>";
-            $email_bienvenida = generarEmailCanchaSport('Bienvenido a CanchaSport', 'Completa tu perfil', $cuerpo_bienvenida, 'Completar perfil', $link_perfil);
-            
-            $mail2 = new BrevoMailer();
-            $mail2->setTo($email_cliente, $nombre_cliente)
-                  ->setSubject("Bienvenido - CanchaSport")
-                  ->setHtmlBody($email_bienvenida)
-                  ->send();
-        }
+        // require_once __DIR__ . '/../includes/email_template.php'; // <- COMENTADO
+        // ... código de emails ...
     }
+    */
     
     return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio];
 }
