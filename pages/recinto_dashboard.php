@@ -2793,6 +2793,15 @@ async function guardarReservaAdmin(e) {
                 method: 'POST',
                 body: formData
             });
+
+            // ✅ VALIDAR QUE LA RESPUESTA ES JSON ANTES DE PARSEAR
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await res.text();
+                console.error('❌ Respuesta no es JSON:', text.substring(0, 300));
+                throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs de PHP.');
+            }
+
             const data = await res.json();
 
             if (data.success) {
