@@ -3959,21 +3959,22 @@ function toggleNuevoSocioPanel(mostrar) {
 
         <!-- Formulario -->
         <form id="formReservaManual" onsubmit="guardarReservaAdmin(event)">
-                <!-- Campos ocultos (CRÍTICOS - ÚNICOS) -->
+                <!-- Campos ocultos (CRÍTICOS - CON name PARA FORMDATA) -->
                 <input type="hidden" id="admin_usuario_creacion" name="usuario_creacion" value="">
-                <input type="hidden" id="admin_cancha_id">
-                <input type="hidden" id="admin_fecha">
-                <input type="hidden" id="admin_hora_inicio">
-                <input type="hidden" id="admin_hora_fin">
-                <input type="hidden" id="admin_socio_id">
-                <input type="hidden" id="admin_monto_total" value="0">
-                <input type="hidden" id="admin_monto_base" value="0">
-                <input type="hidden" id="admin_duracion_bloque" value="60">
+                <input type="hidden" id="admin_cancha_id" name="id_cancha">
+                <input type="hidden" id="admin_fecha" name="fecha">
+                <input type="hidden" id="admin_hora_inicio" name="hora_inicio">
+                <input type="hidden" id="admin_hora_fin" name="hora_fin">
+                <input type="hidden" id="admin_socio_id" name="id_socio">
+                <input type="hidden" id="admin_monto_total" name="monto_total" value="0">
+                <input type="hidden" id="admin_monto_base" name="monto_base" value="0">
+                <input type="hidden" id="admin_duracion_bloque" name="duracion_bloque" value="60">
                 
-                <!-- ✅ RECUERDOS (para que seleccionarSocioAdmin no falle) -->
+                <!-- ✅ RECUERDOS (para que seleccionarSocioAdmin no falle) 
                 <input type="hidden" id="admin_nombre">
                 <input type="hidden" id="admin_email">
                 <input type="hidden" id="admin_celular">
+                -->
 
                 <!-- ✅ Resumen visual con fecha, hora y cancha -->
                 <div style="background:linear-gradient(135deg, #F3E5F5, #E1BEE7); padding:1rem; border-radius:12px; margin-bottom:1.25rem; text-align:center; border:1px solid #CE93D8;">
