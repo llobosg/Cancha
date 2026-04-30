@@ -1353,8 +1353,6 @@ let tipoListaActual = '';
 const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
-// 🔍 LOG PHP: Ver qué IDs y campos llegan al array JS
-error_log("🔍 DEBUG canchas_js PHP: " . json_encode($canchas_js));
 // 🔍 LOG JS: Ver si el array se inyecta correctamente
 console.log("🔍 DEBUG JS canchasData:", {
     length: canchasData?.length || 0,
