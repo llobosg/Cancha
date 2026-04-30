@@ -319,9 +319,40 @@ function crearReservaManualUnificada($pdo, $data) {
         $stmt_token->execute([$token, $id_socio]);
 
         // B. Configurar contenido del correo
-        $titulo = "¡Bienvenido a CanchaSport, {$nombre_cliente}! 🎾";
-        $mensaje = "<p>Hemos creado tu cuenta para la reserva de hoy.</p>
-                    <p>Para gestionar tus reservas, historial y datos, solo necesitas definir una contraseña:</p>";
+        $titulo = "¡Bienvenido a CanchaSport 🎾!";
+        $mensaje = "
+            <p>Hola <strong>{$nombre_cliente}</strong>,</p>
+            <p>Tu cuenta ha sido creada exitosamente para tu próxima reserva:</p>
+            
+            <!-- Caja de Detalles de Reserva -->
+            <div style='background: #f9f9f9; border-left: 4px solid #AB47BC; padding: 15px; margin: 20px 0; border-radius: 4px;'>
+                <table style='width:100%; border-collapse:collapse;'>
+                    <tr>
+                        <td style='padding:5px; color:#666;'>🏟️ Cancha:</td>
+                        <td style='padding:5px; font-weight:bold;'>{$nombre_cancha}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding:5px; color:#666;'>🎾 Deporte:</td>
+                        <td style='padding:5px; font-weight:bold;'>{$deporte}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding:5px; color:#666;'>📅 Fecha:</td>
+                        <td style='padding:5px; font-weight:bold;'>{$fecha}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding:5px; color:#666;'>⏰ Hora:</td>
+                        <td style='padding:5px; font-weight:bold;'>{$hora_inicio} - {$hora_fin}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding:5px; color:#666;'>📍 Recinto:</td>
+                        <td style='padding:5px; font-weight:bold;'>{$recinto_nombre}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p>Para gestionar tus reservas y perfil, solo falta definir tu contraseña:</p>
+        ";
+        // Luego llamas a tu función de envío pasándole este cuerpo y el link de registro.
         $texto_boton = "Crear mi contraseña";
         
         // C. Enviar
