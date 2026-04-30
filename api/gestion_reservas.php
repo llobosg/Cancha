@@ -302,15 +302,13 @@ function crearReservaManualUnificada($pdo, $data) {
     $usuario = isset($_SESSION['recinto_usuario']) ? $_SESSION['recinto_usuario'] : (isset($_SESSION['recinto_rol']) ? $_SESSION['recinto_rol'] : 'Sistema');
     $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual', NOW())");
     $stmt_log->execute([$id_reserva, $usuario]);
-    
-        // ... (Código anterior de la función se mantiene igual hasta el INSERT de la reserva) ...
 
     // === 4. EMAILS (SOLO SI ES SOCIO NUEVO) ===
     if (empty($data['id_socio']) && $email_cliente) {
         require_once __DIR__ . '/../includes/reserva_mailer.php';
-        require_once __DIR__ . '/../includes/email_helper.php'; // Importamos nuestra plantilla nueva
+        require_once __DIR__ . '/../includes/email_helper.php';
 
-        // A. Generar Token de Seguridad para crear contraseña
+        // A. Generar Token de Seguridad
         $token = bin2hex(random_bytes(32));
         $link_registro = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_registro.php?token=" . $token;
         
@@ -318,7 +316,23 @@ function crearReservaManualUnificada($pdo, $data) {
         $stmt_token = $pdo->prepare("UPDATE socios SET registro_token = ? WHERE id_socio = ?");
         $stmt_token->execute([$token, $id_socio]);
 
-        // B. Configurar contenido del correo
+        // === 🔍 OBTENER DATOS DE LA RESERVA PARA EL CORREO ===
+        // 1. Nombre de cancha y deporte desde la tabla canchas
+        $stmt_cancha = $pdo->prepare("SELECT nombre_cancha, id_deporte, id_recinto FROM canchas WHERE id_cancha = ?");
+        $stmt_cancha->execute([$id_cancha]);
+        $cancha_data = $stmt_cancha->fetch(PDO::FETCH_ASSOC);
+        
+        $nombre_cancha = $cancha_data['nombre_cancha'] ?? 'Cancha';
+        $deporte = $cancha_data['id_deporte'] ?? 'Deporte';
+        $id_recinto_reserva = $cancha_data['id_recinto'] ?? $_SESSION['id_recinto'];
+        
+        // 2. Nombre del recinto desde la tabla recintos_deportivos
+        $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
+        $stmt_recinto->execute([$id_recinto_reserva]);
+        $recinto_data = $stmt_recinto->fetch(PDO::FETCH_ASSOC);
+        $recinto_nombre = $recinto_data['nombre'] ?? 'Recinto Deportivo';
+
+        // B. Configurar contenido del correo con variables YA DEFINIDAS
         $titulo = "¡Bienvenido a CanchaSport 🎾!";
         $mensaje = "
             <p>Hola <strong>{$nombre_cliente}</strong>,</p>
@@ -329,42 +343,45 @@ function crearReservaManualUnificada($pdo, $data) {
                 <table style='width:100%; border-collapse:collapse;'>
                     <tr>
                         <td style='padding:5px; color:#666;'>🏟️ Cancha:</td>
-                        <td style='padding:5px; font-weight:bold;'>{$nombre_cancha}</td>
+                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars($nombre_cancha) . "</td>
                     </tr>
                     <tr>
                         <td style='padding:5px; color:#666;'>🎾 Deporte:</td>
-                        <td style='padding:5px; font-weight:bold;'>{$deporte}</td>
+                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars(ucfirst($deporte)) . "</td>
                     </tr>
                     <tr>
                         <td style='padding:5px; color:#666;'>📅 Fecha:</td>
-                        <td style='padding:5px; font-weight:bold;'>{$fecha}</td>
+                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars(date('d/m/Y', strtotime($fecha))) . "</td>
                     </tr>
                     <tr>
                         <td style='padding:5px; color:#666;'>⏰ Hora:</td>
-                        <td style='padding:5px; font-weight:bold;'>{$hora_inicio} - {$hora_fin}</td>
+                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars(substr($hora_inicio,0,5)) . " - " . htmlspecialchars(substr($hora_fin,0,5)) . "</td>
                     </tr>
                     <tr>
                         <td style='padding:5px; color:#666;'>📍 Recinto:</td>
-                        <td style='padding:5px; font-weight:bold;'>{$recinto_nombre}</td>
+                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars($recinto_nombre) . "</td>
                     </tr>
                 </table>
             </div>
 
             <p>Para gestionar tus reservas y perfil, solo falta definir tu contraseña:</p>
         ";
-        // Luego llamas a tu función de envío pasándole este cuerpo y el link de registro.
+        
         $texto_boton = "Crear mi contraseña";
         
-        // C. Enviar
+        // C. Generar y enviar email
         $html = generarEmailHTML($titulo, $mensaje, $texto_boton, $link_registro);
 
         $mail = new BrevoMailer();
         $mail->setTo($email_cliente, $nombre_cliente)
-             ->setSubject("👋 ¡Bienvenido! Completa tu registro en CanchaSport")
-             ->setHtmlBody($html)
-             ->send();
+            ->setSubject("👋 ¡Bienvenido! Completa tu registro en CanchaSport")
+            ->setHtmlBody($html)
+            ->send();
+            
+        // Log opcional para debug
+        error_log("✅ Email bienvenida enviado a {$email_cliente} para reserva en {$nombre_cancha}");
     }
-    
+
     return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio];
 }
 ?>

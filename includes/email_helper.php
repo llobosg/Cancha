@@ -33,7 +33,7 @@ function generarEmailHTML($titulo, $mensaje, $boton_texto = null, $boton_link = 
             <!-- Header -->
             <tr>
                 <td style='background: linear-gradient(135deg, #CE93D8 0%, #AB47BC 100%); padding: 30px; text-align: center; color: white;'>
-                    <h1 style='margin:0; font-size: 24px;'>🏟️ CanchaSport</h1>
+                    <h1 style='margin:0; font-size: 24px;'>CanchaSport</h1>
                 </td>
             </tr>
             <!-- Body -->
