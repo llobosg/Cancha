@@ -1307,14 +1307,6 @@ td.cell-reserva {
 </div>
 
 <!-- MODALES (Detalle, Pago, Lista KPI) -->
-<div id="modalDetalleReserva">
-    <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
-        <span onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
-        <h3 style="color:#071289; margin-bottom:1.5rem; text-align:center;">📋 Detalle de Reserva</h3>
-        <div id="contenidoDetalle"><p style="text-align:center;">Cargando...</p></div>
-    </div>
-</div>
-
 <div id="modalPago">
     <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative;">
         <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
