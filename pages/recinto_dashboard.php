@@ -1309,7 +1309,6 @@ td.cell-reserva {
 <!-- MODALES (Detalle, Pago, Lista KPI) -->
 <div id="modalDetalleReserva">
     <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
-        <span onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
         <div id="contenidoDetalle"><p style="text-align:center;">Cargando...</p></div>
     </div>
 </div>
@@ -3829,14 +3828,17 @@ async function abrirLogReserva(idReserva) {
         if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => `
                 <tr style="border-bottom:1px solid #F1F5F9;">
-                    ${new Date(log.created_at).toLocaleString('es-CL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'America/Santiago'
-                    })}
+                    <!-- ✅ AGREGAR <td> CON ESTILOS PARA LA FECHA -->
+                    <td style="padding:10px; color:#4A5568; font-size:0.85rem; white-space:nowrap;">
+                       ${new Date(log.created_at).toLocaleString('es-CL', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'America/Santiago',
+                            hour12: false
+                        }).replace(',', '')}
+                    </td>
                     <td style="padding:10px; color:#2D3748;">${log.usuario}</td>
                     <td style="padding:10px;">
                         <span style="padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:500; background:${getAccionColor(log.accion)}; color:white;">
