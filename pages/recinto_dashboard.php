@@ -1307,6 +1307,13 @@ td.cell-reserva {
 </div>
 
 <!-- MODALES (Detalle, Pago, Lista KPI) -->
+<div id="modalDetalleReserva">
+    <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
+        <span onclick="cerrarModalDetalle()" style="position:absolute; top:15px; right:15px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
+        <div id="contenidoDetalle"><p style="text-align:center;">Cargando...</p></div>
+    </div>
+</div>
+
 <div id="modalPago">
     <div style="background:white; padding:2rem; border-radius:16px; max-width:500px; width:90%; position:relative;">
         <span onclick="volverAlDetalle()" style="position:absolute; top:15px; right:20px; font-size:28px; cursor:pointer; color:#999;">&times;</span>
@@ -1815,7 +1822,7 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                     <div style="display:flex; align-items:center;">
                         ${menuDotsHtml}
                         <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
-                            📋 Detalle de Reserva <span style="font-weight:400; font-size:0.9rem; color:#666;">by ${userCreacion}</span>
+                            📋 Detalle de Reserva
                         </h3>
                     </div>
                     <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
