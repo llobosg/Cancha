@@ -59,27 +59,29 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                     exit;
                 }
                 
-                // ✅ CONSULTA CORREGIDA: Incluye LEFT JOIN para usuario_creacion y recinto
+                // ✅ CONSULTA CORREGIDA: Evita GROUP BY conflictivo usando subconsulta directa
                 $stmt = $pdo->prepare("
                     SELECT 
                         r.*, 
                         c.nombre_cancha, 
                         c.id_deporte,
                         rec.nombre as recinto_nombre,
-                        log_creador.usuario_nombre as usuario_creacion
+                        (
+                            SELECT rl.usuario_nombre 
+                            FROM reservas_log rl 
+                            WHERE rl.id_reserva = r.id_reserva 
+                            AND rl.accion = 'creada' 
+                            ORDER BY rl.created_at ASC 
+                            LIMIT 1
+                        ) as usuario_creacion
                     FROM reservas r
                     JOIN canchas c ON r.id_cancha = c.id_cancha
                     JOIN recintos_deportivos rec ON c.id_recinto = rec.id_recinto
-                    LEFT JOIN (
-                        SELECT id_reserva, usuario_nombre 
-                        FROM reservas_log 
-                        WHERE accion = 'creada'
-                        GROUP BY id_reserva
-                    ) AS log_creador ON r.id_reserva = log_creador.id_reserva
                     WHERE r.id_reserva = ? 
                     AND c.id_recinto = ?
                     AND r.estado != 'cancelada'
                 ");
+                
                 $stmt->execute([$id_reserva, $id_recinto]);
                 $detalle = $stmt->fetch(PDO::FETCH_ASSOC);
                 
