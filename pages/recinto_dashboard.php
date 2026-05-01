@@ -1803,6 +1803,11 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             const userCreacion = detalle.usuario_creacion || USUARIO_ACTIVO || 'Admin';
             const tituloModal = document.querySelector('#modalDetalleReserva h3');
 
+            // === SECCIÓN DE DATOS DEL CLIENTE ===
+            const cliente = detalle.nombre_cliente || 'Sin asignar';
+            const email   = detalle.email_cliente || '-';
+            const tel     = detalle.telefono_cliente || '-';
+
             if (tituloModal) {
                 tituloModal.innerHTML = `📋 Detalle de Reserva <span style="font-weight:400; font-size:0.95rem; color:#666; margin-left:0.5rem;">by ${userCreacion}</span>`;
             }
@@ -1840,13 +1845,24 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                     </div>
                     <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
                         👤 Creado por: <strong>${userCreacion}</strong> 
-                        ${detalle.created_at ? `• ${new Date(detalle.created_at).toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})}` : ''}
+                        ${detalle.created_at ? (() => {
+                            // 1. Normaliza formato MySQL a ISO
+                            // 2. Fuerza zona horaria Chile (evita saltos de 3/4 horas)
+                            const fecha = new Date(detalle.created_at.replace(' ', 'T'));
+                            return `• ${fecha.toLocaleString('es-CL', { 
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', 
+                                timeZone: 'America/Santiago' 
+                            })}`;
+                        })() : ''}
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
                         <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
-                        <div style="grid-column: span 2;"><strong>Cliente:</strong> ${val(detalle.nombre_cliente || detalle.nombre_responsable)}</div>
-                        <div style="grid-column: span 2;"><strong>Contacto:</strong> ${val(detalle.telefono_cliente)}</div>
+                        <div style="grid-column: span 2;"><strong>Cliente:</strong> ${cliente}</div>
+                        <div style="grid-column: span 2; word-break: break-all;">
+                            <strong>Contacto:</strong> 📧 ${email} | 📱 ${tel}
+                        </div>
+                        
                         <!-- === CREADO POR (visible para todos) === -->
                         <div style="font-size:0.75rem; color:#888; margin-top:4px; display:flex; align-items:center; gap:4px;">
                             <span>👤</span>
@@ -3969,7 +3985,7 @@ function toggleNuevoSocioPanel(mostrar) {
                 <input type="hidden" id="admin_monto_total" name="monto_total" value="0">
                 <input type="hidden" id="admin_monto_base" name="monto_base" value="0">
                 <input type="hidden" id="admin_duracion_bloque" name="duracion_bloque" value="60">
-                
+
                 <!-- ✅ RECUERDOS (para que seleccionarSocioAdmin no falle) 
                 <input type="hidden" id="admin_nombre">
                 <input type="hidden" id="admin_email">

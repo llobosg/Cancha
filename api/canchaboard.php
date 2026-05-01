@@ -62,9 +62,10 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 // Consulta SEGURA: validar que la reserva pertenece a este recinto
                 $stmt = $pdo->prepare("
                     SELECT 
-                        r.*, 
-                        c.nombre_cancha, 
-                        c.id_deporte,
+                        r.id_reserva, r.nombre_cliente, r.email_cliente, r.telefono_cliente,
+                        r.fecha, r.hora_inicio, r.hora_fin, r.monto_total, r.monto_recaudacion,
+                        r.estado_pago, r.notas, r.usuario_creacion, r.created_at,
+                        c.nombre_cancha, c.id_deporte,
                         rec.nombre as recinto_nombre
                     FROM reservas r
                     JOIN canchas c ON r.id_cancha = c.id_cancha
