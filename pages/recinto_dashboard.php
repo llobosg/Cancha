@@ -1813,57 +1813,100 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                 tituloModal.innerHTML = `📋 Detalle de Reserva <span style="font-weight:400; font-size:0.95rem; color:#666; margin-left:0.5rem;">by ${userCreacion}</span>`;
             }
 
-            // 1. Definir menú 3 puntos (solo si es Admin)
-            const menuDotsHtml = (ROL_USUARIO === 'admin') ? `
-                <div style="position:relative; cursor:pointer; padding: 4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
-                    <span style="font-size:1.4rem; color:#666;">⋮</span>
-                    <!-- Menú desplegable -->
-                    <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
-                        <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})" style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
-                            📋 Ver bitácora
+            let html = `
+                <!-- === MENÚ DE 3 PUNTOS (SOLO ADMIN) === -->
+                <?php if (($_SESSION['recinto_rol'] ?? '') === 'admin'): ?>
+                    // 1. Definir menú 3 puntos (solo si es Admin)
+                    const menuDotsHtml = (ROL_USUARIO === 'admin') ? `
+                        <div style="position:relative; cursor:pointer; padding: 4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
+                            <span style="font-size:1.4rem; color:#666;">⋮</span>
+                            <!-- Menú desplegable -->
+                            <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
+                                <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})" style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                                    📋 Ver bitácora
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
+
+                    // 2. Construir HTML del encabezado (Reemplaza el H3 estático y la X por un contenedor Flex)
+                    const headerHtml = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
+                            <div style="display:flex; align-items:center;">
+                                ${menuDotsHtml}
+                                <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
+                                    📋 Detalle de Reserva <span style="font-weight:400; font-size:0.9rem; color:#888;">by ${userCreacion}</span>
+                                </h3>
+                            </div>
+                            <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
+                        </div>
+                    `;
+                <?php endif; ?>
+                // 3. Inyectar encabezado en el modal (reemplazando el título estático antiguo)
+                const modalDiv = document.querySelector('#modalDetalleReserva > div');
+                if(modalDiv) {
+                    // Remover elementos antiguos para evitar duplicados
+                    const oldTitle = modalDiv.querySelector('h3');
+                    const oldClose = modalDiv.querySelector('span[onclick="cerrarModalDetalle()"]');
+                    if(oldTitle) oldTitle.remove();
+                    if(oldClose) oldClose.remove();
+                    
+                    // Insertar nuevo encabezado al principio
+                    modalDiv.insertAdjacentHTML('afterbegin', headerHtml);
+                }
+                    
+                <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                        <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    </div>
+                    <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
+                        👤 Creado por: <strong>${userCreacion}</strong> 
+                        ${detalle.created_at ? (() => {
+                            // 1. Normaliza formato MySQL a ISO
+                            // 2. Fuerza zona horaria Chile (evita saltos de 3/4 horas)
+                            const fecha = new Date(detalle.created_at.replace(' ', 'T'));
+                            return `• ${fecha.toLocaleString('es-CL', { 
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', 
+                                timeZone: 'America/Santiago' 
+                            })}`;
+                        })() : ''}
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
+                        <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
+                        <div style="grid-column: span 2;"><strong>Cliente:</strong> ${cliente}</div>
+                        <div style="grid-column: span 2; word-break: break-all;">
+                            <strong>Contacto:</strong> 📧 ${email} | 📱 ${tel}
+                        </div>
+
+                        <!-- === CREADO POR (visible para todos) === -->
+                        <div style="font-size:0.75rem; color:#888; margin-top:4px; display:flex; align-items:center; gap:4px;">
+                            <span>👤</span>
+                            <span id="creado_por_<?= $reserva['id_reserva'] ?>">
+                                <?= htmlspecialchars($reserva['usuario_creacion'] ?? 'Sistema') ?>
+                            </span>
                         </div>
                     </div>
-                </div>
-            ` : '';
-
-            // 2. Construir HTML del encabezado (Reemplaza el H3 estático y la X por un contenedor Flex)
-            const headerHtml = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
-                    <div style="display:flex; align-items:center;">
-                        ${menuDotsHtml}
-                        <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
-                            📋 Detalle de Reserva <span style="font-weight:400; font-size:0.9rem; color:#888;">by ${userCreacion}</span>
-                        </h3>
+                    <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <span style="color:#666; font-size:0.9rem;">Monto Total</span>
+                            <span style="font-weight:bold;">${money(montoTotal)}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <span style="color:#666; font-size:0.9rem;">Abonado</span>
+                            <span style="font-weight:bold; color:#2e7d32;">${money(montoRecaudado)}</span>
+                        </div>
+                        ${esParcial ? `
+                        <div style="display:flex; justify-content:space-between; padding-top:0.5rem; border-top:1px dashed #ccc;">
+                            <span style="color:#c62828; font-weight:bold;">Saldo Pendiente</span>
+                            <span style="font-weight:bold; color:#c62828;">${money(saldoPendiente)}</span>
+                        </div>` : ''}
+                        <div style="margin-top:0.5rem; text-align:right;">
+                            <span style="font-size:0.8rem; color:#666;">Estado: </span>
+                            <span style="font-weight:bold; color:${estadoColor};">${val(detalle.estado_pago).toUpperCase()}</span>
+                        </div>
                     </div>
-                    <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
-                </div>
-            `;
-
-            // 3. Inyectar encabezado en el modal (reemplazando el título estático antiguo)
-            const modalDiv = document.querySelector('#modalDetalleReserva > div');
-            if(modalDiv) {
-                // Remover elementos antiguos para evitar duplicados
-                const oldTitle = modalDiv.querySelector('h3');
-                const oldClose = modalDiv.querySelector('span[onclick="cerrarModalDetalle()"]');
-                if(oldTitle) oldTitle.remove();
-                if(oldClose) oldClose.remove();
-                
-                // Insertar nuevo encabezado al principio
-                modalDiv.insertAdjacentHTML('afterbegin', headerHtml);
-            }
-
-            // 4. Construir el resto del contenido
-            let html = `<div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
-            <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
-                <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
-                <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
-                <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
-                <div style="grid-column: span 2;"><strong>Cliente:</strong> ${val(detalle.nombre_cliente || detalle.nombre_responsable)}</div>
-                <div style="grid-column: span 2;"><strong>Contacto:</strong> 📧 ${val(detalle.email_cliente)} | 📱 ${val(detalle.telefono_cliente)}</div>
-            </div>
             `;
             
 
