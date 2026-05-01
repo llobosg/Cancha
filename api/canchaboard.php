@@ -41,7 +41,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 break;
 
             case 'get_detalle_reserva':
-                // Validar sesión y recinto
+                // Validar sesión
                 if (!isset($_SESSION['id_recinto'])) {
                     http_response_code(401);
                     echo json_encode(['error' => 'Sesión no válida']);
@@ -50,7 +50,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 
                 $id_reserva = (int)($_POST['id_reserva'] ?? 0);
                 $id_recinto = (int)$_SESSION['id_recinto'];
-
+                
                 error_log("[DEBUG] get_detalle_reserva: id_reserva=$id_reserva, id_recinto=$id_recinto");
                 
                 if (!$id_reserva) {
@@ -59,17 +59,23 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                     exit;
                 }
                 
-                // Consulta SEGURA: validar que la reserva pertenece a este recinto
+                // ✅ CONSULTA CORREGIDA: Incluye LEFT JOIN para usuario_creacion y recinto
                 $stmt = $pdo->prepare("
                     SELECT 
-                        r.id_reserva, r.nombre_cliente, r.email_cliente, r.telefono_cliente,
-                        r.fecha, r.hora_inicio, r.hora_fin, r.monto_total, r.monto_recaudacion,
-                        r.estado_pago, r.notas, r.usuario_creacion, r.created_at,
-                        c.nombre_cancha, c.id_deporte,
-                        rec.nombre as recinto_nombre
+                        r.*, 
+                        c.nombre_cancha, 
+                        c.id_deporte,
+                        rec.nombre as recinto_nombre,
+                        log_creador.usuario_nombre as usuario_creacion
                     FROM reservas r
                     JOIN canchas c ON r.id_cancha = c.id_cancha
                     JOIN recintos_deportivos rec ON c.id_recinto = rec.id_recinto
+                    LEFT JOIN (
+                        SELECT id_reserva, usuario_nombre 
+                        FROM reservas_log 
+                        WHERE accion = 'creada'
+                        GROUP BY id_reserva
+                    ) AS log_creador ON r.id_reserva = log_creador.id_reserva
                     WHERE r.id_reserva = ? 
                     AND c.id_recinto = ?
                     AND r.estado != 'cancelada'
@@ -78,8 +84,6 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 $detalle = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if (!$detalle) {
-                    // Log para depuración (solo en desarrollo)
-                    error_log("[API] Reserva $id_reserva no encontrada para recinto $id_recinto");
                     http_response_code(404);
                     echo json_encode(['error' => 'Reserva no encontrada o no pertenece a este recinto']);
                     exit;
@@ -121,9 +125,14 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
         }
         
     } catch (Exception $e) {
-        http_response_code($e->getCode() ?: 400);
+        // ✅ CORRECCIÓN: Convertir el código a entero o usar 500 por defecto
+        $statusCode = (int)($e->getCode() ?: 500);
+        http_response_code($statusCode);
+        
+        // Loguear el error real para debug
+        error_log("❌ [API CRÍTICO] Error: " . $e->getMessage() . " | Código: " . $e->getCode());
+        
         echo json_encode(['error' => $e->getMessage()]);
-        error_log("❌ [API] Error: " . $e->getMessage());
     }
 
     // === FUNCIONES ===
