@@ -1753,9 +1753,9 @@ document.addEventListener('dragend', (e) => {
 });
 
 
-// === DETALLE DE RESERVA (CORREGIDO) ===
+// === DETALLE DE RESERVA (CORREGIDO + MENÚ 3 PUNTOS IZQUIERDA) ===
 async function abrirDetalleDesdePlanilla(idReserva) {
-     console.log("🔍 abrirDetalleDesdePlanilla llamado con ID:", idReserva, typeof idReserva);
+    console.log("🔍 abrirDetalleDesdePlanilla llamado con ID:", idReserva, typeof idReserva);
     
     if (!idReserva || idReserva === 'undefined' || idReserva === 'null') {
         showToast("❌ ID de reserva inválido", "error");
@@ -1800,61 +1800,43 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             if (detalle.estado_pago === 'pagado') estadoColor = 'green';
             else if (detalle.estado_pago === 'parcial') estadoColor = '#f4e346';
 
-            // Construcción del HTML principal
+            // === ENCABEZADO FLEXBOX: [⋮ + Título] [×] ===
             const userCreacion = detalle.usuario_creacion || USUARIO_ACTIVO || 'Admin';
-            const tituloModal = document.querySelector('#modalDetalleReserva h3');
+            
+            // Menú 3 puntos (solo para admin) - Lógica JS pura
+            const menuDotsHtml = (typeof ROL_USUARIO !== 'undefined' && ROL_USUARIO === 'admin') ? `
+                <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
+                    <span style="font-size:1.4rem; color:#666;">⋮</span>
+                    <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
+                        <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})" 
+                             style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;"
+                             onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                            📋 Ver bitácora
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
+            // Construir header con flexbox
+            const headerHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
+                    <div style="display:flex; align-items:center;">
+                        ${menuDotsHtml}
+                        <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
+                            📋 Detalle de Reserva <span style="font-weight:400; font-size:0.9rem; color:#666;">by ${userCreacion}</span>
+                        </h3>
+                    </div>
+                    <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
+                </div>
+            `;
 
             // === SECCIÓN DE DATOS DEL CLIENTE ===
             const cliente = detalle.nombre_cliente || 'Sin asignar';
             const email   = detalle.email_cliente || '-';
             const tel     = detalle.telefono_cliente || '-';
 
-            if (tituloModal) {
-                tituloModal.innerHTML = `📋 Detalle de Reserva <span style="font-weight:400; font-size:0.95rem; color:#666; margin-left:0.5rem;">by ${userCreacion}</span>`;
-            }
-
+            // Construir cuerpo del modal
             let html = `
-                <!-- === MENÚ DE 3 PUNTOS (SOLO ADMIN) === -->
-                <?php if (($_SESSION['recinto_rol'] ?? '') === 'admin'): ?>
-                    // 1. Definir menú 3 puntos (solo si es Admin)
-                    const menuDotsHtml = (ROL_USUARIO === 'admin') ? `
-                        <div style="position:relative; cursor:pointer; padding: 4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
-                            <span style="font-size:1.4rem; color:#666;">⋮</span>
-                            <!-- Menú desplegable -->
-                            <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
-                                <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})" style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
-                                    📋 Ver bitácora
-                                </div>
-                            </div>
-                        </div>
-                    ` : '';
-
-                    // 2. Construir HTML del encabezado (Reemplaza el H3 estático y la X por un contenedor Flex)
-                    const headerHtml = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
-                            <div style="display:flex; align-items:center;">
-                                ${menuDotsHtml}
-                                <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
-                                    📋 Detalle de Reserva <span style="font-weight:400; font-size:0.9rem; color:#888;">by ${userCreacion}</span>
-                                </h3>
-                            </div>
-                            <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
-                        </div>
-                    `;
-                <?php endif; ?>
-                // 3. Inyectar encabezado en el modal (reemplazando el título estático antiguo)
-                const modalDiv = document.querySelector('#modalDetalleReserva > div');
-                if(modalDiv) {
-                    // Remover elementos antiguos para evitar duplicados
-                    const oldTitle = modalDiv.querySelector('h3');
-                    const oldClose = modalDiv.querySelector('span[onclick="cerrarModalDetalle()"]');
-                    if(oldTitle) oldTitle.remove();
-                    if(oldClose) oldClose.remove();
-                    
-                    // Insertar nuevo encabezado al principio
-                    modalDiv.insertAdjacentHTML('afterbegin', headerHtml);
-                }
-                    
                 <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
                     <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
                         <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
@@ -1863,8 +1845,6 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                     <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
                         👤 Creado por: <strong>${userCreacion}</strong> 
                         ${detalle.created_at ? (() => {
-                            // 1. Normaliza formato MySQL a ISO
-                            // 2. Fuerza zona horaria Chile (evita saltos de 3/4 horas)
                             const fecha = new Date(detalle.created_at.replace(' ', 'T'));
                             return `• ${fecha.toLocaleString('es-CL', { 
                                 day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', 
@@ -1878,14 +1858,6 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         <div style="grid-column: span 2;"><strong>Cliente:</strong> ${cliente}</div>
                         <div style="grid-column: span 2; word-break: break-all;">
                             <strong>Contacto:</strong> 📧 ${email} | 📱 ${tel}
-                        </div>
-
-                        <!-- === CREADO POR (visible para todos) === -->
-                        <div style="font-size:0.75rem; color:#888; margin-top:4px; display:flex; align-items:center; gap:4px;">
-                            <span>👤</span>
-                            <span id="creado_por_<?= $reserva['id_reserva'] ?>">
-                                <?= htmlspecialchars($reserva['usuario_creacion'] ?? 'Sistema') ?>
-                            </span>
                         </div>
                     </div>
                     <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
@@ -1908,16 +1880,12 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         </div>
                     </div>
             `;
-            
 
-            // === SECCIÓN DE NOTAS (CORREGIDA PARA EVITAR SYNTAX ERROR) ===
+            // === SECCIÓN DE NOTAS ===
             const notas = val(detalle.notas, '');
             if (notas && notas !== 'null' && notas !== '') {
-                // Definir colores según estado
                 const bgNota = esParcial ? '#FFF3E0' : '#FFFDE7';
                 const borderNota = esParcial ? '#FFB74D' : '#FFF59D';
-                
-                // Usar concatenación simple para evitar problemas con template literals anidados complejos
                 html += '<div style="background: ' + bgNota + '; padding: 0.8rem; border-radius: 6px; border-left: 4px solid ' + borderNota + '; margin-bottom: 1rem;">';
                 html += '<div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; text-transform: uppercase;">📝 Historial / Notas</div>';
                 html += '<div style="font-size: 0.9rem; color: #333; white-space: pre-wrap; font-family: sans-serif;">' + notas + '</div>';
@@ -1925,8 +1893,7 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             }
 
             html += '</div>'; // Cierre contenedor principal
-            
-            container.innerHTML = html;
+            container.innerHTML = headerHtml + html;
 
             // Agregar botones de acción
             const actionContainer = document.createElement('div');
@@ -1947,6 +1914,29 @@ async function abrirDetalleDesdePlanilla(idReserva) {
         if (container) container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
     }
 }
+
+// === FUNCIÓN AUXILIAR: Toggle menú 3 puntos (agregar junto a tus otras funciones) ===
+function toggleLogMenu(event, idReserva) {
+    event.stopPropagation();
+    // Cerrar otros menús abiertos
+    document.querySelectorAll('[id^="logMenu_"]').forEach(menu => {
+        if (menu.id !== `logMenu_${idReserva}`) menu.style.display = 'none';
+    });
+    // Toggle del menú actual
+    const menu = document.getElementById(`logMenu_${idReserva}`);
+    if (menu) {
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+}
+
+// Cerrar menús al hacer click fuera
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[onclick*="toggleLogMenu"]')) {
+        document.querySelectorAll('[id^="logMenu_"]').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+});
 
 // === FUNCIONES DE MODALES Y ACCIONES ===
 function toggleActionMenuModal() {
