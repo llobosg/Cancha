@@ -3808,7 +3808,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// === ABRIR MODAL DE BITÁCORA (CORREGIDO) ===
+// === ABRIR MODAL DE BITÁCORA (CORREGIDO - FECHA + TIMEZONE) ===
 async function abrirLogReserva(idReserva) {
     const modal = document.getElementById('modalLogReserva');
     const tbody = document.getElementById('logReservaBody');
@@ -3816,7 +3816,6 @@ async function abrirLogReserva(idReserva) {
     
     if (!modal || !tbody) return;
     
-    // Mostrar modal y cargar datos
     titleId.textContent = idReserva;
     tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">🔄 Cargando...</td></tr>';
     modal.style.display = 'flex';
@@ -3824,25 +3823,28 @@ async function abrirLogReserva(idReserva) {
     try {
         const res = await fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`);
         const data = await res.json();
+        console.log('🔍 DEBUG LOGS:', data.logs?.[0]);
+        if (data.logs?.[0]) {
+            console.log('🔍 created_at:', data.logs[0].created_at);
+            console.log('🔍 fecha:', data.logs[0].fecha);
+        }
         
         if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
-            // ✅ CORRECCIÓN: Formatear fecha DENTRO del map, donde 'log' sí existe
             tbody.innerHTML = data.logs.map(log => {
-                // Parsear fecha MySQL a objeto Date válido (DENTRO del map)
-                const fechaLog = log.created_at || log.fecha;
+                // ✅ Parsear fecha MySQL (created_at) con timezone Chile
+                const fechaRaw = log.created_at || log.fecha || '';
                 let fechaFormateada = '-';
                 
-                if (fechaLog) {
+                if (fechaRaw) {
                     try {
-                        // Convertir "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS" para ISO
-                        const fechaISO = fechaLog.replace(' ', 'T');
+                        // Convertir "YYYY-MM-DD HH:MM:SS" → ISO para Date
+                        const fechaISO = fechaRaw.replace(' ', 'T');
                         const fechaObj = new Date(fechaISO);
                         
-                        // Validar que la fecha sea válida
                         if (!isNaN(fechaObj.getTime())) {
                             fechaFormateada = fechaObj.toLocaleString('es-CL', {
                                 day: '2-digit',
-                                month: '2-digit',
+                                month: '2-digit', 
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit',
@@ -3850,15 +3852,14 @@ async function abrirLogReserva(idReserva) {
                             });
                         }
                     } catch (e) {
-                        console.warn('⚠️ Error parseando fecha:', fechaLog, e);
-                        fechaFormateada = fechaLog; // Fallback: mostrar raw
+                        console.warn('⚠️ Error parseando fecha:', fechaRaw, e);
+                        fechaFormateada = fechaRaw; // Fallback
                     }
                 }
                 
-                // Retornar la fila HTML con la fecha ya formateada
                 return `
                 <tr style="border-bottom:1px solid #F1F5F9;">
-                    <td style="padding:10px; color:#4A5568; font-size:0.85rem; white-space:nowrap;">
+                    <td style="padding:10px; color:#4A5568; font-weight:500; white-space:nowrap;">
                         ${fechaFormateada}
                     </td>
                     <td style="padding:10px; color:#2D3748;">${log.usuario || '-'}</td>
@@ -3869,8 +3870,8 @@ async function abrirLogReserva(idReserva) {
                     </td>
                     <td style="padding:10px; color:#4A5568; font-size:0.9rem;">
                         ${log.descripcion || '-'}
-                        ${log.monto_anterior || log.monto_nuevo ? 
-                            `<br><small style="color:#666;">$${log.monto_anterior || '?'} → $${log.monto_nuevo || '?'}</small>` : ''}
+                        ${log.monto_anterior !== undefined || log.monto_nuevo !== undefined ? 
+                            `<br><small style="color:#666;">$${log.monto_anterior !== undefined ? log.monto_anterior : '?'} → $${log.monto_nuevo !== undefined ? log.monto_nuevo : '?'}</small>` : ''}
                     </td>
                 </tr>
                 `;

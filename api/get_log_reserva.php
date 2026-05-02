@@ -28,18 +28,18 @@ try {
     }
     
     // Obtener logs ordenados por fecha (más reciente primero)
+    // En api/get_log_reserva.php
     $stmt = $pdo->prepare("
         SELECT 
             id_log,
-            usuario_nombre,
+            usuario_nombre as usuario,
             accion,
             descripcion,
             monto_anterior,
             monto_nuevo,
-            DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') as fecha_formateada,
             created_at
-        FROM reservas_log
-        WHERE id_reserva = ?
+        FROM reservas_log 
+        WHERE id_reserva = ? 
         ORDER BY created_at DESC
     ");
     $stmt->execute([$id_reserva]);
