@@ -463,6 +463,7 @@ $_SESSION['visited_index'] = true;
             <span style="display:inline-block; margin-top:0.5rem; padding:0.25rem 0.75rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500;">
               ⭐ Convenio Exclusivo
             </span>
+            <div class="carousel-slide" onclick="window.open('club_pasco.php')" style="cursor:pointer;">
           </div>
         </div>
         
@@ -484,6 +485,7 @@ $_SESSION['visited_index'] = true;
             <span style="display:inline-block; margin-top:0.5rem; padding:0.25rem 0.75rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500;">
               ⭐ Convenio Exclusivo
             </span>
+            <div class="carousel-slide" onclick="window.open('mi_padel.php')" style="cursor:pointer;">
           </div>
         </div>
         
@@ -639,22 +641,51 @@ const track = document.getElementById('carouselTrack');
 const slides = track?.children || [];
 const dotsContainer = document.getElementById('carouselDots');
 
+// === CAROUSEL (CORREGIDO) ===
+let currentSlide = 0;
+const track = document.getElementById('carouselTrack');
+const slides = track ? Array.from(track.children) : []; // ✅ Convertir a Array
+const dotsContainer = document.getElementById('carouselDots');
+
 function initCarousel() {
-  if(!track || slides.length === 0) return;
-  
-  // Actualizar total de slides
-  document.getElementById('slideTotal').textContent = slides.length;
-  
-  // Crear dots
-  slides.forEach((_, i) => {
-    const dot = document.createElement('div');
-    dot.className = 'dot' + (i===0?' active':'');
-    dot.onclick = () => goToSlide(i);
-    dotsContainer?.appendChild(dot);
-  });
-  
-  // Auto-play (6 segundos para dar tiempo de leer)
-  setInterval(() => goToSlide((currentSlide+1)%slides.length), 6000);
+    console.log('?? Carousel: slides.length =', slides.length);
+    console.log('?? Carousel: track =', track);
+
+    if(!track || slides.length === 0) {
+        console.warn('⚠️ Carousel: track o slides no encontrados');
+        return;
+    }
+    
+    // Actualizar total de slides
+    const totalEl = document.getElementById('slideTotal');
+    if(totalEl) totalEl.textContent = slides.length;
+    
+    // Crear dots
+    slides.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (i===0 ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        if(dotsContainer) dotsContainer.appendChild(dot);
+    });
+    
+    // Auto-play (6 segundos)
+    setInterval(() => goToSlide((currentSlide+1) % slides.length), 6000);
+}
+
+function goToSlide(index) {
+    if(!track || slides.length === 0) return;
+    
+    currentSlide = index;
+    track.style.transform = `translateX(-${index*100}%)`;
+    
+    // Actualizar dots
+    document.querySelectorAll('.dot').forEach((d,i) => {
+        d.classList.toggle('active', i===index);
+    });
+    
+    // Actualizar contador
+    const counterEl = document.getElementById('slideCounter');
+    if(counterEl) counterEl.textContent = index + 1;
 }
 
 function goToSlide(index) {
