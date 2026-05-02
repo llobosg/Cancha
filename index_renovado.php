@@ -456,7 +456,7 @@ $_SESSION['visited_index'] = true;
         
         <!-- Slide 2: Convenio - Club Pasco Providencia -->
         <div class="carousel-slide">
-          <img src="assets/img/convenio_club_pasco.jpg" alt="Club Pasco Providencia">
+          <img src="assets/img/convenio_club_pasco.jpeg" alt="Club Pasco Providencia">
           <div class="carousel-caption" style="background: linear-gradient(transparent, rgba(107,33,168,0.85));">
             <h4>🏟️ Club Pasco Providencia</h4>
             <p style="font-size:0.85rem; margin-top:0.3rem; opacity:0.95;">🏆 El primer club en Chile en incorporar Pádel</p>
@@ -477,7 +477,7 @@ $_SESSION['visited_index'] = true;
         
         <!-- Slide 4: Convenio - Mi Pádel San Joaquín -->
         <div class="carousel-slide">
-          <img src="assets/img/convenio_mi_padel.jpg" alt="Mi Pádel San Joaquín">
+          <img src="assets/img/convenio_mi_padel.jpeg" alt="Mi Pádel San Joaquín">
           <div class="carousel-caption" style="background: linear-gradient(transparent, rgba(107,33,168,0.85));">
             <h4>🏟️ Mi Pádel San Joaquín</h4>
             <p style="font-size:0.85rem; margin-top:0.3rem; opacity:0.95;"> Nuevas y modernas instalaciones</p>
