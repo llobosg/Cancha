@@ -471,7 +471,7 @@ $_SESSION['visited_index'] = true;
         
         <!-- Slide 3: Feature - Reservas -->
         <div class="carousel-slide">
-          <img src="assets/img/feature2.jpg" alt="Reservas">
+          <img src="assets/img/padel2.jpeg" alt="Reservas">
           <div class="carousel-caption">
             <h4>🎾 Reservas en 3 Clicks</h4>
             <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Rápido, fácil y sin esperas</p>
