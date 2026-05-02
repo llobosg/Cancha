@@ -3824,20 +3824,38 @@ async function abrirLogReserva(idReserva) {
     try {
         const res = await fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`);
         const data = await res.json();
+         // ✅ Parsear fecha MySQL a objeto Date válido
+        const fechaLog = log.created_at || log.fecha;
+        let fechaFormateada = '-';
+        if (fechaLog) {
+            try {
+                // Convertir "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS" para ISO
+                const fechaISO = fechaLog.replace(' ', 'T');
+                const fechaObj = new Date(fechaISO);
+                            
+                // Validar que la fecha sea válida
+            if (!isNaN(fechaObj.getTime())) {
+                fechaFormateada = fechaObj.toLocaleString('es-CL', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Santiago'
+                });
+            }
+            } catch (e) {
+                console.warn('⚠️ Error parseando fecha:', fechaLog, e);
+                fechaFormateada = fechaLog; // Fallback: mostrar raw
+            }
+        }
         
         if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => `
                 <tr style="border-bottom:1px solid #F1F5F9;">
                     <!-- ✅ AGREGAR <td> CON ESTILOS PARA LA FECHA -->
                     <td style="padding:10px; color:#4A5568; font-size:0.85rem; white-space:nowrap;">
-                       ${new Date(log.created_at).toLocaleString('es-CL', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'America/Santiago',
-                            hour12: false
-                        }).replace(',', '')}
+                       ${fechaFormateada}
                     </td>
                     <td style="padding:10px; color:#2D3748;">${log.usuario}</td>
                     <td style="padding:10px;">
