@@ -358,6 +358,46 @@ $_SESSION['visited_index'] = true;
       .ranking-card { padding: 0.9rem 1rem; }
       .modal-card { padding: 1.5rem; margin: 0.5rem; }
     }
+    /* === CARRUSEL MEJORADO === */
+    .carousel-slide {
+      min-width: 100%; 
+      height: 240px; /* Un poco más alto para los convenios */
+      position: relative;
+    }
+
+    .carousel-caption p {
+      margin: 0.3rem 0 0 0;
+      font-size: 0.9rem;
+      opacity: 0.95;
+      line-height: 1.4;
+    }
+
+    /* Slide placeholder (futuros convenios) */
+    .carousel-slide[style*="linear-gradient"] {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Animación suave para el contador */
+    #slideCounter, #slideTotal {
+      font-weight: 600;
+      color: var(--primary-end);
+      transition: color 0.3s;
+    }
+
+    /* Responsive mejorado */
+    @media (max-width: 480px) {
+      .carousel-slide { 
+        height: 200px; 
+      }
+      .carousel-caption h4 { 
+        font-size: 1rem; 
+      }
+      .carousel-caption p { 
+        font-size: 0.8rem; 
+      }
+    }
   </style>
 </head>
 <body>
@@ -401,24 +441,84 @@ $_SESSION['visited_index'] = true;
   </div>
 
   <!-- Carousel Simplificado -->
+  <!-- === CARRUSEL MEJORADO (Features + Convenios) === -->
   <div class="carousel-container">
     <div class="carousel">
       <div class="carousel-track" id="carouselTrack">
+        <!-- Slide 1: Feature - Gestión -->
         <div class="carousel-slide">
           <img src="assets/img/feature1.jpg" alt="Gestión de socios">
-          <div class="carousel-caption"><h4>👥 Gestión de Socios Simplificada</h4></div>
+          <div class="carousel-caption">
+            <h4>👥 Gestión de Socios Simplificada</h4>
+            <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Administra tu club sin complicaciones</p>
+          </div>
         </div>
+        
+        <!-- Slide 2: Convenio - Club Pasco Providencia -->
+        <div class="carousel-slide">
+          <img src="assets/img/convenio_club_pasco.jpg" alt="Club Pasco Providencia">
+          <div class="carousel-caption" style="background: linear-gradient(transparent, rgba(107,33,168,0.85));">
+            <h4>🏟️ Club Pasco Providencia</h4>
+            <p style="font-size:0.85rem; margin-top:0.3rem; opacity:0.95;">🏆 El primer club en Chile en incorporar Pádel</p>
+            <span style="display:inline-block; margin-top:0.5rem; padding:0.25rem 0.75rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500;">
+              ⭐ Convenio Exclusivo
+            </span>
+          </div>
+        </div>
+        
+        <!-- Slide 3: Feature - Reservas -->
         <div class="carousel-slide">
           <img src="assets/img/feature2.jpg" alt="Reservas">
-          <div class="carousel-caption"><h4>🎾 Reservas en 3 Clicks</h4></div>
+          <div class="carousel-caption">
+            <h4>🎾 Reservas en 3 Clicks</h4>
+            <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Rápido, fácil y sin esperas</p>
+          </div>
         </div>
+        
+        <!-- Slide 4: Convenio - Mi Pádel San Joaquín -->
+        <div class="carousel-slide">
+          <img src="assets/img/convenio_mi_padel.jpg" alt="Mi Pádel San Joaquín">
+          <div class="carousel-caption" style="background: linear-gradient(transparent, rgba(107,33,168,0.85));">
+            <h4>🏟️ Mi Pádel San Joaquín</h4>
+            <p style="font-size:0.85rem; margin-top:0.3rem; opacity:0.95;"> Nuevas y modernas instalaciones</p>
+            <span style="display:inline-block; margin-top:0.5rem; padding:0.25rem 0.75rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500;">
+              ⭐ Convenio Exclusivo
+            </span>
+          </div>
+        </div>
+        
+        <!-- Slide 5: Feature - Torneos -->
         <div class="carousel-slide">
           <img src="assets/img/feature3.jpg" alt="Torneos">
-          <div class="carousel-caption"><h4>🏆 Torneos con Rankings en Vivo</h4></div>
+          <div class="carousel-caption">
+            <h4>🏆 Torneos con Rankings en Vivo</h4>
+            <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Compite y sube en el ranking</p>
+          </div>
+        </div>
+        
+        <!-- Slide 6: Placeholder - Futuro Convenio -->
+        <div class="carousel-slide" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <div style="position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:2rem;">
+            <div>
+              <div style="font-size:3rem; margin-bottom:1rem; opacity:0.9;">🏟️</div>
+              <h4 style="font-size:1.3rem; margin-bottom:0.5rem;">Próximamente</h4>
+              <p style="font-size:0.95rem; opacity:0.9; margin-bottom:1rem;">MundoSport</p>
+              <span style="display:inline-block; padding:0.3rem 0.8rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500; border:2px solid rgba(255,255,255,0.4);">
+                🔜 Nuevo Convenio
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    
+    <!-- Dots mejorados -->
     <div class="carousel-dots" id="carouselDots"></div>
+    
+    <!-- Indicador de slide actual -->
+    <div style="text-align:center; margin-top:0.75rem; font-size:0.85rem; color:var(--text-light);">
+      <span id="slideCounter">1</span> / <span id="slideTotal">6</span>
+    </div>
   </div>
 </main>
 
@@ -541,6 +641,10 @@ const dotsContainer = document.getElementById('carouselDots');
 
 function initCarousel() {
   if(!track || slides.length === 0) return;
+  
+  // Actualizar total de slides
+  document.getElementById('slideTotal').textContent = slides.length;
+  
   // Crear dots
   slides.forEach((_, i) => {
     const dot = document.createElement('div');
@@ -548,8 +652,18 @@ function initCarousel() {
     dot.onclick = () => goToSlide(i);
     dotsContainer?.appendChild(dot);
   });
-  // Auto-play
-  setInterval(() => goToSlide((currentSlide+1)%slides.length), 5000);
+  
+  // Auto-play (6 segundos para dar tiempo de leer)
+  setInterval(() => goToSlide((currentSlide+1)%slides.length), 6000);
+}
+
+function goToSlide(index) {
+  currentSlide = index;
+  track.style.transform = `translateX(-${index*100}%)`;
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===index));
+  
+  // Actualizar contador
+  document.getElementById('slideCounter').textContent = index + 1;
 }
 function goToSlide(index) {
   currentSlide = index;

@@ -3836,7 +3836,6 @@ async function abrirLogReserva(idReserva) {
         if (!data.success) {
             throw new Error(data.error || 'Error al cargar bitácora');
         }
-        
         if (Array.isArray(data.logs) && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => {
                 // ✅ Parsear fecha MySQL (created_at) con timezone Chile
