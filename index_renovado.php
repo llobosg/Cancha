@@ -457,7 +457,7 @@ $_SESSION['visited_index'] = true;
         </div>
         
         <!-- Slide 2: Convenio - Club Pasco Providencia -->
-        <div class="carousel-slide">
+        <div class="carousel-slide" onclick="window.open('club_pasco.php')" style="cursor:pointer;">
           <img src="assets/img/convenio_club_pasco.jpeg" alt="Club Pasco Providencia">
           <div class="carousel-caption" style="background: linear-gradient(transparent, rgba(107,33,168,0.85));">
             <h4>🏟️ Club Pasco Providencia</h4>
@@ -465,13 +465,12 @@ $_SESSION['visited_index'] = true;
             <span style="display:inline-block; margin-top:0.5rem; padding:0.25rem 0.75rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500;">
               ⭐ Convenio Exclusivo
             </span>
-            <div class="carousel-slide" onclick="window.open('club_pasco.php')" style="cursor:pointer;">
           </div>
         </div>
         
         <!-- Slide 3: Feature - Reservas -->
         <div class="carousel-slide">
-            <img src="assets/img/feature2.jpeg" alt="Reservas">  <!-- ✅ Cambiar .jpg por .jpeg -->
+            <img src="assets/img/feature2.jpeg" alt="Reservas">
             <div class="carousel-caption">
                 <h4>🎾 Reservas en 3 Clicks</h4>
                 <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Rápido, fácil y sin esperas</p>
