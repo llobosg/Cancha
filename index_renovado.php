@@ -96,6 +96,8 @@ $_SESSION['visited_index'] = true;
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CanchaSport - Tu comunidad deportiva 360º</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Evitar error 404 de favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>" type="image/svg+xml">
   <style>
     :root {
       --primary-start: #CE93D8; --primary-end: #AB47BC;
@@ -634,19 +636,45 @@ function switchTab(tab) {
   document.querySelector(`.modal-tab[data-tab="${tab}"]`).classList.add('active');
   document.getElementById(tab + 'Form').classList.add('active');
 }
-
-// === CAROUSEL ===
+// === VARIABLES GLOBALES ===
 let currentSlide = 0;
 const track = document.getElementById('carouselTrack');
-const slides = track?.children || [];
+const slides = track ? Array.from(track.children) : [];
 const dotsContainer = document.getElementById('carouselDots');
+
+// === TOAST (DEFINIR AQUÍ, ANTES DE CUALQUIER ONCLICK) ===
+function showToast(msg, type = 'success') {
+    // Remover toast anterior si existe
+    const existing = document.getElementById('toastNotification');
+    if (existing) existing.remove();
+    
+    const toast = document.createElement('div');
+    toast.id = 'toastNotification';
+    toast.textContent = msg;
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: ${type === 'error' ? '#C62828' : '#2E7D32'}; color: white;
+        padding: 0.85rem 1.5rem; border-radius: 14px; font-size: 0.9rem; font-weight: 500;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2); z-index: 3000; max-width: 90%; text-align: center;
+        opacity: 0; transition: all 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+    
+    // Animar entrada
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    // Auto-ocultar
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 // === CAROUSEL (CORREGIDO) ===
-let currentSlide = 0;
-const track = document.getElementById('carouselTrack');
-const slides = track ? Array.from(track.children) : []; // ✅ Convertir a Array
-const dotsContainer = document.getElementById('carouselDots');
-
 function initCarousel() {
     console.log('?? Carousel: slides.length =', slides.length);
     console.log('?? Carousel: track =', track);
@@ -700,14 +728,6 @@ function goToSlide(index) {
   currentSlide = index;
   track.style.transform = `translateX(-${index*100}%)`;
   document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===index));
-}
-
-// === TOAST ===
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // === INIT ===
