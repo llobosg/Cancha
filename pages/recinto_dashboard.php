@@ -3808,7 +3808,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// === ABRIR MODAL DE BITÁCORA (CORREGIDO - FECHA + TIMEZONE) ===
+// === ABRIR MODAL DE BITÁCORA (CON VALIDACIÓN DE RESPUESTA) ===
 async function abrirLogReserva(idReserva) {
     const modal = document.getElementById('modalLogReserva');
     const tbody = document.getElementById('logReservaBody');
@@ -3822,25 +3822,31 @@ async function abrirLogReserva(idReserva) {
     
     try {
         const res = await fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`);
-        const data = await res.json();
-        console.log('🔍 DEBUG LOGS:', data.logs?.[0]);
-        if (data.logs?.[0]) {
-            console.log('🔍 created_at:', data.logs[0].created_at);
-            console.log('🔍 fecha:', data.logs[0].fecha);
+        
+        // ✅ VALIDAR QUE LA RESPUESTA ES JSON
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('❌ Respuesta no es JSON:', text.substring(0, 300));
+            throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs de PHP.');
         }
         
-        if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
+        const data = await res.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar bitácora');
+        }
+        
+        if (Array.isArray(data.logs) && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => {
                 // ✅ Parsear fecha MySQL (created_at) con timezone Chile
-                const fechaRaw = log.created_at || log.fecha || '';
+                const fechaRaw = log.created_at || '';
                 let fechaFormateada = '-';
                 
                 if (fechaRaw) {
                     try {
-                        // Convertir "YYYY-MM-DD HH:MM:SS" → ISO para Date
                         const fechaISO = fechaRaw.replace(' ', 'T');
                         const fechaObj = new Date(fechaISO);
-                        
                         if (!isNaN(fechaObj.getTime())) {
                             fechaFormateada = fechaObj.toLocaleString('es-CL', {
                                 day: '2-digit',
@@ -3853,7 +3859,7 @@ async function abrirLogReserva(idReserva) {
                         }
                     } catch (e) {
                         console.warn('⚠️ Error parseando fecha:', fechaRaw, e);
-                        fechaFormateada = fechaRaw; // Fallback
+                        fechaFormateada = fechaRaw;
                     }
                 }
                 
@@ -3881,7 +3887,7 @@ async function abrirLogReserva(idReserva) {
         }
     } catch (err) {
         console.error('Error cargando log:', err);
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#C62828;">Error al cargar historial</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#C62828;">❌ Error al cargar historial</td></tr>';
     }
 }
 
