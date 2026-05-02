@@ -3808,7 +3808,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// === ABRIR MODAL DE BITÁCORA ===
+// === ABRIR MODAL DE BITÁCORA (CORREGIDO) ===
 async function abrirLogReserva(idReserva) {
     const modal = document.getElementById('modalLogReserva');
     const tbody = document.getElementById('logReservaBody');
@@ -3824,40 +3824,44 @@ async function abrirLogReserva(idReserva) {
     try {
         const res = await fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`);
         const data = await res.json();
-         // ✅ Parsear fecha MySQL a objeto Date válido
-        const fechaLog = log.created_at || log.fecha;
-        let fechaFormateada = '-';
-        if (fechaLog) {
-            try {
-                // Convertir "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS" para ISO
-                const fechaISO = fechaLog.replace(' ', 'T');
-                const fechaObj = new Date(fechaISO);
-                            
-                // Validar que la fecha sea válida
-            if (!isNaN(fechaObj.getTime())) {
-                fechaFormateada = fechaObj.toLocaleString('es-CL', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'America/Santiago'
-                });
-            }
-            } catch (e) {
-                console.warn('⚠️ Error parseando fecha:', fechaLog, e);
-                fechaFormateada = fechaLog; // Fallback: mostrar raw
-            }
-        }
         
         if (data.success && Array.isArray(data.logs) && data.logs.length > 0) {
-            tbody.innerHTML = data.logs.map(log => `
+            // ✅ CORRECCIÓN: Formatear fecha DENTRO del map, donde 'log' sí existe
+            tbody.innerHTML = data.logs.map(log => {
+                // Parsear fecha MySQL a objeto Date válido (DENTRO del map)
+                const fechaLog = log.created_at || log.fecha;
+                let fechaFormateada = '-';
+                
+                if (fechaLog) {
+                    try {
+                        // Convertir "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS" para ISO
+                        const fechaISO = fechaLog.replace(' ', 'T');
+                        const fechaObj = new Date(fechaISO);
+                        
+                        // Validar que la fecha sea válida
+                        if (!isNaN(fechaObj.getTime())) {
+                            fechaFormateada = fechaObj.toLocaleString('es-CL', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZone: 'America/Santiago'
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Error parseando fecha:', fechaLog, e);
+                        fechaFormateada = fechaLog; // Fallback: mostrar raw
+                    }
+                }
+                
+                // Retornar la fila HTML con la fecha ya formateada
+                return `
                 <tr style="border-bottom:1px solid #F1F5F9;">
-                    <!-- ✅ AGREGAR <td> CON ESTILOS PARA LA FECHA -->
                     <td style="padding:10px; color:#4A5568; font-size:0.85rem; white-space:nowrap;">
-                       ${fechaFormateada}
+                        ${fechaFormateada}
                     </td>
-                    <td style="padding:10px; color:#2D3748;">${log.usuario}</td>
+                    <td style="padding:10px; color:#2D3748;">${log.usuario || '-'}</td>
                     <td style="padding:10px;">
                         <span style="padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:500; background:${getAccionColor(log.accion)}; color:white;">
                             ${formatAccion(log.accion)}
@@ -3869,7 +3873,8 @@ async function abrirLogReserva(idReserva) {
                             `<br><small style="color:#666;">$${log.monto_anterior || '?'} → $${log.monto_nuevo || '?'}</small>` : ''}
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         } else {
             tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Sin registros de auditoría</td></tr>';
         }
