@@ -861,7 +861,7 @@ $js_vars = [
                     </div>
                 <?php endif; ?>
             </div>
-            <a href="mi_perfil.php" class="avatar"><?= strtoupper(substr($nombre_mostrar ?? 'U',0,1)) ?></a>
+            <a href="mantenedor_socios.php" class="avatar"><?= strtoupper(substr($nombre_mostrar ?? 'U',0,1)) ?></a>
         </div>
     </header>
     <!-- ✅ SELECTOR DE CLUBES (DEBE ESTAR AQUÍ, NO DENTRO DEL HEADER) -->

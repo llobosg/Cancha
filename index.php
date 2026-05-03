@@ -424,7 +424,6 @@ $_SESSION['visited_index'] = true;
     <span class="brand-name">CanchaSport</span>
   </a>
   <div class="header-actions">
-    <button class="btn-header" onclick="openModal('register')">Registrarse</button>
     <button class="btn-header primary" onclick="openModal('login')">Ingresar</button>
   </div>
 </header>
