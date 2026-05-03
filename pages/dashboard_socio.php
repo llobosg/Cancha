@@ -831,7 +831,7 @@ $js_vars = [
             <!-- MENÚ 3 PUNTOS HEADER -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown" style="min-width:220px;">
-                <a href="mi_perfil.php" class="menu-item">👤 Mi perfil</a>
+                <a href="mantenedor_socios.php" class="menu-item">👤 Mi perfil</a>
                 
                 <!-- Club actual + Cambiar (solo si es multiclub) -->
                 <?php if (!empty($clubes_del_socio)): ?>
@@ -886,7 +886,7 @@ $js_vars = [
                 <!-- Dropdown: SIN display:none inline, controlado por JS -->
                 <div id="heroMenu_<?= $id_reserva ?? 0 ?>" class="menu-dropdown hero-menu" 
                     style="position:absolute; top:48px; right:12px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2);">
-                    <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?? 0 ?>)">👟 Paso</div>
+                    <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?? 0 ?>)">Paso</div>
                     <?php if (!empty($deuda_mas_vigente)): ?>
                     <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
                     <?php endif; ?>
@@ -896,7 +896,7 @@ $js_vars = [
                 </div>
             <?php endif; ?>
 
-            <h1 class="hero-title">Próximo Partido</h1>
+            <h1 class="hero-title">Próximo Partido <?= htmlspecialchars($club_nombre ?: 'Individual') ?></h1>
             
             <?php if (!empty($proximo_evento)): ?>
                 <!-- === DATOS DEL PARTIDO === -->
@@ -916,7 +916,7 @@ $js_vars = [
                 <?php endif; ?>
                 
                 <!-- === BOTONES (solo después del lunes 09:00) === -->
-                <?php if ($despues_del_lunes_09): ?>
+                <!-- <?php if ($despues_del_lunes_09): ?> -->
                     <?php if ($ya_inscrito): ?>
                         <!-- Ya inscrito: mostrar "Bajarse" -->
                         <button class="btn-hero inscrito" onclick="bajarseEvento(<?= $id_reserva ?>)">❌ Bajarme del partido</button>
@@ -937,12 +937,12 @@ $js_vars = [
                     <button class="btn-hero" style="margin-top:0.5rem; background:#F1C40F; color:#5D4037;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                     <?php endif; ?>
                     
-                <?php else: ?>
+                <!--<?php else: ?>-->
                     <!-- Antes del lunes 09:00 -->
                     <div style="text-align:center; padding:0.5rem; background:rgba(255,215,0,0.2); border-radius:12px; font-size:0.9rem;">
                         ⏰ Los botones se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
                     </div>
-                <?php endif; ?>
+                <!--<?php endif; ?>-->
                 
                 <!-- Barra de progreso de cupos -->
                 <div class="progress-section">
