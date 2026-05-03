@@ -866,17 +866,7 @@ $js_vars = [
 
     <div class="container">
         <!-- === HERO CARD: PRÓXIMO PARTIDO (LÓGICA COMPLETA + DISEÑO MODERNO) === -->
-        <!-- === BADGE CLUB ACTUAL (arriba de la ficha) === -->
-        <?php if (!empty($club_nombre)): ?>
-            <div style="text-align:center; margin-bottom:0.75rem;">
-                <span style="background:rgba(255,255,255,0.95); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; color:#555; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                    <strong><?= htmlspecialchars($club_nombre) ?></strong>
-                    <?php if ($es_multiclub): ?>
-                    <span style="margin-left:0.5rem; color:#AB47BC; cursor:pointer;" onclick="toggleHeaderMenu(event)">[Cambiar]</span>
-                    <?php endif; ?>
-                </span>
-            </div>
-        <?php endif; ?>
+
         <div class="hero">
             <!-- MENÚ 3 PUNTOS (acciones del partido) -->
             <?php if (!empty($proximo_evento)): ?>
@@ -916,7 +906,6 @@ $js_vars = [
                 <?php endif; ?>
                 
                 <!-- === BOTONES (solo después del lunes 09:00) === -->
-                <!-- <?php if ($despues_del_lunes_09): ?> -->
                     <?php if ($ya_inscrito): ?>
                         <!-- Ya inscrito: mostrar "Bajarse" -->
                         <button class="btn-hero inscrito" onclick="bajarseEvento(<?= $id_reserva ?>)">❌ Bajarme del partido</button>
@@ -937,12 +926,10 @@ $js_vars = [
                     <button class="btn-hero" style="margin-top:0.5rem; background:#F1C40F; color:#5D4037;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
                     <?php endif; ?>
                     
-                <!--<?php else: ?>-->
                     <!-- Antes del lunes 09:00 -->
                     <div style="text-align:center; padding:0.5rem; background:rgba(255,215,0,0.2); border-radius:12px; font-size:0.9rem;">
                         ⏰ Los botones se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
                     </div>
-                <!--<?php endif; ?>-->
                 
                 <!-- Barra de progreso de cupos -->
                 <div class="progress-section">
