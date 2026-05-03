@@ -608,14 +608,12 @@ try {
             <!-- MENÚ HEADER: Perfil + Cambiar Club -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown">
-                <a href="mi_perfil.php" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
+                <a onclick="window.location.href='mantenedor_socios.php'" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
                     👤 Mi perfil
                 </a>
-                <?php if ($es_multiclub): ?>
                 <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
                     🔄 Cambiar de Club
                 </div>
-                <?php endif; ?>
             </div>
             <a href="mi_perfil.php" class="avatar">
                 <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
@@ -1003,36 +1001,36 @@ function abrirModalPago(idReserva) {
 }
 
 // === PAGAR CUOTA ===
-            function pagarCuota(idCuota) {
-                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-            }
+function pagarCuota(idCuota) {
+    window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+}
 
-            // === REVISAR/VALIDAR PAGO ===
-            function revisarPago(idCuota) {
-                fetch('../api/revisar_pago.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-                    else { mostrarToast('❌ ' + data.message, 'error'); }
-                });
-            }
+// === REVISAR/VALIDAR PAGO ===
+function revisarPago(idCuota) {
+    fetch('../api/revisar_pago.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_cuota: idCuota})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+        else { mostrarToast('❌ ' + data.message, 'error'); }
+        });
+}
 
-            function validarPago(idCuota) {
-                fetch('../api/validar_pago.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-                    else { mostrarToast('❌ ' + data.message, 'error'); }
-                });
-            }
+function validarPago(idCuota) {
+    fetch('../api/validar_pago.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_cuota: idCuota})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+        else { mostrarToast('❌ ' + data.message, 'error'); }
+    });
+}
 </script>
 </body>
 </html>
