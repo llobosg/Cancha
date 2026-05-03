@@ -891,21 +891,18 @@ async function abrirSelectorClubes(e) {
             return;
         }
         
-        // ✅ GENERAR SLUG EN JS (igual que tu código PHP antiguo)
+        // ✅ USAR EL SLUG QUE YA VIENE DE LA API (sin calcular en JS)
         let html = '';
         clubs.forEach(c => {
-            // Generar slug EXACTAMENTE como en tu PHP: md5(id_club + email_responsable).slice(0,8)
-            const slug = md5Simple(c.id_club + c.email_responsable).substring(0, 8);
-            const esActual = slug === (window.CLUB_ACTUAL || '');
-            
-            html += `<div onclick="cambiarClub('${slug}')" 
+            const esActual = c.slug === (window.CLUB_ACTUAL || '');
+            html += `<div onclick="cambiarClub('${c.slug}')" 
                  style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'};">
                 <span>${c.club_nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
             </div>`;
         });
         lista.innerHTML = html;
-        console.log('✅ Clubs renderizados:', clubs.length);
+        console.log('✅ Clubs renderizados con slugs válidos:', clubs.length);
         
     } catch (err) {
         console.error('❌ Error:', err);
@@ -929,7 +926,10 @@ function md5Simple(str) {
 
 // === CAMBIAR CLUB (COPIA EXACTA DE TU CÓDIGO FUNCIONAL) ===
 function cambiarClub(clubSlug) {
-    console.log('🔄 Cambiando a club:', clubSlug);
+    console.log('🔄 cambiarClub llamado | slug:', clubSlug);
+    console.log('🔍 CLUB_ACTUAL actual:', window.CLUB_ACTUAL);
+    
+    showToast('🔄 Cambiando de club...', 'info');
     document.body.style.cursor = 'wait';
 
     fetch('../api/cambiar_club_sesion.php', {
@@ -937,22 +937,35 @@ function cambiarClub(clubSlug) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ club_slug: clubSlug })
     })
-    .then(r => {
-        if (!r.ok) throw new Error('Error en la red');
-        return r.json();
+    .then(async r => {
+        console.log('📡 Response status:', r.status);
+        const text = await r.text();
+        console.log('📡 Response raw:', text);
+        
+        if (!r.ok) throw new Error('Error HTTP: ' + r.status);
+        
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('❌ Error parseando JSON:', e);
+            throw new Error('Respuesta no es JSON válido');
+        }
     })
     .then(data => {
+        console.log('📡 Data recibida:', data);
         document.body.style.cursor = 'default';
+        
         if (data.success) {
+            showToast('✅ Club cambiado', 'success');
             window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
         } else {
-            alert('❌ Error: ' + (data.message || 'No se pudo cambiar de club'));
+            showToast('❌ ' + (data.message || 'No se pudo cambiar de club'), 'error');
         }
     })
     .catch(err => {
         document.body.style.cursor = 'default';
-        console.error('Error:', err);
-        alert('❌ Error de conexión al cambiar de club');
+        console.error('❌ Error en cambiarClub:', err);
+        showToast('❌ ' + err.message, 'error');
     });
 }
 
