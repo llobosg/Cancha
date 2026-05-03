@@ -787,7 +787,7 @@ $js_vars = [
             <!-- Dropdown para acciones del partido -->
             <div id="heroMenu_<?= $proximo['id_reserva'] ?? 0 ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50;">
                 <div class="menu-item" onclick="marcarPaso(<?= $proximo['id_reserva'] ?? 0 ?>)">👟 "Paso"</div>
-                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
+                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?? 0 ?>)">💳 Pagar cuota</div>
                 <div class="menu-item" id="menuItemIA_<?= $proximo['id_reserva'] ?? 0 ?>" onclick="generarEquiposIA(<?= $proximo['id_reserva'] ?? 0 ?>)" style="display:none; color:#6A1B9A; font-weight:500;">
                     🤖 Armar equipos IA
                 </div>
@@ -796,6 +796,7 @@ $js_vars = [
             <h1 class="hero-title">Próximo Partido</h1>
             
             <?php if($proximo): ?>
+                <!-- === CONTENIDO CUANDO HAY PRÓXIMO PARTIDO === -->
                 <div class="hero-meta">
                     <span>📅 <?= date('d M', strtotime($proximo['fecha'])) ?></span>
                     <span>⏰ <?= substr($proximo['hora_inicio'],0,5) ?></span>
@@ -817,55 +818,37 @@ $js_vars = [
                     </div>
                     <button class="progress-eye" onclick="verInscritos(<?= $proximo['id_reserva'] ?>)" title="Ver inscritos">👁️</button>
                 </div>
+                
             <?php else: ?>
+                <!-- === CONTENIDO CUANDO NO HAY PRÓXIMO PARTIDO === -->
                 <div style="text-align:center; padding:1rem;">
                     <p style="font-size:1rem; opacity:0.9; margin-bottom:1rem;">🎉 ¡No tienes partidos próximos!</p>
                     <a href="reservar_cancha.php" style="display:inline-block; background:white; color:var(--tennis-green); padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
                 </div>
-                <!-- === BADGE CLUB ACTUAL + CAMBIAR (LÓGICA DIRECTA COMO TEST BUTTON) === -->
-                <?php if (!empty($clubes_del_socio)): ?>
-                <div style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.95); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    
-                    <!-- Club actual en bold -->
-                    🏟️ Club actual: <strong style="color:#2D3748;"><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
-                    
-                    <!-- Si hay más de 1 club, mostrar opción para cambiar -->
-                    <?php if (count($clubes_del_socio) > 1): ?>
-                        <span style="margin:0 0.3rem; color:#CBD5E0;">|</span>
-                        cambiar a: 
-                        <?php 
-                        $otros_clubs = [];
-                        foreach ($clubes_del_socio as $c) {
-                            $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-                            // Mostrar solo los clubs que NO son el actual
-                            if ($slug !== ($club_slug ?? '')) {
-                                $otros_clubs[] = `<a href="javascript:void(0)" onclick="window.cambiarClub('${slug}')" style="color:#AB47BC; font-weight:600; text-decoration:none; margin:0 0.2rem;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${htmlspecialchars($c['club_nombre'])}</a>`;
-                            }
+            <?php endif; ?>
+            
+            <!-- === BADGE CLUB ACTUAL + CAMBIAR (FUERA DEL IF/ELSE - SIEMPRE VISIBLE) === -->
+            <?php if (!empty($clubes_del_socio)): ?>
+            <div style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.95); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                🏟️ Club actual: <strong style="color:#2D3748;"><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
+                <?php if (count($clubes_del_socio) > 1): ?>
+                    <span style="margin:0 0.3rem; color:#CBD5E0;">|</span>
+                    cambiar a: 
+                    <?php 
+                    $otros_clubs = [];
+                    foreach ($clubes_del_socio as $c) {
+                        $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                        if ($slug !== ($club_slug ?? '')) {
+                            $otros_clubs[] = '<a href="javascript:void(0)" onclick="window.cambiarClub(\''.$slug.'\')" style="color:#AB47BC; font-weight:600; text-decoration:none; margin:0 0.2rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">'.htmlspecialchars($c['club_nombre']).'</a>';
                         }
-                        echo implode(' | ', $otros_clubs);
-                        ?>
-                    <?php endif; ?>
-                    
-                </div>
+                    }
+                    echo implode(' | ', $otros_clubs);
+                    ?>
                 <?php endif; ?>
-        </div>
-
-        <!-- QUICK ACTIONS -->
-        <div class="quick-actions">
-            <a href="reservar_cancha.php" class="action-card reservar">
-                <div class="action-icon">🎾</div>
-                <span class="action-label">Reservar</span>
-            </a>
-            <a href="torneos_publicos.php" class="action-card torneos">
-                <div class="action-icon">🏆</div>
-                <span class="action-label">Torneos</span>
-            </a>
-            <a href="mis_estadisticas.php" class="action-card stats">
-                <div class="action-icon">📈</div>
-                <span class="action-label">Mis Stats</span>
-            </a>
-        </div>
-    </div>
+            </div>
+            <?php endif; ?>
+            
+        </div> <!-- ✅ CIERRE CORRECTO DE .hero -->
 
     <!-- FAB -->
     <a href="reservar_cancha.php" class="fab">+</a>
