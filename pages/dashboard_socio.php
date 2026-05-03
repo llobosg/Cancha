@@ -818,6 +818,16 @@ $js_vars = [
             z-index: 10;
         }
         .hero-menu-dots:hover { background: rgba(255,255,255,0.4); }
+        /* Lista de inscritos en modal */
+        #listaInscritos > div {
+            transition: background 0.2s;
+        }
+        #listaInscritos > div:hover {
+            background: #F7FAFC;
+        }
+        #listaInscritos button:hover {
+            background: #FFEBEE !important;
+        }
     </style>
 </head>
 <body>
@@ -1260,28 +1270,109 @@ async function bajarse(id) {
 }
 
 // === 6. MODAL INSCRITOS ===
-async function verInscritos(id) {
+async function verInscritos(idReserva) {
     const modal = document.getElementById('modalInscritos');
     const lista = document.getElementById('listaInscritos');
+    
     if (!modal || !lista) return;
+    
     modal.style.display = 'flex';
-    lista.innerHTML = '<p style="text-align:center; padding:1rem;">🔄 Cargando...</p>';
+    lista.innerHTML = '<p style="text-align:center; padding:1rem; color:#888;">🔄 Cargando inscritos...</p>';
+    
     try {
-        const r = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${id}`);
-        const data = await r.json();
-        if (!Array.isArray(data) || data.length === 0) { lista.innerHTML = '<p style="text-align:center;">Sin inscritos</p>'; return; }
+        const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
+        const data = await res.json();
+        
+        // Manejar error de API
+        if (data.error) {
+            lista.innerHTML = `<p style="text-align:center; color:#C62828;">❌ ${data.error}</p>`;
+            return;
+        }
+        
+        // Manejar array vacío
+        if (!Array.isArray(data) || data.length === 0) {
+            lista.innerHTML = '<p style="text-align:center; color:#888;">Sin inscritos aún</p>';
+            return;
+        }
+        
+        // Renderizar lista
+        const miId = window.SOCIO_ID;
+        const esResponsable = window.ES_RESPONSABLE;
+        
         let html = '';
         data.forEach(p => {
-            const esYo = p.id_socio === window.SOCIO_ID;
-            const puedeBajar = window.ES_RESPONSABLE && !esYo;
-            html += `<div style="padding:0.8rem 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <span>${esYo ? '👤 Tú' : p.nombre}</span>
-                <span style="font-size:0.8rem; padding:0.2rem 0.5rem; border-radius:8px; background:#E8F5E9; color:#2E7D32;">${p.estado}</span>
-                ${puedeBajar ? `<button onclick="bajarJugador(${p.id_socio}, ${id}, '${p.nombre.replace(/'/g,"\\'")}')" style="background:none; border:none; color:#C62828; font-weight:600; cursor:pointer;">Bajar</button>` : ''}
+            const esYo = p.id_socio === miId;
+            const puedeBajar = (esYo || esResponsable);
+            
+            html += `
+            <div style="padding:0.8rem 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:500; color:#2D3748;">
+                        ${esYo ? '👤 <strong>Tú</strong>' : htmlspecialchars_js(p.nombre)}
+                    </div>
+                    <div style="font-size:0.75rem; color:#666; margin-top:0.2rem;">
+                        ${p.equipo !== '-' ? `🎽 ${p.equipo}` : ''}
+                        ${p.posicion !== '-' ? ` • 📍 ${p.posicion}` : ''}
+                        ${p.lleva_cerveza ? ' • 🍺 Cerveza' : ''}
+                    </div>
+                </div>
+                
+                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.3rem;">
+                    ${p.cuota_monto > 0 ? `
+                    <span style="font-size:0.75rem; color:${p.estado_cuota === 'pagado' ? '#2E7D32' : '#C62828'};">
+                        💰 $${Math.round(p.cuota_monto).toLocaleString()} • ${p.estado_cuota}
+                    </span>` : ''}
+                    
+                    ${puedeBajar ? `
+                    <button onclick="bajarInscrito(${p.id_inscrito}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}', ${esYo ? 1 : 0})" 
+                            style="background:none; border:none; color:#C62828; font-size:0.75rem; font-weight:600; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px;">
+                        ${esYo ? 'Bajarme' : 'Bajar'}
+                    </button>` : ''}
+                </div>
             </div>`;
         });
+        
         lista.innerHTML = html;
-    } catch(e) { lista.innerHTML = '<p style="color:red;">Error al cargar</p>'; }
+        
+    } catch (err) {
+        console.error('❌ Error verInscritos:', err);
+        lista.innerHTML = '<p style="text-align:center; color:#C62828;">Error de conexión</p>';
+    }
+}
+
+// Helper para escapar strings en JS (evitar XSS en nombres)
+function htmlspecialchars_js(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// === BAJAR INSCRITO (para responsable o uno mismo) ===
+async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
+    const confirmMsg = esMiInscripcion 
+        ? `¿Seguro que deseas bajarte de este partido?`
+        : `¿Bajar a "${nombre}" de este partido?`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+        const res = await fetch('../api/gestion_eventos.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=bajarse&id_actividad=${idReserva}&id_socio_objetivo=${esMiInscripcion ? '' : idInscrito}`,
+            credentials: 'include'
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('✅ Baja registrada', 'success');
+            verInscritos(idReserva); // Recargar lista
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
 }
 
 async function bajarJugador(idSocio, idReserva, nombre) {
