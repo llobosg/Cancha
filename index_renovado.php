@@ -431,8 +431,8 @@ $_SESSION['visited_index'] = true;
 
 <!-- HERO -->
 <main class="hero">
-  <h1 class="hero-title">Tu deporte, tu comunidad</h1>
-  <p class="hero-subtitle">Gestiona tu club, reserva canchas, únete a torneos y conecta con otros deportistas. Todo en un solo lugar.</p>
+  <h1 class="hero-title">El HUB Deportivo para Jugadores, clubes y recintos. Un solo lugar para todo.</h1>
+  <p class="hero-subtitle">La plataforma más completa para jugadores que buscan horas, clubes que se coordinan y recintos que gestionan. Todo en CanchaSport. Comunidad deportiva, 360°.</p>
   
   <!-- Sport Badges -->
   <div class="sport-badges">
@@ -503,9 +503,9 @@ $_SESSION['visited_index'] = true;
             <img src="assets/img/mundosport.jpeg" alt="Torneos">  <!-- ✅ .jpeg -->
             <div style="position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:2rem;">
                 <div>
-                    <h4 style="font-size:1.3rem; margin-bottom:0.5rem;">Próximamente</h4>
-                    <p style="font-size:0.95rem; opacity:0.9; margin-bottom:1rem;">MundoSport</p>
-                    <span style="display:inline-block; padding:0.3rem 0.8rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500; border:2px solid rgba(255,255,255,0.4);">
+                    <h4 style="font-size:1.3rem; color: white; margin-bottom:0.5rem;">Próximamente</h4>
+                    <p style="font-size:0.95rem; color: white; opacity:0.9; margin-bottom:1rem;">MundoSport</p>
+                    <span style="display:inline-block; padding:0.3rem 0.8rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500; border:2px solid rgba(238, 220, 220, 0.96);">
                         🔜 Nuevo Convenio
                     </span>
                 </div>
