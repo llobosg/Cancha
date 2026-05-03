@@ -400,6 +400,15 @@ $_SESSION['visited_index'] = true;
         font-size: 0.8rem; 
       }
     }
+    /* Modal Centro Deportivo - Overrides */
+    #modalCentroDeportivo .modal-card {
+        background: transparent !important;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.3) !important;
+    }
+
+    #modalCentroDeportivo .modal-card > div:first-child {
+        border-radius: 24px;
+    }
   </style>
 </head>
 <body>
@@ -499,7 +508,16 @@ $_SESSION['visited_index'] = true;
             </div>
         </div>
 
-        <!-- Slide 6: Placeholder - Futuro Convenio -->
+        <!-- Slide 6: Ganadores Americano -->
+        <div class="carousel-slide">
+            <img src="assets/img/ganadores_americano_pasco.jpg" alt="Ganadores Americano Club Pasco">
+            <div class="carousel-caption">
+                <h4>🏆 Ganadores Americano 4ª Club Pasco</h4>
+                <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Adrian y Nicolás</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Placeholder - Futuro Convenio -->
         <div class="carousel-slide" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             <img src="assets/img/mundosport.jpeg" alt="Torneos">  <!-- ✅ .jpeg -->
             <div style="position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:2rem;">
@@ -520,7 +538,7 @@ $_SESSION['visited_index'] = true;
     
     <!-- Indicador de slide actual -->
     <div style="text-align:center; margin-top:0.75rem; font-size:0.85rem; color:var(--text-light);">
-      <span id="slideCounter">1</span> / <span id="slideTotal">6</span>
+      <span id="slideCounter">1</span> / <span id="slideTotal">7</span>
     </div>
   </div>
 </main>
@@ -599,12 +617,12 @@ $_SESSION['visited_index'] = true;
             <div style="font-size:0.8rem; color:var(--text-light);">Para equipos que quieren organizarse</div>
           </div>
         </a>
-        <a href="../pages/registro_centro_contacto.php" style="display:flex; align-items:center; gap:0.75rem; padding:0.9rem; border-radius:14px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-weight:500; transition:all 0.2s;">
-          <span style="font-size:1.3rem;">🏟️</span>
-          <div>
-            <div style="font-weight:600;">Centro Deportivo</div>
-            <div style="font-size:0.8rem; color:var(--text-light);">Para administradores de recintos</div>
-          </div>
+        <a href="javascript:void(0)" onclick="abrirModalCentro(event)" ...>
+            <span style="font-size:1.3rem;">🏟️</span>
+            <div>
+                <div style="font-weight:600;">Centro Deportivo</div>
+                <div style="font-size:0.8rem; color:var(--text-light);">Para administradores de recintos</div>
+            </div>
         </a>
       </div>
     </div>
@@ -740,6 +758,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }).observe(modal, {attributes:true, attributeFilter:['style']});
   }
 });
+// === MODAL CENTRO DEPORTIVO ===
+function abrirModalCentro(e) {
+    if (e) e.preventDefault();
+    const modal = document.getElementById('modalCentroDeportivo');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function cerrarModalCentro(e) {
+    if (e.target.id === 'modalCentroDeportivo' || e.target.closest('button[onclick="cerrarModalCentro(event)"]')) {
+        const modal = document.getElementById('modalCentroDeportivo');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+// Cerrar modal con tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modalCentro = document.getElementById('modalCentroDeportivo');
+        if (modalCentro && modalCentro.style.display === 'flex') {
+            cerrarModalCentro({target: modalCentro});
+        }
+    }
+});
 </script>
+<!-- === MODAL CENTRO DEPORTIVO === -->
+<div id="modalCentroDeportivo" class="modal-backdrop" onclick="cerrarModalCentro(event)" style="display:none;">
+    <div class="modal-card" style="max-width:500px; position:relative; overflow:hidden;">
+        <!-- Imagen de fondo con overlay azul -->
+        <div style="position:absolute; inset:0; background: linear-gradient(135deg, rgba(79,195,247,0.95) 0%, rgba(102,187,106,0.95) 100%); z-index:0;"></div>
+        
+        <!-- Contenido -->
+        <div style="position:relative; z-index:1; padding:2rem 1.5rem; text-align:center; color:white;">
+            <button onclick="cerrarModalCentro(event)" style="position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:32px; height:32px; color:white; font-size:1.2rem; cursor:pointer; display:grid; place-items:center;">
+                &times;
+            </button>
+            
+            <!-- Logo/Icono -->
+            <div style="font-size:3rem; margin-bottom:1rem;">🏟️</div>
+            
+            <h3 style="font-size:1.5rem; font-weight:700; margin-bottom:0.5rem;">Bienvenida a CanchaSport</h3>
+            <p style="font-size:0.9rem; opacity:0.9; margin-bottom:1.5rem;">¿Interesado en crear tu recinto deportivo?</p>
+            
+            <!-- Datos de contacto -->
+            <div style="background:rgba(255,255,255,0.15); padding:1.25rem; border-radius:12px; margin-bottom:1.5rem; text-align:left;">
+                <div style="margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:1.2rem;">📱</span>
+                    <div>
+                        <div style="font-size:0.75rem; opacity:0.85;">Teléfono de contacto:</div>
+                        <div style="font-weight:600;">+569 3656 0392</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:1.2rem;">👔</span>
+                    <div>
+                        <div style="font-size:0.75rem; opacity:0.85;">CEO:</div>
+                        <div style="font-weight:600;">Luis Lobos G</div>
+                    </div>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:1.2rem;">✉️</span>
+                    <div>
+                        <div style="font-size:0.75rem; opacity:0.85;">Correo contacto:</div>
+                        <div style="font-weight:600; word-break:break-all;">contacto@canchasport.com</div>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="mailto:contacto@canchasport.com" style="display:inline-block; background:white; color:#4FC3F7; padding:0.75rem 2rem; border-radius:12px; text-decoration:none; font-weight:600; transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                📩 Contactar ahora
+            </a>
+        </div>
+    </div>
+</div>
 </body>
 </html>
