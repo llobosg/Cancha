@@ -431,7 +431,7 @@ $_SESSION['visited_index'] = true;
 
 <!-- HERO -->
 <main class="hero">
-  <h1 class="hero-title">El HUB Deportivo para Jugadores, clubes y recintos. Un solo lugar para todo.</h1>
+  <h1 class="hero-title">El HUB Deportivo !!</h1>
   <p class="hero-subtitle">La plataforma más completa para jugadores que buscan horas, clubes que se coordinan y recintos que gestionan. Todo en CanchaSport. Comunidad deportiva, 360°.</p>
   
   <!-- Sport Badges -->
@@ -454,7 +454,7 @@ $_SESSION['visited_index'] = true;
           <img src="assets/img/feature1.jpg" alt="Gestión de socios">
           <div class="carousel-caption">
             <h4>👥 Gestión de Socios Simplificada</h4>
-            <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Administra tu club sin complicaciones</p>
+            <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Administra tu club sin complicaciones: reservas, convenios, torneos, canchas no pagadas, cierre diario, KPIs de desempeño</p>
           </div>
         </div>
         
@@ -474,8 +474,8 @@ $_SESSION['visited_index'] = true;
         <div class="carousel-slide">
             <img src="assets/img/feature3.jpg" alt="Reservas">
             <div class="carousel-caption">
-                <h4>🎾 Reservas en 3 Clicks</h4>
-                <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Rápido, fácil y sin esperas</p>
+                <h4>🎾 Reservas a 1 Click</h4>
+                <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Todos los miércoles del mes a las 21:00 con los amigos ?, asegura tu cancha fácil a un click</p>
             </div>
         </div>
 
