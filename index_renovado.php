@@ -436,10 +436,12 @@ $_SESSION['visited_index'] = true;
   
   <!-- Sport Badges -->
   <div class="sport-badges">
-    <span class="sport-badge"><span class="icon">⚽</span>Fútbol</span>
-    <span class="sport-badge"><span class="icon">🎾</span>Pádel</span>
-    <span class="sport-badge"><span class="icon">🏐</span>Vóley</span>
-    <span class="sport-badge"><span class="icon">🎾</span>Tenis</span>
+      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.futbol}</span>Fútbol</span>
+      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.futbol}</span>Fútbolito</span>
+      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.padel}</span>Pádel</span>
+      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.voley}</span>Vóley</span>
+      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.tenis}</span>Tenis</span>
+      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.tenis}</span>Clases</span>
   </div>
 
   <!-- Carousel Simplificado -->
@@ -470,7 +472,7 @@ $_SESSION['visited_index'] = true;
         
         <!-- Slide 3: Feature - Reservas -->
         <div class="carousel-slide">
-            <img src="assets/img/feature2.jpeg" alt="Reservas">
+            <img src="assets/img/feature3.jpg" alt="Reservas">
             <div class="carousel-caption">
                 <h4>🎾 Reservas en 3 Clicks</h4>
                 <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Rápido, fácil y sin esperas</p>
@@ -504,8 +506,8 @@ $_SESSION['visited_index'] = true;
             <div style="position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:2rem;">
                 <div>
                     <h4 style="font-size:1.3rem; color: white; margin-bottom:0.5rem;">Próximamente</h4>
-                    <p style="font-size:0.95rem; color: white; opacity:0.9; margin-bottom:1rem;">MundoSport</p>
-                    <span style="display:inline-block; padding:0.3rem 0.8rem; background:rgba(255,255,255,0.2); border-radius:12px; font-size:0.75rem; font-weight:500; border:2px solid rgba(238, 220, 220, 0.96);">
+                    <h3 style="font-size:0.95rem; color: white; opacity:0.9; margin-bottom:1rem;">MundoSport</h3>
+                    <span style="display:inline-block; padding:0.3rem 0.8rem; background:rgba(235, 224, 224, 0.93); border-radius:12px; font-size:0.75rem; font-weight:500; border:2px solid rgba(238, 220, 220, 0.96);">
                         🔜 Nuevo Convenio
                     </span>
                 </div>
