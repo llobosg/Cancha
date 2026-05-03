@@ -605,30 +605,21 @@ try {
             <span class="brand">CanchaSport</span>
         </div>
         <div class="header-actions">
-            <!-- MENÚ HEADER: Perfil + Cambiar Club -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown">
-                 <a onclick=""abrirSelectorClubes(event)" class="avatar">
-                    🔄 Cambiar Club
-                </a>
-                <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
-                    🔄 Cambiar de Club
-                </div>
+                <a href="mi_perfil.php" class="menu-item">👤 Mi perfil</a>
+                <?php if ($es_multiclub): ?>
+                <div class="menu-item" onclick="abrirSelectorClubes(event)">🔄 Cambiar de Club</div>
+                <?php endif; ?>
             </div>
-            <a onclick="window.location.href='mantenedor_socios.php'" class="avatar">
-                <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
-            </a>
+            <a href="mi_perfil.php" class="avatar"><?= strtoupper(substr($nombre_mostrar,0,1)) ?></a>
         </div>
     </header>
 
-    <!-- SUBMENÚ: SELECTOR DE CLUBES (para Cambiar de Club) -->
-    <div id="selectorClubes" class="menu-dropdown" style="display:none; position:absolute; top:100%; right:0; min-width:220px; max-height:300px; overflow-y:auto; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); z-index:102; border:1px solid #eee;">
-        <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666;">
-            Selecciona un club:
-        </div>
-        <div id="listaClubes">
-            <div style="padding:0.8rem; text-align:center; color:#888;">Cargando clubs...</div>
-        </div>
+    <!-- ✅ CONTENEDOR SELECTOR (fuera del header) -->
+    <div id="selectorClubes" class="menu-dropdown" style="display:none; position:absolute; top:100%; right:0; min-width:220px; max-height:300px; overflow-y:auto; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); z-index:102; border:1px solid #eee; margin-top:4px;">
+        <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666;">Selecciona un club:</div>
+        <div id="listaClubes"><div style="padding:0.8rem; text-align:center; color:#888;">Cargando clubs...</div></div>
     </div>
 
     <div class="container">
@@ -719,6 +710,11 @@ try {
     <!-- TOAST -->
     <div id="toast" class="toast">✅ Acción realizada</div>
 <script>
+console.log('✅ Variables globales:', {
+    SOCIO_ID: typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 'NO DEFINIDO',
+    CLUB_ACTUAL: typeof CLUB_ACTUAL !== 'undefined' ? CLUB_ACTUAL : 'NO DEFINIDO',
+    ES_MULTICLUB: typeof ES_MULTICLUB !== 'undefined' ? ES_MULTICLUB : 'NO DEFINIDO'
+});
 // === VARIABLES GLOBALES (DECLARAR SOLO UNA VEZ) ===
 const SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
 const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
@@ -778,22 +774,37 @@ function closeAllMenus() {
     });
 }
 
-// === ABRIR SELECTOR DE CLUBES (desde header) ===
+// === ABRIR SELECTOR DE CLUBES (CON DEBUG) ===
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
+    console.log('🔍 abrirSelectorClubes llamado');
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
     
-    if (!selector || !lista) return;
+    console.log('🔍 selector:', selector, 'lista:', lista);
+    
+    if (!selector || !lista) {
+        console.error('❌ No se encontró #selectorClubes o #listaClubes');
+        showToast('❌ Error: Contenedor de clubs no encontrado', 'error');
+        return;
+    }
+    
+    console.log('🔍 SOCIO_ID:', SOCIO_ID);
     
     selector.style.display = 'block';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
     
     try {
-        const res = await fetch(`../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`);
+        const url = `../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`;
+        console.log('🔍 Fetch URL:', url);
+        
+        const res = await fetch(url);
+        console.log('🔍 Response status:', res.status);
+        
         const clubs = await res.json();
+        console.log('🔍 Clubs recibidos:', clubs);
         
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
@@ -803,6 +814,7 @@ async function abrirSelectorClubes(e) {
         let html = '';
         clubs.forEach(club => {
             const esActual = club.slug === CLUB_ACTUAL;
+            console.log('🔍 Render club:', club.nombre, 'slug:', club.slug, 'actual:', esActual);
             html += `
             <div onclick="cambiarClub('${club.slug}')" 
                  style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; ${esActual ? 'background:#E8F5E9; font-weight:600;' : ''}"
@@ -813,15 +825,19 @@ async function abrirSelectorClubes(e) {
             </div>`;
         });
         lista.innerHTML = html;
+        console.log('✅ Clubs renderizados');
     } catch (err) {
-        console.error('Error cargando clubs:', err);
+        console.error('❌ Error cargando clubs:', err);
         lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
+        showToast('❌ Error al cargar clubs', 'error');
     }
 }
 
-// === CAMBIAR CLUB ===
+// === CAMBIAR CLUB (CON DEBUG) ===
 function cambiarClub(clubSlug) {
-    console.log('🔄 Cambiando a club:', clubSlug);
+    console.log('🔄 cambiarClub llamado con slug:', clubSlug);
+    console.log('🔍 SOCIO_ID:', SOCIO_ID, 'CLUB_ACTUAL:', CLUB_ACTUAL);
+    
     showToast('🔄 Cambiando de club...', 'info');
     document.body.style.cursor = 'wait';
     
@@ -830,11 +846,22 @@ function cambiarClub(clubSlug) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ club_slug: clubSlug })
     })
-    .then(r => {
-        if (!r.ok) throw new Error('Error en la red');
-        return r.json();
+    .then(async r => {
+        console.log('🔍 Response status:', r.status, 'ok:', r.ok);
+        const text = await r.text(); // Leer como texto primero para debug
+        console.log('🔍 Response raw:', text.substring(0, 200));
+        
+        if (!r.ok) throw new Error('Error en la red: ' + r.status);
+        
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('❌ Error parseando JSON:', e, 'raw:', text);
+            throw new Error('Respuesta no es JSON válido');
+        }
     })
     .then(data => {
+        console.log('🔍 Data recibida:', data);
         document.body.style.cursor = 'default';
         if (data.success) {
             showToast('✅ Club cambiado correctamente', 'success');
@@ -845,8 +872,8 @@ function cambiarClub(clubSlug) {
     })
     .catch(err => {
         document.body.style.cursor = 'default';
-        console.error('Error:', err);
-        showToast('❌ Error de conexión al cambiar de club', 'error');
+        console.error('❌ Error en cambiarClub:', err);
+        showToast('❌ Error: ' + err.message, 'error');
     });
 }
 
