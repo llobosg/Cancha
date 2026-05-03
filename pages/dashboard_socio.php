@@ -864,40 +864,56 @@ function toggleHeaderMenu(e) {
 
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
-    console.log('🔍 abrirSelectorClubes | SOCIO_ID:', window.SOCIO_ID);
-    
+    console.log('🟢 [1] Función iniciada');
+
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
+    console.log('🟢 [2] Elementos DOM encontrados:', { selector: !!selector, lista: !!lista });
+
     if (!selector || !lista) {
-        console.error('❌ Faltan #selectorClubes o #listaClubes en el HTML');
+        console.error('❌ [ERROR CRÍTICO] No se encontraron #selectorClubes o #listaClubes en el HTML. Verifica que estén copiados exactamente fuera del <header>.');
         return;
     }
-    
+
+    // Forzar visibilidad
     selector.style.display = 'block';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
-    
+    console.log('🟢 [3] Menú forzado a visible (display:block)');
+
     try {
-        const res = await fetch(`../api/get_clubs_socio.php?id_socio=${window.SOCIO_ID}`);
-        const clubs = await res.json();
-        
+        const url = `../api/get_clubs_socio.php?id_socio=${window.SOCIO_ID}`;
+        console.log('🟢 [4] Iniciando fetch a:', url);
+
+        const res = await fetch(url);
+        console.log('🟢 [5] Respuesta recibida. Status:', res.status, 'OK:', res.ok);
+
+        const text = await res.text();
+        console.log('🟢 [6] Texto crudo de respuesta (primeros 200 chars):', text.substring(0, 200));
+
+        const clubs = JSON.parse(text);
+        console.log('🟢 [7] JSON parseado correctamente. Cantidad de clubs:', clubs.length);
+
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
+            console.log('🟡 [8] Lista vacía o no es array');
             return;
         }
-        
+
         let html = '';
         clubs.forEach(c => {
             const esActual = c.slug === window.CLUB_ACTUAL;
-            html += `<div onclick="cambiarClub('${c.slug}')" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; font-weight:${esActual?'600':'400'}; border-bottom:1px solid #f0f0f0;">
+            html += `<div onclick="cambiarClub('${c.slug}')" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0;">
                 <span>${c.nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
             </div>`;
         });
         lista.innerHTML = html;
+        console.log('✅ [9] Lista renderizada con éxito. Si no la ves, es un problema de CSS (z-index/overflow).');
+
     } catch (err) {
-        console.error('❌ Error:', err);
-        lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
+        console.error('❌ [10] Error crítico en el flujo:', err);
+        lista.innerHTML = `<div style="padding:0.8rem; text-align:center; color:#C62828;">Error: ${err.message}</div>`;
     }
 }
 
