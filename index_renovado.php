@@ -431,7 +431,7 @@ $_SESSION['visited_index'] = true;
 
 <!-- HERO -->
 <main class="hero">
-  <h1 class="hero-title">El HUB Deportivo para Jugadores, clubes y recintos. Un solo lugar para todo.</h1>
+  <h3 class="hero-title">El HUB Deportivo para Jugadores, clubes y recintos. Un solo lugar para todo.</h3>
   <p class="hero-subtitle">La plataforma más completa para jugadores que buscan horas, clubes que se coordinan y recintos que gestionan. Todo en CanchaSport. Comunidad deportiva, 360°.</p>
   
   <!-- Sport Badges -->
