@@ -708,11 +708,14 @@ $js_vars = [
         #selectorClubes {
             pointer-events: auto !important;
             z-index: 9999 !important;
+            position: absolute !important;
         }
         .club-item {
             pointer-events: auto !important;
+            cursor: pointer !important;
             user-select: none;
-            transition: background 0.2s;
+            position: relative;
+            z-index: 10;
         }
         .club-item:hover {
             background: #F1F5F9 !important;
@@ -879,64 +882,46 @@ function toggleHeaderMenu(e) {
 
 // === ABRIR SELECTOR DE CLUBES (genera slug en JS, igual que tu HTML antiguo) ===
 async function abrirSelectorClubes(e) {
-    e.stopPropagation();
+    // ✅ QUITAR e.stopPropagation() para no bloquear eventos hijos
     console.log('🔍 abrirSelectorClubes iniciado');
 
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
 
-    if (!selector || !lista) return;
+    if (!selector || !lista) {
+        console.error('❌ Faltan elementos DOM');
+        return;
+    }
 
-    // Forzar visibilidad y clickability
+    // Forzar visibilidad
     selector.style.display = 'block';
-    selector.style.pointerEvents = 'auto';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
 
     try {
         const res = await fetch(`../api/get_clubs_socio.php?id_socio=${window.SOCIO_ID}`);
         const clubs = await res.json();
-        console.log('🟢 Clubs recibidos:', clubs);
-
+        
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
-            console.log('🟢 Sale por no encontrar Clubes:');
             return;
         }
 
+        // Renderizar con clase .club-item y data-slug
         let html = '';
         clubs.forEach(c => {
             const esActual = c.slug === (window.CLUB_ACTUAL || '');
-            console.log('🟢 Club actual:', esActual);
-            // Clase .club-item para delegación + estilos seguros
-            html += `<div class="club-item" data-slug="${c.slug}" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'}; position:relative; z-index:10;">
+            html += `<div class="club-item" data-slug="${c.slug}" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'};">
                 <span>${c.club_nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
             </div>`;
         });
         lista.innerHTML = html;
-        console.log('✅ HTML renderizado. Items:', lista.querySelectorAll('.club-item').length);
-
-        // 🎯 EVENT DELEGATION: Un solo listener en el contenedor
-        lista.addEventListener('click', function(event) {
-            const item = event.target.closest('.club-item');
-            console.log('🟢 item eventListener:', item);
-            if (item) {
-                const slug = item.dataset.slug;
-                console.log('🖱️ CLICK DETECTADO → Slug:', slug);
-                console.log('🔍 typeof cambiarClub:', typeof window.cambiarClub);
-                
-                if (typeof window.cambiarClub === 'function') {
-                    window.cambiarClub(slug);
-                } else {
-                    console.error('❌ cambiarClub no está definida en window');
-                }
-            }
-        });
+        console.log('✅ Items renderizados:', lista.querySelectorAll('.club-item').length);
 
     } catch (err) {
-        console.error('❌ Error crítico:', err);
-        lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
+        console.error('❌ Error:', err);
+        lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error</div>';
     }
 }
 
@@ -1088,6 +1073,30 @@ document.addEventListener('click', e => {
 });
 
 console.log('✅ dashboard_socio.js cargado sin errores');
+
+// ============================================================================
+// EVENT DELEGATION GLOBAL PARA CLUBS (SE EJECUTA UNA VEZ AL CARGAR)
+// ============================================================================
+document.addEventListener('click', function(e) {
+    // Buscar si el click fue en un .club-item (o dentro de él)
+    const clubItem = e.target.closest('.club-item');
+    
+    if (clubItem) {
+        e.preventDefault(); // Evitar comportamientos por defecto
+        e.stopPropagation(); // Detener propagación ahora que ya capturamos
+        
+        const slug = clubItem.dataset.slug;
+        console.log('🖱️ CLICK GLOBAL CAPTURADO → Slug:', slug);
+        
+        // Verificar que la función existe y llamarla
+        if (typeof window.cambiarClub === 'function') {
+            console.log('✅ Ejecutando cambiarClub...');
+            window.cambiarClub(slug);
+        } else {
+            console.error('❌ cambiarClub no está definida en window');
+        }
+    }
+}, true); // ✅ Usar fase de CAPTURA para interceptar antes que otros listeners
 </script>
 </body>
 </html>
