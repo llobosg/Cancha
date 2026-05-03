@@ -628,210 +628,53 @@ try {
 
     <!-- TOAST -->
     <div id="toast" class="toast">✅ Acción realizada</div>
-
-    <script>
-        // === VARIABLES GLOBALES ===
-        const SOCIO_ID = <?= $id_socio ?>;
-        const ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
-        const LIMITE_LLENO = <?= $limite_lleno ? 'true' : 'false' ?>;
-        
-        // === TOAST MODERNO ===
-        function showToast(msg, type = 'success') {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.style.background = type === 'error' ? '#C62828' : '#2E7D32';
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
-        }
-        
-        // === MENÚ 3 PUNTOS ===
-        function toggleMenu(e) {
-            e.stopPropagation();
-            const menu = document.getElementById('menuDropdown');
-            const itemIA = document.getElementById('menuItemIA');
-            
-            // Mostrar/ocultar menú
-            menu.classList.toggle('active');
-            
-            // Mostrar "Equipos por IA" solo si está lleno
-            if (LIMITE_LLENO) {
-                itemIA.style.display = 'flex';
-            }
-        }
-        
-        // Cerrar menú al hacer click fuera
-        document.addEventListener('click', () => {
-            document.getElementById('menuDropdown').classList.remove('active');
-        });
-        
-        // === ACCIONES DEL MENÚ ===
-        function marcarPaso() {
-            showToast('👟 Marcado como "Paso"');
-            // Aquí iría: fetch a API para marcar estado "paso"
-        }
-        
-        function generarEquiposIA() {
-            if (!LIMITE_LLENO) {
-                showToast('⚠️ Solo disponible con cupos completos', 'error');
-                return;
-            }
-            showToast('🤖 Generando equipos balanceados...');
-            // Aquí iría: fetch a API de IA para generar equipos
-            setTimeout(() => showToast('✅ Equipos generados y notificados'), 1500);
-        }
-        
-        // === INSCRIPCIÓN / BAJA ===
-        async function anotarse(idReserva) {
-            if (!confirm('¿Confirmas tu inscripción? Se generará tu cuota.')) return;
-            
-            try {
-                const res = await fetch('../api/inscribir_reserva.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    showToast('✅ ¡Anotado correctamente!');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
-                }
-            } catch (e) {
-                showToast('❌ Error de conexión', 'error');
-            }
-        }
-        
-        async function bajarse(idReserva) {
-            if (!confirm('¿Seguro que deseas bajarte?')) return;
-            
-            try {
-                const res = await fetch('../api/bajar_reserva.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    showToast('❌ Te has dado de baja');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
-                }
-            } catch (e) {
-                showToast('❌ Error de conexión', 'error');
-            }
-        }
-        
-        // === MODAL INSCRITOS (CON DATOS REALES) ===
-        async function verInscritos(idReserva) {
-            const modal = document.getElementById('modalInscritos');
-            const lista = document.getElementById('listaInscritos');
-            modal.style.display = 'flex';
-            lista.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:1rem;">🔄 Cargando...</p>';
-            
-            try {
-                const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
-                const data = await res.json();
-                
-                if (!Array.isArray(data) || data.length === 0) {
-                    lista.innerHTML = '<p style="text-align:center; color:var(--text-light);">Sin inscritos aún</p>';
-                    return;
-                }
-                
-                let html = '';
-                data.forEach(p => {
-                    const esYo = p.id_socio === SOCIO_ID;
-                    const puedeBajar = ES_RESPONSABLE && !esYo;
-                    
-                    html += `<div class="inscrito-item">
-                        <span class="inscrito-name">${esYo ? '👤 Tú' : p.nombre}</span>
-                        <span class="inscrito-status">${p.estado}</span>
-                        ${puedeBajar ? `<button class="btn-bajar" onclick="bajarJugador(${p.id_socio}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}')">Bajar</button>` : ''}
-                    </div>`;
-                });
-                lista.innerHTML = html;
-                
-            } catch (e) {
-                console.error(e);
-                lista.innerHTML = '<p style="text-align:center; color:#C62828;">Error al cargar</p>';
-            }
-        }
-        
-        // === BAJAR JUGADOR (SOLO RESPONSABLES) ===
-        async function bajarJugador(idSocioBajar, idReserva, nombre) {
-            if (!confirm(`¿Bajar a "${nombre}" de este partido?`)) return;
-            
-            try {
-                const res = await fetch('../api/bajar_jugador_reserva.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        id_reserva: idReserva, 
-                        id_socio_a_bajar: idSocioBajar,
-                        id_responsable: SOCIO_ID 
-                    })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    showToast(`✅ ${nombre} ha sido bajado`);
-                    verInscritos(idReserva); // Recargar lista
-                } else {
-                    showToast('❌ ' + (data.message || 'Error'), 'error');
-                }
-            } catch (e) {
-                showToast('❌ Error de conexión', 'error');
-            }
-        }
-        
-        // === CERRAR MODAL ===
-        function cerrarModal(e) {
-            if(e.target.id === 'modalInscritos' || e.target.classList.contains('modal-close')) {
-                document.getElementById('modalInscritos').style.display = 'none';
-            }
-        }
-        // === VARIABLES GLOBALES ===
-const SOCIO_ID = <?= $id_socio ?>;
+<script>
+// === VARIABLES GLOBALES (DECLARAR SOLO UNA VEZ) ===
+const SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
 const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
 const CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
+const LIMITE_LLENO = <?= $limite_lleno ?? false ? 'true' : 'false' ?>;
 
-// === TOGGLE MENÚ PRINCIPAL ===
+// === TOAST MODERNO (GLOBAL) ===
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    const colors = { success: '#2E7D32', error: '#C62828', warning: '#EF6C00', info: '#1976D2' };
+    t.style.background = colors[type] || colors.success;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// === MENÚ 3 PUNTOS (GLOBAL) ===
 function toggleMenu(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     const menu = document.getElementById('menuDropdown');
     const selector = document.getElementById('selectorClubes');
     
-    // Cerrar selector si está abierto
     if (selector) selector.style.display = 'none';
+    if (menu) menu.classList.toggle('active');
     
-    // Toggle menú principal
-    menu.classList.toggle('active');
-    
-    // Mostrar "Equipos por IA" solo si está lleno
+    // Mostrar "Equipos por IA" solo si aplica
     const itemIA = document.getElementById('menuItemIA');
     if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
         itemIA.style.display = 'flex';
     }
 }
 
-// === ABRIR SELECTOR DE CLUBES ===
+// === ABRIR SELECTOR DE CLUBES (GLOBAL) ===
 async function abrirSelectorClubes(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
     
     if (!selector || !lista) return;
     
-    // Mostrar selector
     selector.style.display = 'block';
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
     
     try {
-        // Fetch a API para obtener clubs del socio
         const res = await fetch(`../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`);
         const clubs = await res.json();
         
@@ -840,7 +683,6 @@ async function abrirSelectorClubes(e) {
             return;
         }
         
-        // Renderizar lista de clubs
         let html = '';
         clubs.forEach(club => {
             const esActual = club.slug === CLUB_ACTUAL;
@@ -851,22 +693,18 @@ async function abrirSelectorClubes(e) {
                  onmouseout="this.style.background='${esActual ? '#E8F5E9' : 'white'}'">
                 <span>${club.nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
-            </div>
-            `;
+            </div>`;
         });
         lista.innerHTML = html;
-        
     } catch (err) {
         console.error('Error cargando clubs:', err);
         lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
     }
 }
 
-// === CAMBIAR CLUB (Función proporcionada - optimizada) ===
+// === CAMBIAR CLUB (GLOBAL) ===
 function cambiarClub(clubSlug) {
     console.log('🔄 Cambiando a club:', clubSlug);
-    
-    // Mostrar toast de "Cambiando..."
     showToast('🔄 Cambiando de club...', 'info');
     document.body.style.cursor = 'wait';
     
@@ -883,7 +721,6 @@ function cambiarClub(clubSlug) {
         document.body.style.cursor = 'default';
         if (data.success) {
             showToast('✅ Club cambiado correctamente', 'success');
-            // Recargar con parámetro para forzar actualización de caché
             window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
         } else {
             showToast('❌ ' + (data.message || 'No se pudo cambiar de club'), 'error');
@@ -896,11 +733,138 @@ function cambiarClub(clubSlug) {
     });
 }
 
-// === CERRAR MENÚS AL HACER CLICK FUERA ===
+// === CERRAR MENÚS AL CLICK FUERA (GLOBAL) ===
 document.addEventListener('click', () => {
     document.getElementById('menuDropdown')?.classList.remove('active');
     document.getElementById('selectorClubes')?.style.setProperty('display', 'none');
 });
-    </script>
+
+// === ACCIONES DEL MENÚ ===
+function marcarPaso() {
+    showToast('👟 Marcado como "Paso"');
+}
+
+function generarEquiposIA() {
+    if (typeof LIMITE_LLENO !== 'undefined' && !LIMITE_LLENO) {
+        showToast('⚠️ Solo disponible con cupos completos', 'error');
+        return;
+    }
+    showToast('🤖 Generando equipos balanceados...');
+    setTimeout(() => showToast('✅ Equipos generados y notificados'), 1500);
+}
+
+// === INSCRIPCIÓN / BAJA DE RESERVA ===
+async function anotarse(idReserva) {
+    if (!confirm('¿Confirmas tu inscripción? Se generará tu cuota.')) return;
+    try {
+        const res = await fetch('../api/inscribir_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ¡Anotado correctamente!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+async function bajarse(idReserva) {
+    if (!confirm('¿Seguro que deseas bajarte?')) return;
+    try {
+        const res = await fetch('../api/bajar_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('❌ Te has dado de baja');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+// === MODAL INSCRITOS ===
+async function verInscritos(idReserva) {
+    const modal = document.getElementById('modalInscritos');
+    const lista = document.getElementById('listaInscritos');
+    if (!modal || !lista) return;
+    
+    modal.style.display = 'flex';
+    lista.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:1rem;">🔄 Cargando...</p>';
+    
+    try {
+        const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
+        const data = await res.json();
+        
+        if (!Array.isArray(data) || data.length === 0) {
+            lista.innerHTML = '<p style="text-align:center; color:var(--text-light);">Sin inscritos aún</p>';
+            return;
+        }
+        
+        let html = '';
+        data.forEach(p => {
+            const esYo = p.id_socio === SOCIO_ID;
+            const puedeBajar = typeof ES_RESPONSABLE !== 'undefined' && ES_RESPONSABLE && !esYo;
+            html += `<div class="inscrito-item">
+                <span class="inscrito-name">${esYo ? '👤 Tú' : p.nombre}</span>
+                <span class="inscrito-status">${p.estado}</span>
+                ${puedeBajar ? `<button class="btn-bajar" onclick="bajarJugador(${p.id_socio}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}')">Bajar</button>` : ''}
+            </div>`;
+        });
+        lista.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        lista.innerHTML = '<p style="text-align:center; color:#C62828;">Error al cargar</p>';
+    }
+}
+
+async function bajarJugador(idSocioBajar, idReserva, nombre) {
+    if (!confirm(`¿Bajar a "${nombre}" de este partido?`)) return;
+    try {
+        const res = await fetch('../api/bajar_jugador_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                id_reserva: idReserva, 
+                id_socio_a_bajar: idSocioBajar,
+                id_responsable: SOCIO_ID 
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${nombre} ha sido bajado`);
+            verInscritos(idReserva);
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+// === CERRAR MODAL ===
+function cerrarModal(e) {
+    if (e && (e.target.id === 'modalInscritos' || e.target.classList?.contains('modal-close'))) {
+        document.getElementById('modalInscritos')?.style.setProperty('display', 'none');
+    }
+}
+
+// === INIT: Cargar datos al DOM listo ===
+document.addEventListener('DOMContentLoaded', () => {
+    // Aquí puedes inicializar componentes que no necesitan ser globales
+    console.log('✅ dashboard_socio.php cargado');
+});
+</script>
 </body>
 </html>
