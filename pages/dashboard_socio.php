@@ -807,16 +807,14 @@ $js_vars = [
         <div class="header-actions">
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown">
-                <a href="mantenedor_socios.php" class="menu-item">👤 Mi perfil</a>
-                
                 <!-- ✅ Usar $es_multiclub calculado en PHP -->
                 <?php if ($es_multiclub): ?>
-                <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
-                    🔄 Cambiar de Club
-                </div>
+                    <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
+                        🔄 Cambiar de Club
+                    </div>
                 <?php endif; ?>
             </div>
-            <a href="mi_perfil.php" class="avatar">
+            <a href="mantenedor_socios.php" class="avatar">
                 <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
             </a>
         </div>
@@ -836,16 +834,16 @@ $js_vars = [
         <div class="hero">
             <!-- MENÚ 3 PUNTOS (acciones del partido) -->
             <?php if (!empty($proximo_evento)): ?>
-            <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $id_reserva ?>)">⋮</button>
-            <div id="heroMenu_<?= $id_reserva ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2);">
-                <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?>)">👟 Marcar "Paso"</div>
-                <?php if ($deuda_mas_vigente): ?>
-                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
-                <?php endif; ?>
-                <?php if ($es_responsable && $cupos_llenos): ?>
-                <div class="menu-item" onclick="armarEquiposIA(<?= $id_reserva ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
-                <?php endif; ?>
-            </div>
+                <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $id_reserva ?>)">⋮</button>
+                <div id="heroMenu_<?= $id_reserva ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2);">
+                    <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</div>
+                    <?php if ($deuda_mas_vigente): ?>
+                    <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
+                    <?php endif; ?>
+                    <?php if ($es_responsable && $cupos_llenos): ?>
+                    <div class="menu-item" onclick="armarEquiposIA(<?= $id_reserva ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
 
             <h1 class="hero-title">Próximo Partido</h1>
@@ -1036,6 +1034,14 @@ function toggleHeaderMenu(e) {
     closeAllMenus();
     const menu = document.getElementById('headerMenu');
     if (menu) menu.classList.toggle('active');
+}
+
+// === 4. MENÚ FICHA PRÓXIMO PARTIDO ===
+function toggleHeroMenu(e) {
+    e.stopPropagation();
+    closeAllMenus();
+    const menuHero = document.getElementById('heroMenu');
+    if (menuHero) menuHero.classList.toggle('active');
 }
 
 // === ABRIR SELECTOR DE CLUBES (genera slug en JS, igual que tu HTML antiguo) ===
