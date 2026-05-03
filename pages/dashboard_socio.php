@@ -978,7 +978,7 @@ $js_vars = [
     </div>
     <?php endif; ?>
 
-    <!-- === ÚLTIMO PARTIDO === -->
+    <!-- === ÚLTIMO PARTIDO === 
     <div class="container">
         <div style="background:white; border-radius:20px; padding:1.25rem; margin-bottom:2rem; box-shadow:0 4px 15px rgba(0,0,0,0.08);">
             <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem; color:var(--text-dark);">📊 Último Partido</h3>
@@ -1002,7 +1002,7 @@ $js_vars = [
                 <p style="color:#888;">Sin partidos anteriores</p>
             <?php endif; ?>
         </div>
-    </div>
+    </div>-->
     <!-- FAB -->
     <a href="reservar_cancha.php" class="fab">+</a>
 
@@ -1027,6 +1027,26 @@ $js_vars = [
 
 <!-- === BLOQUE ÚNICO DE JAVASCRIPT (COPIAR Y PEGAR TAL CUAL) === -->
 <script>
+// Fallback seguro para showToast (si no está definida)
+if (typeof showToast !== 'function') {
+    function showToast(msg, type = 'success') {
+        // Toast mínimo con CSS inline
+        const t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = `
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: ${type === 'error' ? '#C62828' : '#2E7D32'}; color: white;
+            padding: 0.85rem 1.5rem; border-radius: 14px; font-size: 0.9rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2); z-index: 9999;
+            animation: slideUp 0.3s ease;
+        `;
+        document.body.appendChild(t);
+        setTimeout(() => {
+            t.style.opacity = '0';
+            setTimeout(() => t.remove(), 300);
+        }, 3000);
+    }
+}
 // === 1. INYECCIÓN SEGURA DE VARIABLES (EVITA REDECLARACIONES) ===
 window.SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
 window.ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
@@ -1334,7 +1354,7 @@ function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTo
     console.log('🔵 Anotándose:', { idActividad, tipoActividad, deporte, playersMax, montoTotal });
     
     if (!idActividad) {
-        mostrarToast('❌ Error: ID inválido', 'error');
+        showToast('❌ Error: ID inválido', 'error');
         return;
     }
 
@@ -1345,11 +1365,9 @@ function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTo
     formData.append('deporte', deporte);
     formData.append('players_max', playersMax);
     formData.append('monto_total', montoTotal);
-    // Opcional: cerveza
-    // formData.append('lleva_cerveza', '1');
 
     // Feedback visual inmediato
-    mostrarToast('🔄 Procesando inscripción...', 'info');
+    showToast('🔄 Procesando inscripción...', 'info');
 
     fetch('../api/gestion_eventos.php', { 
         method: 'POST', 
@@ -1367,19 +1385,18 @@ function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTo
     })
     .then(data => {
         if (data.success) {
-            mostrarToast(data.message || '✅ ¡Inscripción confirmada!', 'exito');
+            showToast('✅ ¡Inscripción confirmada!', 'success');
             setTimeout(() => location.reload(), 1200);
         } else if (data.message === 'NO_CUOTA_GENERADA') {
-            // Caso especial: ya pagó el mes, se inscribió pero no se generó cuota
-            mostrarToast('✅ Inscrito (cuota mensual ya pagada)', 'exito');
+            showToast('✅ Inscrito (cuota mensual ya pagada)', 'success');
             setTimeout(() => location.reload(), 1200);
         } else {
-            mostrarToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
+            showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
         }
     })
     .catch(error => {
         console.error('❌ Fetch error:', error);
-        mostrarToast('❌ Error de conexión: ' + error.message, 'error');
+        showToast('❌ Error de conexión: ' + error.message, 'error');
     });
 }
 
@@ -1388,19 +1405,18 @@ function bajarseEvento(idReserva) {
     console.log('🔴 Bajándose de ID:', idReserva);
     
     if (!idReserva || idReserva === 'null' || idReserva === 'undefined') {
-        mostrarToast('❌ Error: ID inválido', 'error');
+        showToast('❌ Error: ID inválido', 'error');
         return;
     }
 
-    // Confirmación para evitar clicks accidentales
     if (!confirm('¿Seguro que deseas bajarte de este evento?')) return;
 
     const formData = new FormData();
     formData.append('action', 'bajarse');
     formData.append('id_actividad', idReserva);
-    formData.append('id_reserva', idReserva); // Compatibilidad
+    formData.append('id_reserva', idReserva);
 
-    mostrarToast('🔄 Procesando baja...', 'info');
+    showToast('🔄 Procesando baja...', 'info');
 
     fetch('../api/gestion_eventos.php', { 
         method: 'POST', 
@@ -1417,21 +1433,21 @@ function bajarseEvento(idReserva) {
     })
     .then(data => {
         if (data.success) {
-            mostrarToast(data.message || '✅ Te has dado de baja', 'exito');
+            showToast('✅ Te has dado de baja', 'success');
             setTimeout(() => location.reload(), 1200);
         } else {
-            mostrarToast('❌ ' + (data.message || 'Error al bajar'), 'error');
+            showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
         }
     })
     .catch(err => {
         console.error('❌ Fetch error:', err);
-        mostrarToast('❌ Error de conexión: ' + err.message, 'error');
+        showToast('❌ Error de conexión: ' + err.message, 'error');
     });
 }
 
 // === PASO (Feedback visual inmediato) ===
 function pasoEvento(idReserva, e) {
-    if (e) e.stopPropagation(); // Evitar que se cierre el menú
+    if (e) e.stopPropagation();
     
     const btn = e?.target || event?.target;
     if (btn) {
@@ -1441,14 +1457,24 @@ function pasoEvento(idReserva, e) {
         btn.style.cursor = 'default';
     }
     
-    mostrarToast('👟 Marcado como "Paso"', 'info');
+    showToast('👟 Marcado como "Paso"', 'info');
+}
+
+// === ANOTARSE CON CERVEZA (wrapper limpio) ===
+function anotarseConCerveza(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+    // Inyectar flag de cerveza temporalmente
+    const originalFetch = window.fetch;
+    window.fetch = function(url, opts) {
+        if (opts?.body instanceof FormData) {
+            opts.body.set('lleva_cerveza', '1');
+        }
+        return originalFetch.call(this, url, opts);
+    };
     
-    // TODO: Si necesitas guardar en BD, descomenta:
-    fetch('../api/gestion_eventos.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `action=paso&id_actividad=${idReserva}`
-    });
+    anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal);
+    
+    // Restaurar fetch original
+    setTimeout(() => { window.fetch = originalFetch; }, 100);
 }
 
 async function armarEquiposIA(idReserva) {
