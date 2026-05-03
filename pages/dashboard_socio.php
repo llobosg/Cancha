@@ -608,6 +608,9 @@ try {
             <!-- MENÚ HEADER: Perfil + Cambiar Club -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown">
+                 <a onclick=""abrirSelectorClubes(event)" class="avatar">
+                    🔄 Cambiar Club
+                </a>
                 <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
                     🔄 Cambiar de Club
                 </div>
