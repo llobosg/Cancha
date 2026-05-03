@@ -908,17 +908,27 @@ $js_vars = [
                 <!-- === BOTONES (solo después del lunes 09:00) === -->
                     <?php if ($ya_inscrito): ?>
                         <!-- Ya inscrito: mostrar "Bajarse" -->
-                        <button class="btn-hero inscrito" onclick="bajarseEvento(<?= $id_reserva ?>)">❌ Bajarme del partido</button>
+                        <!-- Botón Bajarse (con confirmación) -->
+                        <button class="btn-hero inscrito" onclick="bajarseEvento(<?= $id_reserva ?>)">
+                            ❌ Bajarme del partido
+                        </button>
                     <?php else: ?>
                         <!-- No inscrito: mostrar opciones -->
                         <?php if ($cupos_llenos): ?>
                             <button class="btn-hero" disabled>🔒 Cupos completos</button>
                         <?php else: ?>
-                            <button class="btn-hero" onclick="anotarseEvento(<?= $id_reserva ?>, '<?= addslashes($deporte) ?>', <?= $players ?>, <?= $monto_total ?>)">✅ Anotarse</button>
-                            <button class="btn-hero" style="margin-top:0.5rem; background:#FFD54F; color:#5D4037;" onclick="anotarseConCerveza(<?= $id_reserva ?>, '<?= addslashes($deporte) ?>', <?= $players ?>, <?= $monto_total ?>)">🍺 Anotarse + llevo cerveza</button>
+                            <button class="btn-hero" onclick="anotarseEvento(
+                                <?= $id_reserva ?>, 
+                                'reserva', 
+                                '<?= addslashes($deporte) ?>', 
+                                <?= $players ?>, 
+                                <?= $monto_total ?>
+                            )">
+                                ✅ Anotarse
+                            </button>
                         <?php endif; ?>
                         <!-- Botón "Paso" siempre visible -->
-                        <button class="btn-hero" style="margin-top:0.5rem; background:rgba(255,255,255,0.9); color:#E53E3E;" onclick="pasoEvento(<?= $id_reserva ?>)">👟 Paso</button>
+                        <button class="btn-hero" style="margin-top:0.5rem; background:rgba(255,255,255,0.9); color:#E53E3E;" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</button>
                     <?php endif; ?>
                     
                     <!-- Botón IA para responsables -->
@@ -1304,70 +1314,141 @@ document.addEventListener('click', function(e) {
 }, true); // ✅ Usar fase de CAPTURA para interceptar antes que otros listeners
 // === FUNCIONES DE PRÓXIMO PARTIDO (lógica de tu respaldo) ===
 
-async function anotarseEvento(idReserva, deporte, jugadores, monto) {
-    if (!confirm(`¿Confirmar inscripción a ${deporte}? Se generará una cuota de $${monto}.`)) return;
-    try {
-        const res = await fetch('../api/inscribir_reserva.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id_reserva: idReserva, id_socio: window.SOCIO_ID, tipo: 'reserva' })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ ¡Anotado correctamente!', 'success');
-            setTimeout(() => location.reload(), 1200);
-        } else {
-            showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
-        }
-    } catch (e) {
-        showToast('❌ Error de conexión', 'error');
+// === UTILIDAD: Toast unificado (usa tu función existente o fallback) ===
+function mostrarToast(msg, type) {
+    // Si existe tu función original, úsala; sino, usa showToast global
+    if (typeof window.mostrarToast === 'function') {
+        window.mostrarToast(msg, type);
+    } else if (typeof showToast === 'function') {
+        // Mapear tipos: 'exito' → 'success'
+        const toastType = (type === 'exito') ? 'success' : (type === 'error' ? 'error' : 'info');
+        showToast(msg, toastType);
+    } else {
+        // Fallback mínimo
+        alert(msg);
     }
 }
 
-async function anotarseConCerveza(idReserva, deporte, jugadores, monto) {
-    if (!confirm(`¿Anotarte y llevar cerveza? Se agregará $5000 a tu cuota.`)) return;
-    try {
-        const res = await fetch('../api/inscribir_reserva.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id_reserva: idReserva, id_socio: window.SOCIO_ID, tipo: 'reserva', cerveza: true })
-        });
-        const data = await res.json();
+// === ANOTARSE (SIN ALERTA - PROCEDE DIRECTAMENTE) ===
+function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTotal) {
+    console.log('🔵 Anotándose:', { idActividad, tipoActividad, deporte, playersMax, montoTotal });
+    
+    if (!idActividad) {
+        mostrarToast('❌ Error: ID inválido', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'anotarse');
+    formData.append('id_actividad', idActividad);
+    formData.append('tipo_actividad', tipoActividad);
+    formData.append('deporte', deporte);
+    formData.append('players_max', playersMax);
+    formData.append('monto_total', montoTotal);
+    // Opcional: cerveza
+    // formData.append('lleva_cerveza', '1');
+
+    // Feedback visual inmediato
+    mostrarToast('🔄 Procesando inscripción...', 'info');
+
+    fetch('../api/gestion_eventos.php', { 
+        method: 'POST', 
+        body: formData,
+        credentials: 'include'
+    })
+    .then(async response => {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('❌ JSON parse error:', text);
+            throw new Error('Respuesta no válida del servidor');
+        }
+    })
+    .then(data => {
         if (data.success) {
-            showToast('✅ ¡Anotado + 🍺 confirmado!', 'success');
+            mostrarToast(data.message || '✅ ¡Inscripción confirmada!', 'exito');
+            setTimeout(() => location.reload(), 1200);
+        } else if (data.message === 'NO_CUOTA_GENERADA') {
+            // Caso especial: ya pagó el mes, se inscribió pero no se generó cuota
+            mostrarToast('✅ Inscrito (cuota mensual ya pagada)', 'exito');
             setTimeout(() => location.reload(), 1200);
         } else {
-            showToast('❌ ' + (data.message || 'Error'), 'error');
+            mostrarToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
         }
-    } catch (e) {
-        showToast('❌ Error de conexión', 'error');
-    }
+    })
+    .catch(error => {
+        console.error('❌ Fetch error:', error);
+        mostrarToast('❌ Error de conexión: ' + error.message, 'error');
+    });
 }
 
-async function bajarseEvento(idReserva) {
-    if (!confirm('¿Seguro que deseas bajarte?')) return;
-    try {
-        const res = await fetch('../api/bajar_reserva.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id_reserva: idReserva, id_socio: window.SOCIO_ID })
-        });
-        const data = await res.json();
+// === BAJARSE (CON CONFIRMACIÓN POR SEGURIDAD) ===
+function bajarseEvento(idReserva) {
+    console.log('🔴 Bajándose de ID:', idReserva);
+    
+    if (!idReserva || idReserva === 'null' || idReserva === 'undefined') {
+        mostrarToast('❌ Error: ID inválido', 'error');
+        return;
+    }
+
+    // Confirmación para evitar clicks accidentales
+    if (!confirm('¿Seguro que deseas bajarte de este evento?')) return;
+
+    const formData = new FormData();
+    formData.append('action', 'bajarse');
+    formData.append('id_actividad', idReserva);
+    formData.append('id_reserva', idReserva); // Compatibilidad
+
+    mostrarToast('🔄 Procesando baja...', 'info');
+
+    fetch('../api/gestion_eventos.php', { 
+        method: 'POST', 
+        body: formData,
+        credentials: 'include'
+    })
+    .then(async response => {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error('Respuesta no válida');
+        }
+    })
+    .then(data => {
         if (data.success) {
-            showToast('✅ Te has dado de baja', 'success');
+            mostrarToast(data.message || '✅ Te has dado de baja', 'exito');
             setTimeout(() => location.reload(), 1200);
         } else {
-            showToast('❌ ' + (data.message || 'Error'), 'error');
+            mostrarToast('❌ ' + (data.message || 'Error al bajar'), 'error');
         }
-    } catch (e) {
-        showToast('❌ Error de conexión', 'error');
-    }
+    })
+    .catch(err => {
+        console.error('❌ Fetch error:', err);
+        mostrarToast('❌ Error de conexión: ' + err.message, 'error');
+    });
 }
 
-async function pasoEvento(idReserva) {
-    showToast('👟 Marcado como "Paso"');
-    // TODO: fetch a API para registrar estado "paso"
-    // await fetch('../api/marcar_paso.php', { method:'POST', body: JSON.stringify({id_reserva: idReserva}) });
+// === PASO (Feedback visual inmediato) ===
+function pasoEvento(idReserva, e) {
+    if (e) e.stopPropagation(); // Evitar que se cierre el menú
+    
+    const btn = e?.target || event?.target;
+    if (btn) {
+        btn.textContent = '✅ Paso esta semana';
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'default';
+    }
+    
+    mostrarToast('👟 Marcado como "Paso"', 'info');
+    
+    // TODO: Si necesitas guardar en BD, descomenta:
+    fetch('../api/gestion_eventos.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `action=paso&id_actividad=${idReserva}`
+    });
 }
 
 async function armarEquiposIA(idReserva) {
