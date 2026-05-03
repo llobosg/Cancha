@@ -900,12 +900,14 @@ async function abrirSelectorClubes(e) {
 
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
+            console.log('🟢 Sale por no encontrar Clubes:');
             return;
         }
 
         let html = '';
         clubs.forEach(c => {
             const esActual = c.slug === (window.CLUB_ACTUAL || '');
+            console.log('🟢 Club actual:', esActual);
             // Clase .club-item para delegación + estilos seguros
             html += `<div class="club-item" data-slug="${c.slug}" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'}; position:relative; z-index:10;">
                 <span>${c.club_nombre}</span>
@@ -918,6 +920,7 @@ async function abrirSelectorClubes(e) {
         // 🎯 EVENT DELEGATION: Un solo listener en el contenedor
         lista.addEventListener('click', function(event) {
             const item = event.target.closest('.club-item');
+            console.log('🟢 item eventListener:', item);
             if (item) {
                 const slug = item.dataset.slug;
                 console.log('🖱️ CLICK DETECTADO → Slug:', slug);
