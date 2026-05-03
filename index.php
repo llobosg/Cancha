@@ -617,7 +617,7 @@ $_SESSION['visited_index'] = true;
             <div style="font-size:0.8rem; color:var(--text-light);">Para equipos que quieren organizarse</div>
           </div>
         </a>
-        <a href="javascript:void(0)" onclick="abrirModalCentro(event)" ...>
+        <a href="javascript:void(0)" onclick="abrirModalCentro(event)" style="display:flex; align-items:center; gap:0.75rem; padding:0.9rem; border-radius:14px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-weight:500; transition:all 0.2s;">
             <span style="font-size:1.3rem;">🏟️</span>
             <div>
                 <div style="font-weight:600;">Centro Deportivo</div>
