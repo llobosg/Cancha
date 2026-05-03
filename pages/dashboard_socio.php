@@ -1,199 +1,290 @@
-<?php
-// pages/dashboard_socio.php - BLOQUE INICIAL (CONSULTA ORIGINAL)
-require_once __DIR__ . '/../includes/config.php';
-
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
-if (!isset($_SESSION['id_socio'])) {
-    header('Location: ../index.php');
-    exit;
-}
-
-$id_socio = (int)$_SESSION['id_socio'];
-
-// === OBTENER DATOS DEL SOCIO ===
-$stmt = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
-$stmt->execute([$id_socio]);
-$socio = $stmt->fetch();
-
-if (!$socio) {
-    session_destroy();
-    header('Location: ../index.php');
-    exit;
-}
-
-$nombre_mostrar = $socio['alias'] ?: explode(' ', $socio['nombre'])[0];
-$es_responsable = !empty($socio['es_responsable']) && $socio['es_responsable'] == 1;
-
-// === DETECTAR MODO: INDIVIDUAL O CLUB ===
-$club_slug_from_url = $_GET['id_club'] ?? null;
-$modo_individual = (empty($club_slug_from_url) || trim($club_slug_from_url) === '');
-
-$club_id = null;
-$club_nombre = '';
-$club_logo = '';
-$club_slug = null;
-
-if (!$modo_individual) {
-    if (strlen($club_slug_from_url) !== 8 || !ctype_alnum($club_slug_from_url)) {
-        $modo_individual = true;
-    } else {
-        // Buscar club por slug generado
-        $stmt_club = $pdo->prepare("SELECT id_club, email_responsable, nombre, logo FROM clubs WHERE email_verified = 1");
-        $stmt_club->execute();
-        $clubs = $stmt_club->fetchAll();
-
-        foreach ($clubs as $c) {
-            $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-            if ($generated_slug === $club_slug_from_url) {
-                $club_id = (int)$c['id_club'];
-                $club_nombre = $c['nombre'];
-                $club_logo = $c['logo'] ?? '';
-                $club_slug = $generated_slug;
-                break;
-            }
-        }
-
-        if (!$club_id) {
-            $modo_individual = true;
-        }
-    }
-}
-
-// === VALIDAR PERTENENCIA DEL SOCIO AL CLUB ===
-if (!$modo_individual && $club_id) {
-    $stmt_validate = $pdo->prepare("
-        SELECT sc.id_club 
-        FROM socio_club sc 
-        WHERE sc.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
-    ");
-    $stmt_validate->execute([$id_socio, $club_id]);
+<!-- === INYECCIÓN SEGURA DE VARIABLES PHP (EVITA DUPLICADOS) === -->
+<script>
+// Variables PHP → JS (solo si no existen ya)
+if (typeof SOCIO_ID === 'undefined') {
+    const SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
+    const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
+    const CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
+    const LIMITE_LLENO = <?= $limite_lleno ?? false ? 'true' : 'false' ?>;
+    const PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
+    const ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
+    const MODO_INDIVIDUAL = <?= $modo_individual ? 'true' : 'false' ?>;
+    const CLUB_ID = <?= $club_id ?? 'null' ?>;
+    const CLUB_NOMBRE = <?= json_encode($club_nombre ?? '') ?>;
     
-    if (!$stmt_validate->fetch()) {
-        $modo_individual = true;
-        $club_id = null;
-        $club_slug = null;
+    console.log('✅ Variables cargadas | SOCIO_ID:', SOCIO_ID, 'ES_MULTICLUB:', ES_MULTICLUB);
+}
+</script>
+
+<!-- === FUNCIONES GLOBALES (para onclick) === -->
+<script>
+// ============================================================================
+// === 1. UTILITARIAS GLOBALES ===
+// ============================================================================
+
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    const colors = { success: '#2E7D32', error: '#C62828', warning: '#EF6C00', info: '#1976D2' };
+    t.style.background = colors[type] || colors.success;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function closeAllMenus() {
+    document.querySelectorAll('.menu-dropdown').forEach(menu => {
+        menu.classList.remove('active');
+        if (menu.id === 'selectorClubes') menu.style.display = 'none';
+    });
+}
+
+// ============================================================================
+// === 2. MENÚ HEADER (Perfil + Cambiar Club) ===
+// ============================================================================
+
+function toggleHeaderMenu(e) {
+    e.stopPropagation();
+    closeAllMenus();
+    const menu = document.getElementById('headerMenu');
+    if (menu) menu.classList.toggle('active');
+}
+
+async function abrirSelectorClubes(e) {
+    e.stopPropagation();
+    console.log('🔍 abrirSelectorClubes | SOCIO_ID:', typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 'NO DEFINIDO');
+    
+    const selector = document.getElementById('selectorClubes');
+    const lista = document.getElementById('listaClubes');
+    
+    if (!selector || !lista) {
+        console.error('❌ Faltan elementos #selectorClubes o #listaClubes');
+        showToast('❌ Error de interfaz', 'error');
+        return;
     }
-}
-
-// === OBTENER TODOS LOS CLUBES DEL SOCIO (CONSULTA ORIGINAL - SIN FILTROS EXTRA) ===
-$clubes_del_socio = [];
-$stmt_clubes = $pdo->prepare("
-    SELECT 
-        c.id_club,
-        c.nombre AS club_nombre,
-        c.email_responsable
-    FROM socio_club sc
-    JOIN clubs c ON sc.id_club = c.id_club
-    WHERE sc.id_socio = ? AND sc.estado = 'activo'
-    ORDER BY c.nombre ASC
-");
-$stmt_clubes->execute([$id_socio]);
-$clubes_del_socio = $stmt_clubes->fetchAll();
-
-// === DETECTAR MULTICLUB ===
-$es_multiclub = (count($clubes_del_socio) > 1);
-$club_actual_slug = $club_slug ?? '';
-
-// Si es modo individual pero tiene clubs, redirigir al primero
-if ($modo_individual && !empty($clubes_del_socio)) {
-    $c = $clubes_del_socio[0];
-    $redirect_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-    header("Location: dashboard_socio.php?id_club=$redirect_slug");
-    exit;
-}
-
-// Guardar en sesión
-if (!$modo_individual && $club_id) {
-    $_SESSION['club_id'] = $club_id;
-    $_SESSION['current_club'] = $club_slug;
-}
-
-// === PRÓXIMO EVENTO/RESERVA ===
-$proximo = null;
-$ya_inscrito = false;
-$cant_inscritos = 0;
-$jugadores_esperados = 4;
-
-try {
-    $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
-    $params = [];
-
-    if (!$modo_individual && $club_id) {
-        $where_parts[] = "(
-            (r.id_club = ? AND r.id_socio = ?) 
-            OR 
-            (r.id_club = ? AND r.id_socio IS NULL)
-        )";
-        $params[] = $club_id;
-        $params[] = $id_socio;
-        $params[] = $club_id;
-    } else {
-        $where_parts[] = "r.id_club IS NULL AND r.id_socio = ?";
-        $params[] = $id_socio;
-    }
-
-    $sql = "
-        SELECT 
-            r.id_reserva, r.fecha, r.hora_inicio, r.hora_fin, r.monto_total,
-            r.jugadores_esperados, r.estado_pago, r.monto_recaudacion,
-            c.nombre_cancha, c.id_deporte,
-            (SELECT COUNT(*) FROM reservas_participantes rp WHERE rp.id_reserva = r.id_reserva) as inscritos_actuales,
-            (SELECT GROUP_CONCAT(rp.id_socio) FROM reservas_participantes rp WHERE rp.id_reserva = r.id_reserva) as ids_inscritos
-        FROM reservas r
-        JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE " . implode(" AND ", $where_parts) . "
-        ORDER BY r.fecha ASC, r.hora_inicio ASC
-        LIMIT 1
-    ";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $proximo = $stmt->fetch();
-
-    if ($proximo) {
-        $cant_inscritos = (int)($proximo['inscritos_actuales'] ?? 0);
-        $jugadores_esperados = (int)($proximo['jugadores_esperados'] ?? 4);
-        $ids_inscritos = $proximo['ids_inscritos'] ? explode(',', $proximo['ids_inscritos']) : [];
-        $ya_inscrito = in_array($id_socio, $ids_inscritos);
-    }
-
-} catch (PDOException $e) {
-    error_log("Error próximo evento: " . $e->getMessage());
-}
-
-// === CÁLCULOS DE PROGRESO ===
-$progress_percent = min(100, ($cant_inscritos / max(1, $jugadores_esperados)) * 100);
-$cupos_disponibles = max(0, $jugadores_esperados - $cant_inscritos);
-$limite_lleno = ($cant_inscritos >= $jugadores_esperados);
-
-// === DEUDAS PENDIENTES ===
-$cuotas_pendientes = 0;
-if (!$modo_individual && $club_id) {
+    
+    selector.style.display = 'block';
+    selector.classList.add('active');
+    lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
+    
     try {
-        $stmt_count = $pdo->prepare("
-            SELECT COUNT(*) FROM cuotas 
-            WHERE id_socio = ? AND estado = 'pendiente' AND id_club = ?
-        ");
-        $stmt_count->execute([$id_socio, $club_id]);
-        $cuotas_pendientes = (int)$stmt_count->fetchColumn();
-    } catch (PDOException $e) {
-        error_log("Error deudas: " . $e->getMessage());
+        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
+        if (!socioId) throw new Error('SOCIO_ID no definido');
+        
+        const res = await fetch(`../api/get_clubs_socio.php?id_socio=${socioId}`);
+        const clubs = await res.json();
+        
+        if (!Array.isArray(clubs) || clubs.length === 0) {
+            lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
+            return;
+        }
+        
+        let html = '';
+        clubs.forEach(club => {
+            const esActual = club.slug === (typeof CLUB_ACTUAL !== 'undefined' ? CLUB_ACTUAL : '');
+            html += `<div onclick="cambiarClub('${club.slug}')" 
+                 style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; ${esActual ? 'background:#E8F5E9; font-weight:600;' : ''}"
+                 onmouseover="this.style.background='${esActual ? '#C8E6C9' : '#F7FAFC'}'"
+                 onmouseout="this.style.background='${esActual ? '#E8F5E9' : 'white'}'">
+                <span>${club.nombre}</span>
+                ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
+            </div>`;
+        });
+        lista.innerHTML = html;
+    } catch (err) {
+        console.error('❌ Error cargando clubs:', err);
+        lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
+        showToast('❌ Error al cargar clubs', 'error');
     }
 }
 
-// === VARIABLES PARA JS ===
-$js_vars = [
-    'SOCIO_ID' => $id_socio,
-    'ES_MULTICLUB' => $es_multiclub,
-    'CLUB_ACTUAL' => $club_actual_slug,
-    'LIMITE_LLENO' => $limite_lleno,
-    'PROXIMO_ID' => $proximo['id_reserva'] ?? 0,
-    'ES_RESPONSABLE' => $es_responsable,
-    'MODO_INDIVIDUAL' => $modo_individual,
-    'CLUB_ID' => $club_id,
-    'CLUB_NOMBRE' => $club_nombre
-];
-?>
+function cambiarClub(clubSlug) {
+    console.log('🔄 cambiarClub | slug:', clubSlug);
+    showToast('🔄 Cambiando de club...', 'info');
+    document.body.style.cursor = 'wait';
+    
+    fetch('../api/cambiar_club_sesion.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ club_slug: clubSlug })
+    })
+    .then(async r => {
+        if (!r.ok) throw new Error('Error HTTP: ' + r.status);
+        return r.json();
+    })
+    .then(data => {
+        document.body.style.cursor = 'default';
+        if (data.success) {
+            showToast('✅ Club cambiado', 'success');
+            window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    })
+    .catch(err => {
+        document.body.style.cursor = 'default';
+        console.error('❌ Error:', err);
+        showToast('❌ ' + err.message, 'error');
+    });
+}
+
+// ============================================================================
+// === 3. MENÚ FICHA PRÓXIMO PARTIDO ===
+// ============================================================================
+
+function toggleHeroMenu(e, idReserva) {
+    e.stopPropagation();
+    closeAllMenus();
+    
+    const menu = document.getElementById(`heroMenu_${idReserva}`);
+    if (menu) {
+        menu.classList.toggle('active');
+        const itemIA = document.getElementById(`menuItemIA_${idReserva}`);
+        // ✅ Verificar que LIMITE_LLENO existe antes de usarlo
+        if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
+            itemIA.style.display = 'flex';
+        }
+    }
+}
+
+async function marcarPaso(idReserva) {
+    showToast('👟 Marcado como "Paso"');
+}
+
+function generarEquiposIA(idReserva) {
+    if (typeof LIMITE_LLENO === 'undefined' || !LIMITE_LLENO) {
+        showToast('⚠️ Solo con cupos completos', 'error');
+        return;
+    }
+    showToast('🤖 Generando equipos...');
+    setTimeout(() => showToast('✅ Equipos listos'), 1500);
+}
+
+// ============================================================================
+// === 4. INSCRIPCIÓN / BAJA DE RESERVA ===
+// ============================================================================
+
+async function anotarse(idReserva) {
+    if (!confirm('¿Confirmas tu inscripción?')) return;
+    try {
+        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
+        const res = await fetch('../api/inscribir_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: socioId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ¡Anotado!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+async function bajarse(idReserva) {
+    if (!confirm('¿Seguro que deseas bajarte?')) return;
+    try {
+        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
+        const res = await fetch('../api/bajar_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: socioId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('❌ Te has dado de baja');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+// ============================================================================
+// === 5. MODAL INSCRITOS ===
+// ============================================================================
+
+async function verInscritos(idReserva) {
+    const modal = document.getElementById('modalInscritos');
+    const lista = document.getElementById('listaInscritos');
+    if (!modal || !lista) return;
+    
+    modal.style.display = 'flex';
+    lista.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:1rem;">🔄 Cargando...</p>';
+    
+    try {
+        const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
+        const data = await res.json();
+        
+        if (!Array.isArray(data) || data.length === 0) {
+            lista.innerHTML = '<p style="text-align:center; color:var(--text-light);">Sin inscritos aún</p>';
+            return;
+        }
+        
+        let html = '';
+        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
+        data.forEach(p => {
+            const esYo = p.id_socio === socioId;
+            const puedeBajar = (typeof ES_RESPONSABLE !== 'undefined' && ES_RESPONSABLE) && !esYo;
+            html += `<div class="inscrito-item">
+                <span class="inscrito-name">${esYo ? '👤 Tú' : p.nombre}</span>
+                <span class="inscrito-status">${p.estado}</span>
+                ${puedeBajar ? `<button class="btn-bajar" onclick="bajarJugador(${p.id_socio}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}')">Bajar</button>` : ''}
+            </div>`;
+        });
+        lista.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        lista.innerHTML = '<p style="text-align:center; color:#C62828;">Error al cargar</p>';
+    }
+}
+
+async function bajarJugador(idSocioBajar, idReserva, nombre) {
+    if (!confirm(`¿Bajar a "${nombre}"?`)) return;
+    try {
+        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
+        const res = await fetch('../api/bajar_jugador_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio_a_bajar: idSocioBajar, id_responsable: socioId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${nombre} bajado`);
+            verInscritos(idReserva);
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+function cerrarModal(e) {
+    if (e && (e.target.id === 'modalInscritos' || e.target.classList?.contains('modal-close'))) {
+        document.getElementById('modalInscritos')?.style.setProperty('display', 'none');
+    }
+}
+
+// ============================================================================
+// === 6. EVENT LISTENERS GLOBALES ===
+// ============================================================================
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-dots') && !e.target.closest('.hero-menu-dots') && !e.target.closest('.menu-dropdown')) {
+        closeAllMenus();
+    }
+});
+
+// Debug al cargar
+console.log('✅ dashboard_socio.js cargado');
+</script>
 <!DOCTYPE html>
 <html lang="es">
 <head>
