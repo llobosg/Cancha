@@ -795,6 +795,29 @@ $js_vars = [
             box-shadow: 0 4px 12px rgba(171, 71, 188, 0.15);
             transform: translateY(-1px);
         }
+        /* Menú de la ficha Próximo Partido */
+        .hero-menu {
+            display: none;
+            animation: slideDown 0.2s ease;
+        }
+        .hero-menu.active {
+            display: block !important; /* !important para vencer inline styles */
+        }
+        .hero-menu-dots {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: grid; place-items: center;
+            z-index: 10;
+        }
+        .hero-menu-dots:hover { background: rgba(255,255,255,0.4); }
     </style>
 </head>
 <body>
@@ -805,18 +828,30 @@ $js_vars = [
             <span class="brand">CanchaSport</span>
         </div>
         <div class="header-actions">
+            <!-- MENÚ 3 PUNTOS HEADER -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
-            <div id="headerMenu" class="menu-dropdown">
-                <!-- ✅ Usar $es_multiclub calculado en PHP -->
-                <?php if ($es_multiclub): ?>
-                    <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
-                        🔄 Cambiar de Club
+            <div id="headerMenu" class="menu-dropdown" style="min-width:220px;">
+                <a href="mi_perfil.php" class="menu-item">👤 Mi perfil</a>
+                
+                <!-- Club actual + Cambiar (solo si es multiclub) -->
+                <?php if (!empty($clubes_del_socio)): ?>
+                    <div style="border-top:1px solid #eee; margin:0.3rem 0; padding-top:0.5rem;">
+                        <div style="padding:0.5rem 1rem; font-size:0.8rem; color:#666;">
+                            🏟️ <strong><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
+                        </div>
+                        <?php if ($es_multiclub): ?>
+                            <?php foreach ($clubes_del_socio as $c): 
+                                $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                                if ($slug !== ($club_slug ?? '')): ?>
+                                <div class="menu-item" onclick="window.cambiarClub('<?= $slug ?>')" style="font-size:0.85rem; padding:0.5rem 1rem;">
+                                    🔄 <?= htmlspecialchars($c['club_nombre']) ?>
+                                </div>
+                            <?php endif; endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
-            <a href="mantenedor_socios.php" class="avatar">
-                <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
-            </a>
+            <a href="mi_perfil.php" class="avatar"><?= strtoupper(substr($nombre_mostrar ?? 'U',0,1)) ?></a>
         </div>
     </header>
     <!-- ✅ SELECTOR DE CLUBES (DEBE ESTAR AQUÍ, NO DENTRO DEL HEADER) -->
@@ -831,17 +866,32 @@ $js_vars = [
 
     <div class="container">
         <!-- === HERO CARD: PRÓXIMO PARTIDO (LÓGICA COMPLETA + DISEÑO MODERNO) === -->
+        <!-- === BADGE CLUB ACTUAL (arriba de la ficha) === -->
+        <?php if (!empty($club_nombre)): ?>
+            <div style="text-align:center; margin-bottom:0.75rem;">
+                <span style="background:rgba(255,255,255,0.95); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; color:#555; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <strong><?= htmlspecialchars($club_nombre) ?></strong>
+                    <?php if ($es_multiclub): ?>
+                    <span style="margin-left:0.5rem; color:#AB47BC; cursor:pointer;" onclick="toggleHeaderMenu(event)">[Cambiar]</span>
+                    <?php endif; ?>
+                </span>
+            </div>
+        <?php endif; ?>
         <div class="hero">
             <!-- MENÚ 3 PUNTOS (acciones del partido) -->
             <?php if (!empty($proximo_evento)): ?>
-                <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $id_reserva ?>)">⋮</button>
-                <div id="heroMenu_<?= $id_reserva ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2);">
-                    <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?>)">Paso</div>
-                    <?php if ($deuda_mas_vigente): ?>
+                <!-- MENÚ 3 PUNTOS DENTRO DE LA FICHA -->
+                <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $id_reserva ?? 0 ?>)">⋮</button>
+
+                <!-- Dropdown: SIN display:none inline, controlado por JS -->
+                <div id="heroMenu_<?= $id_reserva ?? 0 ?>" class="menu-dropdown hero-menu" 
+                    style="position:absolute; top:48px; right:12px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2);">
+                    <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?? 0 ?>)">👟 Paso</div>
+                    <?php if (!empty($deuda_mas_vigente)): ?>
                     <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
                     <?php endif; ?>
                     <?php if ($es_responsable && $cupos_llenos): ?>
-                    <div class="menu-item" onclick="armarEquiposIA(<?= $id_reserva ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
+                    <div class="menu-item" onclick="armarEquiposIA(<?= $id_reserva ?? 0 ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -860,7 +910,7 @@ $js_vars = [
                 <!-- === INFO CUOTA Y CUPOS === -->
                 <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
                 <div style="background:rgba(255,255,255,0.15); padding:0.75rem; border-radius:12px; margin-bottom:1rem; font-size:0.85rem;">
-                    <div><strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?></div>
+                    <!--<div><strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?></div> -->
                     <div><strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?></div>
                 </div>
                 <?php endif; ?>
@@ -911,26 +961,6 @@ $js_vars = [
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- === BADGE CLUB ACTUAL (siempre visible) === -->
-        <?php if (!empty($clubes_del_socio)): ?>
-            <div style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.95); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee;">
-                🏟️ Club actual: <strong><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
-                <?php if (count($clubes_del_socio) > 1): ?>
-                    <span style="margin:0 0.3rem; color:#CBD5E0;">|</span>cambiar a: 
-                    <?php 
-                    $otros = [];
-                    foreach ($clubes_del_socio as $c) {
-                        $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
-                        if ($slug !== ($club_slug ?? '')) {
-                            $otros[] = '<a href="javascript:void(0)" onclick="window.cambiarClub(\''.$slug.'\')" style="color:#AB47BC; font-weight:600; text-decoration:none;">'.htmlspecialchars($c['club_nombre']).'</a>';
-                        }
-                    }
-                    echo implode(' | ', $otros);
-                    ?>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
     </div>
 
     <!-- === DEUDA PENDIENTE (si existe) === -->
@@ -1022,26 +1052,35 @@ function showToast(msg, type = 'success') {
 }
 
 function closeAllMenus() {
-    document.querySelectorAll('.menu-dropdown').forEach(m => {
-        m.classList.remove('active');
-        if (m.id === 'selectorClubes') m.style.display = 'none';
+    // Cerrar menú header
+    const headerMenu = document.getElementById('headerMenu');
+    if (headerMenu) headerMenu.classList.remove('active');
+    
+    // Cerrar menú de la ficha (por clase)
+    document.querySelectorAll('.hero-menu').forEach(menu => {
+        menu.style.display = 'none';
     });
+    
+    // Cerrar selector de clubs
+    const selector = document.getElementById('selectorClubes');
+    if (selector) {
+        selector.classList.remove('active');
+        selector.style.display = 'none';
+    }
 }
 
 // === 3. MENÚ HEADER ===
 function toggleHeaderMenu(e) {
     e.stopPropagation();
-    closeAllMenus();
+    // Cerrar otros menús PERO NO el que estamos abriendo
+    document.querySelectorAll('.menu-dropdown').forEach(m => {
+        if (m.id !== 'headerMenu') {
+            m.classList.remove('active');
+            if (m.id === 'selectorClubes') m.style.display = 'none';
+        }
+    });
     const menu = document.getElementById('headerMenu');
     if (menu) menu.classList.toggle('active');
-}
-
-// === 4. MENÚ FICHA PRÓXIMO PARTIDO ===
-function toggleHeroMenu(e) {
-    e.stopPropagation();
-    closeAllMenus();
-    const menuHero = document.getElementById('heroMenu');
-    if (menuHero) menuHero.classList.toggle('active');
 }
 
 // === ABRIR SELECTOR DE CLUBES (genera slug en JS, igual que tu HTML antiguo) ===
@@ -1162,16 +1201,20 @@ function cambiarClub(clubSlug) {
 // === 4. MENÚ FICHA PRÓXIMO PARTIDO ===
 function toggleHeroMenu(e, idReserva) {
     e.stopPropagation();
+    
+    // Cerrar TODOS los menús primero
     closeAllMenus();
+    
+    // Toggle específico para este menú (usando inline style para mayor control)
     const menu = document.getElementById(`heroMenu_${idReserva}`);
     if (menu) {
-        menu.classList.toggle('active');
-        const ia = document.getElementById(`menuItemIA_${idReserva}`);
-        if (ia && window.LIMITE_LLENO) ia.style.display = 'flex';
+        const isVisible = menu.style.display === 'block';
+        menu.style.display = isVisible ? 'none' : 'block';
     }
 }
 
 function marcarPaso() { showToast('👟 Marcado como "Paso"'); }
+
 function generarEquiposIA() {
     if (!window.LIMITE_LLENO) { showToast('⚠️ Solo con cupos completos', 'error'); return; }
     showToast('🤖 Generando equipos...');
