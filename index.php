@@ -510,7 +510,7 @@ $_SESSION['visited_index'] = true;
 
         <!-- Slide 6: Ganadores Americano -->
         <div class="carousel-slide">
-            <img src="assets/img/ganadores_americano_pasco.jpg" alt="Ganadores Americano Club Pasco">
+            <img src="assets/img/ganadores_americano_pasco.jpeg" alt="Ganadores Americano Club Pasco">
             <div class="carousel-caption">
                 <h4>🏆 Ganadores Americano 4ª Club Pasco</h4>
                 <p style="font-size:0.9rem; margin-top:0.3rem; opacity:0.95;">Adrian y Nicolás</p>
