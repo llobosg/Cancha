@@ -630,10 +630,8 @@ try {
             
             <!-- Dropdown para acciones del partido -->
             <div id="heroMenu_<?= $proximo['id_reserva'] ?? 0 ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50;">
-                <div class="menu-item" onclick="marcarPaso(<?= $proximo['id_reserva'] ?? 0 ?>)">👟 Marcar como "Paso"</div>
-                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">
-                    💳 Pagar cuota
-                </div>
+                <div class="menu-item" onclick="marcarPaso(<?= $proximo['id_reserva'] ?? 0 ?>)">👟 "Paso"</div>
+                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
                 <div class="menu-item" id="menuItemIA_<?= $proximo['id_reserva'] ?? 0 ?>" onclick="generarEquiposIA(<?= $proximo['id_reserva'] ?? 0 ?>)" style="display:none; color:#6A1B9A; font-weight:500;">
                     🤖 Armar equipos IA
                 </div>
@@ -710,18 +708,19 @@ try {
     <!-- TOAST -->
     <div id="toast" class="toast">✅ Acción realizada</div>
 <script>
-console.log('✅ Variables globales:', {
-    SOCIO_ID: typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 'NO DEFINIDO',
-    CLUB_ACTUAL: typeof CLUB_ACTUAL !== 'undefined' ? CLUB_ACTUAL : 'NO DEFINIDO',
-    ES_MULTICLUB: typeof ES_MULTICLUB !== 'undefined' ? ES_MULTICLUB : 'NO DEFINIDO'
-});
-// === VARIABLES GLOBALES (DECLARAR SOLO UNA VEZ) ===
+// ============================================================================
+// === 1. VARIABLES GLOBALES (PRIMERO - ANTES DE CUALQUIER FUNCIÓN) ===
+// ============================================================================
 const SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
 const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
 const CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
 const LIMITE_LLENO = <?= $limite_lleno ?? false ? 'true' : 'false' ?>;
+const PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
 
-// === TOAST MODERNO (GLOBAL) ===
+// ============================================================================
+// === 2. FUNCIONES UTILITARIAS (Globales para onclick) ===
+// ============================================================================
+
 function showToast(msg, type = 'success') {
     const t = document.getElementById('toast');
     if (!t) return;
@@ -732,79 +731,44 @@ function showToast(msg, type = 'success') {
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// === MENÚ HEADER (Perfil + Cambiar Club) ===
+function closeAllMenus() {
+    document.querySelectorAll('.menu-dropdown').forEach(menu => {
+        menu.classList.remove('active');
+        if (menu.id === 'selectorClubes') menu.style.display = 'none';
+    });
+}
+
+// ============================================================================
+// === 3. MENÚ HEADER (Perfil + Cambiar Club) ===
+// ============================================================================
+
 function toggleHeaderMenu(e) {
     e.stopPropagation();
-    
-    // Cerrar otros menús
     closeAllMenus();
-    
-    // Toggle menú header
     const menu = document.getElementById('headerMenu');
     if (menu) menu.classList.toggle('active');
 }
 
-// === MENÚ FICHA PRÓXIMO PARTIDO ===
-function toggleHeroMenu(e, idReserva) {
-    e.stopPropagation();
-    
-    // Cerrar otros menús
-    closeAllMenus();
-    
-    // Toggle menú de esta ficha específica
-    const menu = document.getElementById(`heroMenu_${idReserva}`);
-    if (menu) {
-        menu.classList.toggle('active');
-        
-        // Mostrar "Armar equipos IA" solo si está lleno
-        const itemIA = document.getElementById(`menuItemIA_${idReserva}`);
-        if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
-            itemIA.style.display = 'flex';
-        }
-    }
-}
-
-// === CERRAR TODOS LOS MENÚS ===
-function closeAllMenus() {
-    document.querySelectorAll('.menu-dropdown').forEach(menu => {
-        menu.classList.remove('active');
-        if (menu.id === 'selectorClubes') {
-            menu.style.display = 'none';
-        }
-    });
-}
-
-// === ABRIR SELECTOR DE CLUBES (CON DEBUG) ===
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
-    console.log('🔍 abrirSelectorClubes llamado');
+    console.log('🔍 abrirSelectorClubes | SOCIO_ID:', SOCIO_ID);
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
     
-    console.log('🔍 selector:', selector, 'lista:', lista);
-    
     if (!selector || !lista) {
-        console.error('❌ No se encontró #selectorClubes o #listaClubes');
-        showToast('❌ Error: Contenedor de clubs no encontrado', 'error');
+        console.error('❌ Faltan elementos #selectorClubes o #listaClubes');
+        showToast('❌ Error de interfaz', 'error');
         return;
     }
-    
-    console.log('🔍 SOCIO_ID:', SOCIO_ID);
     
     selector.style.display = 'block';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
     
     try {
-        const url = `../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`;
-        console.log('🔍 Fetch URL:', url);
-        
-        const res = await fetch(url);
-        console.log('🔍 Response status:', res.status);
-        
+        const res = await fetch(`../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`);
         const clubs = await res.json();
-        console.log('🔍 Clubs recibidos:', clubs);
         
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
@@ -814,9 +778,7 @@ async function abrirSelectorClubes(e) {
         let html = '';
         clubs.forEach(club => {
             const esActual = club.slug === CLUB_ACTUAL;
-            console.log('🔍 Render club:', club.nombre, 'slug:', club.slug, 'actual:', esActual);
-            html += `
-            <div onclick="cambiarClub('${club.slug}')" 
+            html += `<div onclick="cambiarClub('${club.slug}')" 
                  style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; ${esActual ? 'background:#E8F5E9; font-weight:600;' : ''}"
                  onmouseover="this.style.background='${esActual ? '#C8E6C9' : '#F7FAFC'}'"
                  onmouseout="this.style.background='${esActual ? '#E8F5E9' : 'white'}'">
@@ -825,7 +787,6 @@ async function abrirSelectorClubes(e) {
             </div>`;
         });
         lista.innerHTML = html;
-        console.log('✅ Clubs renderizados');
     } catch (err) {
         console.error('❌ Error cargando clubs:', err);
         lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
@@ -833,11 +794,8 @@ async function abrirSelectorClubes(e) {
     }
 }
 
-// === CAMBIAR CLUB (CON DEBUG) ===
 function cambiarClub(clubSlug) {
-    console.log('🔄 cambiarClub llamado con slug:', clubSlug);
-    console.log('🔍 SOCIO_ID:', SOCIO_ID, 'CLUB_ACTUAL:', CLUB_ACTUAL);
-    
+    console.log('🔄 cambiarClub | slug:', clubSlug, 'SOCIO_ID:', SOCIO_ID);
     showToast('🔄 Cambiando de club...', 'info');
     document.body.style.cursor = 'wait';
     
@@ -847,70 +805,64 @@ function cambiarClub(clubSlug) {
         body: JSON.stringify({ club_slug: clubSlug })
     })
     .then(async r => {
-        console.log('🔍 Response status:', r.status, 'ok:', r.ok);
-        const text = await r.text(); // Leer como texto primero para debug
-        console.log('🔍 Response raw:', text.substring(0, 200));
-        
-        if (!r.ok) throw new Error('Error en la red: ' + r.status);
-        
-        try {
-            return JSON.parse(text);
-        } catch (e) {
-            console.error('❌ Error parseando JSON:', e, 'raw:', text);
-            throw new Error('Respuesta no es JSON válido');
-        }
+        if (!r.ok) throw new Error('Error HTTP: ' + r.status);
+        return r.json();
     })
     .then(data => {
-        console.log('🔍 Data recibida:', data);
         document.body.style.cursor = 'default';
         if (data.success) {
-            showToast('✅ Club cambiado correctamente', 'success');
+            showToast('✅ Club cambiado', 'success');
             window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
         } else {
-            showToast('❌ ' + (data.message || 'No se pudo cambiar de club'), 'error');
+            showToast('❌ ' + (data.message || 'Error'), 'error');
         }
     })
     .catch(err => {
         document.body.style.cursor = 'default';
-        console.error('❌ Error en cambiarClub:', err);
-        showToast('❌ Error: ' + err.message, 'error');
+        console.error('❌ Error:', err);
+        showToast('❌ ' + err.message, 'error');
     });
 }
 
-// === ACCIONES DEL MENÚ DE LA FICHA ===
+// ============================================================================
+// === 4. MENÚ FICHA PRÓXIMO PARTIDO ===
+// ============================================================================
+
+function toggleHeroMenu(e, idReserva) {
+    e.stopPropagation();
+    closeAllMenus();
+    
+    // ✅ AHORA SÍ podemos usar LIMITE_LLENO porque ya fue declarado arriba
+    const menu = document.getElementById(`heroMenu_${idReserva}`);
+    if (menu) {
+        menu.classList.toggle('active');
+        const itemIA = document.getElementById(`menuItemIA_${idReserva}`);
+        if (itemIA && LIMITE_LLENO) {  // ✅ Sin error de TDZ
+            itemIA.style.display = 'flex';
+        }
+    }
+}
+
 async function marcarPaso(idReserva) {
     showToast('👟 Marcado como "Paso"');
-    // Aquí iría: fetch a API para marcar estado "paso"
-    // await fetch('../api/marcar_paso.php', { method:'POST', body: JSON.stringify({id_reserva: idReserva}) });
+    // TODO: fetch a API
 }
 
 function generarEquiposIA(idReserva) {
-    if (typeof LIMITE_LLENO !== 'undefined' && !LIMITE_LLENO) {
-        showToast('⚠️ Solo disponible con cupos completos', 'error');
+    if (!LIMITE_LLENO) {  // ✅ Seguro
+        showToast('⚠️ Solo con cupos completos', 'error');
         return;
     }
-    showToast('🤖 Generando equipos balanceados...');
-    // Aquí iría: fetch a API de IA
-    setTimeout(() => showToast('✅ Equipos generados y notificados'), 1500);
+    showToast('🤖 Generando equipos...');
+    setTimeout(() => showToast('✅ Equipos listos'), 1500);
 }
 
-// === CERRAR MENÚS AL CLICK FUERA ===
-document.addEventListener('click', (e) => {
-    // Si el click no fue en un menú o su botón, cerrar todos
-    if (!e.target.closest('.menu-dots') && !e.target.closest('.hero-menu-dots') && !e.target.closest('.menu-dropdown')) {
-        closeAllMenus();
-    }
-});
+// ============================================================================
+// === 5. INSCRIPCIÓN / BAJA DE RESERVA ===
+// ============================================================================
 
-// === CERRAR MENÚS AL CLICK FUERA (GLOBAL) ===
-document.addEventListener('click', () => {
-    document.getElementById('menuDropdown')?.classList.remove('active');
-    document.getElementById('selectorClubes')?.style.setProperty('display', 'none');
-});
-
-// === INSCRIPCIÓN / BAJA DE RESERVA ===
 async function anotarse(idReserva) {
-    if (!confirm('¿Confirmas tu inscripción? Se generará tu cuota.')) return;
+    if (!confirm('¿Confirmas tu inscripción?')) return;
     try {
         const res = await fetch('../api/inscribir_reserva.php', {
             method: 'POST',
@@ -919,10 +871,10 @@ async function anotarse(idReserva) {
         });
         const data = await res.json();
         if (data.success) {
-            showToast('✅ ¡Anotado correctamente!');
+            showToast('✅ ¡Anotado!');
             setTimeout(() => location.reload(), 1000);
         } else {
-            showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
+            showToast('❌ ' + (data.message || 'Error'), 'error');
         }
     } catch (e) {
         showToast('❌ Error de conexión', 'error');
@@ -942,14 +894,17 @@ async function bajarse(idReserva) {
             showToast('❌ Te has dado de baja');
             setTimeout(() => location.reload(), 1000);
         } else {
-            showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
+            showToast('❌ ' + (data.message || 'Error'), 'error');
         }
     } catch (e) {
         showToast('❌ Error de conexión', 'error');
     }
 }
 
-// === MODAL INSCRITOS ===
+// ============================================================================
+// === 6. MODAL INSCRITOS ===
+// ============================================================================
+
 async function verInscritos(idReserva) {
     const modal = document.getElementById('modalInscritos');
     const lista = document.getElementById('listaInscritos');
@@ -970,7 +925,7 @@ async function verInscritos(idReserva) {
         let html = '';
         data.forEach(p => {
             const esYo = p.id_socio === SOCIO_ID;
-            const puedeBajar = typeof ES_RESPONSABLE !== 'undefined' && ES_RESPONSABLE && !esYo;
+            const puedeBajar = window.ES_RESPONSABLE && !esYo;
             html += `<div class="inscrito-item">
                 <span class="inscrito-name">${esYo ? '👤 Tú' : p.nombre}</span>
                 <span class="inscrito-status">${p.estado}</span>
@@ -985,20 +940,16 @@ async function verInscritos(idReserva) {
 }
 
 async function bajarJugador(idSocioBajar, idReserva, nombre) {
-    if (!confirm(`¿Bajar a "${nombre}" de este partido?`)) return;
+    if (!confirm(`¿Bajar a "${nombre}"?`)) return;
     try {
         const res = await fetch('../api/bajar_jugador_reserva.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                id_reserva: idReserva, 
-                id_socio_a_bajar: idSocioBajar,
-                id_responsable: SOCIO_ID 
-            })
+            body: JSON.stringify({ id_reserva: idReserva, id_socio_a_bajar: idSocioBajar, id_responsable: SOCIO_ID })
         });
         const data = await res.json();
         if (data.success) {
-            showToast(`✅ ${nombre} ha sido bajado`);
+            showToast(`✅ ${nombre} bajado`);
             verInscritos(idReserva);
         } else {
             showToast('❌ ' + (data.message || 'Error'), 'error');
@@ -1008,56 +959,56 @@ async function bajarJugador(idSocioBajar, idReserva, nombre) {
     }
 }
 
-// === CERRAR MODAL ===
 function cerrarModal(e) {
     if (e && (e.target.id === 'modalInscritos' || e.target.classList?.contains('modal-close'))) {
         document.getElementById('modalInscritos')?.style.setProperty('display', 'none');
     }
 }
 
-// === INIT: Cargar datos al DOM listo ===
-document.addEventListener('DOMContentLoaded', () => {
-    // Aquí puedes inicializar componentes que no necesitan ser globales
-    console.log('✅ dashboard_socio.php cargado');
+// ============================================================================
+// === 7. EVENT LISTENERS GLOBALES ===
+// ============================================================================
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-dots') && !e.target.closest('.hero-menu-dots') && !e.target.closest('.menu-dropdown')) {
+        closeAllMenus();
+    }
 });
 
-function abrirModalPago(idReserva) {
-    showToast('💳 Abriendo pago para reserva #' + idReserva);
-    // Aquí iría: abrir modal de pago o redirigir
-    // window.location.href = `cuotas.php?id_reserva=${idReserva}`;
-}
+// Debug al cargar
+console.log('✅ dashboard_socio.php cargado | SOCIO_ID:', SOCIO_ID, 'LIMITE_LLENO:', LIMITE_LLENO);
 
 // === PAGAR CUOTA ===
-function pagarCuota(idCuota) {
-    window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-}
+            function pagarCuota(idCuota) {
+                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+            }
 
-// === REVISAR/VALIDAR PAGO ===
-function revisarPago(idCuota) {
-    fetch('../api/revisar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-        else { mostrarToast('❌ ' + data.message, 'error'); }
-        });
-}
+            // === REVISAR/VALIDAR PAGO ===
+            function revisarPago(idCuota) {
+                fetch('../api/revisar_pago.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
 
-function validarPago(idCuota) {
-    fetch('../api/validar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-        else { mostrarToast('❌ ' + data.message, 'error'); }
-    });
-}
+            function validarPago(idCuota) {
+                fetch('../api/validar_pago.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
 </script>
 </body>
 </html>
