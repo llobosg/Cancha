@@ -727,6 +727,14 @@ $js_vars = [
             pointer-events: auto !important;
             z-index: 9999 !important;
         }
+        /* Badge de club actual */
+        div[style*="Club actual"] {
+            transition: all 0.2s;
+        }
+        div[style*="Club actual"]:hover {
+            box-shadow: 0 4px 12px rgba(171, 71, 188, 0.15);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -814,14 +822,32 @@ $js_vars = [
                     <p style="font-size:1rem; opacity:0.9; margin-bottom:1rem;">🎉 ¡No tienes partidos próximos!</p>
                     <a href="reservar_cancha.php" style="display:inline-block; background:white; color:var(--tennis-green); padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
                 </div>
-                <!-- === CLUB ACTUAL (debajo de Reservar ahora) === -->
-                <div id="clubActualBadge" style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.9); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee;">
-                    🏟️ Club actual: <strong id="clubActualNombre"><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
-                    <?php if ($es_multiclub): ?>
-                    <span style="margin-left:0.5rem; font-size:0.75rem; color:#AB47BC; cursor:pointer;" onclick="abrirSelectorClubes(event)">[Cambiar]</span>
+                <!-- === BADGE CLUB ACTUAL + CAMBIAR (LÓGICA DIRECTA COMO TEST BUTTON) === -->
+                <?php if (!empty($clubes_del_socio)): ?>
+                <div style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.95); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    
+                    <!-- Club actual en bold -->
+                    🏟️ Club actual: <strong style="color:#2D3748;"><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
+                    
+                    <!-- Si hay más de 1 club, mostrar opción para cambiar -->
+                    <?php if (count($clubes_del_socio) > 1): ?>
+                        <span style="margin:0 0.3rem; color:#CBD5E0;">|</span>
+                        cambiar a: 
+                        <?php 
+                        $otros_clubs = [];
+                        foreach ($clubes_del_socio as $c) {
+                            $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                            // Mostrar solo los clubs que NO son el actual
+                            if ($slug !== ($club_slug ?? '')) {
+                                $otros_clubs[] = `<a href="javascript:void(0)" onclick="window.cambiarClub('${slug}')" style="color:#AB47BC; font-weight:600; text-decoration:none; margin:0 0.2rem;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${htmlspecialchars($c['club_nombre'])}</a>`;
+                            }
+                        }
+                        echo implode(' | ', $otros_clubs);
+                        ?>
                     <?php endif; ?>
+                    
                 </div>
-            <?php endif; ?>
+                <?php endif; ?>
         </div>
 
         <!-- QUICK ACTIONS -->
