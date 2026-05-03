@@ -710,15 +710,22 @@ $js_vars = [
             z-index: 9999 !important;
             position: absolute !important;
         }
+        .club-item:hover {
+            background: #F1F5F9 !important;
+        }
         .club-item {
             pointer-events: auto !important;
             cursor: pointer !important;
             user-select: none;
-            position: relative;
-            z-index: 10;
+            -webkit-tap-highlight-color: rgba(171, 71, 188, 0.2); /* Feedback visual en móvil */
         }
-        .club-item:hover {
-            background: #F1F5F9 !important;
+        .club-item:active {
+            background: #E1BEE7 !important;
+            transform: scale(0.99);
+        }
+        #selectorClubes {
+            pointer-events: auto !important;
+            z-index: 9999 !important;
         }
     </style>
 </head>
@@ -807,6 +814,13 @@ $js_vars = [
                     <p style="font-size:1rem; opacity:0.9; margin-bottom:1rem;">🎉 ¡No tienes partidos próximos!</p>
                     <a href="reservar_cancha.php" style="display:inline-block; background:white; color:var(--tennis-green); padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
                 </div>
+                <!-- === CLUB ACTUAL (debajo de Reservar ahora) === -->
+                <div id="clubActualBadge" style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.9); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee;">
+                    🏟️ Club actual: <strong id="clubActualNombre"><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
+                    <?php if ($es_multiclub): ?>
+                    <span style="margin-left:0.5rem; font-size:0.75rem; color:#AB47BC; cursor:pointer;" onclick="abrirSelectorClubes(event)">[Cambiar]</span>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -889,18 +903,13 @@ function toggleHeaderMenu(e) {
 
 // === ABRIR SELECTOR DE CLUBES (genera slug en JS, igual que tu HTML antiguo) ===
 async function abrirSelectorClubes(e) {
-    // ✅ QUITAR e.stopPropagation() para no bloquear eventos hijos
     console.log('🔍 abrirSelectorClubes iniciado');
 
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
 
-    if (!selector || !lista) {
-        console.error('❌ Faltan elementos DOM');
-        return;
-    }
+    if (!selector || !lista) return;
 
-    // Forzar visibilidad
     selector.style.display = 'block';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
@@ -914,17 +923,33 @@ async function abrirSelectorClubes(e) {
             return;
         }
 
-        // Renderizar con clase .club-item y data-slug
+        // ✅ Renderizar y asignar click DIRECTO a cada item
         let html = '';
-        clubs.forEach(c => {
+        clubs.forEach((c, index) => {
             const esActual = c.slug === (window.CLUB_ACTUAL || '');
-            html += `<div class="club-item" data-slug="${c.slug}" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'};">
+            // ID único por índice para seleccionar fácilmente después
+            html += `<div id="club-opt-${index}" class="club-item" data-slug="${c.slug}" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'}; position:relative;">
                 <span>${c.club_nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
             </div>`;
         });
         lista.innerHTML = html;
-        console.log('✅ Items renderizados:', lista.querySelectorAll('.club-item').length);
+        console.log('✅ Items renderizados:', clubs.length);
+
+        // ✅ ASIGNAR CLICK DIRECTO A CADA ITEM (después de innerHTML)
+        clubs.forEach((c, index) => {
+            const item = document.getElementById(`club-opt-${index}`);
+            if (item) {
+                // Usar mousedown + click para mayor compatibilidad
+                const handler = () => {
+                    console.log('🖱️ Click en club:', c.club_nombre, '| slug:', c.slug);
+                    window.cambiarClub(c.slug);
+                };
+                item.addEventListener('click', handler);
+                item.addEventListener('mousedown', handler); // Backup para dispositivos táctiles
+            }
+        });
+        console.log('✅ Listeners directos asignados');
 
     } catch (err) {
         console.error('❌ Error:', err);
