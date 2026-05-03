@@ -868,13 +868,13 @@ function toggleHeaderMenu(e) {
 // === ABRIR SELECTOR DE CLUBES (genera slug en JS, igual que tu HTML antiguo) ===
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
-    console.log('🔍 abrirSelectorClubes iniciado');
+    console.log('🔍 [1] abrirSelectorClubes iniciado');
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
     
     if (!selector || !lista) {
-        console.error('❌ Faltan #selectorClubes o #listaClubes');
+        console.error('❌ Faltan elementos DOM');
         return;
     }
     
@@ -885,27 +885,41 @@ async function abrirSelectorClubes(e) {
     try {
         const res = await fetch(`../api/get_clubs_socio.php?id_socio=${window.SOCIO_ID}`);
         const clubs = await res.json();
+        console.log('🟢 [2] Clubs recibidos:', clubs);
         
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
             return;
         }
         
-        // ✅ USAR EL SLUG QUE YA VIENE DE LA API (sin calcular en JS)
+        // ✅ Renderizar SIN onclick inline
         let html = '';
-        clubs.forEach(c => {
+        clubs.forEach((c, index) => {
             const esActual = c.slug === (window.CLUB_ACTUAL || '');
-            html += `<div onclick="cambiarClub('${c.slug}')" 
+            // Usamos data-attributes para guardar el slug, y un ID único para el listener
+            html += `<div id="club-item-${index}" data-slug="${c.slug}" 
                  style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'};">
                 <span>${c.club_nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
             </div>`;
         });
         lista.innerHTML = html;
-        console.log('✅ Clubs renderizados con slugs válidos:', clubs.length);
+        console.log('🟢 [3] HTML renderizado');
+        
+        // ✅ ASIGNAR EVENTOS CON addEventListener (robusto y sin problemas de comillas)
+        clubs.forEach((c, index) => {
+            const item = document.getElementById(`club-item-${index}`);
+            if (item) {
+                item.addEventListener('click', () => {
+                    console.log('🎯 [4] Click detectado en club:', c.club_nombre, '| slug:', c.slug);
+                    cambiarClub(c.slug); // Llamada directa a función global
+                });
+            }
+        });
+        console.log('✅ [5] Event listeners asignados');
         
     } catch (err) {
-        console.error('❌ Error:', err);
+        console.error('❌ Error crítico:', err);
         lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
     }
 }
