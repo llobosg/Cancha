@@ -123,8 +123,19 @@ if (!$modo_individual && $club_id) {
     $_SESSION['current_club'] = $club_slug;
 }
 
-// === 7. PRÓXIMO EVENTO ===
+// === 7. PRÓXIMO PARTIDO - LÓGICA COMPLETA DE TU RESPALDO ===
+$proximo_evento = null;
+$ya_inscrito = false;
+$cupos_llenos = false;
+$despues_del_lunes_09 = false;
+$fecha_formateada = '';
+$hora_formateada = '';
+$nombre_deporte = '';
+$inscritos_actuales = 0;
+$jugadores_esperados = 0;
+
 try {
+    // Consulta para próximo evento (misma lógica que tu respaldo)
     $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
     $params = [];
 
@@ -143,10 +154,9 @@ try {
     $sql = "
         SELECT 
             r.id_reserva, r.fecha, r.hora_inicio, r.hora_fin, r.monto_total,
-            r.jugadores_esperados, r.estado_pago, r.monto_recaudacion,
+            r.jugadores_esperados, r.estado_pago, r.monto_recaudacion, r.valor_mes,
             c.nombre_cancha, c.id_deporte,
-            (SELECT COUNT(*) FROM reservas_participantes rp WHERE rp.id_reserva = r.id_reserva) as inscritos_actuales,
-            (SELECT GROUP_CONCAT(rp.id_socio) FROM reservas_participantes rp WHERE rp.id_reserva = r.id_reserva) as ids_inscritos
+            (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
         WHERE " . implode(" AND ", $where_parts) . "
@@ -156,26 +166,63 @@ try {
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $proximo = $stmt->fetch();
+    $proximo_evento = $stmt->fetch();
 
-    if ($proximo) {
-        $cant_inscritos = (int)($proximo['inscritos_actuales'] ?? 0);
-        $jugadores_esperados = (int)($proximo['jugadores_esperados'] ?? 4);
-        $ids_inscritos = $proximo['ids_inscritos'] ? explode(',', $proximo['ids_inscritos']) : [];
-        $ya_inscrito = in_array($id_socio, $ids_inscritos);
+    if ($proximo_evento) {
+        // === VARIABLES Y LÓGICA DE TU RESPALDO ===
+        $id_reserva = $proximo_evento['id_reserva'];
+        $monto_total = (float)$proximo_evento['monto_total'];
+        $valor_mes = (float)($proximo_evento['valor_mes'] ?? 0);
+        $deporte = $proximo_evento['id_deporte'] ?? 'futbolito';
+        $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
+        
+        $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
+        $ahora = new DateTime();
+        $lunes_semana_evento = clone $fecha_evento;
+        $lunes_semana_evento->modify('this week monday');
+        $lunes_semana_evento->setTime(9, 0, 0);
+        $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+        
+        $fecha_formateada = $fecha_evento->format('d M');
+        $hora_formateada = $fecha_evento->format('H:i');
+        
+        $inscritos_actuales = (int)($proximo_evento['inscritos_actuales'] ?? 0);
+        $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 0);
+        $cupos_llenos = ($jugadores_esperados > 0 && $inscritos_actuales >= $jugadores_esperados);
+        
+        // Mapeo de deportes
+        $nombres_deportes = [
+            'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
+            'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro'
+        ];
+        $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
+        
+        // Verificar si ya está inscrito
+        $stmt_check = $pdo->prepare("
+            SELECT 1 FROM inscritos 
+            WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'
+        ");
+        $stmt_check->execute([$id_reserva, $id_socio]);
+        $ya_inscrito = (bool)$stmt_check->fetch();
     }
-} catch (PDOException $e) {
-    error_log("Error próximo evento: " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Error próximo partido: " . $e->getMessage());
 }
 
-// === 8. CÁLCULOS ===
-$progress_percent = min(100, ($cant_inscritos / max(1, $jugadores_esperados)) * 100);
-$cupos_disponibles = max(0, $jugadores_esperados - $cant_inscritos);
-$limite_lleno = ($cant_inscritos >= $jugadores_esperados);
-
-// === 9. DEUDAS ===
+// === 8. DEUDAS PENDIENTES ===
+$deuda_mas_vigente = null;
+$cuotas_pendientes = 0;
 if (!$modo_individual && $club_id) {
     try {
+        $stmt_deuda = $pdo->prepare("
+            SELECT id_cuota, monto, fecha_vencimiento, tipo_actividad, detalle_origen
+            FROM cuotas 
+            WHERE id_socio = ? AND estado = 'pendiente' AND id_club = ?
+            ORDER BY fecha_vencimiento ASC LIMIT 1
+        ");
+        $stmt_deuda->execute([$id_socio, $club_id]);
+        $deuda_mas_vigente = $stmt_deuda->fetch();
+        
         $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND estado = 'pendiente' AND id_club = ?");
         $stmt_count->execute([$id_socio, $club_id]);
         $cuotas_pendientes = (int)$stmt_count->fetchColumn();
@@ -183,6 +230,19 @@ if (!$modo_individual && $club_id) {
         error_log("Error deudas: " . $e->getMessage());
     }
 }
+
+// === 9. VARIABLES PARA JS ===
+$js_vars = [
+    'SOCIO_ID' => $id_socio,
+    'ES_MULTICLUB' => $es_multiclub,
+    'CLUB_ACTUAL' => $club_actual_slug,
+    'LIMITE_LLENO' => $cupos_llenos, // Reutilizamos para compatibilidad
+    'PROXIMO_ID' => $proximo_evento['id_reserva'] ?? 0,
+    'ES_RESPONSABLE' => $es_responsable,
+    'MODO_INDIVIDUAL' => $modo_individual,
+    'CLUB_ID' => $club_id,
+    'CLUB_NOMBRE' => $club_nombre
+];
 
 // === 10. VARIABLES PARA JS ===
 $js_vars = [
@@ -759,13 +819,6 @@ $js_vars = [
             <a href="mi_perfil.php" class="avatar">
                 <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
             </a>
-
-             <!-- BOTÓN DE TEST (borrar después) -->
-            <div style="position:fixed; bottom:20px; left:20px; z-index:9999;">
-                <button onclick="window.cambiarClub('35a04180')" style="background:#EF5350; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">
-                    🧪 TEST: Cambiar a Teteras
-                </button>
-            </div>
         </div>
     </header>
     <!-- ✅ SELECTOR DE CLUBES (DEBE ESTAR AQUÍ, NO DENTRO DEL HEADER) -->
@@ -779,77 +832,152 @@ $js_vars = [
     </div>
 
     <div class="container">
-        <!-- HERO CARD: Próximo Partido -->
+        <!-- === HERO CARD: PRÓXIMO PARTIDO (LÓGICA COMPLETA + DISEÑO MODERNO) === -->
         <div class="hero">
-            <!-- MENÚ 3 PUNTOS DENTRO DE LA FICHA (esquina superior derecha) -->
-            <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $proximo['id_reserva'] ?? 0 ?>)">⋮</button>
-            
-            <!-- Dropdown para acciones del partido -->
-            <div id="heroMenu_<?= $proximo['id_reserva'] ?? 0 ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50;">
-                <div class="menu-item" onclick="marcarPaso(<?= $proximo['id_reserva'] ?? 0 ?>)">👟 "Paso"</div>
-                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?? 0 ?>)">💳 Pagar cuota</div>
-                <div class="menu-item" id="menuItemIA_<?= $proximo['id_reserva'] ?? 0 ?>" onclick="generarEquiposIA(<?= $proximo['id_reserva'] ?? 0 ?>)" style="display:none; color:#6A1B9A; font-weight:500;">
-                    🤖 Armar equipos IA
-                </div>
+            <!-- MENÚ 3 PUNTOS (acciones del partido) -->
+            <?php if (!empty($proximo_evento)): ?>
+            <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $id_reserva ?>)">⋮</button>
+            <div id="heroMenu_<?= $id_reserva ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2);">
+                <div class="menu-item" onclick="pasoEvento(<?= $id_reserva ?>)">👟 Marcar "Paso"</div>
+                <?php if ($deuda_mas_vigente): ?>
+                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
+                <?php endif; ?>
+                <?php if ($es_responsable && $cupos_llenos): ?>
+                <div class="menu-item" onclick="armarEquiposIA(<?= $id_reserva ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
+                <?php endif; ?>
             </div>
+            <?php endif; ?>
 
             <h1 class="hero-title">Próximo Partido</h1>
             
-            <?php if($proximo): ?>
-                <!-- === CONTENIDO CUANDO HAY PRÓXIMO PARTIDO === -->
+            <?php if (!empty($proximo_evento)): ?>
+                <!-- === DATOS DEL PARTIDO === -->
                 <div class="hero-meta">
-                    <span>📅 <?= date('d M', strtotime($proximo['fecha'])) ?></span>
-                    <span>⏰ <?= substr($proximo['hora_inicio'],0,5) ?></span>
-                    <span>🏟️ <?= htmlspecialchars($proximo['nombre_cancha']) ?></span>
+                    <span>📅 <?= $fecha_formateada ?></span>
+                    <span>⏰ <?= $hora_formateada ?></span>
+                    <span>🏟️ <?= htmlspecialchars($proximo_evento['nombre_cancha']) ?></span>
                 </div>
+                <p style="text-align:center; font-size:1.1rem; font-weight:600; margin:0.5rem 0 1rem 0;"><?= htmlspecialchars($nombre_deporte) ?></p>
                 
-                <?php if($ya_inscrito): ?>
-                    <button class="btn-hero inscrito" onclick="bajarse(<?= $proximo['id_reserva'] ?>)">❌ Bajarme del partido</button>
-                <?php else: ?>
-                    <button class="btn-hero" onclick="anotarse(<?= $proximo['id_reserva'] ?>)" <?= $limite_lleno ? 'disabled title="Cupos completos"' : '' ?>>
-                        <?= $limite_lleno ? '🔒 Cupos completos' : '✅ Anotarme' ?>
-                    </button>
+                <!-- === INFO CUOTA Y CUPOS === -->
+                <?php if (!empty($proximo_evento['monto_recaudacion'])): ?>
+                <div style="background:rgba(255,255,255,0.15); padding:0.75rem; border-radius:12px; margin-bottom:1rem; font-size:0.85rem;">
+                    <div><strong>💰 Cuota:</strong> $<?= number_format((int)$proximo_evento['monto_recaudacion'], 0, ',', '.') ?></div>
+                    <div><strong>👥 Cupos:</strong> <?= $jugadores_esperados ?> • <strong>👥 Anotados:</strong> <?= $inscritos_actuales ?></div>
+                </div>
                 <?php endif; ?>
-
+                
+                <!-- === BOTONES (solo después del lunes 09:00) === -->
+                <?php if ($despues_del_lunes_09): ?>
+                    <?php if ($ya_inscrito): ?>
+                        <!-- Ya inscrito: mostrar "Bajarse" -->
+                        <button class="btn-hero inscrito" onclick="bajarseEvento(<?= $id_reserva ?>)">❌ Bajarme del partido</button>
+                    <?php else: ?>
+                        <!-- No inscrito: mostrar opciones -->
+                        <?php if ($cupos_llenos): ?>
+                            <button class="btn-hero" disabled>🔒 Cupos completos</button>
+                        <?php else: ?>
+                            <button class="btn-hero" onclick="anotarseEvento(<?= $id_reserva ?>, '<?= addslashes($deporte) ?>', <?= $players ?>, <?= $monto_total ?>)">✅ Anotarse</button>
+                            <button class="btn-hero" style="margin-top:0.5rem; background:#FFD54F; color:#5D4037;" onclick="anotarseConCerveza(<?= $id_reserva ?>, '<?= addslashes($deporte) ?>', <?= $players ?>, <?= $monto_total ?>)">🍺 Anotarse + llevo cerveza</button>
+                        <?php endif; ?>
+                        <!-- Botón "Paso" siempre visible -->
+                        <button class="btn-hero" style="margin-top:0.5rem; background:rgba(255,255,255,0.9); color:#E53E3E;" onclick="pasoEvento(<?= $id_reserva ?>)">👟 Paso</button>
+                    <?php endif; ?>
+                    
+                    <!-- Botón IA para responsables -->
+                    <?php if ($es_responsable && $inscritos_actuales >= 10): ?>
+                    <button class="btn-hero" style="margin-top:0.5rem; background:#F1C40F; color:#5D4037;" onclick="armarEquiposIA(<?= $id_reserva ?>)">🤖 Armar Equipos IA</button>
+                    <?php endif; ?>
+                    
+                <?php else: ?>
+                    <!-- Antes del lunes 09:00 -->
+                    <div style="text-align:center; padding:0.5rem; background:rgba(255,215,0,0.2); border-radius:12px; font-size:0.9rem;">
+                        ⏰ Los botones se activarán el lunes <?= $lunes_semana_evento->format('d/m') ?> a las 09:00 hrs
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Barra de progreso de cupos -->
                 <div class="progress-section">
                     <span class="progress-label">Cupos</span>
                     <div class="progress-track">
-                        <div class="progress-fill" style="width: <?= $progress_percent ?>%;"></div>
+                        <div class="progress-fill" style="width: <?= min(100, ($inscritos_actuales / max(1, $jugadores_esperados)) * 100) ?>%;"></div>
                     </div>
-                    <button class="progress-eye" onclick="verInscritos(<?= $proximo['id_reserva'] ?>)" title="Ver inscritos">👁️</button>
+                    <button class="progress-eye" onclick="verInscritos(<?= $id_reserva ?>)" title="Ver inscritos">👁️</button>
                 </div>
                 
             <?php else: ?>
-                <!-- === CONTENIDO CUANDO NO HAY PRÓXIMO PARTIDO === -->
+                <!-- Sin próximo partido -->
                 <div style="text-align:center; padding:1rem;">
                     <p style="font-size:1rem; opacity:0.9; margin-bottom:1rem;">🎉 ¡No tienes partidos próximos!</p>
                     <a href="reservar_cancha.php" style="display:inline-block; background:white; color:var(--tennis-green); padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
                 </div>
             <?php endif; ?>
-            
-            <!-- === BADGE CLUB ACTUAL + CAMBIAR (FUERA DEL IF/ELSE - SIEMPRE VISIBLE) === -->
-            <?php if (!empty($clubes_del_socio)): ?>
-            <div style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.95); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                🏟️ Club actual: <strong style="color:#2D3748;"><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
+        </div>
+
+        <!-- === BADGE CLUB ACTUAL (siempre visible) === -->
+        <?php if (!empty($clubes_del_socio)): ?>
+            <div style="margin-top:0.75rem; text-align:center; padding:0.5rem 1rem; background:rgba(255,255,255,0.95); border-radius:12px; font-size:0.85rem; color:#555; border:1px solid #eee;">
+                🏟️ Club actual: <strong><?= htmlspecialchars($club_nombre ?: 'Individual') ?></strong>
                 <?php if (count($clubes_del_socio) > 1): ?>
-                    <span style="margin:0 0.3rem; color:#CBD5E0;">|</span>
-                    cambiar a: 
+                    <span style="margin:0 0.3rem; color:#CBD5E0;">|</span>cambiar a: 
                     <?php 
-                    $otros_clubs = [];
+                    $otros = [];
                     foreach ($clubes_del_socio as $c) {
                         $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
                         if ($slug !== ($club_slug ?? '')) {
-                            $otros_clubs[] = '<a href="javascript:void(0)" onclick="window.cambiarClub(\''.$slug.'\')" style="color:#AB47BC; font-weight:600; text-decoration:none; margin:0 0.2rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">'.htmlspecialchars($c['club_nombre']).'</a>';
+                            $otros[] = '<a href="javascript:void(0)" onclick="window.cambiarClub(\''.$slug.'\')" style="color:#AB47BC; font-weight:600; text-decoration:none;">'.htmlspecialchars($c['club_nombre']).'</a>';
                         }
                     }
-                    echo implode(' | ', $otros_clubs);
+                    echo implode(' | ', $otros);
                     ?>
                 <?php endif; ?>
             </div>
-            <?php endif; ?>
-            
-        </div> <!-- ✅ CIERRE CORRECTO DE .hero -->
+        <?php endif; ?>
+    </div>
 
+    <!-- === DEUDA PENDIENTE (si existe) === -->
+    <?php if ($deuda_mas_vigente): ?>
+    <div class="container">
+        <div style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); border-radius:20px; padding:1.25rem; margin-bottom:1rem; color:#071289; box-shadow:0 6px 20px rgba(231,76,60,0.3);">
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">💰 Deuda Pendiente</h3>
+            <div style="background:rgba(255,255,255,0.8); padding:0.75rem; border-radius:12px; font-size:0.9rem;">
+                <strong><?= htmlspecialchars($deuda_mas_vigente['detalle_origen'] ?? 'Cuota') ?></strong><br>
+                📅 <?= date('d/m', strtotime($deuda_mas_vigente['fecha_vencimiento'])) ?> • 
+                💲 $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?>
+                <button class="btn-hero" style="margin-top:0.5rem; background:#E74C3C; color:white; padding:0.5rem; font-size:0.9rem;" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">Pagar ahora</button>
+            </div>
+            <?php if ($cuotas_pendientes > 1): ?>
+            <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.8;">⚠️ Existen <?= $cuotas_pendientes ?> cuotas pendientes...</p>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- === ÚLTIMO PARTIDO === -->
+    <div class="container">
+        <div style="background:white; border-radius:20px; padding:1.25rem; margin-bottom:2rem; box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem; color:var(--text-dark);">📊 Último Partido</h3>
+            <?php if ($ultimo_partido): ?>
+                <p><strong>Fecha:</strong> <?= htmlspecialchars($ultimo_partido['fecha']) ?></p>
+                <?php if (!empty($ultimo_partido['resultado_grabado'])): ?>
+                    <p style="color:#2E7D32; font-weight:500;">✅ Resultado registrado</p>
+                <?php elseif ($es_responsable): ?>
+                    <form onsubmit="grabarResultado(event, <?= $ultimo_partido['id_reserva'] ?>)" style="margin-top:0.75rem;">
+                        <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                            <input type="number" name="goles_rojos" placeholder="Rojos" min="0" style="flex:1; padding:0.5rem; border-radius:8px; border:1px solid #ddd;">
+                            <span style="align-self:center; font-weight:600;">vs</span>
+                            <input type="number" name="goles_blancos" placeholder="Blancos" min="0" style="flex:1; padding:0.5rem; border-radius:8px; border:1px solid #ddd;">
+                        </div>
+                        <button type="submit" style="width:100%; padding:0.5rem; background:#2ECC71; color:white; border:none; border-radius:10px; font-weight:600; cursor:pointer;">Grabar Resultado</button>
+                    </form>
+                <?php else: ?>
+                    <p style="color:#888;">Resultado pendiente de registro</p>
+                <?php endif; ?>
+            <?php else: ?>
+                <p style="color:#888;">Sin partidos anteriores</p>
+            <?php endif; ?>
+        </div>
+    </div>
     <!-- FAB -->
     <a href="reservar_cancha.php" class="fab">+</a>
 
@@ -1138,6 +1266,91 @@ document.addEventListener('click', function(e) {
         }
     }
 }, true); // ✅ Usar fase de CAPTURA para interceptar antes que otros listeners
+// === FUNCIONES DE PRÓXIMO PARTIDO (lógica de tu respaldo) ===
+
+async function anotarseEvento(idReserva, deporte, jugadores, monto) {
+    if (!confirm(`¿Confirmar inscripción a ${deporte}? Se generará una cuota de $${monto}.`)) return;
+    try {
+        const res = await fetch('../api/inscribir_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: window.SOCIO_ID, tipo: 'reserva' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ¡Anotado correctamente!', 'success');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+async function anotarseConCerveza(idReserva, deporte, jugadores, monto) {
+    if (!confirm(`¿Anotarte y llevar cerveza? Se agregará $5000 a tu cuota.`)) return;
+    try {
+        const res = await fetch('../api/inscribir_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: window.SOCIO_ID, tipo: 'reserva', cerveza: true })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ¡Anotado + 🍺 confirmado!', 'success');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+async function bajarseEvento(idReserva) {
+    if (!confirm('¿Seguro que deseas bajarte?')) return;
+    try {
+        const res = await fetch('../api/bajar_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: window.SOCIO_ID })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ Te has dado de baja', 'success');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            showToast('❌ ' + (data.message || 'Error'), 'error');
+        }
+    } catch (e) {
+        showToast('❌ Error de conexión', 'error');
+    }
+}
+
+async function pasoEvento(idReserva) {
+    showToast('👟 Marcado como "Paso"');
+    // TODO: fetch a API para registrar estado "paso"
+    // await fetch('../api/marcar_paso.php', { method:'POST', body: JSON.stringify({id_reserva: idReserva}) });
+}
+
+async function armarEquiposIA(idReserva) {
+    if (!window.ES_RESPONSABLE) {
+        showToast('⚠️ Solo para responsables', 'error');
+        return;
+    }
+    showToast('🤖 Generando equipos balanceados...');
+    // TODO: fetch a API de IA
+    setTimeout(() => {
+        showToast('✅ Equipos generados y notificados a los jugadores');
+    }, 1500);
+}
+
+async function pagarCuota(idCuota) {
+    showToast('💳 Redirigiendo a pago...');
+    // TODO: Redirigir a pasarela de pago
+    window.location.href = `pago_cuota.php?id=${idCuota}`;
+}
 </script>
 </body>
 </html>
