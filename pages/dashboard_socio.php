@@ -513,51 +513,143 @@ try {
             border-radius: 10px;
             font-weight: 500;
         }
+        /* Menú 3 puntos DENTRO de la ficha Próximo Partido */
+        .hero {
+            position: relative; /* Necesario para posicionar el menú absoluto */
+        }
+
+        .hero-menu-dots {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .hero-menu-dots:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        /* Dropdown genérico para menús */
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            min-width: 180px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            z-index: 101;
+            overflow: hidden;
+            margin-top: 4px;
+            border: 1px solid #eee;
+            animation: slideDown 0.2s ease;
+        }
+
+        .menu-dropdown.active {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-item:hover {
+            background: #F7FAFC;
+        }
+
+        .menu-item.danger {
+            color: #C62828;
+            font-weight: 500;
+        }
+
+        .menu-item:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
+    <!-- HEADER SIMPLIFICADO -->
     <header class="app-header">
         <div class="logo">
             <div class="logo-icon">⚽</div>
             <span class="brand">CanchaSport</span>
         </div>
         <div class="header-actions">
-            <!-- MENÚ 3 PUNTOS (dentro del header) -->
-            <button class="menu-dots" onclick="toggleMenu(event)">⋮</button>
-            <div id="menuDropdown" class="menu-dropdown">
-                <div class="menu-item" onclick="marcarPaso()">👟 Marcar como "Paso"</div>
-                <div class="menu-item" id="menuItemIA" onclick="generarEquiposIA()" style="display:none; color:#6A1B9A; font-weight:500;">🤖 Equipos por IA</div>
-                <a href="cuotas.php" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
-                    💳 Pagar Cuota <?= $cuotas_pendientes > 0 ? '<span style="background:#EF5350; color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px;">'.$cuotas_pendientes.'</span>' : '' ?>
+            <!-- MENÚ HEADER: Perfil + Cambiar Club -->
+            <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
+            <div id="headerMenu" class="menu-dropdown">
+                <a href="mi_perfil.php" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
+                    👤 Mi perfil
                 </a>
-                
-                <!-- === NUEVA OPCIÓN: CAMBIAR DE CLUB === -->
                 <?php if ($es_multiclub): ?>
                 <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
                     🔄 Cambiar de Club
                 </div>
-                <!-- === MANTENEDOR DE SOCIO === -->
-                <a href="mantenedor_socios.php" class="avatar">
-                    <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
-                </a>
-                <!-- SUBMENÚ: SELECTOR DE CLUBES (oculto por defecto) -->
-                <div id="selectorClubes" class="menu-dropdown" style="display:none; top:100%; right:0; min-width:220px; max-height:300px; overflow-y:auto;">
-                    <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666;">
-                        Selecciona un club:
-                    </div>
-                    <div id="listaClubes">
-                        <!-- Se llena con JS -->
-                        <div style="padding:0.8rem; text-align:center; color:#888;">Cargando clubs...</div>
-                    </div>
-                </div>
                 <?php endif; ?>
             </div>
+            <a href="mi_perfil.php" class="avatar">
+                <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
+            </a>
         </div>
     </header>
 
+    <!-- SUBMENÚ: SELECTOR DE CLUBES (para Cambiar de Club) -->
+    <div id="selectorClubes" class="menu-dropdown" style="display:none; position:absolute; top:100%; right:0; min-width:220px; max-height:300px; overflow-y:auto; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); z-index:102; border:1px solid #eee;">
+        <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666;">
+            Selecciona un club:
+        </div>
+        <div id="listaClubes">
+            <div style="padding:0.8rem; text-align:center; color:#888;">Cargando clubs...</div>
+        </div>
+    </div>
+
     <div class="container">
-        <!-- HERO CARD -->
+        <!-- HERO CARD: Próximo Partido -->
         <div class="hero">
+            <!-- MENÚ 3 PUNTOS DENTRO DE LA FICHA (esquina superior derecha) -->
+            <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $proximo['id_reserva'] ?? 0 ?>)">⋮</button>
+            
+            <!-- Dropdown para acciones del partido -->
+            <div id="heroMenu_<?= $proximo['id_reserva'] ?? 0 ?>" class="menu-dropdown" style="display:none; position:absolute; top:48px; right:12px; min-width:200px; z-index:50;">
+                <div class="menu-item" onclick="marcarPaso(<?= $proximo['id_reserva'] ?? 0 ?>)">👟 Marcar como "Paso"</div>
+                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">
+                    💳 Pagar cuota
+                </div>
+                <div class="menu-item" id="menuItemIA_<?= $proximo['id_reserva'] ?? 0 ?>" onclick="generarEquiposIA(<?= $proximo['id_reserva'] ?? 0 ?>)" style="display:none; color:#6A1B9A; font-weight:500;">
+                    🤖 Armar equipos IA
+                </div>
+            </div>
+
             <h1 class="hero-title">Próximo Partido</h1>
             
             <?php if($proximo): ?>
@@ -578,7 +670,7 @@ try {
                 <div class="progress-section">
                     <span class="progress-label">Cupos</span>
                     <div class="progress-track">
-                        <div class="progress-fill" style="background: linear-gradient(90deg, #66BB6A 0%, #66BB6A 60%, #FFB300 80%, #EF5350 100%); width: <?= $progress_percent ?>%;"></div>
+                        <div class="progress-fill" style="width: <?= $progress_percent ?>%;"></div>
                     </div>
                     <button class="progress-eye" onclick="verInscritos(<?= $proximo['id_reserva'] ?>)" title="Ver inscritos">👁️</button>
                 </div>
@@ -646,25 +738,51 @@ function showToast(msg, type = 'success') {
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// === MENÚ 3 PUNTOS (GLOBAL) ===
-function toggleMenu(e) {
-    if (e) e.stopPropagation();
-    const menu = document.getElementById('menuDropdown');
-    const selector = document.getElementById('selectorClubes');
+// === MENÚ HEADER (Perfil + Cambiar Club) ===
+function toggleHeaderMenu(e) {
+    e.stopPropagation();
     
-    if (selector) selector.style.display = 'none';
+    // Cerrar otros menús
+    closeAllMenus();
+    
+    // Toggle menú header
+    const menu = document.getElementById('headerMenu');
     if (menu) menu.classList.toggle('active');
+}
+
+// === MENÚ FICHA PRÓXIMO PARTIDO ===
+function toggleHeroMenu(e, idReserva) {
+    e.stopPropagation();
     
-    // Mostrar "Equipos por IA" solo si aplica
-    const itemIA = document.getElementById('menuItemIA');
-    if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
-        itemIA.style.display = 'flex';
+    // Cerrar otros menús
+    closeAllMenus();
+    
+    // Toggle menú de esta ficha específica
+    const menu = document.getElementById(`heroMenu_${idReserva}`);
+    if (menu) {
+        menu.classList.toggle('active');
+        
+        // Mostrar "Armar equipos IA" solo si está lleno
+        const itemIA = document.getElementById(`menuItemIA_${idReserva}`);
+        if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
+            itemIA.style.display = 'flex';
+        }
     }
 }
 
-// === ABRIR SELECTOR DE CLUBES (GLOBAL) ===
+// === CERRAR TODOS LOS MENÚS ===
+function closeAllMenus() {
+    document.querySelectorAll('.menu-dropdown').forEach(menu => {
+        menu.classList.remove('active');
+        if (menu.id === 'selectorClubes') {
+            menu.style.display = 'none';
+        }
+    });
+}
+
+// === ABRIR SELECTOR DE CLUBES (desde header) ===
 async function abrirSelectorClubes(e) {
-    if (e) e.stopPropagation();
+    e.stopPropagation();
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
@@ -672,6 +790,7 @@ async function abrirSelectorClubes(e) {
     if (!selector || !lista) return;
     
     selector.style.display = 'block';
+    selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
     
     try {
@@ -702,7 +821,7 @@ async function abrirSelectorClubes(e) {
     }
 }
 
-// === CAMBIAR CLUB (GLOBAL) ===
+// === CAMBIAR CLUB ===
 function cambiarClub(clubSlug) {
     console.log('🔄 Cambiando a club:', clubSlug);
     showToast('🔄 Cambiando de club...', 'info');
@@ -733,25 +852,36 @@ function cambiarClub(clubSlug) {
     });
 }
 
-// === CERRAR MENÚS AL CLICK FUERA (GLOBAL) ===
-document.addEventListener('click', () => {
-    document.getElementById('menuDropdown')?.classList.remove('active');
-    document.getElementById('selectorClubes')?.style.setProperty('display', 'none');
-});
-
-// === ACCIONES DEL MENÚ ===
-function marcarPaso() {
+// === ACCIONES DEL MENÚ DE LA FICHA ===
+async function marcarPaso(idReserva) {
     showToast('👟 Marcado como "Paso"');
+    // Aquí iría: fetch a API para marcar estado "paso"
+    // await fetch('../api/marcar_paso.php', { method:'POST', body: JSON.stringify({id_reserva: idReserva}) });
 }
 
-function generarEquiposIA() {
+function generarEquiposIA(idReserva) {
     if (typeof LIMITE_LLENO !== 'undefined' && !LIMITE_LLENO) {
         showToast('⚠️ Solo disponible con cupos completos', 'error');
         return;
     }
     showToast('🤖 Generando equipos balanceados...');
+    // Aquí iría: fetch a API de IA
     setTimeout(() => showToast('✅ Equipos generados y notificados'), 1500);
 }
+
+// === CERRAR MENÚS AL CLICK FUERA ===
+document.addEventListener('click', (e) => {
+    // Si el click no fue en un menú o su botón, cerrar todos
+    if (!e.target.closest('.menu-dots') && !e.target.closest('.hero-menu-dots') && !e.target.closest('.menu-dropdown')) {
+        closeAllMenus();
+    }
+});
+
+// === CERRAR MENÚS AL CLICK FUERA (GLOBAL) ===
+document.addEventListener('click', () => {
+    document.getElementById('menuDropdown')?.classList.remove('active');
+    document.getElementById('selectorClubes')?.style.setProperty('display', 'none');
+});
 
 // === INSCRIPCIÓN / BAJA DE RESERVA ===
 async function anotarse(idReserva) {
@@ -865,6 +995,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Aquí puedes inicializar componentes que no necesitan ser globales
     console.log('✅ dashboard_socio.php cargado');
 });
+
+function abrirModalPago(idReserva) {
+    showToast('💳 Abriendo pago para reserva #' + idReserva);
+    // Aquí iría: abrir modal de pago o redirigir
+    // window.location.href = `cuotas.php?id_reserva=${idReserva}`;
+}
+
+// === PAGAR CUOTA ===
+            function pagarCuota(idCuota) {
+                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+            }
+
+            // === REVISAR/VALIDAR PAGO ===
+            function revisarPago(idCuota) {
+                fetch('../api/revisar_pago.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
+
+            function validarPago(idCuota) {
+                fetch('../api/validar_pago.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({id_cuota: idCuota})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+                    else { mostrarToast('❌ ' + data.message, 'error'); }
+                });
+            }
 </script>
 </body>
 </html>
