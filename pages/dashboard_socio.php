@@ -595,7 +595,7 @@ $js_vars = [
         body, .app-header, .container {
             overflow: visible !important;
         }
-        
+
         /* Item de club en lista */
         #listaClubes > div {
             border-bottom: 1px solid #f5f5f5;
@@ -831,25 +831,22 @@ console.log('✅ dashboard_socio.php cargado | SOCIO_ID:', SOCIO_ID, 'ES_MULTICL
     <!-- TOAST -->
     <div id="toast" class="toast">✅ Acción realizada</div>
 
-    <!-- === INYECCIÓN SEGURA DE VARIABLES PHP (EVITA DUPLICADOS) === -->
+<!-- === BLOQUE ÚNICO DE JAVASCRIPT (COPIAR Y PEGAR TAL CUAL) === -->
 <script>
-// Variables PHP → JS (solo si no existen ya)
-if (typeof SOCIO_ID === 'undefined') {
-    const SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
-    const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
-    const CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
-    const LIMITE_LLENO = <?= $limite_lleno ?? false ? 'true' : 'false' ?>;
-    const PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
-    const ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
-    const MODO_INDIVIDUAL = <?= $modo_individual ? 'true' : 'false' ?>;
-    const CLUB_ID = <?= $club_id ?? 'null' ?>;
-    const CLUB_NOMBRE = <?= json_encode($club_nombre ?? '') ?>;
-    
-    console.log('✅ Variables cargadas | SOCIO_ID:', SOCIO_ID, 'ES_MULTICLUB:', ES_MULTICLUB);
-}
+// ============================================================================
+// 1. VARIABLES GLOBALES (Inyectadas desde PHP de forma segura)
+// ============================================================================
+const SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
+const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
+const CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
+const LIMITE_LLENO = <?= $limite_lleno ? 'true' : 'false' ?>;
+const PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
+const ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
+
+console.log('✅ Variables cargadas | SOCIO_ID:', SOCIO_ID, 'ES_MULTICLUB:', ES_MULTICLUB);
 
 // ============================================================================
-// === 1. UTILITARIAS GLOBALES ===
+// 2. FUNCIONES UTILITARIAS
 // ============================================================================
 
 function showToast(msg, type = 'success') {
@@ -863,34 +860,38 @@ function showToast(msg, type = 'success') {
 }
 
 function closeAllMenus() {
+    // Cierra todos los menús desplegables
     document.querySelectorAll('.menu-dropdown').forEach(menu => {
         menu.classList.remove('active');
-        if (menu.id === 'selectorClubes') menu.style.display = 'none';
+        if (menu.id === 'selectorClubes') {
+            menu.style.display = 'none';
+        }
     });
 }
 
 // ============================================================================
-// === 2. MENÚ HEADER (Perfil + Cambiar Club) ===
+// 3. MENÚ HEADER (Perfil + Cambiar Club)
 // ============================================================================
 
 function toggleHeaderMenu(e) {
     e.stopPropagation();
     closeAllMenus();
     const menu = document.getElementById('headerMenu');
-    if (menu) menu.classList.toggle('active');
+    if (menu) {
+        menu.classList.toggle('active');
+    }
 }
 
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
-    console.log(' [PASO 1] abrirSelectorClubes iniciado | SOCIO_ID:', SOCIO_ID);
+    console.log('🔍 [PASO 1] abrirSelectorClubes iniciado | SOCIO_ID:', SOCIO_ID);
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
-    console.log('🟢 [PASO 2] Elementos DOM encontrados:', { selector: !!selector, lista: !!lista });
     
     if (!selector || !lista) {
-        console.error('❌ Faltan #selectorClubes o #listaClubes en el HTML');
-        showToast('❌ Error de interfaz: revisa consola', 'error');
+        console.error('❌ Faltan elementos #selectorClubes o #listaClubes en el HTML');
+        showToast('❌ Error de interfaz', 'error');
         return;
     }
     
@@ -898,30 +899,26 @@ async function abrirSelectorClubes(e) {
     selector.style.display = 'block';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
-    console.log('🟢 [PASO 3] Menú visible y cargando...');
+    console.log('🟢 [PASO 2] Menú visible y cargando...');
     
     try {
         const url = `../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`;
-        console.log('🟢 [PASO 4] Fetching:', url);
+        console.log('🟢 [PASO 3] Fetching:', url);
         
         const res = await fetch(url);
-        console.log('🟢 [PASO 5] Response status:', res.status, 'ok:', res.ok);
+        console.log('🟢 [PASO 4] Response status:', res.status);
         
-        const text = await res.text();
-        console.log('🟢 [PASO 6] Raw response:', text.substring(0, 100));
-        
-        const clubs = JSON.parse(text);
-        console.log('🟢 [PASO 7] Clubs parseados:', clubs);
+        const clubs = await res.json();
+        console.log('🟢 [PASO 5] Clubs recibidos:', clubs);
         
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
-            console.log('⚠️ [PASO 8] Array vacío o no válido');
             return;
         }
         
         let html = '';
         clubs.forEach(club => {
-            const esActual = club.slug === (CLUB_ACTUAL || '');
+            const esActual = club.slug === CLUB_ACTUAL;
             html += `<div onclick="cambiarClub('${club.slug}')" 
                  style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; ${esActual ? 'background:#E8F5E9; font-weight:600;' : ''}"
                  onmouseover="this.style.background='${esActual ? '#C8E6C9' : '#F7FAFC'}'"
@@ -971,7 +968,7 @@ function cambiarClub(clubSlug) {
 }
 
 // ============================================================================
-// === 3. MENÚ FICHA PRÓXIMO PARTIDO ===
+// 4. MENÚ FICHA PRÓXIMO PARTIDO
 // ============================================================================
 
 function toggleHeroMenu(e, idReserva) {
@@ -982,8 +979,7 @@ function toggleHeroMenu(e, idReserva) {
     if (menu) {
         menu.classList.toggle('active');
         const itemIA = document.getElementById(`menuItemIA_${idReserva}`);
-        // ✅ Verificar que LIMITE_LLENO existe antes de usarlo
-        if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
+        if (itemIA && LIMITE_LLENO) {
             itemIA.style.display = 'flex';
         }
     }
@@ -994,7 +990,7 @@ async function marcarPaso(idReserva) {
 }
 
 function generarEquiposIA(idReserva) {
-    if (typeof LIMITE_LLENO === 'undefined' || !LIMITE_LLENO) {
+    if (!LIMITE_LLENO) {
         showToast('⚠️ Solo con cupos completos', 'error');
         return;
     }
@@ -1003,17 +999,16 @@ function generarEquiposIA(idReserva) {
 }
 
 // ============================================================================
-// === 4. INSCRIPCIÓN / BAJA DE RESERVA ===
+// 5. INSCRIPCIÓN / BAJA DE RESERVA
 // ============================================================================
 
 async function anotarse(idReserva) {
     if (!confirm('¿Confirmas tu inscripción?')) return;
     try {
-        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
         const res = await fetch('../api/inscribir_reserva.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id_reserva: idReserva, id_socio: socioId })
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
         });
         const data = await res.json();
         if (data.success) {
@@ -1030,11 +1025,10 @@ async function anotarse(idReserva) {
 async function bajarse(idReserva) {
     if (!confirm('¿Seguro que deseas bajarte?')) return;
     try {
-        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
         const res = await fetch('../api/bajar_reserva.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id_reserva: idReserva, id_socio: socioId })
+            body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
         });
         const data = await res.json();
         if (data.success) {
@@ -1049,7 +1043,7 @@ async function bajarse(idReserva) {
 }
 
 // ============================================================================
-// === 5. MODAL INSCRITOS ===
+// 6. MODAL INSCRITOS
 // ============================================================================
 
 async function verInscritos(idReserva) {
@@ -1070,10 +1064,9 @@ async function verInscritos(idReserva) {
         }
         
         let html = '';
-        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
         data.forEach(p => {
-            const esYo = p.id_socio === socioId;
-            const puedeBajar = (typeof ES_RESPONSABLE !== 'undefined' && ES_RESPONSABLE) && !esYo;
+            const esYo = p.id_socio === SOCIO_ID;
+            const puedeBajar = ES_RESPONSABLE && !esYo;
             html += `<div class="inscrito-item">
                 <span class="inscrito-name">${esYo ? '👤 Tú' : p.nombre}</span>
                 <span class="inscrito-status">${p.estado}</span>
@@ -1090,11 +1083,10 @@ async function verInscritos(idReserva) {
 async function bajarJugador(idSocioBajar, idReserva, nombre) {
     if (!confirm(`¿Bajar a "${nombre}"?`)) return;
     try {
-        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
         const res = await fetch('../api/bajar_jugador_reserva.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id_reserva: idReserva, id_socio_a_bajar: idSocioBajar, id_responsable: socioId })
+            body: JSON.stringify({ id_reserva: idReserva, id_socio_a_bajar: idSocioBajar, id_responsable: SOCIO_ID })
         });
         const data = await res.json();
         if (data.success) {
@@ -1115,7 +1107,7 @@ function cerrarModal(e) {
 }
 
 // ============================================================================
-// === 6. EVENT LISTENERS GLOBALES ===
+// 7. EVENT LISTENERS GLOBALES
 // ============================================================================
 
 document.addEventListener('click', (e) => {
@@ -1124,40 +1116,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Debug al cargar
-console.log('✅ dashboard_socio.js cargado');
-
-// === PAGAR CUOTA ===
-function pagarCuota(idCuota) {
-    window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-}
-
-// === REVISAR/VALIDAR PAGO ===
-function revisarPago(idCuota) {
-    fetch('../api/revisar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-    )
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-        else { mostrarToast('❌ ' + data.message, 'error'); }
-    });
-}
-
-function validarPago(idCuota) {
-    fetch('../api/validar_pago.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id_cuota: idCuota})
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-        else { mostrarToast('❌ ' + data.message, 'error'); }
-    });
-}
+console.log('✅ dashboard_socio.js cargado sin errores');
 </script>
 </body>
 </html>
