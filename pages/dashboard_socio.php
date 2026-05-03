@@ -608,14 +608,11 @@ try {
             <!-- MENÚ HEADER: Perfil + Cambiar Club -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown">
-                <a onclick="window.location.href='mantenedor_socios.php'" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
-                    👤 Mi perfil
-                </a>
                 <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
                     🔄 Cambiar de Club
                 </div>
             </div>
-            <a href="mi_perfil.php" class="avatar">
+            <a onclick="window.location.href='mantenedor_socios.php'" class="avatar">
                 <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
             </a>
         </div>
