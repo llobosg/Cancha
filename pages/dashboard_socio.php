@@ -9,6 +9,23 @@ if (!isset($_SESSION['id_socio'])) {
     exit;
 }
 
+// === DETECTAR SI ES SOCIO MULTICLUB ===
+$es_multiclub = false;
+$club_actual_slug = '';
+
+try {
+    // Contar clubs activos del socio
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM socio_club WHERE id_socio = ? AND estado = 'activo'");
+    $stmt->execute([$id_socio]);
+    $cant_clubs = (int)$stmt->fetchColumn();
+    $es_multiclub = ($cant_clubs > 1);
+    
+    // Obtener slug del club actual (si viene por GET o sesión)
+    $club_actual_slug = $_GET['id_club'] ?? $_SESSION['current_club'] ?? '';
+} catch (PDOException $e) {
+    error_log("Error multiclub check: " . $e->getMessage());
+}
+
 $id_socio = (int)$_SESSION['id_socio'];
 
 // === DATOS DEL SOCIO ===
@@ -456,6 +473,46 @@ try {
             .action-icon { width: 46px; height: 46px; font-size: 1.5rem; }
             .fab { width: 54px; height: 54px; font-size: 1.8rem; bottom: 22px; right: 22px; }
         }
+        /* Selector de clubs - submenú */
+        #selectorClubes {
+            position: absolute;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            z-index: 102;
+            border: 1px solid #eee;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Item de club en lista */
+        #listaClubes > div {
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        #listaClubes > div:last-child {
+            border-bottom: none;
+        }
+
+        #listaClubes > div:hover {
+            background: #F7FAFC;
+        }
+
+        /* Badge "Actual" */
+        #listaClubes span[style*="Actual"] {
+            font-size: 0.7rem;
+            background: #E8F5E9;
+            color: #2E7D32;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -465,7 +522,7 @@ try {
             <span class="brand">CanchaSport</span>
         </div>
         <div class="header-actions">
-            <!-- MENÚ 3 PUNTOS -->
+            <!-- MENÚ 3 PUNTOS (dentro del header) -->
             <button class="menu-dots" onclick="toggleMenu(event)">⋮</button>
             <div id="menuDropdown" class="menu-dropdown">
                 <div class="menu-item" onclick="marcarPaso()">👟 Marcar como "Paso"</div>
@@ -473,10 +530,28 @@ try {
                 <a href="cuotas.php" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
                     💳 Pagar Cuota <?= $cuotas_pendientes > 0 ? '<span style="background:#EF5350; color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px;">'.$cuotas_pendientes.'</span>' : '' ?>
                 </a>
+                
+                <!-- === NUEVA OPCIÓN: CAMBIAR DE CLUB === -->
+                <?php if ($es_multiclub): ?>
+                <div class="menu-item" style="border-top:1px solid #eee; margin-top:0.3rem; padding-top:0.8rem;" onclick="abrirSelectorClubes(event)">
+                    🔄 Cambiar de Club
+                </div>
+                <!-- === MANTENEDOR DE SOCIO === -->
+                <a href="mantenedor_socios.php" class="avatar">
+                    <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
+                </a>
+                <!-- SUBMENÚ: SELECTOR DE CLUBES (oculto por defecto) -->
+                <div id="selectorClubes" class="menu-dropdown" style="display:none; top:100%; right:0; min-width:220px; max-height:300px; overflow-y:auto;">
+                    <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666;">
+                        Selecciona un club:
+                    </div>
+                    <div id="listaClubes">
+                        <!-- Se llena con JS -->
+                        <div style="padding:0.8rem; text-align:center; color:#888;">Cargando clubs...</div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
-            <a href="mantenedor_socios.php" class="avatar">
-                <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
-            </a>
         </div>
     </header>
 
@@ -718,6 +793,114 @@ try {
                 document.getElementById('modalInscritos').style.display = 'none';
             }
         }
+        // === VARIABLES GLOBALES ===
+const SOCIO_ID = <?= $id_socio ?>;
+const ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
+const CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
+
+// === TOGGLE MENÚ PRINCIPAL ===
+function toggleMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('menuDropdown');
+    const selector = document.getElementById('selectorClubes');
+    
+    // Cerrar selector si está abierto
+    if (selector) selector.style.display = 'none';
+    
+    // Toggle menú principal
+    menu.classList.toggle('active');
+    
+    // Mostrar "Equipos por IA" solo si está lleno
+    const itemIA = document.getElementById('menuItemIA');
+    if (itemIA && typeof LIMITE_LLENO !== 'undefined' && LIMITE_LLENO) {
+        itemIA.style.display = 'flex';
+    }
+}
+
+// === ABRIR SELECTOR DE CLUBES ===
+async function abrirSelectorClubes(e) {
+    e.stopPropagation();
+    
+    const selector = document.getElementById('selectorClubes');
+    const lista = document.getElementById('listaClubes');
+    
+    if (!selector || !lista) return;
+    
+    // Mostrar selector
+    selector.style.display = 'block';
+    lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
+    
+    try {
+        // Fetch a API para obtener clubs del socio
+        const res = await fetch(`../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`);
+        const clubs = await res.json();
+        
+        if (!Array.isArray(clubs) || clubs.length === 0) {
+            lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
+            return;
+        }
+        
+        // Renderizar lista de clubs
+        let html = '';
+        clubs.forEach(club => {
+            const esActual = club.slug === CLUB_ACTUAL;
+            html += `
+            <div onclick="cambiarClub('${club.slug}')" 
+                 style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; ${esActual ? 'background:#E8F5E9; font-weight:600;' : ''}"
+                 onmouseover="this.style.background='${esActual ? '#C8E6C9' : '#F7FAFC'}'"
+                 onmouseout="this.style.background='${esActual ? '#E8F5E9' : 'white'}'">
+                <span>${club.nombre}</span>
+                ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
+            </div>
+            `;
+        });
+        lista.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Error cargando clubs:', err);
+        lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
+    }
+}
+
+// === CAMBIAR CLUB (Función proporcionada - optimizada) ===
+function cambiarClub(clubSlug) {
+    console.log('🔄 Cambiando a club:', clubSlug);
+    
+    // Mostrar toast de "Cambiando..."
+    showToast('🔄 Cambiando de club...', 'info');
+    document.body.style.cursor = 'wait';
+    
+    fetch('../api/cambiar_club_sesion.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ club_slug: clubSlug })
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('Error en la red');
+        return r.json();
+    })
+    .then(data => {
+        document.body.style.cursor = 'default';
+        if (data.success) {
+            showToast('✅ Club cambiado correctamente', 'success');
+            // Recargar con parámetro para forzar actualización de caché
+            window.location.href = `dashboard_socio.php?id_club=${clubSlug}&t=${Date.now()}`;
+        } else {
+            showToast('❌ ' + (data.message || 'No se pudo cambiar de club'), 'error');
+        }
+    })
+    .catch(err => {
+        document.body.style.cursor = 'default';
+        console.error('Error:', err);
+        showToast('❌ Error de conexión al cambiar de club', 'error');
+    });
+}
+
+// === CERRAR MENÚS AL HACER CLICK FUERA ===
+document.addEventListener('click', () => {
+    document.getElementById('menuDropdown')?.classList.remove('active');
+    document.getElementById('selectorClubes')?.style.setProperty('display', 'none');
+});
     </script>
 </body>
 </html>
