@@ -2,66 +2,77 @@
 // pages/home_socio.php
 require_once __DIR__ . '/../includes/config.php';
 
-// Validar sesión socio
+// === VERIFICAR SESIÓN ===
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 if (!isset($_SESSION['id_socio'])) {
-    header('Location: ../index.php');
+    header('Location: login_socios.php');
     exit;
 }
 
-$id_socio = $_SESSION['id_socio'];
+$id_socio = (int)$_SESSION['id_socio'];
 
-// Obtener datos básicos del socio
-$stmt = $pdo->prepare("SELECT alias, nombre, foto_url FROM socios WHERE id_socio = ?");
+// === DATOS DEL SOCIO ===
+$stmt = $pdo->prepare("SELECT nombre, alias, email, rol FROM socios WHERE id_socio = ?");
 $stmt->execute([$id_socio]);
 $socio = $stmt->fetch();
 $nombre_mostrar = $socio['alias'] ?: explode(' ', $socio['nombre'])[0];
+$es_responsable = ($socio['rol'] === 'Delegado' || $socio['rol'] === 'Director');
 
-// === LÓGICA PRÓXIMO PARTIDO (Igual que dashboard_socio pero simplificada) ===
-$club_id_actual = $_SESSION['club_id'] ?? null;
-$where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
-$params = [];
-
-if ($club_id_actual !== null) {
-    // Modo Club
-    $where_parts[] = "( (r.id_club = ? AND r.id_socio = ?) OR (r.id_club = ?) )";
-    $params[] = $club_id_actual;
-    $params[] = $id_socio;
-    $params[] = $club_id_actual;
-} else {
-    // Modo Individual
-    $where_parts[] = "r.id_club IS NULL AND r.id_socio = ?";
-    $params[] = $id_socio;
-}
-
-$sql_next = "
-    SELECT 
-        r.id_reserva, r.fecha, r.hora_inicio, r.monto_total, 
-        r.jugadores_esperados, r.monto_recaudacion,
-        c.nombre_cancha, c.id_deporte,
-        (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
-    FROM reservas r
-    JOIN canchas c ON r.id_cancha = c.id_cancha
-    WHERE " . implode(" AND ", $where_parts) . "
-    ORDER BY r.fecha ASC, r.hora_inicio ASC
-    LIMIT 1
-";
-
-$stmt_next = $pdo->prepare($sql_next);
-$stmt_next->execute($params);
-$proximo = $stmt_next->fetch();
-
-// Verificar inscripción y contar
+// === PRÓXIMO PARTIDO/RESERVA DEL SOCIO ===
+$proximo = null;
 $ya_inscrito = false;
 $cant_inscritos = 0;
-if ($proximo) {
-    $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ?");
-    $stmt_check->execute([$proximo['id_reserva'], $id_socio]);
-    $ya_inscrito = $stmt_check->fetch();
-    $cant_inscritos = $proximo['inscritos_actuales'] ?? 0;
+$jugadores_esperados = 4; // Default para pádel/tenis
+
+try {
+    // Buscar próxima reserva donde el socio esté inscrito (fecha futura)
+    $stmt = $pdo->prepare("
+        SELECT 
+            r.id_reserva, r.fecha, r.hora_inicio, r.hora_fin, r.estado_pago,
+            c.nombre_cancha, c.id_deporte,
+            r.jugadores_esperados,
+            COUNT(rp.id_socio) as inscritos_actuales,
+            GROUP_CONCAT(rp.id_socio) as ids_inscritos
+        FROM reservas r
+        JOIN canchas c ON r.id_cancha = c.id_cancha
+        LEFT JOIN reservas_participantes rp ON r.id_reserva = rp.id_reserva
+        WHERE (rp.id_socio = ? OR r.id_socio = ?)
+        AND r.fecha >= CURDATE()
+        AND r.estado != 'cancelada'
+        GROUP BY r.id_reserva
+        ORDER BY r.fecha ASC, r.hora_inicio ASC
+        LIMIT 1
+    ");
+    $stmt->execute([$id_socio, $id_socio]);
+    $proximo = $stmt->fetch();
+    
+    if ($proximo) {
+        $cant_inscritos = (int)$proximo['inscritos_actuales'];
+        $jugadores_esperados = (int)($proximo['jugadores_esperados'] ?? 4);
+        $ids_inscritos = $proximo['ids_inscritos'] ? explode(',', $proximo['ids_inscritos']) : [];
+        $ya_inscrito = in_array($id_socio, $ids_inscritos);
+    }
+} catch (PDOException $e) {
+    error_log("Error próximo partido: " . $e->getMessage());
 }
 
-$nombres_deportes = ['futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal', 'tenis' => 'Tenis', 'padel' => 'Pádel'];
-$nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($proximo['id_deporte'] ?? 'Deporte');
+// === CÁLCULO DE PROGRESO Y COLORES ===
+$progress_percent = min(100, ($cant_inscritos / max(1, $jugadores_esperados)) * 100);
+$cupos_disponibles = max(0, $jugadores_esperados - $cant_inscritos);
+$limite_lleno = ($cant_inscritos >= $jugadores_esperados);
+
+// Color dinámico de la barra según disponibilidad
+$progress_color = $cupos_disponibles > 2 ? '#66BB6A' : ($cupos_disponibles === 2 ? '#FFB300' : '#EF5350');
+
+// === CUOTAS PENDIENTES (para "Pagar Cuota") ===
+$cuotas_pendientes = 0;
+try {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
+    $stmt->execute([$id_socio]);
+    $cuotas_pendientes = (int)$stmt->fetchColumn();
+} catch (PDOException $e) {
+    error_log("Error cuotas: " . $e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -70,346 +81,642 @@ $nombre_deporte = $nombres_deportes[$proximo['id_deporte'] ?? ''] ?? ucfirst($pr
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Home - CanchaSport</title>
     <style>
-        :root { 
-            --primary-start: #CE93D8; 
-            --primary-end: #AB47BC; 
-            --accent: #4CAF50; 
-            --text-dark: #333;
-            --bg-light: #F4F6F9;
+        :root {
+            --padel-blue: #4FC3F7;
+            --tennis-green: #66BB6A;
+            --gold: #FFD54F;
+            --stats-blue: #42A5F5;
+            --green-fluor: #76FF03;
+            --text-dark: #2D3748;
+            --text-light: #718096;
+            --bg-transparent: transparent;
+            --shadow-blue: rgba(79, 195, 247, 0.4);
+            --shadow-green: rgba(102, 187, 106, 0.4);
+            --overlay-dark: rgba(10, 25, 15, 0.75); /* Overlay más oscuro */
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        
-        body { 
-            background-color: var(--bg-light); 
-            color: var(--text-dark); 
-            min-height: 100vh; 
-            padding-bottom: 80px; 
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-transparent);
+            background-image: url('../../assets/img/cancha_pasto2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+        /* Overlay más oscuro para mejor legibilidad */
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background: var(--overlay-dark);
+            z-index: -1;
         }
 
-        /* HEADER DEGRADÉ LILA */
+        /* HEADER */
         .app-header {
-            background: linear-gradient(90deg, var(--primary-start) 0%, var(--primary-end) 100%);
-            padding: 0.8rem 1.5rem; /* Más fino en móvil por defecto */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: linear-gradient(90deg, var(--padel-blue), var(--tennis-green));
+            padding: 0.75rem 1.25rem;
+            display: flex; justify-content: space-between; align-items: center;
             position: sticky; top: 0; z-index: 100;
-            box-shadow: 0 2px 10px rgba(171, 71, 188, 0.2);
+            box-shadow: 0 2px 12px rgba(79, 195, 247, 0.3);
         }
-        .logo-container { display: flex; align-items: center; gap: 0.5rem; }
-        .brand-name { font-weight: 700; font-size: 1.3rem; color: white; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user-avatar {
+        .logo { display: flex; align-items: center; gap: 0.6rem; }
+        .logo-icon {
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 12px;
+            display: grid; place-items: center;
+            font-size: 1.1rem;
+        }
+        .brand { font-weight: 700; font-size: 1.25rem; color: white; letter-spacing: -0.3px; }
+        
+        .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+        
+        /* MENÚ 3 PUNTOS */
+        .menu-dots {
+            position: relative;
             width: 36px; height: 36px;
-            background: rgba(255,255,255,0.2);
-            color: white;
             border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; text-decoration: none;
-            border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: grid; place-items: center;
+            transition: background 0.2s;
+        }
+        .menu-dots:hover { background: rgba(255,255,255,0.35); }
+        
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%; right: 0;
+            background: white;
+            border-radius: 12px;
+            min-width: 180px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            z-index: 101;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .menu-dropdown.active { display: block; animation: slideDown 0.2s ease; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .menu-item {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item:hover { background: #F7FAFC; }
+        .menu-item.danger { color: #C62828; font-weight: 500; }
+        .menu-item:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: white; color: var(--padel-blue);
+            font-weight: 600; font-size: 0.95rem;
+            display: grid; place-items: center;
+            border: 2px solid rgba(255,255,255,0.7);
+            text-decoration: none;
         }
 
-        .container { max-width: 600px; margin: 0 auto; padding: 1.5rem; }
+        .container { max-width: 560px; margin: 0 auto; padding: 1.25rem; }
 
-        /* FICHA PRÓXIMO PARTIDO */
-        .hero-card {
-            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+        /* HERO CARD */
+        .hero {
+            background: linear-gradient(135deg, var(--padel-blue) 0%, var(--tennis-green) 100%);
+            border-radius: 28px;
+            padding: 1.75rem 1.5rem;
+            margin-bottom: 1.75rem;
+            box-shadow: 
+                0 10px 30px rgba(79, 195, 247, 0.35),
+                0 10px 30px rgba(102, 187, 106, 0.25);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.4);
             color: white;
-            border-radius: 24px;
-            padding: 1.8rem 1.5rem;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: -40%; right: -15%;
+            width: 160px; height: 160px;
+            background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%);
+            border-radius: 50%; pointer-events: none;
+        }
+        
+        .hero-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 0.75rem;
+            opacity: 0.95;
+        }
+        
+        .hero-meta {
+            display: flex; gap: 1rem;
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            font-weight: 500;
+        }
+        .hero-meta span { display: flex; align-items: center; gap: 0.3rem; }
+        
+        .btn-hero {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 18px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            border: none;
+            cursor: pointer;
+            background: white;
+            color: var(--tennis-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        }
+        .btn-hero:active { transform: scale(0.98); }
+        .btn-hero.inscrito {
+            background: rgba(255,255,255,0.95);
+            color: #E53E3E;
+        }
+        .btn-hero:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* BARRA DE PROGRESO */
+        .progress-section {
+            margin-top: 1.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .progress-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            opacity: 0.95;
+        }
+        .progress-track {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            width: <?= $progress_percent ?>%;
+            background: linear-gradient(90deg, 
+                #66BB6A 0%, 
+                #66BB6A 60%, 
+                #FFB300 80%, 
+                #EF5350 100%);
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+        .progress-eye {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            display: grid; place-items: center;
+            transition: background 0.2s;
+        }
+        .progress-eye:hover { background: rgba(255,255,255,0.4); }
+
+        /* QUICK ACTIONS */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
             margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(171, 71, 188, 0.3);
+        }
+        .action-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 1.25rem 0.75rem;
             text-align: center;
+            text-decoration: none;
+            color: var(--text-dark);
+            box-shadow: 0 6px 20px var(--action-shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255,255,255,0.8);
             position: relative;
             overflow: hidden;
         }
-        .hero-card h2 { 
-            font-size: 1.4rem; 
-            font-weight: 300; /* Texto fino */
-            margin-bottom: 0.5rem; 
-            opacity: 0.95; 
+        .action-card::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(180deg, transparent 60%, var(--action-shadow) 100%);
+            opacity: 0.15; pointer-events: none;
         }
-        .hero-date { 
-            font-size: 1rem; 
-            font-weight: 400; 
-            margin-bottom: 0.5rem; 
-            display: block; 
-            opacity: 0.9; 
+        .action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px var(--action-shadow);
         }
-        .hero-sport { 
-            font-size: 0.9rem; 
-            opacity: 0.8; 
-            margin-bottom: 1.5rem; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            font-weight: 500;
-        }
+        .action-card.reservar { --action-shadow: rgba(102, 187, 106, 0.5); }
+        .action-card.torneos { --action-shadow: rgba(255, 213, 79, 0.5); }
+        .action-card.stats { --action-shadow: rgba(66, 165, 245, 0.5); }
         
-        .btn-main {
-            background: white;
-            color: var(--primary-end);
-            border: none;
-            padding: 0.9rem 2rem;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .btn-main:active { transform: scale(0.98); }
-        
-        /* MENÚ 3 PUNTOS & OJO */
-        .top-controls {
-            position: absolute; top: 1.2rem; right: 1.2rem;
-            display: flex; gap: 0.8rem;
-        }
-        .icon-btn {
-            background: rgba(255,255,255,0.2); 
-            border: none; 
-            color: white;
-            width: 32px; height: 32px; 
-            border-radius: 50%; 
-            cursor: pointer;
-            font-size: 1.1rem; 
-            display: flex; align-items: center; justify-content: center;
-            transition: background 0.2s;
-        }
-        .icon-btn:hover { background: rgba(255,255,255,0.3); }
-
-        /* ACCIONES MINIMALISTAS (Sin bloque) */
-        .quick-actions {
-            display: flex;
-            justify-content: center;
-            gap: 2.5rem;
-            margin-bottom: 2.5rem;
-        }
-        .action-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.4rem;
-            text-decoration: none;
-            color: #555;
-            transition: transform 0.2s;
-        }
-        .action-item:hover { transform: translateY(-3px); color: var(--primary-end); }
         .action-icon {
-            font-size: 1.8rem;
-            color: var(--primary-end);
-            background: #F3E5F5;
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            display: grid; place-items: center;
+            width: 52px; height: 52px;
+            margin: 0 auto 0.5rem;
+            border-radius: 16px;
         }
-        .action-label { font-size: 0.85rem; font-weight: 500; }
+        .action-card.reservar .action-icon { background: linear-gradient(135deg, rgba(102,187,106,0.15), rgba(76,175,80,0.1)); }
+        .action-card.torneos .action-icon { background: linear-gradient(135deg, rgba(255,213,79,0.15), rgba(255,193,7,0.1)); }
+        .action-card.stats .action-icon { background: linear-gradient(135deg, rgba(66,165,245,0.15), rgba(33,150,243,0.1)); }
+        
+        .action-label { font-size: 0.85rem; font-weight: 600; }
 
-        /* FAB (+) SUTIL */
-        .fab-reserve {
-            position: fixed; bottom: 25px; right: 25px;
-            background: white;
-            color: var(--primary-end);
-            width: 56px; height: 56px;
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 28px; right: 28px;
+            width: 60px; height: 60px;
             border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
+            background: var(--green-fluor);
+            color: #1B5E20;
             font-size: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            font-weight: 700;
+            display: grid; place-items: center;
             text-decoration: none;
+            box-shadow: 
+                0 6px 20px rgba(118, 255, 3, 0.5),
+                0 0 0 4px rgba(118, 255, 3, 0.15);
+            border: 2px solid white;
+            transition: all 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
             z-index: 90;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 1px solid #eee;
         }
-        .fab-reserve:hover { 
-            transform: scale(1.1) rotate(90deg); 
-            box-shadow: 0 6px 20px rgba(171, 71, 188, 0.3);
-            background: var(--primary-end);
-            color: white;
+        .fab:hover {
+            transform: scale(1.08) rotate(5deg);
+            box-shadow: 
+                0 10px 35px rgba(118, 255, 3, 0.7),
+                0 0 0 6px rgba(118, 255, 3, 0.25);
+            background: #64DD17;
         }
 
-        /* MODAL INSCRITOS */
+        /* MODALES */
         .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 2000;
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
             justify-content: center; align-items: center;
+            padding: 1rem;
         }
         .modal-content {
-            background: white; color: #333; padding: 1.5rem; border-radius: 20px;
-            max-width: 350px; width: 90%; max-height: 80vh; overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: white; color: var(--text-dark);
+            padding: 1.5rem; border-radius: 20px;
+            max-width: 380px; width: 100%;
+            max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            position: relative;
         }
-        .inscrito-item { padding: 0.8rem 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: #F7FAFC; border: none;
+            font-size: 1.2rem; cursor: pointer;
+            display: grid; place-items: center;
+            color: var(--text-light);
+        }
+        
+        /* Lista de inscritos */
+        .inscrito-item {
+            padding: 0.9rem 0;
+            border-bottom: 1px solid #EDF2F7;
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 0.5rem;
+        }
         .inscrito-item:last-child { border-bottom: none; }
+        .inscrito-name { font-weight: 500; font-size: 0.95rem; }
+        .inscrito-status {
+            font-size: 0.75rem; padding: 0.2rem 0.5rem;
+            border-radius: 8px; background: #E8F5E9; color: #2E7D32;
+        }
+        .btn-bajar {
+            background: none; border: none; color: #C62828;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            padding: 0.3rem 0.6rem; border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .btn-bajar:hover { background: #FFEBEE; }
+        .btn-bajar:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* RESPONSIVE MÓVIL */
+        /* TOAST */
+        .toast {
+            position: fixed; bottom: 100px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #2D3748; color: white;
+            padding: 0.85rem 1.5rem; border-radius: 14px;
+            font-size: 0.9rem; font-weight: 500;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            opacity: 0; visibility: hidden;
+            transition: all 0.3s; z-index: 3000;
+            max-width: 90%; text-align: center;
+        }
+        .toast.show {
+            opacity: 1; visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* RESPONSIVE */
         @media (max-width: 480px) {
-            .app-header { padding: 0.6rem 1rem; } /* Header más fino */
-            .brand-name { font-size: 1.1rem; }
-            .hero-card { padding: 1.5rem 1rem; margin-bottom: 1.5rem; }
-            .hero-card h2 { font-size: 1.2rem; } /* Título más pequeño */
-            .hero-date { font-size: 0.9rem; }
-            .quick-actions { gap: 1.5rem; }
-            .action-icon { width: 45px; height: 45px; font-size: 1.5rem; }
-            .fab-reserve { width: 50px; height: 50px; font-size: 1.8rem; bottom: 20px; right: 20px; }
+            .app-header { padding: 0.6rem 1rem; }
+            .brand { font-size: 1.15rem; }
+            .hero { padding: 1.5rem 1.25rem; border-radius: 24px; }
+            .hero-title { font-size: 1rem; }
+            .hero-meta { font-size: 0.9rem; gap: 0.75rem; }
+            .quick-actions { gap: 0.75rem; }
+            .action-card { padding: 1rem 0.5rem; }
+            .action-icon { width: 46px; height: 46px; font-size: 1.5rem; }
+            .fab { width: 54px; height: 54px; font-size: 1.8rem; bottom: 22px; right: 22px; }
         }
     </style>
 </head>
 <body>
-
     <header class="app-header">
-        <div class="logo-container">
-            <!-- Logo SVG Simple -->
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
-                <circle cx="50" cy="50" r="45" stroke="white" stroke-width="8"/>
-                <path d="M30 50 C30 30, 70 30, 70 50 C70 70, 30 70, 30 50" stroke="white" stroke-width="6" fill="none"/>
-            </svg>
-            <span class="brand-name">CanchaSport</span>
+        <div class="logo">
+            <div class="logo-icon">⚽</div>
+            <span class="brand">CanchaSport</span>
         </div>
-        <a href="mantenedor_socios.php" class="user-avatar">
-            <?= strtoupper(substr($nombre_mostrar, 0, 1)) ?>
-        </a>
+        <div class="header-actions">
+            <!-- MENÚ 3 PUNTOS -->
+            <button class="menu-dots" onclick="toggleMenu(event)">⋮</button>
+            <div id="menuDropdown" class="menu-dropdown">
+                <div class="menu-item" onclick="marcarPaso()">👟 Marcar como "Paso"</div>
+                <div class="menu-item" id="menuItemIA" onclick="generarEquiposIA()" style="display:none; color:#6A1B9A; font-weight:500;">🤖 Equipos por IA</div>
+                <a href="cuotas.php" class="menu-item" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.6rem;">
+                    💳 Pagar Cuota <?= $cuotas_pendientes > 0 ? '<span style="background:#EF5350; color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px;">'.$cuotas_pendientes.'</span>' : '' ?>
+                </a>
+            </div>
+            <a href="mantenedor_socios.php" class="avatar">
+                <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
+            </a>
+        </div>
     </header>
 
     <div class="container">
-        
-        <?php if ($proximo): ?>
-            <div class="hero-card">
-                <!-- Controles Superiores: Menú y Ojo -->
-                <div class="top-controls">
-                    <button class="icon-btn" onclick="verInscritosHero(<?= $proximo['id_reserva'] ?>)" title="Ver Inscritos">👁️</button>
-                    <div style="position:relative;">
-                        <button class="icon-btn" onclick="toggleMenu()">⋮</button>
-                        <div id="reservaMenu" style="display:none; position:absolute; top:100%; right:0; background:white; border-radius:12px; min-width:160px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:200; overflow:hidden;">
-                            <div class="dropdown-item" onclick="compartirReserva(<?= $proximo['id_reserva'] ?>)" style="padding:0.8rem; color:#333; cursor:pointer; border-bottom:1px solid #eee;">📲 Compartir Reserva</div>
-                        </div>
-                    </div>
+        <!-- HERO CARD -->
+        <div class="hero">
+            <h1 class="hero-title">Próximo Partido</h1>
+            
+            <?php if($proximo): ?>
+                <div class="hero-meta">
+                    <span>📅 <?= date('d M', strtotime($proximo['fecha'])) ?></span>
+                    <span>⏰ <?= substr($proximo['hora_inicio'],0,5) ?></span>
+                    <span>🏟️ <?= htmlspecialchars($proximo['nombre_cancha']) ?></span>
                 </div>
-
-                <h2>Próximo Partido</h2>
-                <span class="hero-date">📅 <?= date('d M', strtotime($proximo['fecha'])) ?> • ⏰ <?= substr($proximo['hora_inicio'], 0, 5) ?></span>
-                <div class="hero-sport"><?= htmlspecialchars($nombre_deporte) ?> • <?= htmlspecialchars($proximo['nombre_cancha']) ?></div>
                 
-                <?php if ($ya_inscrito): ?>
-                    <button class="btn-main" onclick="bajarseEvento(<?= $proximo['id_reserva'] ?>)">❌ Bajarme</button>
+                <?php if($ya_inscrito): ?>
+                    <button class="btn-hero inscrito" onclick="bajarse(<?= $proximo['id_reserva'] ?>)">❌ Bajarme del partido</button>
                 <?php else: ?>
-                    <button class="btn-main" onclick="anotarmeAlEvento(<?= $proximo['id_reserva'] ?>)">✅ Anotarme</button>
+                    <button class="btn-hero" onclick="anotarse(<?= $proximo['id_reserva'] ?>)" <?= $limite_lleno ? 'disabled title="Cupos completos"' : '' ?>>
+                        <?= $limite_lleno ? '🔒 Cupos completos' : '✅ Anotarme' ?>
+                    </button>
                 <?php endif; ?>
 
-                <div style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.9; display:flex; justify-content:center; align-items:center; gap:0.5rem;">
-                    <span>👥 <?= $cant_inscritos ?> inscritos</span>
+                <div class="progress-section">
+                    <span class="progress-label">Cupos</span>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="background: linear-gradient(90deg, #66BB6A 0%, #66BB6A 60%, #FFB300 80%, #EF5350 100%); width: <?= $progress_percent ?>%;"></div>
+                    </div>
+                    <button class="progress-eye" onclick="verInscritos(<?= $proximo['id_reserva'] ?>)" title="Ver inscritos">👁️</button>
                 </div>
-            </div>
-        <?php else: ?>
-            <div class="hero-card" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);">
-                <h2>¡Hola, <?= htmlspecialchars($nombre_mostrar) ?>!</h2>
-                <p style="margin-bottom: 1.5rem; opacity: 0.9;">No tienes partidos próximos.</p>
-                <a href="reservar_cancha.php" style="display:block; background:white; color:#2E7D32; padding:0.9rem; border-radius:50px; text-decoration:none; font-weight:bold;">🎾 Reservar Ahora</a>
-            </div>
-        <?php endif; ?>
+            <?php else: ?>
+                <div style="text-align:center; padding:1rem;">
+                    <p style="font-size:1rem; opacity:0.9; margin-bottom:1rem;">🎉 ¡No tienes partidos próximos!</p>
+                    <a href="reservar_cancha.php" style="display:inline-block; background:white; color:var(--tennis-green); padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
+                </div>
+            <?php endif; ?>
+        </div>
 
-        <!-- Acciones Minimalistas -->
+        <!-- QUICK ACTIONS -->
         <div class="quick-actions">
-            <a href="reservar_cancha.php" class="action-item">
+            <a href="reservar_cancha.php" class="action-card reservar">
                 <div class="action-icon">🎾</div>
                 <span class="action-label">Reservar</span>
             </a>
-            <a href="#" class="action-item">
+            <a href="torneos_publicos.php" class="action-card torneos">
                 <div class="action-icon">🏆</div>
                 <span class="action-label">Torneos</span>
             </a>
-            <a href="#" class="action-item">
-                <div class="action-icon">📊</div>
-                <span class="action-label">Ranking</span>
+            <a href="mis_estadisticas.php" class="action-card stats">
+                <div class="action-icon">📈</div>
+                <span class="action-label">Mis Stats</span>
             </a>
         </div>
-
     </div>
 
-    <!-- Botón Flotante (+) -->
-    <a href="reservar_cancha.php" class="fab-reserve">+</a>
+    <!-- FAB -->
+    <a href="reservar_cancha.php" class="fab">+</a>
 
-    <!-- Modal Inscritos -->
-    <div id="modalInscritos" class="modal-overlay" onclick="cerrarModalInscritos(event)">
+    <!-- MODAL INSCRITOS -->
+    <div id="modalInscritos" class="modal-overlay" onclick="cerrarModal(event)">
         <div class="modal-content">
-            <h3 style="text-align:center; color:#AB47BC; margin-bottom:1rem; font-weight:600;">👥 Inscritos</h3>
-            <div id="listaInscritos"><p style="text-align:center; color:#888;">Cargando...</p></div>
-            <button onclick="document.getElementById('modalInscritos').style.display='none'" style="width:100%; margin-top:1rem; padding:0.6rem; background:#f0f0f0; border:none; border-radius:12px; font-weight:600; color:#555;">Cerrar</button>
+            <button class="modal-close" onclick="cerrarModal(event)">&times;</button>
+            <h3 style="text-align:center; margin-bottom:1rem; color:var(--padel-blue); font-weight:600;">👥 Inscritos</h3>
+            <div id="listaInscritos">
+                <p style="text-align:center; color:var(--text-light); padding:1rem;">Cargando inscritos...</p>
+            </div>
+            <?php if($es_responsable): ?>
+                <p style="font-size:0.75rem; color:#888; text-align:center; margin-top:1rem;">
+                    ℹ️ Como responsable, puedes bajar a otros jugadores
+                </p>
+            <?php endif; ?>
         </div>
     </div>
 
+    <!-- TOAST -->
+    <div id="toast" class="toast">✅ Acción realizada</div>
+
     <script>
+        // === VARIABLES GLOBALES ===
+        const SOCIO_ID = <?= $id_socio ?>;
+        const ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
+        const LIMITE_LLENO = <?= $limite_lleno ? 'true' : 'false' ?>;
+        
+        // === TOAST MODERNO ===
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.background = type === 'error' ? '#C62828' : '#2E7D32';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        
         // === MENÚ 3 PUNTOS ===
-        function toggleMenu() {
-            const menu = document.getElementById('reservaMenu');
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        function toggleMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('menuDropdown');
+            const itemIA = document.getElementById('menuItemIA');
+            
+            // Mostrar/ocultar menú
+            menu.classList.toggle('active');
+            
+            // Mostrar "Equipos por IA" solo si está lleno
+            if (LIMITE_LLENO) {
+                itemIA.style.display = 'flex';
+            }
         }
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.top-controls')) document.getElementById('reservaMenu').style.display = 'none';
+        
+        // Cerrar menú al hacer click fuera
+        document.addEventListener('click', () => {
+            document.getElementById('menuDropdown').classList.remove('active');
         });
-
-        // === ANOTARSE / BAJARSE ===
-        function anotarmeAlEvento(idReserva) {
-            if(!confirm('¿Quieres anotarte? Se generará tu cuota.')) return;
-            fetch('../api/gestion_eventos.php', { 
-                method: 'POST', 
-                body: new URLSearchParams({ action: 'anotarse', id_actividad: idReserva, tipo_actividad: 'reserva' }) 
-            })
-            .then(r => r.json())
-            .then(d => {
-                if(d.success) { alert('¡Anotado correctamente!'); location.reload(); }
-                else { alert('Error: ' + d.message); }
-            });
+        
+        // === ACCIONES DEL MENÚ ===
+        function marcarPaso() {
+            showToast('👟 Marcado como "Paso"');
+            // Aquí iría: fetch a API para marcar estado "paso"
         }
-
-        function bajarseEvento(idReserva) {
-            if(!confirm('¿Seguro que deseas bajarte?')) return;
-            fetch('../api/gestion_eventos.php', { 
-                method: 'POST', 
-                body: new URLSearchParams({ action: 'bajarse', id_reserva: idReserva }) 
-            })
-            .then(r => r.json())
-            .then(d => {
-                if(d.success) { alert('Te has dado de baja.'); location.reload(); }
-                else { alert('Error: ' + d.message); }
-            });
+        
+        function generarEquiposIA() {
+            if (!LIMITE_LLENO) {
+                showToast('⚠️ Solo disponible con cupos completos', 'error');
+                return;
+            }
+            showToast('🤖 Generando equipos balanceados...');
+            // Aquí iría: fetch a API de IA para generar equipos
+            setTimeout(() => showToast('✅ Equipos generados y notificados'), 1500);
         }
-
-        // === VER INSCRITOS (CORREGIDO PARA CARGAR DATOS REALES) ===
-        function verInscritosHero(idReserva) {
+        
+        // === INSCRIPCIÓN / BAJA ===
+        async function anotarse(idReserva) {
+            if (!confirm('¿Confirmas tu inscripción? Se generará tu cuota.')) return;
+            
+            try {
+                const res = await fetch('../api/inscribir_reserva.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('✅ ¡Anotado correctamente!');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ Error de conexión', 'error');
+            }
+        }
+        
+        async function bajarse(idReserva) {
+            if (!confirm('¿Seguro que deseas bajarte?')) return;
+            
+            try {
+                const res = await fetch('../api/bajar_reserva.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id_reserva: idReserva, id_socio: SOCIO_ID })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('❌ Te has dado de baja');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ Error de conexión', 'error');
+            }
+        }
+        
+        // === MODAL INSCRITOS (CON DATOS REALES) ===
+        async function verInscritos(idReserva) {
             const modal = document.getElementById('modalInscritos');
             const lista = document.getElementById('listaInscritos');
             modal.style.display = 'flex';
-            lista.innerHTML = '<p style="text-align:center; color:#888;">Cargando...</p>';
+            lista.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:1rem;">🔄 Cargando...</p>';
             
-            // Usamos la API que ya funciona en el dashboard
-            fetch(`../api/get_inscritos_torneo.php?id_torneo=${idReserva}`) // Ojo: Si es reserva, quizás necesites otra API o adaptar esta
-                .then(r => r.json())
-                .then(data => {
-                    // Si la API devuelve error o vacío, mostramos mensaje
-                    if(!data || !Array.isArray(data) || data.length === 0) {
-                        // Intento fallback: Si no hay API específica de reserva, mostramos los inscritos generales si existen
-                        lista.innerHTML = '<p style="text-align:center; color:#888; padding:1rem;">No se pudo cargar la lista detallada.<br><small>Total inscritos: <?= $cant_inscritos ?></small></p>';
-                        return;
-                    }
+            try {
+                const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
+                const data = await res.json();
+                
+                if (!Array.isArray(data) || data.length === 0) {
+                    lista.innerHTML = '<p style="text-align:center; color:var(--text-light);">Sin inscritos aún</p>';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach(p => {
+                    const esYo = p.id_socio === SOCIO_ID;
+                    const puedeBajar = ES_RESPONSABLE && !esYo;
                     
-                    let html = '';
-                    data.forEach(p => {
-                        // Asumiendo estructura de get_inscritos_torneo
-                        const nombre = p.nombre_pareja || (p.jugador1 + ' & ' + p.jugador2);
-                        html += `<div class="inscrito-item"><span>${nombre}</span></div>`;
-                    });
-                    lista.innerHTML = html || '<p style="text-align:center;">Sin detalles disponibles.</p>';
-                })
-                .catch(err => {
-                    console.error(err);
-                    lista.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
+                    html += `<div class="inscrito-item">
+                        <span class="inscrito-name">${esYo ? '👤 Tú' : p.nombre}</span>
+                        <span class="inscrito-status">${p.estado}</span>
+                        ${puedeBajar ? `<button class="btn-bajar" onclick="bajarJugador(${p.id_socio}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}')">Bajar</button>` : ''}
+                    </div>`;
                 });
+                lista.innerHTML = html;
+                
+            } catch (e) {
+                console.error(e);
+                lista.innerHTML = '<p style="text-align:center; color:#C62828;">Error al cargar</p>';
+            }
         }
-        function cerrarModalInscritos(e) { if(e.target.id === 'modalInscritos') e.target.style.display = 'none'; }
-
-        // === COMPARTIR ===
-        function compartirReserva(id) {
-            navigator.clipboard.writeText(window.location.origin + '/pages/detalle_reserva.php?id=' + id)
-            .then(() => alert('✅ Enlace copiado'));
+        
+        // === BAJAR JUGADOR (SOLO RESPONSABLES) ===
+        async function bajarJugador(idSocioBajar, idReserva, nombre) {
+            if (!confirm(`¿Bajar a "${nombre}" de este partido?`)) return;
+            
+            try {
+                const res = await fetch('../api/bajar_jugador_reserva.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        id_reserva: idReserva, 
+                        id_socio_a_bajar: idSocioBajar,
+                        id_responsable: SOCIO_ID 
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast(`✅ ${nombre} ha sido bajado`);
+                    verInscritos(idReserva); // Recargar lista
+                } else {
+                    showToast('❌ ' + (data.message || 'Error'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ Error de conexión', 'error');
+            }
+        }
+        
+        // === CERRAR MODAL ===
+        function cerrarModal(e) {
+            if(e.target.id === 'modalInscritos' || e.target.classList.contains('modal-close')) {
+                document.getElementById('modalInscritos').style.display = 'none';
+            }
         }
     </script>
 </body>

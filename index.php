@@ -432,7 +432,7 @@ $_SESSION['visited_index'] = true;
 <!-- HERO -->
 <main class="hero">
   <h1 class="hero-title">El HUB Deportivo !!</h1>
-  <p class="hero-subtitle">La plataforma más completa para jugadores que buscan horas, clubes que se coordinan y recintos que gestionan. Todo en CanchaSport. Comunidad deportiva, 360°.</p>
+  <p class="hero-subtitle">La plataforma más completa para jugadores que reservan horas, clubes que se coordinan y recintos que gestionan. Todo en CanchaSport. Comunidad deportiva, 360°.</p>
   
   <!-- Sport Badges -->
   <div class="sport-badges">
@@ -505,8 +505,8 @@ $_SESSION['visited_index'] = true;
             <img src="assets/img/mundosport.jpeg" alt="Torneos">  <!-- ✅ .jpeg -->
             <div style="position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:2rem;">
                 <div>
-                    <h4 style="font-size:1.3rem; color: white; margin-bottom:0.5rem;">Próximamente</h4>
-                    <h3 style="font-size:0.95rem; color: white; opacity:0.9; margin-bottom:1rem;">MundoSport</h3>
+                    <h4 style="font-size:1.3rem; color: white; margin-bottom:0.5rem;">MundoSport</h4>
+                    <h3 style="font-size:0.95rem; color: white; opacity:0.9; margin-bottom:1rem;">Próximamente</h3>
                     <span style="display:inline-block; padding:0.3rem 0.8rem; background:rgba(235, 224, 224, 0.93); border-radius:12px; font-size:0.75rem; font-weight:500; border:2px solid rgba(238, 220, 220, 0.96);">
                         🔜 Nuevo Convenio
                     </span>

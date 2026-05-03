@@ -11,7 +11,7 @@ if (isset($_SESSION['id_socio'])) {
         exit;
     }
     if (!empty($_SESSION['current_club'])) {
-        header('Location: dashboard_socio.php?id_club=' . $_SESSION['current_club']);
+        header('Location: home_socio.php?id_club=' . $_SESSION['current_club']);
         exit;
     }
     header('Location: ../index.php');
