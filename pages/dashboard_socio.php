@@ -705,6 +705,18 @@ $js_vars = [
             opacity: 0.5;
             cursor: not-allowed;
         }
+        #selectorClubes {
+            pointer-events: auto !important;
+            z-index: 9999 !important;
+        }
+        .club-item {
+            pointer-events: auto !important;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        .club-item:hover {
+            background: #F1F5F9 !important;
+        }
     </style>
 </head>
 <body>
@@ -868,56 +880,57 @@ function toggleHeaderMenu(e) {
 // === ABRIR SELECTOR DE CLUBES (genera slug en JS, igual que tu HTML antiguo) ===
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
-    console.log('🔍 [1] abrirSelectorClubes iniciado');
-    
+    console.log('🔍 abrirSelectorClubes iniciado');
+
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
-    
-    if (!selector || !lista) {
-        console.error('❌ Faltan elementos DOM');
-        return;
-    }
-    
+
+    if (!selector || !lista) return;
+
+    // Forzar visibilidad y clickability
     selector.style.display = 'block';
+    selector.style.pointerEvents = 'auto';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
-    
+
     try {
         const res = await fetch(`../api/get_clubs_socio.php?id_socio=${window.SOCIO_ID}`);
         const clubs = await res.json();
-        console.log('🟢 [2] Clubs recibidos:', clubs);
-        
+        console.log('🟢 Clubs recibidos:', clubs);
+
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
             return;
         }
-        
-        // ✅ Renderizar SIN onclick inline
+
         let html = '';
-        clubs.forEach((c, index) => {
+        clubs.forEach(c => {
             const esActual = c.slug === (window.CLUB_ACTUAL || '');
-            // Usamos data-attributes para guardar el slug, y un ID único para el listener
-            html += `<div id="club-item-${index}" data-slug="${c.slug}" 
-                 style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'};">
+            // Clase .club-item para delegación + estilos seguros
+            html += `<div class="club-item" data-slug="${c.slug}" style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${esActual ? '#E8F5E9' : 'white'}; border-bottom:1px solid #f0f0f0; font-weight:${esActual?'600':'400'}; position:relative; z-index:10;">
                 <span>${c.club_nombre}</span>
                 ${esActual ? '<span style="font-size:0.75rem; color:#2E7D32; background:#C8E6C9; padding:2px 8px; border-radius:10px;">Actual</span>' : ''}
             </div>`;
         });
         lista.innerHTML = html;
-        console.log('🟢 [3] HTML renderizado');
-        
-        // ✅ ASIGNAR EVENTOS CON addEventListener (robusto y sin problemas de comillas)
-        clubs.forEach((c, index) => {
-            const item = document.getElementById(`club-item-${index}`);
+        console.log('✅ HTML renderizado. Items:', lista.querySelectorAll('.club-item').length);
+
+        // 🎯 EVENT DELEGATION: Un solo listener en el contenedor
+        lista.addEventListener('click', function(event) {
+            const item = event.target.closest('.club-item');
             if (item) {
-                item.addEventListener('click', () => {
-                    console.log('🎯 [4] Click detectado en club:', c.club_nombre, '| slug:', c.slug);
-                    cambiarClub(c.slug); // Llamada directa a función global
-                });
+                const slug = item.dataset.slug;
+                console.log('🖱️ CLICK DETECTADO → Slug:', slug);
+                console.log('🔍 typeof cambiarClub:', typeof window.cambiarClub);
+                
+                if (typeof window.cambiarClub === 'function') {
+                    window.cambiarClub(slug);
+                } else {
+                    console.error('❌ cambiarClub no está definida en window');
+                }
             }
         });
-        console.log('✅ [5] Event listeners asignados');
-        
+
     } catch (err) {
         console.error('❌ Error crítico:', err);
         lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
