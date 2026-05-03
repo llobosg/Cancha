@@ -744,6 +744,13 @@ $js_vars = [
             <a href="mi_perfil.php" class="avatar">
                 <?= strtoupper(substr($nombre_mostrar,0,1)) ?>
             </a>
+
+             <!-- BOTÓN DE TEST (borrar después) -->
+            <div style="position:fixed; bottom:20px; left:20px; z-index:9999;">
+                <button onclick="window.cambiarClub('35a04180')" style="background:#EF5350; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">
+                    🧪 TEST: Cambiar a Teteras
+                </button>
+            </div>
         </div>
     </header>
     <!-- ✅ SELECTOR DE CLUBES (DEBE ESTAR AQUÍ, NO DENTRO DEL HEADER) -->
