@@ -578,14 +578,12 @@ $js_vars = [
             .fab { width: 54px; height: 54px; font-size: 1.8rem; bottom: 22px; right: 22px; }
         }
         /* Selector de clubs - submenú */
+        /* Forzar visibilidad del selector */
         #selectorClubes {
-            position: absolute;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-            z-index: 102;
-            border: 1px solid #eee;
-            animation: slideDown 0.2s ease;
+            display: none !important; /* JS lo cambiará a block */
+            position: absolute !important;
+            z-index: 9999 !important;
+            background: white !important;
         }
 
         @keyframes slideDown {
@@ -593,6 +591,11 @@ $js_vars = [
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Asegurar que el contenedor padre no lo recorte */
+        body, .app-header, .container {
+            overflow: visible !important;
+        }
+        
         /* Item de club en lista */
         #listaClubes > div {
             border-bottom: 1px solid #f5f5f5;
@@ -718,7 +721,7 @@ console.log('✅ dashboard_socio.php cargado | SOCIO_ID:', SOCIO_ID, 'ES_MULTICL
         <div class="header-actions">
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
             <div id="headerMenu" class="menu-dropdown">
-                <a href="mi_perfil.php" class="menu-item">👤 Mi perfil</a>
+                <a href="mantenedor_socios.php" class="menu-item">👤 Mi perfil</a>
                 
                 <!-- ✅ Usar $es_multiclub calculado en PHP -->
                 <?php if ($es_multiclub): ?>
@@ -732,11 +735,14 @@ console.log('✅ dashboard_socio.php cargado | SOCIO_ID:', SOCIO_ID, 'ES_MULTICL
             </a>
         </div>
     </header>
-
-    <!-- ✅ CONTENEDOR SELECTOR (fuera del header) -->
-    <div id="selectorClubes" class="menu-dropdown" style="display:none; position:absolute; top:100%; right:0; min-width:220px; max-height:300px; overflow-y:auto; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); z-index:102; border:1px solid #eee; margin-top:4px;">
-        <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666;">Selecciona un club:</div>
-        <div id="listaClubes"><div style="padding:0.8rem; text-align:center; color:#888;">Cargando clubs...</div></div>
+    <!-- ✅ SELECTOR DE CLUBES (DEBE ESTAR AQUÍ, NO DENTRO DEL HEADER) -->
+    <div id="selectorClubes" class="menu-dropdown" style="display:none; position:absolute; top:60px; right:1rem; min-width:240px; max-height:300px; overflow-y:auto; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.25); z-index:2000; border:1px solid #eee;">
+        <div style="padding:0.6rem 0.8rem; border-bottom:1px solid #f0f0f0; font-weight:600; font-size:0.85rem; color:#666; background:#f9f9f9; border-radius:12px 12px 0 0;">
+            Selecciona un club:
+        </div>
+        <div id="listaClubes">
+            <div style="padding:1rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>
+        </div>
     </div>
 
     <div class="container">
@@ -876,36 +882,46 @@ function toggleHeaderMenu(e) {
 
 async function abrirSelectorClubes(e) {
     e.stopPropagation();
-    console.log('🔍 abrirSelectorClubes | SOCIO_ID:', typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 'NO DEFINIDO');
+    console.log(' [PASO 1] abrirSelectorClubes iniciado | SOCIO_ID:', SOCIO_ID);
     
     const selector = document.getElementById('selectorClubes');
     const lista = document.getElementById('listaClubes');
+    console.log('🟢 [PASO 2] Elementos DOM encontrados:', { selector: !!selector, lista: !!lista });
     
     if (!selector || !lista) {
-        console.error('❌ Faltan elementos #selectorClubes o #listaClubes');
-        showToast('❌ Error de interfaz', 'error');
+        console.error('❌ Faltan #selectorClubes o #listaClubes en el HTML');
+        showToast('❌ Error de interfaz: revisa consola', 'error');
         return;
     }
     
+    // Mostrar menú
     selector.style.display = 'block';
     selector.classList.add('active');
     lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">🔄 Cargando clubs...</div>';
+    console.log('🟢 [PASO 3] Menú visible y cargando...');
     
     try {
-        const socioId = typeof SOCIO_ID !== 'undefined' ? SOCIO_ID : 0;
-        if (!socioId) throw new Error('SOCIO_ID no definido');
+        const url = `../api/get_clubs_socio.php?id_socio=${SOCIO_ID}`;
+        console.log('🟢 [PASO 4] Fetching:', url);
         
-        const res = await fetch(`../api/get_clubs_socio.php?id_socio=${socioId}`);
-        const clubs = await res.json();
+        const res = await fetch(url);
+        console.log('🟢 [PASO 5] Response status:', res.status, 'ok:', res.ok);
+        
+        const text = await res.text();
+        console.log('🟢 [PASO 6] Raw response:', text.substring(0, 100));
+        
+        const clubs = JSON.parse(text);
+        console.log('🟢 [PASO 7] Clubs parseados:', clubs);
         
         if (!Array.isArray(clubs) || clubs.length === 0) {
             lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#888;">Sin clubs disponibles</div>';
+            console.log('⚠️ [PASO 8] Array vacío o no válido');
             return;
         }
         
         let html = '';
         clubs.forEach(club => {
-            const esActual = club.slug === (typeof CLUB_ACTUAL !== 'undefined' ? CLUB_ACTUAL : '');
+            const esActual = club.slug === (CLUB_ACTUAL || '');
             html += `<div onclick="cambiarClub('${club.slug}')" 
                  style="padding:0.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; ${esActual ? 'background:#E8F5E9; font-weight:600;' : ''}"
                  onmouseover="this.style.background='${esActual ? '#C8E6C9' : '#F7FAFC'}'"
@@ -915,9 +931,11 @@ async function abrirSelectorClubes(e) {
             </div>`;
         });
         lista.innerHTML = html;
+        console.log('✅ [PASO FINAL] Clubs renderizados correctamente');
+        
     } catch (err) {
-        console.error('❌ Error cargando clubs:', err);
-        lista.innerHTML = '<div style="padding:0.8rem; text-align:center; color:#C62828;">Error al cargar</div>';
+        console.error('❌ [ERROR CRÍTICO] en abrirSelectorClubes:', err);
+        lista.innerHTML = `<div style="padding:0.8rem; text-align:center; color:#C62828;">Error: ${err.message}</div>`;
         showToast('❌ Error al cargar clubs', 'error');
     }
 }
@@ -1110,36 +1128,36 @@ document.addEventListener('click', (e) => {
 console.log('✅ dashboard_socio.js cargado');
 
 // === PAGAR CUOTA ===
-            function pagarCuota(idCuota) {
-                window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
-            }
+function pagarCuota(idCuota) {
+    window.location.href = 'pagar_cuota.php?id_cuota=' + idCuota;
+}
 
-            // === REVISAR/VALIDAR PAGO ===
-            function revisarPago(idCuota) {
-                fetch('../api/revisar_pago.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-                    else { mostrarToast('❌ ' + data.message, 'error'); }
-                });
-            }
+// === REVISAR/VALIDAR PAGO ===
+function revisarPago(idCuota) {
+    fetch('../api/revisar_pago.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_cuota: idCuota})
+    )
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { mostrarToast('✅ Cuota en revisión', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+        else { mostrarToast('❌ ' + data.message, 'error'); }
+    });
+}
 
-            function validarPago(idCuota) {
-                fetch('../api/validar_pago.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: new URLSearchParams({id_cuota: idCuota})
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
-                    else { mostrarToast('❌ ' + data.message, 'error'); }
-                });
-            }
+function validarPago(idCuota) {
+    fetch('../api/validar_pago.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id_cuota: idCuota})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { mostrarToast('✅ Pago validado', 'exito'); setTimeout(() => cargarTabla('cuotas'), 1000); }
+        else { mostrarToast('❌ ' + data.message, 'error'); }
+    });
+}
 </script>
 </body>
 </html>
