@@ -436,12 +436,12 @@ $_SESSION['visited_index'] = true;
   
   <!-- Sport Badges -->
   <div class="sport-badges">
-      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.futbol}</span>Fútbol</span>
-      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.futbol}</span>Fútbolito</span>
-      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.padel}</span>Pádel</span>
-      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.voley}</span>Vóley</span>
-      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.tenis}</span>Tenis</span>
-      <span class="sport-badge"><span class="icon">${ICONOS_DEPORTE.tenis}</span>Clases</span>
+    <span class="sport-badge"><span class="icon">⚽</span>Fútbol</span>
+    <span class="sport-badge"><span class="icon">⚽</span>Fútbolito</span>
+    <span class="sport-badge"><span class="icon">🎾</span>Pádel</span>
+    <span class="sport-badge"><span class="icon">🏐</span>Vóley</span>
+    <span class="sport-badge"><span class="icon">🎾</span>Tenis</span>
+    <span class="sport-badge"><span class="icon">🎾</span>Clases</span>
   </div>
 
   <!-- Carousel Simplificado -->
