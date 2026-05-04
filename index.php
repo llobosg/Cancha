@@ -574,7 +574,6 @@ $_SESSION['visited_index'] = true;
         <button class="modal-close" onclick="cerrarLoginModal(event)">&times;</button>
         
         <div style="text-align:center; margin-bottom:1.5rem;">
-            <div style="font-size:2.5rem; margin-bottom:0.5rem;">🏟️</div>
             <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-dark);">Ingresar a CanchaSport</h2>
             <p style="font-size:0.85rem; color:var(--text-light); margin-top:0.3rem;">
                 Usa tu email o nombre de usuario
@@ -601,7 +600,7 @@ $_SESSION['visited_index'] = true;
                     style="width:100%; padding:0.85rem 1rem; border-radius:12px; border:2px solid #E2E8F0; font-size:1rem;"
                 >
                 <small style="display:block; margin-top:0.3rem; font-size:0.75rem; color:var(--text-light);">
-                    💡 Ingresa tu email (si eres socio) o usuario (si eres centro deportivo)
+                    💡 email socio o usuario centro deportivo
                 </small>
             </div>
             
@@ -643,7 +642,7 @@ $_SESSION['visited_index'] = true;
                     <span style="font-size:1.2rem;">⚽</span>
                     <span><strong>Club de Amigos</strong><br><small style="color:var(--text-light); font-weight:400;">Para equipos</small></span>
                 </a>
-                <a href="pages/registro_centro_contacto.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                <a onclick="modalCentroDeportivo" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
                     <span style="font-size:1.2rem;">🏟️</span>
                     <span><strong>Centro Deportivo</strong><br><small style="color:var(--text-light); font-weight:400;">Para administradores</small></span>
                 </a>
