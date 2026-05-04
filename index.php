@@ -990,8 +990,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
             
             <!-- Logo/Icono -->
-            <div style="font-size:3rem; margin-bottom:1rem;">🏟️</div>
-            
             <h3 style="font-size:1.5rem; font-weight:700; margin-bottom:0.5rem;">Bienvenida a CanchaSport</h3>
             <p style="font-size:0.9rem; opacity:0.9; margin-bottom:1.5rem;">¿Interesado en crear tu recinto deportivo?</p>
             

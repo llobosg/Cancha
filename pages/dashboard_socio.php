@@ -123,7 +123,7 @@ if (!$modo_individual && $club_id) {
     $_SESSION['current_club'] = $club_slug;
 }
 
-// === 7. PRÓXIMO PARTIDO - LÓGICA COMPLETA DE TU RESPALDO ===
+// === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA ===
 $proximo_evento = null;
 $ya_inscrito = false;
 $cupos_llenos = false;
@@ -133,22 +133,20 @@ $hora_formateada = '';
 $nombre_deporte = '';
 $inscritos_actuales = 0;
 $jugadores_esperados = 0;
+$lunes_semana_evento = null;
 
 try {
-    // Consulta para próximo evento (misma lógica que tu respaldo)
     $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
     $params = [];
 
     if (!$modo_individual && $club_id) {
-        $where_parts[] = "(
-            (r.id_club = ? AND r.id_socio = ?) 
-            OR 
-            (r.id_club = ? AND r.id_socio IS NULL)
-        )";
-        $params = [$club_id, $id_socio, $club_id];
+        // ✅ CORREGIDO: Mostrar próxima reserva del club, sin importar quién la creó
+        $where_parts[] = "r.id_club = ?";
+        $params[] = $club_id;
     } else {
+        // MODO INDIVIDUAL: Mostrar solo reservas personales del socio
         $where_parts[] = "r.id_club IS NULL AND r.id_socio = ?";
-        $params = [$id_socio];
+        $params[] = $id_socio;
     }
 
     $sql = "
@@ -169,7 +167,6 @@ try {
     $proximo_evento = $stmt->fetch();
 
     if ($proximo_evento) {
-        // === VARIABLES Y LÓGICA DE TU RESPALDO ===
         $id_reserva = $proximo_evento['id_reserva'];
         $monto_total = (float)$proximo_evento['monto_total'];
         $valor_mes = (float)($proximo_evento['valor_mes'] ?? 0);
@@ -197,7 +194,7 @@ try {
         ];
         $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
         
-        // Verificar si ya está inscrito
+        // Verificar si el socio actual ya está inscrito en esta reserva
         $stmt_check = $pdo->prepare("
             SELECT 1 FROM inscritos 
             WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'
