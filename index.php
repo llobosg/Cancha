@@ -409,6 +409,24 @@ $_SESSION['visited_index'] = true;
     #modalCentroDeportivo .modal-card > div:first-child {
         border-radius: 24px;
     }
+
+    /* Animación suave para opciones de registro */
+    .registro-collapse {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+
+    .registro-collapse.show {
+        max-height: 500px;
+        transition: max-height 0.5s ease-in;
+    }
+
+    /* Ajuste para modal centro deportivo */
+    #modalCentroDeportivo .modal-card {
+        background: transparent !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+    }
   </style>
 </head>
 <body>
@@ -574,7 +592,7 @@ $_SESSION['visited_index'] = true;
         <button class="modal-close" onclick="cerrarLoginModal(event)">&times;</button>
         
         <div style="text-align:center; margin-bottom:1.5rem;">
-            <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-dark);">Ingresar a CanchaSport</h2>
+            <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-dark);">Login CanchaSport</h2>
             <p style="font-size:0.85rem; color:var(--text-light); margin-top:0.3rem;">
                 Usa tu email o nombre de usuario
             </p>
@@ -629,20 +647,28 @@ $_SESSION['visited_index'] = true;
             </a>
         </div>
         
-        <div style="border-top:1px solid #E2E8F0; margin-top:1.5rem; padding-top:1rem; text-align:center;">
-            <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem;">
-                ¿Aún no tienes cuenta?
+        <!-- Toggle para mostrar/ocultar opciones de registro -->
+        <div style="text-align:center; margin-top:1rem; font-size:0.85rem; color:var(--text-light);">
+            <a href="#" id="toggleRegistro" onclick="toggleRegistroOptions(event)" style="color:var(--primary-end); text-decoration:none; font-weight:500;">
+                ¿Aún no tienes cuenta? <span id="registroArrow">▼</span>
+            </a>
+        </div>
+
+        <!-- Opciones de registro (colapsables) -->
+        <div id="registroOptions" style="display:none; border-top:1px solid #E2E8F0; margin-top:1rem; padding-top:1rem; overflow:hidden; transition:max-height 0.3s ease;" class="registro-collapse">
+            <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem; text-align:center;">
+                Selecciona tu tipo de registro:
             </p>
             <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                <a href="pages/registro_socio.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                <a href="pages/registro_socio.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:all 0.2s;" onmouseover="this.style.background='#EDF2F7'; this.style.transform='translateX(4px)'" onmouseout="this.style.background='#F7FAFC'; this.style.transform='translateX(0)'">
                     <span style="font-size:1.2rem;">🎾</span>
                     <span><strong>Socio Individual</strong><br><small style="color:var(--text-light); font-weight:400;">Para jugadores</small></span>
                 </a>
-                <a href="pages/registro_club.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                <a href="pages/registro_club.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:all 0.2s;" onmouseover="this.style.background='#EDF2F7'; this.style.transform='translateX(4px)'" onmouseout="this.style.background='#F7FAFC'; this.style.transform='translateX(0)'">
                     <span style="font-size:1.2rem;">⚽</span>
                     <span><strong>Club de Amigos</strong><br><small style="color:var(--text-light); font-weight:400;">Para equipos</small></span>
                 </a>
-                <a onclick="modalCentroDeportivo" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                <a href="javascript:void(0)" onclick="abrirModalCentro(event)" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:all 0.2s; cursor:pointer;" onmouseover="this.style.background='#EDF2F7'; this.style.transform='translateX(4px)'" onmouseout="this.style.background='#F7FAFC'; this.style.transform='translateX(0)'">
                     <span style="font-size:1.2rem;">🏟️</span>
                     <span><strong>Centro Deportivo</strong><br><small style="color:var(--text-light); font-weight:400;">Para administradores</small></span>
                 </a>
@@ -780,6 +806,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }).observe(modal, {attributes:true, attributeFilter:['style']});
   }
 });
+
+// === MODAL CENTRO DEPORTIVO ===
+// === TOGGLE OPCIONES DE REGISTRO ===
+function toggleRegistroOptions(e) {
+    e.preventDefault();
+    const options = document.getElementById('registroOptions');
+    const arrow = document.getElementById('registroArrow');
+    
+    if (options.style.display === 'none' || options.style.display === '') {
+        // Mostrar
+        options.style.display = 'block';
+        arrow.textContent = '▲';
+        
+        // Animación suave
+        options.style.maxHeight = '0';
+        setTimeout(() => {
+            options.style.maxHeight = options.scrollHeight + 'px';
+        }, 10);
+    } else {
+        // Ocultar
+        options.style.maxHeight = '0';
+        setTimeout(() => {
+            options.style.display = 'none';
+        }, 300);
+        arrow.textContent = '▼';
+    }
+}
+
 // === MODAL CENTRO DEPORTIVO ===
 function abrirModalCentro(e) {
     if (e) e.preventDefault();
@@ -800,12 +854,17 @@ function cerrarModalCentro(e) {
     }
 }
 
-// Cerrar modal con tecla ESC
+// Cerrar modal centro con tecla ESC
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const modalCentro = document.getElementById('modalCentroDeportivo');
         if (modalCentro && modalCentro.style.display === 'flex') {
             cerrarModalCentro({target: modalCentro});
+        }
+        
+        const loginModal = document.getElementById('loginModal');
+        if (loginModal && loginModal.style.display === 'flex') {
+            cerrarLoginModal({target: loginModal});
         }
     }
 });
