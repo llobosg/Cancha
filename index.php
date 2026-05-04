@@ -433,7 +433,7 @@ $_SESSION['visited_index'] = true;
     <span class="brand-name">CanchaSport</span>
   </a>
   <div class="header-actions">
-    <button class="btn-header primary" onclick="openModal('login')">Ingresar</button>
+    <button class="btn-header primary" onclick="abrirLoginModal()">Ingresar</button>
   </div>
 </header>
 
@@ -568,65 +568,88 @@ $_SESSION['visited_index'] = true;
   </div>
 </section>
 
-<!-- === MODAL UNIFICADO === -->
-<div id="authModal" class="modal-backdrop" onclick="closeModal(event)">
-  <div class="modal-card">
-    <button class="modal-close" onclick="forceCloseModal()">&times;</button>
-    
-    <div class="modal-tabs">
-      <div class="modal-tab active" data-tab="login" onclick="switchTab('login')">🔐 Ingresar</div>
-      <div class="modal-tab" data-tab="register" onclick="switchTab('register')">✍️ Registrarse</div>
-    </div>
-
-    <!-- Login Form -->
-    <form id="loginForm" class="modal-form active" method="POST">
-      <?php if($error_login): ?>
-        <div style="background:#FEE2E2; color:#991B1B; padding:0.75rem; border-radius:10px; font-size:0.85rem; text-align:center;">
-          <?= htmlspecialchars($error_login) ?>
+<!-- === MODAL LOGIN UNIFICADO === -->
+<div id="loginModal" class="modal-backdrop" onclick="cerrarLoginModal(event)" style="display:none;">
+    <div class="modal-card" style="max-width:420px;">
+        <button class="modal-close" onclick="cerrarLoginModal(event)">&times;</button>
+        
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <div style="font-size:2.5rem; margin-bottom:0.5rem;">🏟️</div>
+            <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-dark);">Ingresar a CanchaSport</h2>
+            <p style="font-size:0.85rem; color:var(--text-light); margin-top:0.3rem;">
+                Usa tu email o nombre de usuario
+            </p>
         </div>
-      <?php endif; ?>
-      
-      <div class="form-group">
-        <label for="email_alt">Email</label>
-        <input type="email" id="email_alt" name="email_alt" required placeholder="tu@email.com">
-      </div>
-      <div class="form-group">
-        <label for="password_alt">Contraseña</label>
-        <input type="password" id="password_alt" name="password_alt" required placeholder="••••••••">
-      </div>
-      <button type="submit" name="login_alternativo" class="btn-modal">Iniciar Sesión</button>
-      <div class="modal-footer">
-        <a href="#" onclick="showToast('🔜 Recuperación de contraseña próximamente'); return false;">¿Olvidaste tu contraseña?</a>
-      </div>
-    </form>
-
-    <!-- Register Options -->
-    <div id="registerForm" class="modal-form">
-      <div style="display:flex; flex-direction:column; gap:0.75rem;">
-        <a href="../pages/registro_socio.php" style="display:flex; align-items:center; gap:0.75rem; padding:0.9rem; border-radius:14px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-weight:500; transition:all 0.2s;">
-          <span style="font-size:1.3rem;">🎾</span>
-          <div>
-            <div style="font-weight:600;">Socio Individual</div>
-            <div style="font-size:0.8rem; color:var(--text-light);">Para jugadores que no pertenecen a un club</div>
-          </div>
-        </a>
-        <a href="../pages/registro_club.php" style="display:flex; align-items:center; gap:0.75rem; padding:0.9rem; border-radius:14px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-weight:500; transition:all 0.2s;">
-          <span style="font-size:1.3rem;">⚽</span>
-          <div>
-            <div style="font-weight:600;">Club de Amigos</div>
-            <div style="font-size:0.8rem; color:var(--text-light);">Para equipos que quieren organizarse</div>
-          </div>
-        </a>
-        <a href="javascript:void(0)" onclick="abrirModalCentro(event)" style="display:flex; align-items:center; gap:0.75rem; padding:0.9rem; border-radius:14px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-weight:500; transition:all 0.2s;">
-            <span style="font-size:1.3rem;">🏟️</span>
-            <div>
-                <div style="font-weight:600;">Centro Deportivo</div>
-                <div style="font-size:0.8rem; color:var(--text-light);">Para administradores de recintos</div>
+        
+        <?php if(isset($error_login) && $error_login): ?>
+        <div style="background:#FEE2E2; color:#991B1B; padding:0.75rem; border-radius:10px; margin-bottom:1rem; font-size:0.85rem; text-align:center;">
+            <?= htmlspecialchars($error_login) ?>
+        </div>
+        <?php endif; ?>
+        
+        <form id="loginUnificadoForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="credencial" style="display:block; font-weight:500; margin-bottom:0.4rem; color:var(--text-dark);">
+                    Email o Usuario *
+                </label>
+                <input 
+                    type="text" 
+                    id="credencial" 
+                    name="credencial" 
+                    required 
+                    placeholder="Ej: juan@email.com o juan123"
+                    style="width:100%; padding:0.85rem 1rem; border-radius:12px; border:2px solid #E2E8F0; font-size:1rem;"
+                >
+                <small style="display:block; margin-top:0.3rem; font-size:0.75rem; color:var(--text-light);">
+                    💡 Ingresa tu email (si eres socio) o usuario (si eres centro deportivo)
+                </small>
             </div>
-        </a>
-      </div>
+            
+            <div class="form-group">
+                <label for="password" style="display:block; font-weight:500; margin-bottom:0.4rem; color:var(--text-dark);">
+                    Contraseña *
+                </label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    placeholder="••••••••"
+                    style="width:100%; padding:0.85rem 1rem; border-radius:12px; border:2px solid #E2E8F0; font-size:1rem;"
+                >
+            </div>
+            
+            <button type="submit" class="btn-modal" style="width:100%; padding:0.9rem; border-radius:14px; background:linear-gradient(135deg, var(--primary-start), var(--primary-end)); color:white; border:none; font-weight:600; font-size:1rem; cursor:pointer;">
+                Ingresar
+            </button>
+        </form>
+        
+        <div style="text-align:center; margin-top:1rem; font-size:0.85rem; color:var(--text-light);">
+            <a href="#" onclick="showToast('🔜 Recuperación de contraseña próximamente'); return false;" style="color:var(--primary-end); text-decoration:none;">
+                ¿Olvidaste tu contraseña?
+            </a>
+        </div>
+        
+        <div style="border-top:1px solid #E2E8F0; margin-top:1.5rem; padding-top:1rem; text-align:center;">
+            <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem;">
+                ¿Aún no tienes cuenta?
+            </p>
+            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                <a href="pages/registro_socio.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                    <span style="font-size:1.2rem;">🎾</span>
+                    <span><strong>Socio Individual</strong><br><small style="color:var(--text-light); font-weight:400;">Para jugadores</small></span>
+                </a>
+                <a href="pages/registro_club.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                    <span style="font-size:1.2rem;">⚽</span>
+                    <span><strong>Club de Amigos</strong><br><small style="color:var(--text-light); font-weight:400;">Para equipos</small></span>
+                </a>
+                <a href="pages/registro_centro_contacto.php" style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem; border-radius:10px; background:#F7FAFC; text-decoration:none; color:var(--text-dark); font-size:0.85rem; transition:background 0.2s;" onmouseover="this.style.background='#EDF2F7'">
+                    <span style="font-size:1.2rem;">🏟️</span>
+                    <span><strong>Centro Deportivo</strong><br><small style="color:var(--text-light); font-weight:400;">Para administradores</small></span>
+                </a>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <!-- TOAST -->
@@ -785,6 +808,114 @@ document.addEventListener('keydown', function(e) {
         if (modalCentro && modalCentro.style.display === 'flex') {
             cerrarModalCentro({target: modalCentro});
         }
+    }
+});
+
+// === LOGIN UNIFICADO ===
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const credencial = document.getElementById('credencial').value.trim();
+    const password = document.getElementById('password').value;
+    
+    // Validación básica
+    if (!credencial || !password) {
+        showToast('❌ Ingresa credencial y contraseña', 'error');
+        return;
+    }
+    
+    // Mostrar loading
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '🔄 Verificando...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('api/login_unificado.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ credencial, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(`✅ Bienvenido! Redirigiendo...`, 'success');
+            
+            // Guardar preferencia de login
+            localStorage.setItem('cancha_last_login', data.tipo);
+            
+            // Redirigir después de 800ms
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 800);
+        } else {
+            showToast('❌ ' + data.message, 'error');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('❌ Error de conexión. Intenta nuevamente.', 'error');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// === MODAL LOGIN ===
+function abrirLoginModal() {
+    const lastLogin = localStorage.getItem('cancha_last_login');
+    const credencialInput = document.getElementById('credencial');
+    
+    if (lastLogin === 'recinto' && credencialInput) {
+        credencialInput.placeholder = 'Usuario (ej: admin)';
+        credencialInput.focus();
+    } else if (credencialInput) {
+        credencialInput.placeholder = 'Email o usuario';
+        credencialInput.focus();
+    }
+
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        document.getElementById('credencial').focus();
+    }
+}
+
+function cerrarLoginModal(e) {
+    if (e.target.id === 'loginModal' || e.target.classList.contains('modal-close')) {
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+// Cerrar con tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarLoginModal({target: document.getElementById('loginModal')});
+    }
+});
+
+// Detectar si es email o username en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const credencialInput = document.getElementById('credencial');
+    if (credencialInput) {
+        credencialInput.addEventListener('input', function(e) {
+            const val = e.target.value.trim();
+            const esEmail = val.includes('@');
+            
+            // Cambiar placeholder dinámicamente
+            if (esEmail) {
+                e.target.placeholder = 'tu@email.com';
+            } else {
+                e.target.placeholder = 'Ej: admin, juan, lucho';
+            }
+        });
     }
 });
 </script>
