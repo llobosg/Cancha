@@ -1307,19 +1307,13 @@ async function verInscritos(idReserva) {
                     <div style="font-weight:500; color:#2D3748;">
                         ${esYo ? '👤 <strong>Tú</strong>' : htmlspecialchars_js(p.nombre)}
                     </div>
-                    <div style="font-size:0.75rem; color:#666; margin-top:0.2rem;">
+                    <div style="font-size:0.75rem; color: #666; margin-top:0.2rem;">
                         ${p.equipo !== '-' ? `🎽 ${p.equipo}` : ''}
                         ${p.posicion !== '-' ? ` • 📍 ${p.posicion}` : ''}
                         ${p.lleva_cerveza ? ' • 🍺 Cerveza' : ''}
                     </div>
                 </div>
-                
-                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.3rem;">
-                    ${p.cuota_monto > 0 ? `
-                    <span style="font-size:0.75rem; color:${p.estado_cuota === 'pagado' ? '#2E7D32' : '#C62828'};">
-                        💰 $${Math.round(p.cuota_monto).toLocaleString()} • ${p.estado_cuota}
-                    </span>` : ''}
-                    
+                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.3rem;">                    
                     ${puedeBajar ? `
                     <button onclick="bajarInscrito(${p.id_inscrito}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}', ${esYo ? 1 : 0})" 
                             style="background:none; border:none; color:#C62828; font-size:0.75rem; font-weight:600; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px;">
