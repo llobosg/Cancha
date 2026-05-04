@@ -1588,10 +1588,8 @@ async function pagarCuota(idCuota) {
 }
 // === CERRAR SESIÓN ===
 function cerrarSesion() {
-    if (confirm('¿Seguro que deseas cerrar sesión?')) {
-        showToast('👋 Cerrando sesión...', 'info');
-        window.location.href = '../api/logout.php';
-    }
+    showToast('👋 Cerrando sesión...', 'info');
+    window.location.href = '../api/logout.php';
 }
 </script>
 </body>
