@@ -29,15 +29,18 @@ try {
                 throw new Exception('Nombre de empresa y descuento válido (0-100%) son requeridos');
             }
             
+           // === CREATE ===
             $stmt = $pdo->prepare("
                 INSERT INTO convenios (
                     id_recinto, nombre_empresa, contacto_nombre, contacto_email, 
-                    contacto_telefono, porc_dscto, vigente_desde, vigente_hasta, estado
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'activo')
+                    contacto_telefono, porc_dscto, vigente_desde, vigente_hasta, 
+                    estado, canchas_asignadas, horas_mensuales, valor_mensual
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'activo', ?, ?, ?)
             ");
             $stmt->execute([
                 $id_recinto, $nombre, $contacto, $email, $telefono, 
-                $porc_dscto, $vigente_desde ?: null, $vigente_hasta ?: null
+                $porc_dscto, $vigente_desde ?: null, $vigente_hasta ?: null,
+                $canchas_asignadas_json ?? null, $horas_mensuales ?? 20, $valor_mensual ?? null
             ]);
             
             echo json_encode(['success' => true, 'id_convenio' => $pdo->lastInsertId(), 'message' => 'Convenio creado']);
@@ -66,18 +69,15 @@ try {
                 throw new Exception('Nombre y descuento válido son requeridos');
             }
             
+            // === UPDATE ===
             $stmt = $pdo->prepare("
                 UPDATE convenios SET
                     nombre_empresa = ?, contacto_nombre = ?, contacto_email = ?,
                     contacto_telefono = ?, porc_dscto = ?, vigente_desde = ?,
-                    vigente_hasta = ?, estado = ?, updated_at = NOW()
+                    vigente_hasta = ?, estado = ?, canchas_asignadas = ?,
+                    horas_mensuales = ?, valor_mensual = ?, updated_at = NOW()
                 WHERE id_convenio = ? AND id_recinto = ?
             ");
-            $stmt->execute([
-                $nombre, $contacto, $email, $telefono, $porc_dscto,
-                $vigente_desde ?: null, $vigente_hasta ?: null, $estado,
-                $id_convenio, $id_recinto
-            ]);
             
             echo json_encode(['success' => true, 'message' => 'Convenio actualizado']);
             break;

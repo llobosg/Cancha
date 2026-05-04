@@ -285,16 +285,59 @@ function crearReservaManualUnificada($pdo, $data) {
         }
     }
     
-    // === 2. INSERTAR RESERVA CON DATOS DE CLIENTE ===
+    // === 1. CALCULAR MONTO CON DESCUENTO DE CONVENIO ===
+    $monto_base = $precio_hora * $horas; // o tu lógica de cálculo actual
+    $monto_final = $monto_base;
+    $id_convenio_aplicado = null;
+    $porc_dscto_aplicado = 0;
+    $monto_descuento = 0;
+
+    // Verificar si el socio tiene convenio activo
+    if ($id_socio) {
+        $stmt_conv = $pdo->prepare("
+            SELECT c.id_convenio, c.porc_dscto, c.nombre_empresa
+            FROM socios s
+            JOIN convenios c ON s.id_convenio = c.id_convenio
+            WHERE s.id_socio = ? 
+            AND c.estado = 'activo'  -- ✅ Usar 'estado' en lugar de 'activo'
+            AND (c.vigente_hasta IS NULL OR c.vigente_hasta >= CURDATE())
+            LIMIT 1
+        ");
+        $stmt_conv->execute([$id_socio]);
+        $conv = $stmt_conv->fetch();
+        
+        if ($conv && $conv['porc_dscto'] > 0) {
+            $id_convenio_aplicado = $conv['id_convenio'];
+            $porc_dscto_aplicado = $conv['porc_dscto'];
+            $monto_descuento = $monto_base * ($porc_dscto_aplicado / 100);
+            $monto_final = $monto_base - $monto_descuento;
+        }
+    }
+
+    // === 2. INSERTAR RESERVA CON TODOS LOS DATOS (CLIENTE + CONVENIO) ===
     $stmt = $pdo->prepare("
         INSERT INTO reservas (
-            id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente,
-            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+            id_cancha, id_socio, id_convenio,
+            nombre_cliente, email_cliente, telefono_cliente,
+            fecha, hora_inicio, hora_fin,
+            monto_base, monto_descuento, monto_total, porc_dscto_aplicado,
+            estado_pago, estado, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
     ");
     $stmt->execute([
-        $id_cancha, $id_socio, $nombre_cliente, $email_cliente, $telefono_cliente,
-        $fecha, $hora_inicio, $hora_fin, $monto_total
+        $id_cancha,
+        $id_socio,
+        $id_convenio_aplicado,
+        $nombre_cliente,
+        $email_cliente,
+        $telefono_cliente,
+        $fecha,
+        $hora_inicio,
+        $hora_fin,
+        $monto_base,
+        $monto_descuento,
+        $monto_final,
+        $porc_dscto_aplicado
     ]);
     $id_reserva = $pdo->lastInsertId();
     
