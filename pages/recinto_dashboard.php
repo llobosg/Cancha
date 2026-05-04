@@ -1175,6 +1175,41 @@ td.cell-reserva {
     opacity: 1;
     padding: 0.75rem;
 }
+/* Submodal sobre planilla */
+.submodal-overlay {
+    animation: fadeIn 0.2s ease;
+}
+.submodal-card {
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Botón + flotante */
+button[onclick="abrirModalConvenio()"]:hover {
+    box-shadow: 0 6px 16px rgba(76,175,80,0.6) !important;
+}
+
+/* Tabla responsive */
+@media (max-width: 768px) {
+    .submodal-card {
+        width: 98%;
+        max-height: 90vh;
+    }
+    table {
+        font-size: 0.8rem;
+    }
+    th, td {
+        padding: 0.6rem 0.4rem !important;
+    }
+}
 </style>
 </head>
 <body>
@@ -1224,9 +1259,9 @@ td.cell-reserva {
                 <span>➕</span> Crear Torneo
             </button>
             <!-- Botón para abrir modal convenios -->
-            <button onclick="abrirModalConvenio()" 
+            <button onclick="abrirSubmodalConvenios()" 
                     style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.2rem; border-radius:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; margin-bottom:1rem;">
-                <span>🤝</span> Gestionar Convenios
+                <span>🤝</span> Convenios
             </button>
         </div>
     </div>
@@ -1262,23 +1297,117 @@ td.cell-reserva {
         </div>
     </div>
 
-    <!-- === MANTENEDOR CONVENIOS === -->
-    <h3>🤝 Convenios Activos</h3>
-    <button onclick="abrirModalConvenio()" style="background:#4CAF50; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; margin-bottom:1rem;">+ Nuevo Convenio</button>
-    <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden;">
-        <thead><tr style="background:#f5f5f5;"><th>Empresa</th><th>Contacto</th><th>Descuento</th><th>Vigencia</th><th>Estado</th></tr></thead>
-        <tbody>
-            <?php foreach($convenios as $c): ?>
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:0.8rem;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
-                <td><?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?></td>
-                <td><strong style="color:#2E7D32;"><?= $c['porc_dscto'] ?>%</strong></td>
-                <td><?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?> → <?= $c['vigente_hasta'] ? date('d/m', strtotime($c['vigente_hasta'])) : 'Indefinido' ?></td>
-                <td><span style="background:<?= $c['estado']=='activo' ? '#E8F5E9' : '#FFEBEE' ?>; color:<?= $c['estado']=='activo' ? '#2E7D32' : '#C62828' ?>; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem;"><?= ucfirst($c['estado']) ?></span></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <!-- === SUBMODAL CONVENIOS (se superpone sobre la planilla) === -->
+    <div id="submodalConvenios" class="submodal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; display:flex; justify-content:center; align-items:center; padding:1rem;">
+        <div class="submodal-card" style="background:white; border-radius:20px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; display:flex; flex-direction:column;">
+            
+            <!-- Header del submodal -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #eee; background:linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 Mantenedor de Convenios</h3>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <!-- Botón + para crear nuevo convenio -->
+                    <button onclick="abrirModalConvenio()" title="Nuevo Convenio" 
+                            style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #4CAF50, #43A047); border:none; color:white; font-size:1.3rem; cursor:pointer; display:grid; place-items:center; box-shadow:0 4px 12px rgba(76,175,80,0.4); transition:transform 0.2s;"
+                            onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                        +
+                    </button>
+                    <!-- Botón X para cerrar submodal -->
+                    <button onclick="cerrarSubmodalConvenios()" title="Cerrar" 
+                            style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer; display:grid; place-items:center; transition:background 0.2s;"
+                            onmouseover="this.style.background='#CBD5E0'" onmouseout="this.style.background='#E2E8F0'">
+                        ×
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Contenido: Tabla de convenios -->
+            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem;">
+                <?php
+                // Cargar convenios del recinto actual (solo para este submodal)
+                $stmt_conv = $pdo->prepare("
+                    SELECT 
+                        c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, 
+                        c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado,
+                        COUNT(s.id_socio) as socios_vinculados
+                    FROM convenios c
+                    LEFT JOIN socios s ON c.id_convenio = s.id_convenio AND s.activo = 'Si'
+                    WHERE c.id_recinto = ? 
+                    GROUP BY c.id_convenio
+                    ORDER BY c.nombre_empresa ASC
+                ");
+                $stmt_conv->execute([$_SESSION['id_recinto']]);
+                $convenios_submodal = $stmt_conv->fetchAll();
+                ?>
+                
+                <?php if (empty($convenios_submodal)): ?>
+                    <div style="text-align:center; padding:3rem 1rem; color:#718096;">
+                        <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
+                        <p style="font-weight:500;">Aún no tienes convenios</p>
+                        <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
+                        <button onclick="abrirModalConvenio()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
+                            + Crear mi primer convenio
+                        </button>
+                    </div>
+                <?php else: ?>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead>
+                                <tr style="background:#F7FAFC; position:sticky; top:0;">
+                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600;">Empresa</th>
+                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600;">Contacto</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Descuento</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Socios</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Vigencia</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Estado</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($convenios_submodal as $c): ?>
+                                <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
+                                    <td style="padding:0.8rem; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
+                                    <td style="padding:0.8rem;">
+                                        <?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br>
+                                        <small style="color:#718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small>
+                                    </td>
+                                    <td style="padding:0.8rem; text-align:center;">
+                                        <span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;">
+                                            <?= $c['porc_dscto'] ?>%
+                                        </span>
+                                    </td>
+                                    <td style="padding:0.8rem; text-align:center; font-weight:500; color:#4A5568;">
+                                        <?= $c['socios_vinculados'] ?>
+                                    </td>
+                                    <td style="padding:0.8rem; text-align:center; font-size:0.85rem;">
+                                        <?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?>
+                                        <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small style="color:#A0AEC0">(∞)</small>' ?>
+                                    </td>
+                                    <td style="padding:0.8rem; text-align:center;">
+                                        <span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem; font-weight:500;">
+                                            <?= ucfirst($c['estado']) ?>
+                                        </span>
+                                    </td>
+                                    <td style="padding:0.8rem; text-align:center;">
+                                        <button onclick="abrirModalConvenio(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
+                                                style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
+                                                onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
+                                            ✏️ Editar
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Footer opcional -->
+            <div style="padding:0.75rem 1.5rem; border-top:1px solid #eee; background:#F8F9FA; text-align:right; font-size:0.85rem; color:#718096;">
+                💡 Tip: Vincula socios a un convenio desde el mantenedor de socios
+            </div>
+        </div>
+    </div>
 
     <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
@@ -4123,6 +4252,89 @@ document.addEventListener('keydown', function(e) {
         cerrarModalConvenio({target: document.getElementById('modalConvenio')});
     }
 });
+// === SUBMODAL CONVENIOS ===
+function abrirSubmodalConvenios() {
+    const submodal = document.getElementById('submodalConvenios');
+    if (submodal) {
+        submodal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Evitar scroll del fondo
+    }
+}
+
+function cerrarSubmodalConvenios() {
+    const submodal = document.getElementById('submodalConvenios');
+    if (submodal) {
+        submodal.style.display = 'none';
+        document.body.style.overflow = ''; // Restaurar scroll
+    }
+}
+
+// Cerrar submodal al hacer click fuera del contenido
+document.addEventListener('click', function(e) {
+    const submodal = document.getElementById('submodalConvenios');
+    if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
+        cerrarSubmodalConvenios();
+    }
+});
+
+// Cerrar con tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const submodal = document.getElementById('submodalConvenios');
+        if (submodal && submodal.style.display === 'flex') {
+            cerrarSubmodalConvenios();
+        }
+    }
+});
+
+// === MODAL CREAR/EDITAR CONVENIO (ya existente, solo aseguramos que funcione sobre el submodal) ===
+// Si tu función abrirModalConvenio() ya existe, no necesitas cambiarla.
+// Si no, aquí va la versión mínima:
+function abrirModalConvenio(datos = null) {
+    // Si ya tienes esta función, bórrala de aquí para evitar duplicados
+    const modal = document.getElementById('modalConvenio');
+    if (!modal) {
+        console.error('❌ No se encontró #modalConvenio. Asegúrate de agregar el HTML del modal.');
+        return;
+    }
+    
+    const form = document.getElementById('formConvenio');
+    const campoEstado = document.getElementById('campo_estado');
+    
+    form.reset();
+    document.getElementById('convenio_action').value = 'create';
+    document.getElementById('convenio_id').value = '';
+    if (campoEstado) campoEstado.style.display = 'none';
+    
+    if (datos) {
+        document.getElementById('convenio_action').value = 'update';
+        document.getElementById('convenio_id').value = datos.id_convenio;
+        document.getElementById('convenio_nombre').value = datos.nombre_empresa || '';
+        document.getElementById('convenio_contacto').value = datos.contacto_nombre || '';
+        document.getElementById('convenio_email').value = datos.contacto_email || '';
+        document.getElementById('convenio_telefono').value = datos.contacto_telefono || '';
+        document.getElementById('convenio_dscto').value = datos.porc_dscto || 0;
+        document.getElementById('convenio_desde').value = datos.vigente_desde || '';
+        document.getElementById('convenio_hasta').value = datos.vigente_hasta || '';
+        if (campoEstado) {
+            document.getElementById('convenio_estado').value = datos.estado || 'activo';
+            campoEstado.style.display = 'block';
+        }
+    }
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalConvenio(e) {
+    if (e?.target?.id === 'modalConvenio' || e?.target?.classList?.contains('modal-close')) {
+        const modal = document.getElementById('modalConvenio');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+}
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
