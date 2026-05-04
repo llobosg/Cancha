@@ -864,7 +864,6 @@ $js_vars = [
             </div>
             <a href="mantenedor_socios.php" class="avatar"><?= strtoupper(substr($nombre_mostrar ?? 'U',0,1)) ?></a>
             <div style="display:flex; align-items:center; gap:0.75rem;">
-                <a href="mantenedor_socios.php" class="avatar"><?= strtoupper(substr($nombre_mostrar ?? 'U',0,1)) ?></a>
                 <button onclick="cerrarSesion()" title="Cerrar Sesión" style="background:rgba(255,255,255,0.2); border:none; border-radius:50%; width:36px; height:36px; color:white; font-size:1.1rem; cursor:pointer; display:grid; place-items:center; transition:background 0.2s;" onmouseover="this.style.background='rgba(231,76,60,0.6)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
                  X
                 </button>
