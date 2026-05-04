@@ -9,11 +9,6 @@ if (!isset($_SESSION['id_recinto']) || !in_array($rol_actual, $roles_validos)) {
 }
 require_once __DIR__ . '/../includes/permisos.php';
 
-// === CARGAR CONVENIOS DEL RECINTO ACTUAL ===
-$stmt_conv = $pdo->prepare("SELECT id_convenio, nombre_empresa, contacto_nombre, porc_dscto, vigente_desde, vigente_hasta, estado FROM convenios WHERE id_recinto = ? ORDER BY nombre_empresa ASC");
-$stmt_conv->execute([$_SESSION['id_recinto']]);
-$convenios = $stmt_conv->fetchAll();
-
 // Datos Usuario
 $stmt_user = $pdo->prepare("SELECT * FROM admin_recintos WHERE id_admin = ?");
 $stmt_user->execute([$_SESSION['id_admin']]);
@@ -1223,11 +1218,6 @@ td.cell-reserva {
             <button class="action-btn-sidebar" onclick="window.location.href='crear_torneo.php'">
                 <span>➕</span> Crear Torneo
             </button>
-            <!-- Botón para abrir modal convenios -->
-            <button onclick="abrirModalConvenio()" 
-                    style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.2rem; border-radius:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; margin-bottom:1rem;">
-                <span>🤝</span> Gestionar Convenios
-            </button>
         </div>
     </div>
 
@@ -1261,24 +1251,6 @@ td.cell-reserva {
             </table>
         </div>
     </div>
-
-    <!-- === MANTENEDOR CONVENIOS === -->
-    <h3>🤝 Convenios Activos</h3>
-    <button onclick="abrirModalConvenio()" style="background:#4CAF50; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; margin-bottom:1rem;">+ Nuevo Convenio</button>
-    <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden;">
-        <thead><tr style="background:#f5f5f5;"><th>Empresa</th><th>Contacto</th><th>Descuento</th><th>Vigencia</th><th>Estado</th></tr></thead>
-        <tbody>
-            <?php foreach($convenios as $c): ?>
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:0.8rem;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
-                <td><?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?></td>
-                <td><strong style="color:#2E7D32;"><?= $c['porc_dscto'] ?>%</strong></td>
-                <td><?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?> → <?= $c['vigente_hasta'] ? date('d/m', strtotime($c['vigente_hasta'])) : 'Indefinido' ?></td>
-                <td><span style="background:<?= $c['estado']=='activo' ? '#E8F5E9' : '#FFEBEE' ?>; color:<?= $c['estado']=='activo' ? '#2E7D32' : '#C62828' ?>; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem;"><?= ucfirst($c['estado']) ?></span></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
 
     <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
@@ -4001,7 +3973,6 @@ function verDetalleExtras(idReserva, montoExtras) {
     // Opcional: abrir modal de detalle si prefieres
     // abrirDetalleDesdePlanilla(idReserva);
 }
-
 // === TOGGLE PANEL NUEVO SOCIO ===
 function toggleNuevoSocioPanel(mostrar) {
     const panel = document.getElementById('panelNuevoSocio');
@@ -4025,104 +3996,6 @@ function toggleNuevoSocioPanel(mostrar) {
         }
     }
 }
-// === MODAL CONVENIOS ===
-function abrirModalConvenio(datos = null) {
-    const modal = document.getElementById('modalConvenio');
-    const form = document.getElementById('formConvenio');
-    const campoEstado = document.getElementById('campo_estado');
-    
-    // Resetear formulario
-    form.reset();
-    document.getElementById('convenio_action').value = 'create';
-    document.getElementById('convenio_id').value = '';
-    campoEstado.style.display = 'none';
-    
-    if (datos) {
-        // Modo edición
-        document.getElementById('convenio_action').value = 'update';
-        document.getElementById('convenio_id').value = datos.id_convenio;
-        document.getElementById('convenio_nombre').value = datos.nombre_empresa;
-        document.getElementById('convenio_contacto').value = datos.contacto_nombre || '';
-        document.getElementById('convenio_email').value = datos.contacto_email || '';
-        document.getElementById('convenio_telefono').value = datos.contacto_telefono || '';
-        document.getElementById('convenio_dscto').value = datos.porc_dscto;
-        document.getElementById('convenio_desde').value = datos.vigente_desde || '';
-        document.getElementById('convenio_hasta').value = datos.vigente_hasta || '';
-        document.getElementById('convenio_estado').value = datos.estado || 'activo';
-        campoEstado.style.display = 'block';
-    }
-    
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function cerrarModalConvenio(e) {
-    if (e.target.id === 'modalConvenio' || e.target.classList.contains('modal-close')) {
-        document.getElementById('modalConvenio').style.display = 'none';
-        document.body.style.overflow = '';
-    }
-}
-
-async function guardarConvenio(e) {
-    e.preventDefault();
-    
-    const form = e.target;
-    const action = document.getElementById('convenio_action').value;
-    const idConvenio = document.getElementById('convenio_id').value;
-    
-    const data = {
-        action: action,
-        nombre_empresa: document.getElementById('convenio_nombre').value,
-        contacto_nombre: document.getElementById('convenio_contacto').value,
-        contacto_email: document.getElementById('convenio_email').value,
-        contacto_telefono: document.getElementById('convenio_telefono').value,
-        porc_dscto: parseFloat(document.getElementById('convenio_dscto').value),
-        vigente_desde: document.getElementById('convenio_desde').value || null,
-        vigente_hasta: document.getElementById('convenio_hasta').value || null
-    };
-    
-    if (action === 'update') {
-        data.id_convenio = parseInt(idConvenio);
-        data.estado = document.getElementById('convenio_estado').value;
-    }
-    
-    // Feedback visual
-    const btn = form.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-    btn.textContent = '💾 Guardando...';
-    btn.disabled = true;
-    
-    try {
-        const res = await fetch('../api/guardar_convenio.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        
-        if (result.success) {
-            showToast('✅ ' + result.message, 'success');
-            cerrarModalConvenio({target: document.getElementById('modalConvenio')});
-            setTimeout(() => location.reload(), 800);
-        } else {
-            showToast('❌ ' + result.message, 'error');
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    } catch (err) {
-        console.error('Error guardar convenio:', err);
-        showToast('❌ Error de conexión', 'error');
-        btn.textContent = originalText;
-        btn.disabled = false;
-    }
-}
-
-// Cerrar modal con ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        cerrarModalConvenio({target: document.getElementById('modalConvenio')});
-    }
-});
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
@@ -4362,103 +4235,6 @@ document.addEventListener('keydown', function(e) {
         Ordenado por fecha (más reciente primero)
         </div>
     </div>
-    </div>
-
-    <!-- === MODAL CONVENIOS === -->
-    <div id="modalConvenio" class="modal-overlay" style="display:none;" onclick="cerrarModalConvenio(event)">
-        <div class="modal-content" style="max-width:520px;">
-            <button class="modal-close" onclick="cerrarModalConvenio(event)">&times;</button>
-            <h3 style="text-align:center; margin-bottom:1.5rem; color:var(--padel-blue);">🤝 Gestión de Convenios</h3>
-            
-            <form id="formConvenio" onsubmit="guardarConvenio(event)">
-                <input type="hidden" id="convenio_id" name="id_convenio">
-                <input type="hidden" id="convenio_action" name="action" value="create">
-                
-                <div style="display:grid; gap:1rem;">
-                    <!-- Nombre Empresa -->
-                    <div>
-                        <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Empresa / Institución *</label>
-                        <input type="text" id="convenio_nombre" name="nombre_empresa" required 
-                            placeholder="Ej: Universidad Diego Portales"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                    </div>
-                    
-                    <!-- Contacto -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Nombre Contacto</label>
-                            <input type="text" id="convenio_contacto" name="contacto_nombre" 
-                                placeholder="Juan Pérez"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Teléfono</label>
-                            <input type="tel" id="convenio_telefono" name="contacto_telefono" 
-                                placeholder="+569 1234 5678"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Email Contacto</label>
-                        <input type="email" id="convenio_email" name="contacto_email" 
-                            placeholder="contacto@empresa.cl"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                    </div>
-                    
-                    <!-- Descuento -->
-                    <div style="background:#F7FAFC; padding:1rem; border-radius:12px; border-left:4px solid #4FC3F7;">
-                        <label style="display:block; font-weight:600; margin-bottom:0.4rem; color:#2D3748;">
-                            % Descuento sobre arriendo *
-                        </label>
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <input type="number" id="convenio_dscto" name="porc_dscto" required min="0" max="100" step="0.01"
-                                placeholder="Ej: 20"
-                                style="flex:1; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem; font-weight:600;">
-                            <span style="font-size:1.2rem; font-weight:600; color:#4FC3F7;">%</span>
-                        </div>
-                        <small style="display:block; margin-top:0.3rem; color:#718096; font-size:0.8rem;">
-                            Ej: 20 → $33.000 se cobra como $26.400
-                        </small>
-                    </div>
-                    
-                    <!-- Vigencia -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Vigente desde</label>
-                            <input type="date" id="convenio_desde" name="vigente_desde"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Vigente hasta</label>
-                            <input type="date" id="convenio_hasta" name="vigente_hasta"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                            <small style="color:#718096; font-size:0.75rem;">Dejar vacío = indefinido</small>
-                        </div>
-                    </div>
-                    
-                    <!-- Estado (solo para editar) -->
-                    <div id="campo_estado" style="display:none;">
-                        <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Estado</label>
-                        <select id="convenio_estado" name="estado" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                            <option value="activo">✅ Activo</option>
-                            <option value="inactivo">⏸️ Inactivo</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
-                    <button type="button" onclick="cerrarModalConvenio(event)" 
-                            style="flex:1; padding:0.85rem; border-radius:12px; border:2px solid #E2E8F0; background:white; font-weight:500; cursor:pointer;">
-                        Cancelar
-                    </button>
-                    <button type="submit" 
-                            style="flex:1; padding:0.85rem; border-radius:12px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; font-weight:600; cursor:pointer;">
-                        💾 Guardar Convenio
-                    </button>
-                </div>
-            </form>
-        </div>
     </div>
 </body>
 </html>
