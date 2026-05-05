@@ -1529,7 +1529,873 @@ button[onclick="abrirModalConvenios()"]:hover {
 </div>
 
 <script>
+// === VARIABLES GLOBALES ===
+const USUARIO_ACTIVO = <?= json_encode($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin', JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const ROL_USUARIO = "<?= $_SESSION['recinto_rol'] ?? '' ?>"; 
+const iconosDeporte = { 1: '🎾', 2: '🎾', 3: '🏐', 10: '⚽', 11: '⚽', 'default': '🏟️' };
+let fechaPlanillaActual = new Date().toISOString().split('T')[0];
+let estadoSeleccionadoPlanilla = "";
+let reservaActualSeleccionada = null;
+let tipoListaActual = '';
 
+// ✅ Inyección segura de canchasData (la variable $canchas_js ya fue procesada en PHP)
+const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+// 🔍 Logs de debug (solo JS)
+console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
+console.log("🔍 DEBUG JS canchasData:", {
+    length: canchasData?.length || 0,
+    primera: canchasData?.[0] || "vacio",
+    id_26: canchasData?.find(c => String(c.id_cancha) === '26') || "no encontrada"
+});
+
+// === INICIALIZACIÓN ===
+document.addEventListener('DOMContentLoaded', function() {
+    // Fecha
+    const fechaInput = document.getElementById('fechaPlanillaInput');
+    if (fechaInput) {
+        fechaInput.value = fechaPlanillaActual;
+        fechaInput.addEventListener('change', function() { 
+            fechaPlanillaActual = this.value; 
+            cargarPlanillaReservas(); 
+        });
+    }
+    
+    // Filtros
+    document.getElementById('filtroDeporte')?.addEventListener('change', cargarPlanillaReservas);
+    document.getElementById('filtroEstado')?.addEventListener('change', function() { 
+        estadoSeleccionadoPlanilla = this.value; 
+        cargarPlanillaReservas(); 
+    });
+
+    cargarPlanillaReservas();
+});
+
+// === FUNCIONES DE NAVEGACIÓN FECHA ===
+function cambiarDiaPlanilla(dias) {
+    const fechaObj = new Date(fechaPlanillaActual);
+    fechaObj.setDate(fechaObj.getDate() + dias);
+    fechaPlanillaActual = fechaObj.toISOString().split('T')[0];
+    const inputFecha = document.getElementById('fechaPlanillaInput');
+    if (inputFecha) inputFecha.value = fechaPlanillaActual;
+    cargarPlanillaReservas();
+}
+
+function irAHoyPlanilla() {
+    fechaPlanillaActual = new Date().toISOString().split('T')[0];
+    const inputFecha = document.getElementById('fechaPlanillaInput');
+    if (inputFecha) inputFecha.value = fechaPlanillaActual;
+    cargarPlanillaReservas();
+}
+
+// === CARGA DE PLANILLA (con validación de respuesta) ===
+async function cargarPlanillaReservas() {
+    const deporte = document.getElementById('filtroDeporte')?.value || "todos";
+    console.log(`📡 Cargando... Fecha: ${fechaPlanillaActual}, Deporte: ${deporte}`);
+    
+    try {
+        const url = `../api/canchaboard.php?action=get_planilla_reservas&fecha=${fechaPlanillaActual}&deporte=${encodeURIComponent(deporte)}`;
+        const response = await fetch(url, { credentials: 'include' });
+        
+        // Verificar estado HTTP primero
+        if (response.status === 401) {
+            showToast("Sesión expirada. Redirigiendo...", "warning");
+            setTimeout(() => window.location.href = 'login_recintos.php', 2000);
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // === VALIDAR QUE LA RESPUESTA ES JSON ANTES DE PARSEAR ===
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Si no es JSON, leer como texto para debug
+            const text = await response.text();
+            console.error('❌ Respuesta no es JSON:', text.substring(0, 200));
+            throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs.');
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) throw new Error(data.error);
+        
+        renderizarPlanilla(data, estadoSeleccionadoPlanilla);
+        
+    } catch (error) {
+        console.error('❌ Error en cargarPlanillaReservas:', error);
+        showToast(`Error: ${error.message}`, 'error');
+        document.getElementById('tablaPlanilla').innerHTML = 
+            `<tr><td colspan="100%" style="padding:2rem; color:#c62828; text-align:center;">
+                ⚠️ ${error.message}<br>
+                <small style="color:#666;">Revisa consola (F12) para más detalles</small>
+            </td></tr>`;
+    }
+}
+
+function renderizarPlanilla(data, filtroEstado) {
+    const table = document.getElementById('tablaPlanilla');
+    if (!table) return;
+    if (!data.canchas || !data.canchas.length) {
+        table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas.</td></tr>';
+        return;
+    }
+
+    console.log(`📊 [DEBUG] Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
+
+    // === HEADER ===
+    let html = `<thead><tr>`;
+    html += `<th style="background:#AB47BC; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
+    
+    window.currentCanchasData = data.canchas;
+    
+    data.canchas.forEach((c, index) => {
+        const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
+        html += `<th style="background:#AB47BC; width:110px; font-size:0.75rem;" 
+                data-cancha-id="${c.id_cancha}">
+                    <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
+                </th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    // === CUERPO: Slots de 30 minutos ===
+    const ahora = new Date();
+    let skipCells = {};
+    let celdasPintadas = 0;
+
+    data.slots.forEach(slot => {
+        if (slot.is_label_row) {
+            html += `<tr>`;
+            html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
+
+            data.canchas.forEach((cancha, idxCancha) => {
+                // Saltar si está cubierta por rowspan anterior
+                if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
+                    skipCells[idxCancha]--;
+                    return;
+                }
+
+                // 🔑 CLAVE: Normalizar slot.label para match exacto con BD
+                const slotLabelNormalized = slot.label.substring(0, 5); // "21:00:00" → "21:00"
+                const key = `${cancha.id_cancha}_${slotLabelNormalized}`;
+                const res = data.reservas[key];
+
+                if (res) {
+                    // === CELDA RESERVADA ===
+                    let bgClass = 'estado-pendiente';
+                    if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
+                    else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
+
+                    // Calcular duración y rowspan
+                    const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
+                    const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
+                    const duracionMin = hFin - hIni;
+                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
+
+                    console.log(`✅ MATCH: Key="${key}" | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
+
+                    if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
+
+                    const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
+
+                // 1. Parsear extras desde notas (formato [EXTRAS:5000])
+                let extrasMonto = 0;
+                if (res.notas && typeof res.notas === 'string') {
+                    const match = res.notas.match(/\[EXTRAS:(\d+(?:\.\d+)?)\]/);
+                    if (match) extrasMonto = parseFloat(match[1]);
+                }
+
+                // 2. Badge compacto y clickeable (BONUS)
+                let extrasHtml = '';
+                if (extrasMonto > 0) {
+                    extrasHtml = `
+                        <div class="badge-extras" 
+                            style="cursor:pointer; display:inline-block; background:#FFF3CD; color:#856404; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:600; margin-top:2px; white-space:nowrap;"
+                            title="Click para ver detalle de extras"
+                            onclick="event.stopPropagation(); verDetalleExtras(${res.id_reserva}, ${extrasMonto})">
+                            🎒 Extras $${Math.round(extrasMonto).toLocaleString('es-CL')}
+                        </div>`;
+                }
+
+                // 3. Notas visibles (solo si NO hay extras, para no duplicar)
+                let notasHtml = '';
+                if (res.notas && res.notas.trim() !== '' && extrasMonto === 0) {
+                    const notasCortas = res.notas.length > 15 ? res.notas.substring(0, 15) + '...' : res.notas;
+                    const notasEscapadas = notasCortas.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    notasHtml = `<div style="font-size:0.65rem; color:#666; margin-top:2px;" title="${res.notas.replace(/"/g, '&quot;')}">📝 ${notasCortas}</div>`;
+                }
+
+                // 4. Construir celda (con max-width para no desplazar grilla)
+                html += `<td class="${bgClass} cell-reserva" 
+                            rowspan="${rowspan}" 
+                            draggable="true" 
+                            ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
+                            ondragend="dragEnd(event)"
+                            style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; max-width:140px; overflow:hidden;" 
+                            onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
+                            <div style="font-size:0.7rem; font-weight:bold; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nombre}</div>
+                            <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                            ${extrasHtml}
+                            ${notasHtml}
+                        </td>`;
+                    celdasPintadas++;
+                    
+                } else {
+                    // === CELDA DISPONIBLE ===
+                    const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
+                    const esPasado = slotFecha <= ahora;
+                    
+                    if (esPasado) {
+                        html += `<td class="estado-disponible" 
+                                    data-cancha-id="${cancha.id_cancha}"
+                                    style="opacity:0.3; cursor:not-allowed;"></td>`;
+                    } else {
+                        html += `<td class="estado-disponible drop-zone" 
+                                    data-cancha-id="${cancha.id_cancha}"
+                                    ondragover="dragOver(event)" 
+                                    ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                    }
+                }
+            });
+            html += `</tr>`;
+        }
+    });
+    
+    html += `</tbody>`;
+    table.innerHTML = html;
+    
+    // Debug opcional: verificar rowspan aplicado
+    setTimeout(() => {
+        const celdas = document.querySelectorAll('td.cell-reserva[rowspan]');
+        console.log(`🔍 [DEBUG] Celdas con rowspan: ${celdas.length}`);
+        celdas.forEach((td, i) => {
+            console.log(`   [${i}] rowspan="${td.getAttribute('rowspan')}" | offsetHeight=${td.offsetHeight}px`);
+        });
+    }, 100);
+    
+    console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas`);
+}
+
+// === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ==
+let draggedReservaId = null;
+let draggedElement = null;
+
+function dragStart(e, id) {
+    draggedReservaId = id;
+    draggedElement = e.target;
+    
+    // Configurar dataTransfer ANTES de cualquier otra cosa
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id.toString());
+    
+    // Aplicar clase visual
+    e.target.classList.add('dragging');
+    
+    // Forzar reflow para aplicar estilos inmediatamente
+    void e.target.offsetWidth;
+    
+    console.log(`🎯 Drag START: ID=${id}`);
+}
+
+function dragEnd(e) {
+    console.log(`🎯 Drag END`);
+    if (draggedElement) draggedElement.classList.remove('dragging');
+    limpiarHighlights();
+    draggedReservaId = null;
+    draggedElement = null;
+}
+
+// Listener GLOBAL para dragover (CRÍTICO para permitir drop)
+document.addEventListener('dragover', (e) => {
+    e.preventDefault(); // Permite el drop
+    e.dataTransfer.dropEffect = 'move';
+    
+    const td = e.target.closest('td.estado-disponible');
+    if (td) {
+        limpiarHighlights();
+        td.classList.add('drop-target');
+        highlightCoordinates(td);
+    }
+}, { passive: false });
+
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+function highlightCoordinates(td) {
+    const row = td.closest('tr');
+    if (!row) return;
+    const colIndex = Array.from(row.children).indexOf(td);
+    
+    // Resaltar Hora
+    const timeCell = row.querySelector('td:first-child');
+    if (timeCell) timeCell.classList.add('coord-highlight');
+    
+    // Resaltar Cancha (header)
+    const headerRow = document.querySelector('#tablaPlanilla thead tr');
+    if (headerRow && headerRow.children[colIndex]) {
+        headerRow.children[colIndex].classList.add('coord-highlight');
+    }
+}
+
+function limpiarHighlights() {
+    document.querySelectorAll('.drop-target, .coord-highlight').forEach(el => {
+        el.classList.remove('drop-target', 'coord-highlight');
+    });
+}
+
+function dragOver(e) {
+    e.preventDefault(); // CRÍTICO: permite el drop
+    const td = e.target.closest('td.estado-disponible');
+    
+    if (td && draggedReservaId) {
+        console.log(`🎯 Drag OVER: celda disponible`, td);
+        limpiarHighlights();
+        td.classList.add('drop-target');
+        highlightCoordinates(td);
+    }
+}
+
+async function dropReserva(e, canchaId, hora) {
+    e.preventDefault();
+    console.log(`🎯 Drop: canchaId=${canchaId}, hora=${hora}, draggedId=${draggedReservaId}`);
+    e.stopPropagation(); // 🔑 EVITA QUE EL EVENTO BUBBLEE A OTROS LISTENERS
+     // Validación adicional por seguridad
+    if (!draggedReservaId || !canchaId || !hora) {
+        console.warn('⚠️ Datos incompletos para mover reserva');
+        return;
+    }
+
+    
+    const targetCell = e.target.closest('td');
+    if (targetCell) {
+        targetCell.classList.add('drop-anim');
+        setTimeout(() => targetCell.classList.remove('drop-anim'), 300);
+    }
+    
+    limpiarHighlights();
+    if (!draggedReservaId) {
+        console.warn('⚠️ No hay reserva arrastrada');
+        return;
+    }
+
+    if (confirm(`📅 ¿Mover reserva ID ${draggedReservaId} a las ${hora} en Cancha ${canchaId}?`)) {
+        try {
+            const res = await fetch('../api/mover_reserva.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id_reserva: draggedReservaId,
+                    id_cancha: canchaId,
+                    hora_inicio: hora + ':00',
+                    fecha: fechaPlanillaActual
+                })
+            });
+            const data = await res.json();
+            showToast(data.success ? '✅ Reserva movida' : '❌ ' + data.message, 
+                     data.success ? 'success' : 'error');
+            if (data.success) cargarPlanillaReservas();
+        } catch (err) {
+            console.error('❌ Error en drop:', err);
+            showToast('❌ Error de conexión', 'error');
+        }
+    }
+    draggedReservaId = null;
+}
+
+document.addEventListener('dragend', (e) => {
+    e.target.classList.remove('dragging');
+    limpiarHighlights();
+    draggedReservaId = null;
+});
+
+
+// === DETALLE DE RESERVA (CORREGIDO + MENÚ 3 PUNTOS IZQUIERDA) ===
+async function abrirDetalleDesdePlanilla(idReserva) {
+    console.log("🔍 abrirDetalleDesdePlanilla llamado con ID:", idReserva, typeof idReserva);
+    
+    if (!idReserva || idReserva === 'undefined' || idReserva === 'null') {
+        showToast("❌ ID de reserva inválido", "error");
+        console.error("❌ ID inválido recibido:", idReserva);
+        return;
+    }
+    if (!idReserva) return;
+    
+    const modal = document.getElementById('modalDetalleReserva');
+    const container = document.getElementById('contenidoDetalle');
+    
+    if (modal) modal.style.display = 'flex';
+    if (container) container.innerHTML = '<p style="text-align:center;">Cargando...</p>';
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'get_detalle_reserva');
+        formData.append('id_reserva', idReserva);
+        
+        const response = await fetch('../api/canchaboard.php', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+            body: formData, 
+            credentials: 'include' 
+        });
+        
+        const detalle = await response.json();
+        if (detalle.error) throw new Error(detalle.error);
+        
+        window.reservaActualSeleccionada = detalle;
+
+        if (container) {
+            const val = (v, def = 'N/A') => (v !== null && v !== undefined && v !== '') ? v : def;
+            const money = (v) => '$' + parseInt(v || 0).toLocaleString();
+            
+            const montoTotal = parseFloat(detalle.monto_total || 0);
+            const montoRecaudado = parseFloat(detalle.monto_recaudacion || 0);
+            const saldoPendiente = montoTotal - montoRecaudado;
+            const esParcial = (detalle.estado_pago === 'parcial');
+            
+            let estadoColor = 'red';
+            if (detalle.estado_pago === 'pagado') estadoColor = 'green';
+            else if (detalle.estado_pago === 'parcial') estadoColor = '#f4e346';
+
+            // === ENCABEZADO FLEXBOX: [⋮ + Título] [×] ===
+            const userCreacion = detalle.usuario_creacion || USUARIO_ACTIVO || 'Admin';
+            
+            // Menú 3 puntos (solo para admin) - Lógica JS pura
+            const menuDotsHtml = (typeof ROL_USUARIO !== 'undefined' && ROL_USUARIO === 'admin') ? `
+                <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
+                    <span style="font-size:1.4rem; color:#666;">⋮</span>
+                    <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
+                        <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})" 
+                             style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;"
+                             onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                            📋 Ver bitácora
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
+            // Construir header con flexbox
+            const headerHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
+                    <div style="display:flex; align-items:center;">
+                        ${menuDotsHtml}
+                        <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
+                            📋 Detalle de Reserva
+                        </h3>
+                    </div>
+                    <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
+                </div>
+            `;
+
+            // === SECCIÓN DE DATOS DEL CLIENTE ===
+            const cliente = detalle.nombre_cliente || 'Sin asignar';
+            const email   = detalle.email_cliente || '-';
+            const tel     = detalle.telefono_cliente || '-';
+
+            // Construir cuerpo del modal
+            let html = `
+                <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                        <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    </div>
+                    <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
+                        👤 Creado por: <strong>${userCreacion}</strong> 
+                        ${detalle.created_at ? (() => {
+                            const fecha = new Date(detalle.created_at.replace(' ', 'T'));
+                            return `• ${fecha.toLocaleString('es-CL', { 
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', 
+                                timeZone: 'America/Santiago' 
+                            })}`;
+                        })() : ''}
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
+                        <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
+                        <div style="grid-column: span 2;"><strong>Cliente:</strong> ${cliente}</div>
+                        <div style="grid-column: span 2; word-break: break-all;">
+                            <strong>Contacto:</strong> 📧 ${email} | 📱 ${tel}
+                        </div>
+                    </div>
+                    <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <span style="color:#666; font-size:0.9rem;">Monto Total</span>
+                            <span style="font-weight:bold;">${money(montoTotal)}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <span style="color:#666; font-size:0.9rem;">Abonado</span>
+                            <span style="font-weight:bold; color:#2e7d32;">${money(montoRecaudado)}</span>
+                        </div>
+                        ${esParcial ? `
+                        <div style="display:flex; justify-content:space-between; padding-top:0.5rem; border-top:1px dashed #ccc;">
+                            <span style="color:#c62828; font-weight:bold;">Saldo Pendiente</span>
+                            <span style="font-weight:bold; color:#c62828;">${money(saldoPendiente)}</span>
+                        </div>` : ''}
+                        <div style="margin-top:0.5rem; text-align:right;">
+                            <span style="font-size:0.8rem; color:#666;">Estado: </span>
+                            <span style="font-weight:bold; color:${estadoColor};">${val(detalle.estado_pago).toUpperCase()}</span>
+                        </div>
+                    </div>
+            `;
+
+            // === SECCIÓN DE NOTAS ===
+            const notas = val(detalle.notas, '');
+            if (notas && notas !== 'null' && notas !== '') {
+                const bgNota = esParcial ? '#FFF3E0' : '#FFFDE7';
+                const borderNota = esParcial ? '#FFB74D' : '#FFF59D';
+                html += '<div style="background: ' + bgNota + '; padding: 0.8rem; border-radius: 6px; border-left: 4px solid ' + borderNota + '; margin-bottom: 1rem;">';
+                html += '<div style="font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 0.3rem; text-transform: uppercase;">📝 Historial / Notas</div>';
+                html += '<div style="font-size: 0.9rem; color: #333; white-space: pre-wrap; font-family: sans-serif;">' + notas + '</div>';
+                html += '</div>';
+            }
+
+            html += '</div>'; // Cierre contenedor principal
+            container.innerHTML = headerHtml + html;
+
+            // Agregar botones de acción
+            const actionContainer = document.createElement('div');
+            actionContainer.style.marginTop = '1rem';
+            actionContainer.style.textAlign = 'center';
+            actionContainer.innerHTML = `
+                <button onclick="toggleActionMenuModal()" style="background:#071289; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; width:100%;">⚙️ Opciones</button>
+                <div id="actionMenuModal" style="display:none; margin-top:10px; border:1px solid #ddd; border-radius:8px; background:white;">
+                    <button onclick="anularReserva()" style="width:100%; padding:10px; border:none; background:none; text-align:left; border-bottom:1px solid #eee;">🗑️ Anular</button>
+                    <button onclick="abrirModalMover()" style="width:100%; padding:10px; border:none; background:#E3F2FD; color:#0D47A1; text-align:left; font-weight:bold; cursor:pointer; border-bottom:1px solid #eee;">📅 Mover Fecha/Hora</button>
+                    ${detalle.estado_pago !== 'pagado' ? `<button onclick="abrirModalPagoDesdeDetalle()" style="width:100%; padding:10px; border:none; background:#e8f5e9; color:#2e7d32; text-align:left; font-weight:bold;">💳 Pagar</button>` : ''}
+                </div>
+            `;
+            container.appendChild(actionContainer);
+        }
+    } catch (err) {
+        console.error(err);
+        if (container) container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+    }
+}
+
+// === FUNCIÓN AUXILIAR: Toggle menú 3 puntos (agregar junto a tus otras funciones) ===
+function toggleLogMenu(event, idReserva) {
+    event.stopPropagation();
+    // Cerrar otros menús abiertos
+    document.querySelectorAll('[id^="logMenu_"]').forEach(menu => {
+        if (menu.id !== `logMenu_${idReserva}`) menu.style.display = 'none';
+    });
+    // Toggle del menú actual
+    const menu = document.getElementById(`logMenu_${idReserva}`);
+    if (menu) {
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+}
+
+// Cerrar menús al hacer click fuera
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[onclick*="toggleLogMenu"]')) {
+        document.querySelectorAll('[id^="logMenu_"]').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+// === FUNCIONES DE MODALES Y ACCIONES ===
+function toggleActionMenuModal() {
+    const menu = document.getElementById('actionMenuModal');
+    if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+
+function toggleAcciones() {
+    const contenedor = document.getElementById('contenedor-acciones');
+    const icono = document.getElementById('icon-operaciones');
+    if (contenedor && icono) {
+        if (contenedor.style.display === 'none') {
+            contenedor.style.display = 'flex';
+            icono.classList.add('rotated');
+        } else {
+            contenedor.style.display = 'none';
+            icono.classList.remove('rotated');
+        }
+    }
+}
+
+function cerrarModalDetalle() { document.getElementById('modalDetalleReserva').style.display = 'none'; }
+function volverAlDetalle() { 
+    document.getElementById('modalPago').style.display = 'none'; 
+    document.getElementById('modalDetalleReserva').style.display = 'flex'; 
+}
+function cerrarModalListaKPI() { document.getElementById('modalListaKPI').style.display = 'none'; }
+
+function anularReserva() { alert("Función Anular: En desarrollo"); }
+
+function abrirModalPagoDesdeDetalle() {
+    if (!window.reservaActualSeleccionada) return;
+    const d = window.reservaActualSeleccionada;
+    document.getElementById('infoIdReserva').textContent = d.id_reserva;
+    document.getElementById('infoMontoTotal').textContent = '$' + parseFloat(d.monto_total).toLocaleString();
+    document.getElementById('montoPagar').value = d.monto_total;
+    document.getElementById('formPago').dataset.idReserva = d.id_reserva;
+    document.getElementById('formPago').dataset.montoOriginal = d.monto_total;
+    document.getElementById('modalDetalleReserva').style.display = 'none';
+    document.getElementById('modalPago').style.display = 'flex';
+}
+
+// Listener Método de Pago
+document.getElementById('metodoPago')?.addEventListener('change', function() {
+    const campo = document.getElementById('campoTransaccion');
+    if (['transferencia', 'webpay'].includes(this.value)) { campo.style.display = 'block'; } 
+    else { campo.style.display = 'none'; }
+});
+
+// Submit Pago
+document.getElementById('formPago')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const idReserva = this.dataset.idReserva;
+    const montoOriginal = parseFloat(this.dataset.montoOriginal);
+    const montoPagado = parseFloat(document.getElementById('montoPagar').value);
+    const metodo = document.getElementById('metodoPago').value;
+    const transaccion = document.getElementById('transaccionId').value;
+    const notas = document.getElementById('notasPago').value;
+
+    if (montoPagado <= 0) { showToast("Monto inválido", "error"); return; }
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'procesar_pago_parcial');
+        formData.append('id_reserva', idReserva);
+        formData.append('monto_pagado', montoPagado);
+        formData.append('monto_total_original', montoOriginal);
+        formData.append('metodo_pago', metodo);
+        formData.append('transaccion_id', transaccion || '');
+        formData.append('notas_pago', notas);
+        formData.append('extras', document.getElementById('extrasPago')?.value || 0);
+
+        const res = await fetch('../api/gestion_reservas.php', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.success) {
+            let msg = "✅ Pago registrado.";
+            let type = "success";
+            if (montoPagado < montoOriginal) {
+                msg = `⚠️ Pago Parcial. Faltan $${(montoOriginal - montoPagado).toLocaleString()}.`;
+                type = "warning";
+            }
+            showToast(msg, type);
+            document.getElementById('modalPago').style.display = 'none';
+            document.getElementById('modalDetalleReserva').style.display = 'none';
+            cargarPlanillaReservas();
+        } else {
+            showToast("❌ Error: " + data.message, "error");
+        }
+    } catch (err) {
+        showToast("❌ Error de conexión", "error");
+    }
+});
+
+// === LISTA KPI ===
+async function abrirListaKPI(tipo) {
+    tipoListaActual = tipo;
+    const modal = document.getElementById('modalListaKPI');
+    const tbody = document.getElementById('cuerpoTablaKPI');
+    document.getElementById('tituloListaKPI').textContent = (tipo === 'parcial') ? '📋 Pagos Parciales' : '🚨 Deuda Vencida';
+    
+    modal.style.display = 'flex';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando...</td></tr>';
+
+    try {
+        const res = await fetch(`../api/canchaboard.php?action=get_lista_kpi&tipo=${tipo}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Sin registros.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        data.forEach(row => {
+            const total = parseFloat(row.monto_total) || 0;
+            const abonado = parseFloat(row.monto_recaudacion) || 0;
+            const saldo = parseFloat(row.saldo_pendiente) || (total - abonado);
+            const fmt = (n) => '$' + parseInt(n).toLocaleString();
+            
+            html += `
+                <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="verDetalleDesdeLista(${row.id_reserva})">
+                    <td style="padding:10px;">${row.fecha}</td>
+                    <td style="padding:10px;">${row.nombre_cancha}</td>
+                    <td style="padding:10px; font-weight:bold;">${row.nombre_cliente || 'N/A'}</td>
+                    <td style="padding:10px;">${row.telefono_cliente || '-'}</td>
+                    <td style="padding:10px; text-align:right;">${fmt(total)}</td>
+                    <td style="padding:10px; text-align:right; color:green;">${fmt(abonado)}</td>
+                    <td style="padding:10px; text-align:right; font-weight:bold; color:#c62828;">${fmt(saldo)}</td>
+                    <td style="padding:10px; text-align:center;"><span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:4px; font-size:0.7rem;">Ver</span></td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar.</td></tr>';
+    }
+}
+
+async function verDetalleDesdeLista(idReserva) {
+    cerrarModalListaKPI();
+    await abrirDetalleDesdePlanilla(idReserva);
+}
+
+// === TOAST NOTIFICATIONS ===
+function showToast(message, type = 'success') {
+    // Remover toast anterior si existe
+    const existing = document.getElementById('toastNotification');
+    if (existing) existing.remove();
+    
+    const toast = document.createElement('div');
+    toast.id = 'toastNotification';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: ${type === 'error' ? '#C62828' : '#2E7D32'}; color: white;
+        padding: 0.85rem 1.5rem; border-radius: 14px; font-size: 0.9rem; font-weight: 500;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2); z-index: 3000; max-width: 90%; text-align: center;
+        opacity: 0; transition: all 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+    
+    // Animar entrada
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    // Auto-ocultar
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Menú Admin
+function toggleMenu(e) { e.stopPropagation(); document.getElementById('adminMenu').style.display = 'block'; }
+function closeMenu() { document.getElementById('adminMenu').style.display = 'none'; }
+document.addEventListener('click', () => { if(document.getElementById('adminMenu').style.display === 'block') closeMenu(); });
+
+// === 🏆 CARGAR TORNEOS + LÓGICA DE BOTONES CORREGIDA ===
+async function cargarTorneos() {
+    const container = document.getElementById('listaTorneos');
+    if (!container) return;
+    
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem; color:#666;">🔄 Cargando torneos...</div>`;
+    
+    try {
+        const res = await fetch(`../api/get_torneos_recinto.php`, { credentials: 'include' });
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        
+        const torneos = await res.json();
+        
+        if (!Array.isArray(torneos) || torneos.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#888;">
+                <div style="font-size:3rem; margin-bottom:0.5rem;">📋</div>
+                <p>No hay torneos activos</p></div>`;
+            return;
+        }
+        
+        let html = '';
+        torneos.forEach(t => {
+            // 1. Definir variables básicas
+            const estado = (t.estado || '').toLowerCase();
+            const fechaInicio = t.fecha_inicio ? new Date(t.fecha_inicio).toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) : '-';
+            const inscritosCount = parseInt(t.parejas_inscritas) || 0;
+            const maxParejas = parseInt(t.num_parejas_max) || 0;
+            const progreso = maxParejas > 0 ? Math.min(100, (inscritosCount / maxParejas) * 100) : 0;
+            const icono = {padel:'🎾',tenis:'🎾',futbol:'⚽',futsal:'⚽'}[t.deporte?.toLowerCase()] || '🏆';
+            
+            // 2. DEFINIR estadoLabel y Color (Aquí estaba el error)
+            const estadoMap = {
+                'abierto': 'ABIERTO',
+                'cerrado': 'CERRADO',
+                'en_progreso': 'EN CURSO',
+                'finalizado': 'FINALIZADO'
+            };
+            const estadoLabel = estadoMap[estado] || estado.toUpperCase();
+            
+            const estadoColor = estado === 'abierto' ? '#4CAF50' : 
+                               (estado === 'en_progreso' ? '#2196F3' : '#FF9800');
+
+            // 3. Lógica de Botones (Según tu requerimiento)
+            let botonesHtml = '';
+            
+            if (estado === 'abierto') {
+                // ABIERTO: Invitar, Crear Fixture
+                botonesHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                        <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar" style="text-align:center; text-decoration:none; padding:0.6rem; border-radius:6px; background:#E0F7FA; color:#006064; font-weight:600; font-size:0.9rem;">📩 Invitar Parejas</a>
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="cerrarTorneo(${t.id_torneo})">Cerrar Inscrip..</button>
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="generarFixture(${t.id_torneo})">⚙️ Crear Fixture</button>
+                    </div>
+                `;
+            } else {
+                // EN CURSO / CERRADO: Ver Fixture, Resultados, Finalizar
+                botonesHtml = `
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#f0f0f0; color:#333; border:none; font-weight:600; cursor:pointer;" onclick="verFixture(${t.id_torneo})">🎾 Ver Fixture</button>
+                            <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="verResultadosTV(${t.id_torneo})">📺 TV Mode</button>
+                        </div>
+                        ${estado !== 'finalizado' ? `
+                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background: #f64242; color:white; border:none; font-weight:600; cursor:pointer; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
+                            ✅ Finalizar + Upgrade Ranking
+                        </button>` : ''}
+                    </div>
+                `;
+            }
+            
+            // 4. Construir HTML de la Tarjeta
+            html += `
+            <div style="background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; gap: 0.8rem; border-left: 5px solid ${estadoColor}; animation: fadeIn 0.3s ease-out forwards;">
+                
+                <!-- Header: Estado y Menú 3 Puntos -->
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="background:${estadoColor}; color:white; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.7rem; font-weight:bold;">
+                        ${estadoLabel}
+                    </span>
+                    
+                    <!-- Menú de 3 Puntos -->
+                    <div style="position:relative;">
+                        <button onclick="toggleMenuTorneo(${t.id_torneo}, event)" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666; padding:0;">⋮</button>
+                        <div id="menu-torneo-${t.id_torneo}" style="display:none; position:absolute; right:0; top:100%; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:10; min-width:120px; border:1px solid #eee;">
+                            <div onclick="editarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem; color:#333;">✏️ Editar</div>
+                            <div onclick="eliminarTorneo(${t.id_torneo})" style="padding:0.6rem; cursor:pointer; color:#c62828; font-size:0.9rem;">🗑️ Eliminar</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Título y Fecha -->
+                <div>
+                    <h4 style="margin:0; color:#071289; font-size:1.1rem; font-weight:700;">${icono} ${t.nombre || 'Sin nombre'}</h4>
+                    <p style="margin:0.2rem 0 0 0; font-size:0.85rem; color:#666;">📅 Inicio: ${fechaInicio}</p>
+                </div>
+
+                <!-- Inscritos y Ojo -->
+                <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.9rem; color:#555;">
+                    <span>👥 ${inscritosCount}/${maxParejas || '∞'} parejas</span>
+                    <button onclick="abrirModalInscritos(${t.id_torneo})" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#071289;" title="Ver inscritos">👁️</button>
+                </div>
+
+                <!-- Barra de Progreso -->
+                ${maxParejas > 0 ? `<div style="background:#e0e0e0; border-radius:10px; height:6px; overflow:hidden;"><div style="background:${estadoColor}; height:100%; width:${progreso}%; border-radius:10px;"></div></div>` : ''}
+
+                <!-- Botones de Acción -->
+                <div style="margin-top:auto; padding-top:0.8rem; border-top:1px solid #eee;">
+                    ${botonesHtml}
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#c62828; padding:2rem;">⚠️ Error: ${error.message}<br><button onclick="cargarTorneos()" style="margin-top:0.5rem; padding:0.4rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">Reintentar</button></div>`;
+    }
+}
 
 // === FUNCIONES AUXILIARES PARA EL MENÚ ===
 function toggleMenuTorneo(id, event) {
