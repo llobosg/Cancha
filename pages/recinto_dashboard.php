@@ -1189,7 +1189,7 @@ td.cell-reserva {
 }
 
 /* Botón + flotante */
-button[onclick="abrirModalConvenio()"]:hover {
+button[onclick="abrirModalConvenios()"]:hover {
     box-shadow: 0 6px 16px rgba(76,175,80,0.6) !important;
 }
 
@@ -1313,7 +1313,7 @@ button[onclick="abrirModalConvenio()"]:hover {
             <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #eee; background:linear-gradient(135deg, #f8f9fa, #e9ecef);">
                 <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 Mantenedor de Convenios</h3>
                 <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <button onclick="abrirModalConvenio(); event.stopPropagation();" title="Nuevo Convenio" 
+                    <button onclick="abrirModalConvenios(); event.stopPropagation();" title="Nuevo Convenio" 
                             style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #4CAF50, #43A047); border:none; color:white; font-size:1.3rem; cursor:pointer; display:grid; place-items:center; box-shadow:0 4px 12px rgba(76,175,80,0.4);">
                         +
                     </button>
@@ -1348,7 +1348,7 @@ button[onclick="abrirModalConvenio()"]:hover {
                         <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
                         <p style="font-weight:500;">Aún no tienes convenios</p>
                         <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
-                        <button onclick="abrirModalConvenio()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
+                        <button onclick="abrirModalConvenios()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
                             + Crear mi primer convenio
                         </button>
                     </div>
@@ -1392,7 +1392,7 @@ button[onclick="abrirModalConvenio()"]:hover {
                                         </span>
                                     </td>
                                     <td style="padding:0.8rem; text-align:center;">
-                                        <button onclick="abrirModalConvenio(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
+                                        <button onclick="abrirModalConvenios(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
                                                 style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
                                                 onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
                                             ✏️ Editar
@@ -4249,7 +4249,7 @@ function cerrarSubmodalConvenios(e) {
 }
 
 // === MODAL CREAR/EDITAR CONVENIO ===
-function abrirModalConvenio(datos = null) {
+function abrirModalConvenios(datos = null) {
     console.log('🔍 [Modal Convenio] Abriendo...', datos);
     const modal = document.getElementById('modalConvenio');
     if (!modal) {
@@ -4322,7 +4322,7 @@ document.addEventListener('click', function(e) {
         e.stopPropagation();
         try {
             const datos = JSON.parse(btn.dataset.convenio);
-            abrirModalConvenio(datos);
+            abrirModalConvenios(datos);
         } catch (err) {
             console.error('❌ Error al parsear convenio:', err);
             showToast('❌ Error al cargar datos', 'error');
@@ -4571,16 +4571,17 @@ document.addEventListener('click', function(e) {
     </div>
 
     <!-- === MODAL CREAR/EDITAR CONVENIO (minimal) === -->
-    <div id="modalConvenio" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; display:flex; justify-content:center; align-items:center; padding:1rem;" onclick="if(event.target===this)cerrarModalConvenio(event)">
+    <div id="modalConvenio" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; padding:1rem;" onclick="if(event.target===this)cerrarModalConvenio(event)">
         <div style="background:white; border-radius:16px; padding:1.5rem; max-width:500px; width:95%; position:relative;">
             <button onclick="cerrarModalConvenio(event)" style="position:absolute; top:0.75rem; right:0.75rem; background:#E2E8F0; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer;">&times;</button>
             <h3 style="margin:0 0 1rem 0;">🤝 <span id="modalConvenioTitulo">Nuevo Convenio</span></h3>
-            <form id="formConvenio" onsubmit="guardarConvenio(event)">
-                <input type="hidden" id="convenio_id" name="id_convenio">
-                <input type="hidden" id="convenio_action" name="action" value="create">
-                <!-- Contenido: Tabla de convenios -->
-                <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem; color: #2D3748;">
-                    <?php
+        </div>
+        <form id="formConvenio" onsubmit="guardarConvenio(event)">
+            <input type="hidden" id="convenio_id" name="id_convenio">
+            <input type="hidden" id="convenio_action" name="action" value="create">
+            <!-- Contenido: Tabla de convenios -->
+            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem; color: #2D3748;">
+                <?php
                     $stmt_conv = $pdo->prepare("
                         SELECT c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, 
                         c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado,
@@ -4593,33 +4594,33 @@ document.addEventListener('click', function(e) {
                     ");
                     $stmt_conv->execute([$_SESSION['id_recinto']]);
                     $convenios_submodal = $stmt_conv->fetchAll();
-                    ?>
+                ?>
                     
-                    <?php if (empty($convenios_submodal)): ?>
-                        <div style="text-align:center; padding:3rem 1rem; color:#718096;">
-                            <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
-                            <p style="font-weight:500;">Aún no tienes convenios</p>
-                            <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
-                            <button onclick="abrirModalConvenio()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
-                                + Crear mi primer convenio
-                            </button>
-                        </div>
-                    <?php else: ?>
-                        <div style="overflow-x:auto;">
-                            <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #2D3748;">
-                                <thead>
-                                    <tr style="background:#F7FAFC; position:sticky; top:0;">
-                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Empresa</th>
-                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Contacto</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Descuento</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Socios</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Vigencia</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Estado</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach($convenios_submodal as $c): ?>
+                <?php if (empty($convenios_submodal)): ?>
+                    <div style="text-align:center; padding:3rem 1rem; color:#718096;">
+                        <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
+                        <p style="font-weight:500;">Aún no tienes convenios</p>
+                        <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
+                        <button onclick="abrirModalConvenios()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
+                            + Crear mi primer convenio
+                        </button>
+                    </div>
+                <?php else: ?>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #2D3748;">
+                            <thead>
+                                <tr style="background:#F7FAFC; position:sticky; top:0;">
+                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Empresa</th>
+                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Contacto</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Descuento</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Socios</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Vigencia</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Estado</th>
+                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($convenios_submodal as $c): ?>
                                     <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
                                         <td style="padding:0.8rem; color: #718096; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
                                         <td style="padding:0.8rem;">
@@ -4644,26 +4645,25 @@ document.addEventListener('click', function(e) {
                                             </span>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
-                                           <button type="button" 
+                                            <button type="button" 
                                                 class="btn-editar-convenio"
-                                                data-convenio='<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>'
+                                                data-convenio='<?= htmlspecialchars(json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>'
                                                 style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
-                                            ✏️ Editar
-                                        </button>
+                                                ✏️ Editar
+                                            </button>
                                         </td>
                                     </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-                    <button type="button" onclick="cerrarModalConvenio(event)" style="flex:1; padding:0.7rem; border-radius:10px; border:2px solid #E2E8F0; background:white; cursor:pointer;">Cancelar</button>
-                    <button type="submit" style="flex:1; padding:0.7rem; border-radius:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; font-weight:600; cursor:pointer;">💾 Guardar</button>
-                </div>
-            </form>
-        </div>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                <button type="button" onclick="cerrarModalConvenio(event)" style="flex:1; padding:0.7rem; border-radius:10px; border:2px solid #E2E8F0; background:white; cursor:pointer;">Cancelar</button>
+                <button type="submit" style="flex:1; padding:0.7rem; border-radius:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; font-weight:600; cursor:pointer;">💾 Guardar</button>
+            </div>
+        </form>
     </div>
 </body>
 </html>
