@@ -1258,8 +1258,8 @@ button[onclick="abrirModalConvenio()"]:hover {
             <button class="action-btn-sidebar" onclick="window.location.href='crear_torneo.php'">
                 <span>➕</span> Crear Torneo
             </button>
-            <!-- Botón para abrir modal convenios -->
-            <button onclick="abrirSubmodalConvenios()" 
+            <!-- Botón Convenios con stopPropagation -->
+            <button onclick="abrirSubmodalConvenios(event)" 
                     style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.2rem; border-radius:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; margin-bottom:1rem;">
                 <span>🤝</span> Convenios
             </button>
@@ -1298,23 +1298,26 @@ button[onclick="abrirModalConvenio()"]:hover {
     </div>
 
     <!-- === SUBMODAL CONVENIOS (se superpone sobre la planilla) === -->
-    <div id="submodalConvenios" class="submodal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">
-        <div class="submodal-card" style="background:white; border-radius:20px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; display:flex; flex-direction:column;">
+    <div id="submodalConvenios" 
+        class="submodal-overlay" 
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;"
+        onclick="if(event.target === this) cerrarSubmodalConvenios()">
+        
+        <!-- ✅ onclick="event.stopPropagation()" en la tarjeta para evitar cierre accidental -->
+        <div class="submodal-card" 
+            onclick="event.stopPropagation()"
+            style="background:white; border-radius:20px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; display:flex; flex-direction:column;">
             
-            <!-- Header del submodal -->
+            <!-- Header -->
             <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #eee; background:linear-gradient(135deg, #f8f9fa, #e9ecef);">
                 <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 Mantenedor de Convenios</h3>
                 <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <!-- Botón + para crear nuevo convenio -->
-                    <button onclick="abrirModalConvenio()" title="Nuevo Convenio" 
-                            style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #4CAF50, #43A047); border:none; color:white; font-size:1.3rem; cursor:pointer; display:grid; place-items:center; box-shadow:0 4px 12px rgba(76,175,80,0.4); transition:transform 0.2s;"
-                            onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <button onclick="abrirModalConvenio(); event.stopPropagation();" title="Nuevo Convenio" 
+                            style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #4CAF50, #43A047); border:none; color:white; font-size:1.3rem; cursor:pointer; display:grid; place-items:center; box-shadow:0 4px 12px rgba(76,175,80,0.4);">
                         +
                     </button>
-                    <!-- Botón X para cerrar submodal -->
-                    <button onclick="cerrarSubmodalConvenios()" title="Cerrar" 
-                            style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer; display:grid; place-items:center; transition:background 0.2s;"
-                            onmouseover="this.style.background='#CBD5E0'" onmouseout="this.style.background='#E2E8F0'">
+                    <button onclick="cerrarSubmodalConvenios(); event.stopPropagation();" title="Cerrar" 
+                            style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer; display:grid; place-items:center;">
                         ×
                     </button>
                 </div>
@@ -4253,19 +4256,17 @@ document.addEventListener('keydown', function(e) {
     }
 });
 // === SUBMODAL CONVENIOS ===
-function abrirSubmodalConvenios() {
+function abrirSubmodalConvenios(e) {
+    if (e) e.stopPropagation(); // ✅ Detener propagación del click
     console.log('🔍 abrirSubmodalConvenios llamado');
     
     const submodal = document.getElementById('submodalConvenios');
     console.log('🔍 submodal encontrado:', !!submodal);
     
     if (submodal) {
-        submodal.style.display = 'flex';  // ✅ Ahora sí aplica flex
+        submodal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         console.log('✅ Submodal abierto');
-    } else {
-        console.error('❌ No se encontró #submodalConvenios en el DOM');
-        alert('Error: El mantenedor de convenios no está cargado. Recarga la página.');
     }
 }
 
