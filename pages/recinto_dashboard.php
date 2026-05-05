@@ -4260,54 +4260,82 @@ document.addEventListener('keydown', function(e) {
 // === TRAZA: SUBMODAL CONVENIOS ===
 let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
 
-// === SUBMODAL CONVENIOS ===
 function abrirSubmodalConvenios(e) {
     if (e) e.stopPropagation();
-    console.log('🔍 [Convenios] Intentando abrir submodal...');
+    const modal = document.getElementById('submodalConvenios');
+    modal.classList.add('active'); // Usa la clase CSS
+    document.body.style.overflow = 'hidden';
+    
+    console.log('✅ [APERTURA] Submodal visible. Display:', submodal.style.display);
+}
+
+function cerrarSubmodalConvenios(e) {
+    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando submodal vía: ${e.type}`);
     
     const submodal = document.getElementById('submodalConvenios');
-    if (!submodal) {
-        console.error('❌ [Convenios] No se encontró #submodalConvenios en el DOM');
+    if (submodal) {
+        submodal.classList.remove('active');
+        // Esperar animación CSS antes de ocultar
+        setTimeout(() => {
+            submodal.style.display = 'none';
+        }, 300);
+        document.body.style.overflow = '';
+        console.log('🔴 [CIERRE] Submodal cerrado');
+    }
+}
+
+// === LISTENER GLOBAL (CON TRAZA) ===
+document.addEventListener('click', function(e) {
+    const submodal = document.getElementById('submodalConvenios');
+    
+    // Si el submodal no está abierto, ignorar
+    if (!submodal || submodal.style.display === 'none') return;
+
+    // Si el click fue DENTRO del contenido (tarjeta), NO cerrar
+    if (e.target.closest('.submodal-card')) {
+        if(submodalConveniosDebug) console.log('ℹ️ [GLOBAL] Click ignorado: fue dentro del contenido');
         return;
     }
 
-    submodal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    console.log('✅ [Convenios] Submodal abierto correctamente');
-}
-
-function cerrarSubmodalConvenios() {
-    const submodal = document.getElementById('submodalConvenios');
-    if (submodal) {
-        submodal.style.display = 'none';
-        document.body.style.overflow = '';
+    // Si el click fue en el overlay (fondo oscuro)
+    if (e.target.id === 'submodalConvenios' || e.target === submodal) {
+        console.log('🔍 [GLOBAL] Click detectado en overlay. Cerrando...');
+        cerrarSubmodalConvenios(e);
     }
-}
+});
 
-// === MODAL CREAR/EDITAR CONVENIO ===
+// Cerrar con tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const submodal = document.getElementById('submodalConvenios');
+        if (submodal && submodal.style.display === 'flex') {
+            cerrarSubmodalConvenios();
+        }
+    }
+});
+
+// === MODAL CREAR/EDITAR CONVENIO (ya existente, solo aseguramos que funcione sobre el submodal) ===
+// Si tu función abrirModalConvenio() ya existe, no necesitas cambiarla.
+// Si no, aquí va la versión mínima:
 function abrirModalConvenio(datos = null) {
-    console.log('🔍 [Modal Convenio] Abriendo...', datos);
+    // Si ya tienes esta función, bórrala de aquí para evitar duplicados
     const modal = document.getElementById('modalConvenio');
     if (!modal) {
-        console.error('❌ [Modal Convenio] No se encontró #modalConvenio');
+        console.error('❌ No se encontró #modalConvenio. Asegúrate de agregar el HTML del modal.');
         return;
     }
     
     const form = document.getElementById('formConvenio');
     const campoEstado = document.getElementById('campo_estado');
-    const titulo = document.getElementById('modalConvenioTitulo');
     
-    // Reset
     form.reset();
     document.getElementById('convenio_action').value = 'create';
     document.getElementById('convenio_id').value = '';
-    if (titulo) titulo.textContent = 'Nuevo Convenio';
     if (campoEstado) campoEstado.style.display = 'none';
     
-    if (datos && typeof datos === 'object') {
-        // Modo Edición
+    if (datos) {
         document.getElementById('convenio_action').value = 'update';
-        document.getElementById('convenio_id').value = datos.id_convenio || '';
+        document.getElementById('convenio_id').value = datos.id_convenio;
         document.getElementById('convenio_nombre').value = datos.nombre_empresa || '';
         document.getElementById('convenio_contacto').value = datos.contacto_nombre || '';
         document.getElementById('convenio_email').value = datos.contacto_email || '';
@@ -4315,12 +4343,10 @@ function abrirModalConvenio(datos = null) {
         document.getElementById('convenio_dscto').value = datos.porc_dscto || 0;
         document.getElementById('convenio_desde').value = datos.vigente_desde || '';
         document.getElementById('convenio_hasta').value = datos.vigente_hasta || '';
-        
         if (campoEstado) {
             document.getElementById('convenio_estado').value = datos.estado || 'activo';
             campoEstado.style.display = 'block';
         }
-        if (titulo) titulo.textContent = 'Editar Convenio';
     }
     
     modal.style.display = 'flex';
@@ -4328,8 +4354,7 @@ function abrirModalConvenio(datos = null) {
 }
 
 function cerrarModalConvenio(e) {
-    // Cerrar si click en fondo o botón X
-    if (!e || e.target.id === 'modalConvenio' || e.target.classList.contains('modal-close')) {
+    if (e?.target?.id === 'modalConvenio' || e?.target?.classList?.contains('modal-close')) {
         const modal = document.getElementById('modalConvenio');
         if (modal) {
             modal.style.display = 'none';
@@ -4337,20 +4362,6 @@ function cerrarModalConvenio(e) {
         }
     }
 }
-
-// Listeners globales para cerrar con ESC o click fuera
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        cerrarSubmodalConvenios();
-        cerrarModalConvenio();
-    }
-});
-document.addEventListener('click', (e) => {
-    const submodal = document.getElementById('submodalConvenios');
-    if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
-        cerrarSubmodalConvenios();
-    }
-});
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
@@ -4666,8 +4677,7 @@ document.addEventListener('click', (e) => {
                                             </span>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
-                                            <button type="button" 
-                                                    onclick="abrirModalConvenio(JSON.parse(atob('<?= base64_encode(json_encode($c, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>')))" 
+                                            <button onclick="abrirModalConvenio(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
                                                     style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
                                                     onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
                                                 ✏️ Editar
