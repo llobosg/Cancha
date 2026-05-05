@@ -4611,19 +4611,84 @@ function cerrarModalConvenio(e) {
             <form id="formConvenio" onsubmit="guardarConvenio(event)">
                 <input type="hidden" id="convenio_id" name="id_convenio">
                 <input type="hidden" id="convenio_action" name="action" value="create">
-                <div style="display:grid; gap:0.75rem;">
-                    <input type="text" id="convenio_nombre" name="nombre_empresa" required placeholder="Empresa *" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                    <input type="text" id="convenio_contacto" name="contacto_nombre" placeholder="Contacto" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                    <input type="email" id="convenio_email" name="contacto_email" placeholder="Email" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                    <input type="tel" id="convenio_telefono" name="contacto_telefono" placeholder="Teléfono" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <input type="number" id="convenio_dscto" name="porc_dscto" min="0" max="100" step="0.01" required placeholder="%" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                        <span style="font-weight:600;">% descuento</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
-                        <input type="date" id="convenio_desde" name="vigente_desde" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                        <input type="date" id="convenio_hasta" name="vigente_hasta" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
-                    </div>
+                <!-- Contenido: Tabla de convenios -->
+                <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem; color: #2D3748;">
+                    <?php
+                    $stmt_conv = $pdo->prepare("
+                        SELECT c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, 
+                        c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado,
+                        COUNT(s.id_socio) as socios_vinculados
+                        FROM convenios c
+                        LEFT JOIN socios s ON c.id_convenio = s.id_convenio AND s.activo = 'Si'
+                        WHERE c.id_recinto = ? 
+                        GROUP BY c.id_convenio
+                        ORDER BY c.nombre_empresa ASC
+                    ");
+                    $stmt_conv->execute([$_SESSION['id_recinto']]);
+                    $convenios_submodal = $stmt_conv->fetchAll();
+                    ?>
+                    
+                    <?php if (empty($convenios_submodal)): ?>
+                        <div style="text-align:center; padding:3rem 1rem; color:#718096;">
+                            <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
+                            <p style="font-weight:500;">Aún no tienes convenios</p>
+                            <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
+                            <button onclick="abrirModalConvenio()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
+                                + Crear mi primer convenio
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #2D3748;">
+                                <thead>
+                                    <tr style="background:#F7FAFC; position:sticky; top:0;">
+                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Empresa</th>
+                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Contacto</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Descuento</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Socios</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Vigencia</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Estado</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach($convenios_submodal as $c): ?>
+                                    <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
+                                        <td style="padding:0.8rem; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
+                                        <td style="padding:0.8rem;">
+                                            <?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br>
+                                            <small style="color:#718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small>
+                                        </td>
+                                        <td style="padding:0.8rem; text-align:center;">
+                                            <span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;">
+                                                <?= $c['porc_dscto'] ?>%
+                                            </span>
+                                        </td>
+                                        <td style="padding:0.8rem; text-align:center; font-weight:500; color:#4A5568;">
+                                            <?= $c['socios_vinculados'] ?>
+                                        </td>
+                                        <td style="padding:0.8rem; text-align:center; font-size:0.85rem;">
+                                            <?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?>
+                                            <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small style="color:#A0AEC0">(∞)</small>' ?>
+                                        </td>
+                                        <td style="padding:0.8rem; text-align:center;">
+                                            <span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem; font-weight:500;">
+                                                <?= ucfirst($c['estado']) ?>
+                                            </span>
+                                        </td>
+                                        <td style="padding:0.8rem; text-align:center;">
+                                            <button onclick="abrirModalConvenio(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
+                                                    style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
+                                                    onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
+                                                ✏️ Editar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div style="display:flex; gap:0.5rem; margin-top:1rem;">
                     <button type="button" onclick="cerrarModalConvenio(event)" style="flex:1; padding:0.7rem; border-radius:10px; border:2px solid #E2E8F0; background:white; cursor:pointer;">Cancelar</button>
