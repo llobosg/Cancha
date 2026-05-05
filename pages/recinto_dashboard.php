@@ -4260,82 +4260,54 @@ document.addEventListener('keydown', function(e) {
 // === TRAZA: SUBMODAL CONVENIOS ===
 let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
 
+// === SUBMODAL CONVENIOS ===
 function abrirSubmodalConvenios(e) {
     if (e) e.stopPropagation();
-    const modal = document.getElementById('submodalConvenios');
-    modal.classList.add('active'); // Usa la clase CSS
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ [APERTURA] Submodal visible. Display:', submodal.style.display);
-}
-
-function cerrarSubmodalConvenios(e) {
-    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando submodal vía: ${e.type}`);
+    console.log('🔍 [Convenios] Intentando abrir submodal...');
     
     const submodal = document.getElementById('submodalConvenios');
-    if (submodal) {
-        submodal.classList.remove('active');
-        // Esperar animación CSS antes de ocultar
-        setTimeout(() => {
-            submodal.style.display = 'none';
-        }, 300);
-        document.body.style.overflow = '';
-        console.log('🔴 [CIERRE] Submodal cerrado');
-    }
-}
-
-// === LISTENER GLOBAL (CON TRAZA) ===
-document.addEventListener('click', function(e) {
-    const submodal = document.getElementById('submodalConvenios');
-    
-    // Si el submodal no está abierto, ignorar
-    if (!submodal || submodal.style.display === 'none') return;
-
-    // Si el click fue DENTRO del contenido (tarjeta), NO cerrar
-    if (e.target.closest('.submodal-card')) {
-        if(submodalConveniosDebug) console.log('ℹ️ [GLOBAL] Click ignorado: fue dentro del contenido');
+    if (!submodal) {
+        console.error('❌ [Convenios] No se encontró #submodalConvenios en el DOM');
         return;
     }
 
-    // Si el click fue en el overlay (fondo oscuro)
-    if (e.target.id === 'submodalConvenios' || e.target === submodal) {
-        console.log('🔍 [GLOBAL] Click detectado en overlay. Cerrando...');
-        cerrarSubmodalConvenios(e);
-    }
-});
+    submodal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    console.log('✅ [Convenios] Submodal abierto correctamente');
+}
 
-// Cerrar con tecla ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const submodal = document.getElementById('submodalConvenios');
-        if (submodal && submodal.style.display === 'flex') {
-            cerrarSubmodalConvenios();
-        }
+function cerrarSubmodalConvenios() {
+    const submodal = document.getElementById('submodalConvenios');
+    if (submodal) {
+        submodal.style.display = 'none';
+        document.body.style.overflow = '';
     }
-});
+}
 
-// === MODAL CREAR/EDITAR CONVENIO (ya existente, solo aseguramos que funcione sobre el submodal) ===
-// Si tu función abrirModalConvenio() ya existe, no necesitas cambiarla.
-// Si no, aquí va la versión mínima:
+// === MODAL CREAR/EDITAR CONVENIO ===
 function abrirModalConvenio(datos = null) {
-    // Si ya tienes esta función, bórrala de aquí para evitar duplicados
+    console.log('🔍 [Modal Convenio] Abriendo...', datos);
     const modal = document.getElementById('modalConvenio');
     if (!modal) {
-        console.error('❌ No se encontró #modalConvenio. Asegúrate de agregar el HTML del modal.');
+        console.error('❌ [Modal Convenio] No se encontró #modalConvenio');
         return;
     }
     
     const form = document.getElementById('formConvenio');
     const campoEstado = document.getElementById('campo_estado');
+    const titulo = document.getElementById('modalConvenioTitulo');
     
+    // Reset
     form.reset();
     document.getElementById('convenio_action').value = 'create';
     document.getElementById('convenio_id').value = '';
+    if (titulo) titulo.textContent = 'Nuevo Convenio';
     if (campoEstado) campoEstado.style.display = 'none';
     
-    if (datos) {
+    if (datos && typeof datos === 'object') {
+        // Modo Edición
         document.getElementById('convenio_action').value = 'update';
-        document.getElementById('convenio_id').value = datos.id_convenio;
+        document.getElementById('convenio_id').value = datos.id_convenio || '';
         document.getElementById('convenio_nombre').value = datos.nombre_empresa || '';
         document.getElementById('convenio_contacto').value = datos.contacto_nombre || '';
         document.getElementById('convenio_email').value = datos.contacto_email || '';
@@ -4343,10 +4315,12 @@ function abrirModalConvenio(datos = null) {
         document.getElementById('convenio_dscto').value = datos.porc_dscto || 0;
         document.getElementById('convenio_desde').value = datos.vigente_desde || '';
         document.getElementById('convenio_hasta').value = datos.vigente_hasta || '';
+        
         if (campoEstado) {
             document.getElementById('convenio_estado').value = datos.estado || 'activo';
             campoEstado.style.display = 'block';
         }
+        if (titulo) titulo.textContent = 'Editar Convenio';
     }
     
     modal.style.display = 'flex';
@@ -4354,7 +4328,8 @@ function abrirModalConvenio(datos = null) {
 }
 
 function cerrarModalConvenio(e) {
-    if (e?.target?.id === 'modalConvenio' || e?.target?.classList?.contains('modal-close')) {
+    // Cerrar si click en fondo o botón X
+    if (!e || e.target.id === 'modalConvenio' || e.target.classList.contains('modal-close')) {
         const modal = document.getElementById('modalConvenio');
         if (modal) {
             modal.style.display = 'none';
@@ -4362,6 +4337,20 @@ function cerrarModalConvenio(e) {
         }
     }
 }
+
+// Listeners globales para cerrar con ESC o click fuera
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        cerrarSubmodalConvenios();
+        cerrarModalConvenio();
+    }
+});
+document.addEventListener('click', (e) => {
+    const submodal = document.getElementById('submodalConvenios');
+    if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
+        cerrarSubmodalConvenios();
+    }
+});
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
@@ -4642,34 +4631,34 @@ function cerrarModalConvenio(e) {
                             <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #2D3748;">
                                 <thead>
                                     <tr style="background:#F7FAFC; position:sticky; top:0;">
-                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Empresa</th>
-                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Contacto</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Descuento</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Socios</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Vigencia</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Estado</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600; color:#4A5568;">Acciones</th>
+                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Empresa</th>
+                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Contacto</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Descuento</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Socios</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Vigencia</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Estado</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach($convenios_submodal as $c): ?>
                                     <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
-                                        <td style="padding:0.8rem; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
+                                        <td style="padding:0.8rem; color: #718096; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
                                         <td style="padding:0.8rem;">
                                             <?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br>
-                                            <small style="color:#718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small>
+                                            <small style="color: #718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
                                             <span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;">
                                                 <?= $c['porc_dscto'] ?>%
                                             </span>
                                         </td>
-                                        <td style="padding:0.8rem; text-align:center; font-weight:500; color:#4A5568;">
+                                        <td style="padding:0.8rem; text-align:center; font-weight:500; color: #4A5568;">
                                             <?= $c['socios_vinculados'] ?>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center; font-size:0.85rem;">
                                             <?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?>
-                                            <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small style="color:#A0AEC0">(∞)</small>' ?>
+                                            <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small style="color: #A0AEC0">(∞)</small>' ?>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
                                             <span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem; font-weight:500;">
@@ -4677,7 +4666,8 @@ function cerrarModalConvenio(e) {
                                             </span>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
-                                            <button onclick="abrirModalConvenio(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
+                                            <button type="button" 
+                                                    onclick="abrirModalConvenio(JSON.parse(atob('<?= base64_encode(json_encode($c, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>')))" 
                                                     style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
                                                     onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
                                                 ✏️ Editar
