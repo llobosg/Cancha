@@ -750,10 +750,6 @@ td.estado-parcial { background: #FFEB3B !important; color: #333 !important; bord
     pointer-events: none;
     transition: opacity 0.3s ease;
 }
-.submodal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
 .submodal-card {
     background: white;
     border-radius: 16px;
@@ -1210,6 +1206,12 @@ button[onclick="abrirModalConvenio()"]:hover {
         padding: 0.6rem 0.4rem !important;
     }
 }
+/* Agrega esto a tu <style> */
+.submodal-overlay.active {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
 </style>
 </head>
 <body>
@@ -1301,9 +1303,8 @@ button[onclick="abrirModalConvenio()"]:hover {
     <!-- ✅ SOLO document listener para cerrar -->
     <div id="submodalConvenios" 
         class="submodal-overlay" 
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">onclick="if(event.target === this) cerrarSubmodalConvenios()">
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">
         
-        <!-- ✅ onclick="event.stopPropagation()" en la tarjeta para evitar cierre accidental -->
         <div class="submodal-card" 
             onclick="event.stopPropagation()"
             style="background:white; border-radius:20px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; display:flex; flex-direction:column;">
@@ -4255,52 +4256,51 @@ document.addEventListener('keydown', function(e) {
         cerrarModalConvenio({target: document.getElementById('modalConvenio')});
     }
 });
-// === SUBMODAL CONVENIOS ===
+
+// === TRAZA: SUBMODAL CONVENIOS ===
+let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
+
 function abrirSubmodalConvenios(e) {
-    // ✅ Prevenir comportamiento por defecto Y propagación
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+    if (e) e.stopPropagation();
+    const modal = document.getElementById('submodalConvenios');
+    modal.classList.add('active'); // Usa la clase CSS
+    document.body.style.overflow = 'hidden';
     
-    console.log('🔍 abrirSubmodalConvenios llamado');
+    console.log('✅ [APERTURA] Submodal visible. Display:', submodal.style.display);
+}
+
+function cerrarSubmodalConvenios(e) {
+    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando submodal vía: ${e.type}`);
     
     const submodal = document.getElementById('submodalConvenios');
-    console.log('🔍 submodal encontrado:', !!submodal);
-    
     if (submodal) {
-        // ✅ Forzar display flex y asegurar que no se cierre inmediatamente
-        submodal.style.display = 'flex';
-        
-        // ✅ Pequeño timeout para evitar race condition con document listener
+        submodal.classList.remove('active');
+        // Esperar animación CSS antes de ocultar
         setTimeout(() => {
-            submodal.dataset.justOpened = 'true';
-            setTimeout(() => { delete submodal.dataset.justOpened; }, 300);
-        }, 50);
-        
-        document.body.style.overflow = 'hidden';
-        console.log('✅ Submodal abierto');
+            submodal.style.display = 'none';
+        }, 300);
+        document.body.style.overflow = '';
+        console.log('🔴 [CIERRE] Submodal cerrado');
     }
 }
 
-function cerrarSubmodalConvenios() {
-    const submodal = document.getElementById('submodalConvenios');
-    if (submodal) {
-        submodal.style.display = 'none';
-        document.body.style.overflow = ''; // Restaurar scroll
-    }
-}
-
-// Cerrar submodal al hacer click FUERA del contenido (solo overlay)
+// === LISTENER GLOBAL (CON TRAZA) ===
 document.addEventListener('click', function(e) {
     const submodal = document.getElementById('submodalConvenios');
     
-    // ✅ Verificar que está abierto Y que no se acaba de abrir (evitar race condition)
-    if (submodal && 
-        submodal.style.display === 'flex' && 
-        !submodal.dataset.justOpened &&
-        e.target.id === 'submodalConvenios') {  // ✅ Usar ID para comparación exacta
-        cerrarSubmodalConvenios();
+    // Si el submodal no está abierto, ignorar
+    if (!submodal || submodal.style.display === 'none') return;
+
+    // Si el click fue DENTRO del contenido (tarjeta), NO cerrar
+    if (e.target.closest('.submodal-card')) {
+        if(submodalConveniosDebug) console.log('ℹ️ [GLOBAL] Click ignorado: fue dentro del contenido');
+        return;
+    }
+
+    // Si el click fue en el overlay (fondo oscuro)
+    if (e.target.id === 'submodalConvenios' || e.target === submodal) {
+        console.log('🔍 [GLOBAL] Click detectado en overlay. Cerrando...');
+        cerrarSubmodalConvenios(e);
     }
 });
 
