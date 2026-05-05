@@ -2002,14 +2002,19 @@ async function abrirDetalleDesdePlanilla(idReserva) {
                         <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
                     </div>
                     <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
-                        👤 Creado por: <strong>${userCreacion}</strong> 
-                        ${detalle.created_at ? (() => {
+                        👤 Creado por: <strong>${userCreacion}</strong> ${fechaCreacionStr}
+                        let fechaCreacionStr = '';
+
+                        if (detalle.created_at) {
                             const fecha = new Date(detalle.created_at.replace(' ', 'T'));
-                            return `• ${fecha.toLocaleString('es-CL', { 
-                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', 
-                                timeZone: 'America/Santiago' 
+                            fechaCreacionStr = `• ${fecha.toLocaleString('es-CL', { 
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZone: 'America/Santiago'
                             })}`;
-                        })() : ''}
+                        }
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
