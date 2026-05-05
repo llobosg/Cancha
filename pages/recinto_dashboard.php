@@ -4216,24 +4216,32 @@ async function guardarConvenio(e) {
 // === TRAZA: SUBMODAL CONVENIOS ===
 let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
 
+// === SUBMODAL CONVENIOS (CORREGIDO) ===
 function abrirSubmodalConvenios(e) {
     if (e) e.stopPropagation();
+    console.log('🔍 [APERTURA] Click en botón Convenios');
+    
     const modal = document.getElementById('submodalConvenios');
-    modal.classList.add('active'); // Usa la clase CSS
+    if (!modal) {
+        console.error('❌ [APERTURA] No se encontró #submodalConvenios');
+        return;
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
     document.body.style.overflow = 'hidden';
     
-    console.log('✅ [APERTURA] Submodal visible. Display:', submodal.style.display);
+    console.log('✅ [APERTURA] Submodal visible. Display:', modal.style.display);
 }
 
 function cerrarSubmodalConvenios(e) {
-    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando submodal vía: ${e.type}`);
+    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando vía: ${e.type}`);
     
-    const submodal = document.getElementById('submodalConvenios');
-    if (submodal) {
-        submodal.classList.remove('active');
-        // Esperar animación CSS antes de ocultar
+    const modal = document.getElementById('submodalConvenios');
+    if (modal) {
+        modal.classList.remove('active');
         setTimeout(() => {
-            submodal.style.display = 'none';
+            modal.style.display = 'none';
         }, 300);
         document.body.style.overflow = '';
         console.log('🔴 [CIERRE] Submodal cerrado');
@@ -4305,6 +4313,20 @@ document.addEventListener('click', (e) => {
     const submodal = document.getElementById('submodalConvenios');
     if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
         cerrarSubmodalConvenios();
+    }
+});
+// === LISTENER PARA BOTÓN EDITAR CONVENIO (SEGURO) ===
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-editar-convenio');
+    if (btn) {
+        e.stopPropagation();
+        try {
+            const datos = JSON.parse(btn.dataset.convenio);
+            abrirModalConvenio(datos);
+        } catch (err) {
+            console.error('❌ Error al parsear convenio:', err);
+            showToast('❌ Error al cargar datos', 'error');
+        }
     }
 });
 </script>
@@ -4623,11 +4645,11 @@ document.addEventListener('click', (e) => {
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
                                            <button type="button" 
-                                                    onclick="abrirModalConvenio(JSON.parse(atob('<?= base64_encode(json_encode($c, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>')))" 
-                                                    style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
-                                                    onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
-                                                ✏️ Editar
-                                            </button>
+                                                class="btn-editar-convenio"
+                                                data-convenio='<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>'
+                                                style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
+                                            ✏️ Editar
+                                        </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
