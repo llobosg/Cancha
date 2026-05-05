@@ -1298,10 +1298,10 @@ button[onclick="abrirModalConvenio()"]:hover {
     </div>
 
     <!-- === SUBMODAL CONVENIOS (se superpone sobre la planilla) === -->
+    <!-- ✅ SOLO document listener para cerrar -->
     <div id="submodalConvenios" 
         class="submodal-overlay" 
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;"
-        onclick="if(event.target === this) cerrarSubmodalConvenios()">
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">onclick="if(event.target === this) cerrarSubmodalConvenios()">
         
         <!-- ✅ onclick="event.stopPropagation()" en la tarjeta para evitar cierre accidental -->
         <div class="submodal-card" 
@@ -4257,14 +4257,27 @@ document.addEventListener('keydown', function(e) {
 });
 // === SUBMODAL CONVENIOS ===
 function abrirSubmodalConvenios(e) {
-    if (e) e.stopPropagation(); // ✅ Detener propagación del click
+    // ✅ Prevenir comportamiento por defecto Y propagación
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
     console.log('🔍 abrirSubmodalConvenios llamado');
     
     const submodal = document.getElementById('submodalConvenios');
     console.log('🔍 submodal encontrado:', !!submodal);
     
     if (submodal) {
+        // ✅ Forzar display flex y asegurar que no se cierre inmediatamente
         submodal.style.display = 'flex';
+        
+        // ✅ Pequeño timeout para evitar race condition con document listener
+        setTimeout(() => {
+            submodal.dataset.justOpened = 'true';
+            setTimeout(() => { delete submodal.dataset.justOpened; }, 300);
+        }, 50);
+        
         document.body.style.overflow = 'hidden';
         console.log('✅ Submodal abierto');
     }
@@ -4278,10 +4291,15 @@ function cerrarSubmodalConvenios() {
     }
 }
 
-// Cerrar submodal al hacer click fuera del contenido
+// Cerrar submodal al hacer click FUERA del contenido (solo overlay)
 document.addEventListener('click', function(e) {
     const submodal = document.getElementById('submodalConvenios');
-    if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
+    
+    // ✅ Verificar que está abierto Y que no se acaba de abrir (evitar race condition)
+    if (submodal && 
+        submodal.style.display === 'flex' && 
+        !submodal.dataset.justOpened &&
+        e.target.id === 'submodalConvenios') {  // ✅ Usar ID para comparación exacta
         cerrarSubmodalConvenios();
     }
 });
