@@ -1550,7 +1550,7 @@ console.log("🔍 DEBUG JS canchasData:", {
 });
 
 // === INICIALIZACIÓN ===
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     // Fecha
     const fechaInput = document.getElementById('fechaPlanillaInput');
     if (fechaInput) {
