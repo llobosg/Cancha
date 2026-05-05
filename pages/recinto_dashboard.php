@@ -1298,7 +1298,7 @@ button[onclick="abrirModalConvenio()"]:hover {
     </div>
 
     <!-- === SUBMODAL CONVENIOS (se superpone sobre la planilla) === -->
-    <div id="submodalConvenios" class="submodal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; display:flex; justify-content:center; align-items:center; padding:1rem;">
+    <div id="submodalConvenios" class="submodal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">
         <div class="submodal-card" style="background:white; border-radius:20px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; display:flex; flex-direction:column;">
             
             <!-- Header del submodal -->
@@ -4254,10 +4254,18 @@ document.addEventListener('keydown', function(e) {
 });
 // === SUBMODAL CONVENIOS ===
 function abrirSubmodalConvenios() {
+    console.log('🔍 abrirSubmodalConvenios llamado');
+    
     const submodal = document.getElementById('submodalConvenios');
+    console.log('🔍 submodal encontrado:', !!submodal);
+    
     if (submodal) {
-        submodal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Evitar scroll del fondo
+        submodal.style.display = 'flex';  // ✅ Ahora sí aplica flex
+        document.body.style.overflow = 'hidden';
+        console.log('✅ Submodal abierto');
+    } else {
+        console.error('❌ No se encontró #submodalConvenios en el DOM');
+        alert('Error: El mantenedor de convenios no está cargado. Recarga la página.');
     }
 }
 
@@ -4576,98 +4584,31 @@ function cerrarModalConvenio(e) {
     </div>
     </div>
 
-    <!-- === MODAL CONVENIOS === -->
-    <div id="modalConvenio" class="modal-overlay" style="display:none;" onclick="cerrarModalConvenio(event)">
-        <div class="modal-content" style="max-width:520px;">
-            <button class="modal-close" onclick="cerrarModalConvenio(event)">&times;</button>
-            <h3 style="text-align:center; margin-bottom:1.5rem; color:var(--padel-blue);">🤝 Gestión de Convenios</h3>
-            
+    <!-- === MODAL CREAR/EDITAR CONVENIO (minimal) === -->
+    <div id="modalConvenio" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; display:flex; justify-content:center; align-items:center; padding:1rem;" onclick="if(event.target===this)cerrarModalConvenio(event)">
+        <div style="background:white; border-radius:16px; padding:1.5rem; max-width:500px; width:95%; position:relative;">
+            <button onclick="cerrarModalConvenio(event)" style="position:absolute; top:0.75rem; right:0.75rem; background:#E2E8F0; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer;">&times;</button>
+            <h3 style="margin:0 0 1rem 0;">🤝 <span id="modalConvenioTitulo">Nuevo Convenio</span></h3>
             <form id="formConvenio" onsubmit="guardarConvenio(event)">
                 <input type="hidden" id="convenio_id" name="id_convenio">
                 <input type="hidden" id="convenio_action" name="action" value="create">
-                
-                <div style="display:grid; gap:1rem;">
-                    <!-- Nombre Empresa -->
-                    <div>
-                        <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Empresa / Institución *</label>
-                        <input type="text" id="convenio_nombre" name="nombre_empresa" required 
-                            placeholder="Ej: Universidad Diego Portales"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
+                <div style="display:grid; gap:0.75rem;">
+                    <input type="text" id="convenio_nombre" name="nombre_empresa" required placeholder="Empresa *" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
+                    <input type="text" id="convenio_contacto" name="contacto_nombre" placeholder="Contacto" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
+                    <input type="email" id="convenio_email" name="contacto_email" placeholder="Email" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
+                    <input type="tel" id="convenio_telefono" name="contacto_telefono" placeholder="Teléfono" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="convenio_dscto" name="porc_dscto" min="0" max="100" step="0.01" required placeholder="%" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
+                        <span style="font-weight:600;">% descuento</span>
                     </div>
-                    
-                    <!-- Contacto -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Nombre Contacto</label>
-                            <input type="text" id="convenio_contacto" name="contacto_nombre" 
-                                placeholder="Juan Pérez"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Teléfono</label>
-                            <input type="tel" id="convenio_telefono" name="contacto_telefono" 
-                                placeholder="+569 1234 5678"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Email Contacto</label>
-                        <input type="email" id="convenio_email" name="contacto_email" 
-                            placeholder="contacto@empresa.cl"
-                            style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                    </div>
-                    
-                    <!-- Descuento -->
-                    <div style="background:#F7FAFC; padding:1rem; border-radius:12px; border-left:4px solid #4FC3F7;">
-                        <label style="display:block; font-weight:600; margin-bottom:0.4rem; color:#2D3748;">
-                            % Descuento sobre arriendo *
-                        </label>
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <input type="number" id="convenio_dscto" name="porc_dscto" required min="0" max="100" step="0.01"
-                                placeholder="Ej: 20"
-                                style="flex:1; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem; font-weight:600;">
-                            <span style="font-size:1.2rem; font-weight:600; color:#4FC3F7;">%</span>
-                        </div>
-                        <small style="display:block; margin-top:0.3rem; color:#718096; font-size:0.8rem;">
-                            Ej: 20 → $33.000 se cobra como $26.400
-                        </small>
-                    </div>
-                    
-                    <!-- Vigencia -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Vigente desde</label>
-                            <input type="date" id="convenio_desde" name="vigente_desde"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Vigente hasta</label>
-                            <input type="date" id="convenio_hasta" name="vigente_hasta"
-                                style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                            <small style="color:#718096; font-size:0.75rem;">Dejar vacío = indefinido</small>
-                        </div>
-                    </div>
-                    
-                    <!-- Estado (solo para editar) -->
-                    <div id="campo_estado" style="display:none;">
-                        <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Estado</label>
-                        <select id="convenio_estado" name="estado" style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid #ddd; font-size:0.95rem;">
-                            <option value="activo">✅ Activo</option>
-                            <option value="inactivo">⏸️ Inactivo</option>
-                        </select>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                        <input type="date" id="convenio_desde" name="vigente_desde" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
+                        <input type="date" id="convenio_hasta" name="vigente_hasta" style="padding:0.6rem; border-radius:8px; border:1px solid #ddd;">
                     </div>
                 </div>
-                
-                <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
-                    <button type="button" onclick="cerrarModalConvenio(event)" 
-                            style="flex:1; padding:0.85rem; border-radius:12px; border:2px solid #E2E8F0; background:white; font-weight:500; cursor:pointer;">
-                        Cancelar
-                    </button>
-                    <button type="submit" 
-                            style="flex:1; padding:0.85rem; border-radius:12px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; font-weight:600; cursor:pointer;">
-                        💾 Guardar Convenio
-                    </button>
+                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                    <button type="button" onclick="cerrarModalConvenio(event)" style="flex:1; padding:0.7rem; border-radius:10px; border:2px solid #E2E8F0; background:white; cursor:pointer;">Cancelar</button>
+                    <button type="submit" style="flex:1; padding:0.7rem; border-radius:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; font-weight:600; cursor:pointer;">💾 Guardar</button>
                 </div>
             </form>
         </div>
