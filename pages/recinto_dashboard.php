@@ -4642,13 +4642,13 @@ function cerrarModalConvenio(e) {
                             <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #2D3748;">
                                 <thead>
                                     <tr style="background:#F7FAFC; position:sticky; top:0;">
-                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Empresa</th>
-                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Contacto</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Descuento</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Socios</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Vigencia</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Estado</th>
-                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color:#4A5568;">Acciones</th>
+                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Empresa</th>
+                                        <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Contacto</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Descuento</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Socios</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Vigencia</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Estado</th>
+                                        <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
