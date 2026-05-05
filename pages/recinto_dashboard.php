@@ -4216,27 +4216,27 @@ async function guardarConvenio(e) {
 // === TRAZA: SUBMODAL CONVENIOS ===
 let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
 
+// === SUBMODAL CONVENIOS ===
 function abrirSubmodalConvenios(e) {
     if (e) e.stopPropagation();
-    const modal = document.getElementById('submodalConvenios');
-    modal.classList.add('active'); // Usa la clase CSS
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ [APERTURA] Submodal visible. Display:', submodal.style.display);
-}
-
-function cerrarSubmodalConvenios(e) {
-    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando submodal vía: ${e.type}`);
+    console.log('🔍 [Convenios] Intentando abrir submodal...');
     
     const submodal = document.getElementById('submodalConvenios');
+    if (!submodal) {
+        console.error('❌ [Convenios] No se encontró #submodalConvenios en el DOM');
+        return;
+    }
+
+    submodal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    console.log('✅ [Convenios] Submodal abierto correctamente');
+}
+
+function cerrarSubmodalConvenios() {
+    const submodal = document.getElementById('submodalConvenios');
     if (submodal) {
-        submodal.classList.remove('active');
-        // Esperar animación CSS antes de ocultar
-        setTimeout(() => {
-            submodal.style.display = 'none';
-        }, 300);
+        submodal.style.display = 'none';
         document.body.style.overflow = '';
-        console.log('🔴 [CIERRE] Submodal cerrado');
     }
 }
 
@@ -4307,7 +4307,6 @@ document.addEventListener('click', (e) => {
         cerrarSubmodalConvenios();
     }
 });
-
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
