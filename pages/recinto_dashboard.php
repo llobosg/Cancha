@@ -4158,43 +4158,6 @@ function toggleNuevoSocioPanel(mostrar) {
         }
     }
 }
-// === MODAL CONVENIOS ===
-function abrirModalConvenio(datos = null) {
-    const modal = document.getElementById('modalConvenio');
-    const form = document.getElementById('formConvenio');
-    const campoEstado = document.getElementById('campo_estado');
-    
-    // Resetear formulario
-    form.reset();
-    document.getElementById('convenio_action').value = 'create';
-    document.getElementById('convenio_id').value = '';
-    campoEstado.style.display = 'none';
-    
-    if (datos) {
-        // Modo edición
-        document.getElementById('convenio_action').value = 'update';
-        document.getElementById('convenio_id').value = datos.id_convenio;
-        document.getElementById('convenio_nombre').value = datos.nombre_empresa;
-        document.getElementById('convenio_contacto').value = datos.contacto_nombre || '';
-        document.getElementById('convenio_email').value = datos.contacto_email || '';
-        document.getElementById('convenio_telefono').value = datos.contacto_telefono || '';
-        document.getElementById('convenio_dscto').value = datos.porc_dscto;
-        document.getElementById('convenio_desde').value = datos.vigente_desde || '';
-        document.getElementById('convenio_hasta').value = datos.vigente_hasta || '';
-        document.getElementById('convenio_estado').value = datos.estado || 'activo';
-        campoEstado.style.display = 'block';
-    }
-    
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function cerrarModalConvenio(e) {
-    if (e.target.id === 'modalConvenio' || e.target.classList.contains('modal-close')) {
-        document.getElementById('modalConvenio').style.display = 'none';
-        document.body.style.overflow = '';
-    }
-}
 
 async function guardarConvenio(e) {
     e.preventDefault();
@@ -4250,13 +4213,6 @@ async function guardarConvenio(e) {
     }
 }
 
-// Cerrar modal con ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        cerrarModalConvenio({target: document.getElementById('modalConvenio')});
-    }
-});
-
 // === TRAZA: SUBMODAL CONVENIOS ===
 let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
 
@@ -4284,58 +4240,30 @@ function cerrarSubmodalConvenios(e) {
     }
 }
 
-// === LISTENER GLOBAL (CON TRAZA) ===
-document.addEventListener('click', function(e) {
-    const submodal = document.getElementById('submodalConvenios');
-    
-    // Si el submodal no está abierto, ignorar
-    if (!submodal || submodal.style.display === 'none') return;
-
-    // Si el click fue DENTRO del contenido (tarjeta), NO cerrar
-    if (e.target.closest('.submodal-card')) {
-        if(submodalConveniosDebug) console.log('ℹ️ [GLOBAL] Click ignorado: fue dentro del contenido');
-        return;
-    }
-
-    // Si el click fue en el overlay (fondo oscuro)
-    if (e.target.id === 'submodalConvenios' || e.target === submodal) {
-        console.log('🔍 [GLOBAL] Click detectado en overlay. Cerrando...');
-        cerrarSubmodalConvenios(e);
-    }
-});
-
-// Cerrar con tecla ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const submodal = document.getElementById('submodalConvenios');
-        if (submodal && submodal.style.display === 'flex') {
-            cerrarSubmodalConvenios();
-        }
-    }
-});
-
-// === MODAL CREAR/EDITAR CONVENIO (ya existente, solo aseguramos que funcione sobre el submodal) ===
-// Si tu función abrirModalConvenio() ya existe, no necesitas cambiarla.
-// Si no, aquí va la versión mínima:
+// === MODAL CREAR/EDITAR CONVENIO ===
 function abrirModalConvenio(datos = null) {
-    // Si ya tienes esta función, bórrala de aquí para evitar duplicados
+    console.log('🔍 [Modal Convenio] Abriendo...', datos);
     const modal = document.getElementById('modalConvenio');
     if (!modal) {
-        console.error('❌ No se encontró #modalConvenio. Asegúrate de agregar el HTML del modal.');
+        console.error('❌ [Modal Convenio] No se encontró #modalConvenio');
         return;
     }
     
     const form = document.getElementById('formConvenio');
     const campoEstado = document.getElementById('campo_estado');
+    const titulo = document.getElementById('modalConvenioTitulo');
     
+    // Reset
     form.reset();
     document.getElementById('convenio_action').value = 'create';
     document.getElementById('convenio_id').value = '';
+    if (titulo) titulo.textContent = 'Nuevo Convenio';
     if (campoEstado) campoEstado.style.display = 'none';
     
-    if (datos) {
+    if (datos && typeof datos === 'object') {
+        // Modo Edición
         document.getElementById('convenio_action').value = 'update';
-        document.getElementById('convenio_id').value = datos.id_convenio;
+        document.getElementById('convenio_id').value = datos.id_convenio || '';
         document.getElementById('convenio_nombre').value = datos.nombre_empresa || '';
         document.getElementById('convenio_contacto').value = datos.contacto_nombre || '';
         document.getElementById('convenio_email').value = datos.contacto_email || '';
@@ -4343,10 +4271,12 @@ function abrirModalConvenio(datos = null) {
         document.getElementById('convenio_dscto').value = datos.porc_dscto || 0;
         document.getElementById('convenio_desde').value = datos.vigente_desde || '';
         document.getElementById('convenio_hasta').value = datos.vigente_hasta || '';
+        
         if (campoEstado) {
             document.getElementById('convenio_estado').value = datos.estado || 'activo';
             campoEstado.style.display = 'block';
         }
+        if (titulo) titulo.textContent = 'Editar Convenio';
     }
     
     modal.style.display = 'flex';
@@ -4354,7 +4284,8 @@ function abrirModalConvenio(datos = null) {
 }
 
 function cerrarModalConvenio(e) {
-    if (e?.target?.id === 'modalConvenio' || e?.target?.classList?.contains('modal-close')) {
+    // Cerrar si click en fondo o botón X
+    if (!e || e.target.id === 'modalConvenio' || e.target.classList.contains('modal-close')) {
         const modal = document.getElementById('modalConvenio');
         if (modal) {
             modal.style.display = 'none';
@@ -4362,6 +4293,21 @@ function cerrarModalConvenio(e) {
         }
     }
 }
+
+// Listeners globales para cerrar con ESC o click fuera
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        cerrarSubmodalConvenios();
+        cerrarModalConvenio();
+    }
+});
+document.addEventListener('click', (e) => {
+    const submodal = document.getElementById('submodalConvenios');
+    if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
+        cerrarSubmodalConvenios();
+    }
+});
+
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
@@ -4677,7 +4623,8 @@ function cerrarModalConvenio(e) {
                                             </span>
                                         </td>
                                         <td style="padding:0.8rem; text-align:center;">
-                                            <button onclick="abrirModalConvenio(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
+                                           <button type="button" 
+                                                    onclick="abrirModalConvenio(JSON.parse(atob('<?= base64_encode(json_encode($c, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>')))" 
                                                     style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
                                                     onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
                                                 ✏️ Editar
