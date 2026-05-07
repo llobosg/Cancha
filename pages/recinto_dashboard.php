@@ -4374,26 +4374,30 @@ function guardarConvenio(e) {
     if (!form) return;
 
     const formData = new FormData(form);
-    formData.append('id_recinto', <?= json_encode($_SESSION['id_recinto'] ?? 0) ?>); // Envía recinto por seguridad
 
-    fetch('/api/convenios.php', { method: 'POST', body: formData })
-        .then(r => r.text())
-        .then(text => {
-            try { return JSON.parse(text); } catch { throw new Error('Respuesta inválida del servidor'); }
-        })
-        .then(data => {
-            if (data.success) {
-                cerrarModalConvenio();
-                cerrarSubmodalConvenios(); // Cierra ambos modales
-                location.reload(); // Recarga para actualizar la tabla
-            } else {
-                alert('❌ ' + (data.error || 'Error al guardar'));
-            }
-        })
-        .catch(err => {
-            console.error('❌ Error red:', err);
-            alert('❌ Error de conexión. Revisa consola.');
-        });
+    // 👇 CLAVE: credentials: 'same-origin' envía las cookies de sesión al backend
+    fetch('/api/convenios.php', { 
+        method: 'POST', 
+        body: formData,
+        credentials: 'same-origin' 
+    })
+    .then(r => r.text())
+    .then(text => {
+        try { return JSON.parse(text); } catch { throw new Error('Respuesta inválida del servidor'); }
+    })
+    .then(data => {
+        if (data.success) {
+            cerrarModalConvenio();
+            cerrarSubmodalConvenios();
+            location.reload();
+        } else {
+            alert('❌ ' + (data.error || 'Error al guardar'));
+        }
+    })
+    .catch(err => {
+        console.error('❌ Error red:', err);
+        alert('❌ Error de conexión. Revisa consola.');
+    });
 }
 
 // Listeners globales para cerrar con ESC o click fuera
