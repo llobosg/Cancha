@@ -22,6 +22,6 @@ if (ini_get("session.use_cookies")) {
 session_destroy();
 
 // 5. Redirigir al login
-header('Location: index.php');
+href="www.canchasport.com";
 exit;
 ?>
