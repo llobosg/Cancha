@@ -1,19 +1,27 @@
 <?php
-/**
- * api/convenios.php - Crear/Actualizar Convenios
- * Recibe POST con action=create|update y campos del formulario
- */
 header('Content-Type: application/json; charset=utf-8');
 while (ob_get_level()) ob_end_clean();
 
 try {
     define('APP_ENTRY_POINT', true);
-    require_once __DIR__ . '/../../vendor/autoload.php';
-    require_once __DIR__ . '/../../config.php';
+    
+    // ✅ RUTAS SEGURAS (Resuelve desde la ubicación real del script)
+    $basePath = dirname(__DIR__, 2); // /app/public/api/ -> /app
+    
+    $autoload = $basePath . '/vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        throw new Exception("Composer autoload no encontrado en: {$autoload}");
+    }
+    require_once $autoload;
+    
+    $config = $basePath . '/config.php';
+    if (!file_exists($config)) {
+        throw new Exception("Config.php no encontrado en: {$config}");
+    }
+    require_once $config;
 
     if (session_status() === PHP_SESSION_NONE) session_start();
     
-    // Validar sesión y recinto
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['id_recinto'])) {
         throw new Exception('No autorizado. Sesión inválida.', 401);
     }
@@ -61,7 +69,7 @@ try {
     exit;
 
 } catch (\Throwable $e) {
-    error_log("❌ API convenios Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+    error_log("❌ API convenios Fatal: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     http_response_code($e->getCode() ?: 500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
