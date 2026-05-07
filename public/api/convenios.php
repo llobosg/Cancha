@@ -5,21 +5,30 @@ while (ob_get_level()) ob_end_clean();
 try {
     define('APP_ENTRY_POINT', true);
     
-    // 🔍 RESOLUCIÓN INTELIGENTE DE RUTAS
-    $candidates = [dirname(__DIR__, 2), dirname(__DIR__)];
-    $baseDir = null;
-    foreach ($candidates as $path) {
-        if (file_exists($path . '/vendor/autoload.php')) {
-            $baseDir = $path;
-            break;
-        }
-    }
-    if (!$baseDir) {
-        throw new Exception("No se encontró vendor/autoload.php. Verifica la estructura del proyecto.");
-    }
+    // 🔍 RESOLUCIÓN DE RUTAS (Adaptada a: includes/config.php)
+    $docRoot     = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
+    $projectRoot = dirname($docRoot);
     
-    require_once $baseDir . '/vendor/autoload.php';
-    require_once $baseDir . '/config.php';
+    // 1. Buscar vendor/autoload.php (raíz del proyecto)
+    $autoload = file_exists("$projectRoot/vendor/autoload.php") 
+              ? "$projectRoot/vendor/autoload.php" 
+              : (file_exists("$docRoot/vendor/autoload.php") ? "$docRoot/vendor/autoload.php" : null);
+              
+    // 2. Buscar config.php (dentro de includes/)
+    $config   = file_exists("$projectRoot/includes/config.php") 
+              ? "$projectRoot/includes/config.php" 
+              : (file_exists("$docRoot/includes/config.php") ? "$docRoot/includes/config.php" : null);
+              
+    // Diagnóstico en logs de Railway
+    error_log("🔍 [API Convenios] Root: $projectRoot | DocRoot: $docRoot");
+    error_log("📦 Autoload: " . ($autoload && file_exists($autoload) ? "✅" : "❌ Falta"));
+    error_log("⚙️ Config: " . ($config && file_exists($config) ? "✅" : "❌ Falta en includes/"));
+    
+    if (!$autoload) throw new Exception("vendor/autoload.php no encontrado.");
+    if (!$config)   throw new Exception("includes/config.php no encontrado. Verifica que esté en la carpeta includes/");
+    
+    require_once $autoload;
+    require_once $config;
 
     if (session_status() === PHP_SESSION_NONE) session_start();
     
@@ -70,7 +79,7 @@ try {
     exit;
 
 } catch (\Throwable $e) {
-    error_log("❌ API convenios Fatal: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+    error_log("❌ [API Convenios] Fatal: " . $e->getMessage());
     http_response_code($e->getCode() ?: 500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;

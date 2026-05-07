@@ -5,21 +5,30 @@ while (ob_get_level()) ob_end_clean();
 try {
     define('APP_ENTRY_POINT', true);
     
-    // 🔍 RESOLUCIÓN INTELIGENTE DE RUTAS
-    $candidates = [dirname(__DIR__, 2), dirname(__DIR__)];
-    $baseDir = null;
-    foreach ($candidates as $path) {
-        if (file_exists($path . '/vendor/autoload.php')) {
-            $baseDir = $path;
-            break;
-        }
-    }
-    if (!$baseDir) {
-        throw new Exception("No se encontró vendor/autoload.php. Verifica la estructura del proyecto.");
-    }
+    // 🔍 RESOLUCIÓN INTELIGENTE DE RUTAS (Compatible Railway/Nixpacks)
+    $docRoot    = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
+    $projectRoot = dirname($docRoot);
     
-    require_once $baseDir . '/vendor/autoload.php';
-    require_once $baseDir . '/config.php';
+    // Buscar autoload.php
+    $autoload = file_exists("$projectRoot/vendor/autoload.php") 
+              ? "$projectRoot/vendor/autoload.php" 
+              : "$docRoot/vendor/autoload.php";
+              
+    // Buscar config.php
+    $config   = file_exists("$projectRoot/config.php") 
+              ? "$projectRoot/config.php" 
+              : "$docRoot/config.php";
+              
+    // Log de diagnóstico (aparecerá en Railway logs)
+    error_log("🔍 [API Convenios] Project Root: $projectRoot | Doc Root: $docRoot");
+    error_log("📦 [API Convenios] Autoload: " . (file_exists($autoload) ? "✅" : "❌ Falta"));
+    error_log("⚙️ [API Convenios] Config: " . (file_exists($config) ? "✅" : "❌ Falta"));
+    
+    if (!file_exists($autoload)) throw new Exception("vendor/autoload.php no encontrado. Verifica composer install.");
+    if (!file_exists($config))   throw new Exception("config.php no encontrado. Verifica que esté en /app/ o /app/public/");
+    
+    require_once $autoload;
+    require_once $config;
 
     if (session_status() === PHP_SESSION_NONE) session_start();
     
@@ -70,7 +79,7 @@ try {
     exit;
 
 } catch (\Throwable $e) {
-    error_log("❌ API convenios Fatal: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+    error_log("❌ [API Convenios] Fatal: " . $e->getMessage());
     http_response_code($e->getCode() ?: 500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
