@@ -1645,7 +1645,7 @@ function renderizarPlanilla(data, filtroEstado) {
     console.log(`📊 [DEBUG] Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
 
     // === HEADER ===
-    let html = `<thead><tr>`;
+    let html = `<div>TEST</div>`;
     html += `<th style="background:#AB47BC; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
     window.currentCanchasData = data.canchas;
@@ -1995,44 +1995,7 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             const tel     = detalle.telefono_cliente || '-';
 
             // Construir cuerpo del modal
-            let html = `
-                <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
-                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
-                        <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
-                        <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
-                    </div>
-                    <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
-                        👤 Creado por: <strong>${userCreacion}</strong> 
-                       
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
-                        <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
-                        <div style="grid-column: span 2;"><strong>Cliente:</strong> ${cliente}</div>
-                        <div style="grid-column: span 2; word-break: break-all;">
-                            <strong>Contacto:</strong> 📧 ${email} | 📱 ${tel}
-                        </div>
-                    </div>
-                    <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
-                            <span style="color:#666; font-size:0.9rem;">Monto Total</span>
-                            <span style="font-weight:bold;">${money(montoTotal)}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
-                            <span style="color:#666; font-size:0.9rem;">Abonado</span>
-                            <span style="font-weight:bold; color:#2e7d32;">${money(montoRecaudado)}</span>
-                        </div>
-                        ${esParcial ? `
-                        <div style="display:flex; justify-content:space-between; padding-top:0.5rem; border-top:1px dashed #ccc;">
-                            <span style="color:#c62828; font-weight:bold;">Saldo Pendiente</span>
-                            <span style="font-weight:bold; color:#c62828;">${money(saldoPendiente)}</span>
-                        </div>` : ''}
-                        <div style="margin-top:0.5rem; text-align:right;">
-                            <span style="font-size:0.8rem; color:#666;">Estado: </span>
-                            <span style="font-weight:bold; color:${estadoColor};">${val(detalle.estado_pago).toUpperCase()}</span>
-                        </div>
-                    </div>
-            `;
+            let html = `<div>TEST</div>`;
 
             // === SECCIÓN DE NOTAS ===
             const notas = val(detalle.notas, '');
@@ -3187,10 +3150,7 @@ async function abrirModalInscritos(idTorneo) {
             return;
         }
         
-        let html = `<h3 style="color:#071289; margin-bottom:1rem;">👥 Parejas Inscritas</h3>
-                    <table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
-                    <thead><tr style="background:#071289; color:white;"><th>Pareja</th><th>Jugador 1</th><th>Jugador 2</th><th>Contacto</th></tr></thead>
-                    <tbody>`;
+        let html = `<div>TEST</div>`;
             
         data.forEach(p => {
             html += `<tr style="border-bottom:1px solid #eee;">
@@ -3392,7 +3352,7 @@ function verResultados(idTorneo) {
                 rondas[key].push(partido);
             });
 
-            let html = `<h3 style="color:#071289;">📊 Resultados Generales</h3>`;
+            let html = `<div>TEST</div>`;
             html += `<table style="width:100%; border-collapse:collapse; margin-top:1rem; font-size:0.9rem;">`;
             html += `<thead><tr style="background:#071289; color:white;"><th>Ronda</th><th>Pareja 1</th><th>Res</th><th>Pareja 2</th></tr></thead><tbody>`;
 
@@ -3431,7 +3391,7 @@ function verPosicionesTorneo(idTorneo) {
                 return;
             }
 
-            let html = `<h3 style="color:#071289;">🏆 Tabla de Posiciones – ${data.torneo_nombre}</h3>`;
+            let html = `<div>TEST</div>`;
             html += `<table style="width:100%; border-collapse:collapse; margin-top:1rem;">`;
             html += `<thead><tr style="background:#071289; color:white;"><th>#</th><th>Pareja</th><th>Sets Ganados</th></tr></thead><tbody>`;
 
@@ -3504,7 +3464,7 @@ function verFixture(idTorneo) {
                         return;
                     }
 
-                    let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-size:1.2rem;">🎾 Fixture - ${nombreTorneo}</h3>`;
+                    let html = `<div>TEST</div>`;
                     
                     const rondas = {};
                     data.forEach(partido => {
