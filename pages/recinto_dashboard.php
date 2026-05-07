@@ -4370,19 +4370,30 @@ document.addEventListener('click', function(e) {
 // === GUARDAR (AJAX) ===
 function guardarConvenio(e) {
     e.preventDefault();
-    const formData = new FormData(document.getElementById('formConvenio'));
-    
-    fetch('api/convenios.php', { method: 'POST', body: formData })
-        .then(r => r.json())
+    const form = document.getElementById('formConvenio');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    formData.append('id_recinto', <?= json_encode($_SESSION['id_recinto'] ?? 0) ?>); // Envía recinto por seguridad
+
+    fetch('/api/convenios.php', { method: 'POST', body: formData })
+        .then(r => r.text())
+        .then(text => {
+            try { return JSON.parse(text); } catch { throw new Error('Respuesta inválida del servidor'); }
+        })
         .then(data => {
             if (data.success) {
                 cerrarModalConvenio();
-                location.reload(); // Recarga para reflejar cambios en la tabla
+                cerrarSubmodalConvenios(); // Cierra ambos modales
+                location.reload(); // Recarga para actualizar la tabla
             } else {
-                alert(data.error || 'Error al guardar');
+                alert('❌ ' + (data.error || 'Error al guardar'));
             }
         })
-        .catch(err => console.error('❌ Error red:', err));
+        .catch(err => {
+            console.error('❌ Error red:', err);
+            alert('❌ Error de conexión. Revisa consola.');
+        });
 }
 
 // Listeners globales para cerrar con ESC o click fuera
