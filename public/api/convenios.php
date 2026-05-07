@@ -1,19 +1,28 @@
 <?php
-/**
- * api/convenios.php - Crear/Actualizar Convenios
- * Recibe POST con action=create|update y campos del formulario
- */
 header('Content-Type: application/json; charset=utf-8');
 while (ob_get_level()) ob_end_clean();
 
 try {
     define('APP_ENTRY_POINT', true);
-    require_once __DIR__ . '/../../vendor/autoload.php';
-    require_once __DIR__ . '/../../config.php';
+    
+    // 🔍 RESOLUCIÓN INTELIGENTE DE RUTAS
+    $candidates = [dirname(__DIR__, 2), dirname(__DIR__)];
+    $baseDir = null;
+    foreach ($candidates as $path) {
+        if (file_exists($path . '/vendor/autoload.php')) {
+            $baseDir = $path;
+            break;
+        }
+    }
+    if (!$baseDir) {
+        throw new Exception("No se encontró vendor/autoload.php. Verifica la estructura del proyecto.");
+    }
+    
+    require_once $baseDir . '/vendor/autoload.php';
+    require_once $baseDir . '/config.php';
 
     if (session_status() === PHP_SESSION_NONE) session_start();
     
-    // Validar sesión y recinto
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['id_recinto'])) {
         throw new Exception('No autorizado. Sesión inválida.', 401);
     }
@@ -61,7 +70,7 @@ try {
     exit;
 
 } catch (\Throwable $e) {
-    error_log("❌ API convenios Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+    error_log("❌ API convenios Fatal: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     http_response_code($e->getCode() ?: 500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
