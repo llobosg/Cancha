@@ -4376,7 +4376,7 @@ function guardarConvenio(e) {
     const formData = new FormData(form);
     formData.append('id_recinto', <?= json_encode($_SESSION['id_recinto'] ?? 0) ?>); // Envía recinto por seguridad
 
-    fetch('/api/convenios.php', { method: 'POST', body: formData })
+    fetch('/public/api/convenios.php', { method: 'POST', body: formData })
         .then(r => r.text())
         .then(text => {
             try { return JSON.parse(text); } catch { throw new Error('Respuesta inválida del servidor'); }
