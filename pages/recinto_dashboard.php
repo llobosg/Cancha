@@ -1426,7 +1426,7 @@ button[onclick="abrirModalConvenios()"]:hover {
                 <a href="mantenedor_admin_recinto.php?id=<?= $usuario_actual['id_admin'] ?>" onclick="closeMenu()">⚙️ Mi Perfil</a>
             </div>
         </div>
-        <a href="recinto_logout.php" class="btn-logout">Salir</a>
+        <a href="../index.php" class="btn-logout">Salir</a>
     </div>
 </div>
 

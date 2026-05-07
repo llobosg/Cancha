@@ -5,30 +5,24 @@ while (ob_get_level()) ob_end_clean();
 try {
     define('APP_ENTRY_POINT', true);
     
-    // 🔍 RESOLUCIÓN DE RUTAS (Adaptada a: includes/config.php)
-    $docRoot     = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
-    $projectRoot = dirname($docRoot);
-    
-    // 1. Buscar vendor/autoload.php (raíz del proyecto)
-    $autoload = file_exists("$projectRoot/vendor/autoload.php") 
-              ? "$projectRoot/vendor/autoload.php" 
-              : (file_exists("$docRoot/vendor/autoload.php") ? "$docRoot/vendor/autoload.php" : null);
-              
-    // 2. Buscar config.php (dentro de includes/)
-    $config   = file_exists("$projectRoot/includes/config.php") 
-              ? "$projectRoot/includes/config.php" 
-              : (file_exists("$docRoot/includes/config.php") ? "$docRoot/includes/config.php" : null);
-              
-    // Diagnóstico en logs de Railway
-    error_log("🔍 [API Convenios] Root: $projectRoot | DocRoot: $docRoot");
-    error_log("📦 Autoload: " . ($autoload && file_exists($autoload) ? "✅" : "❌ Falta"));
-    error_log("⚙️ Config: " . ($config && file_exists($config) ? "✅" : "❌ Falta en includes/"));
-    
-    if (!$autoload) throw new Exception("vendor/autoload.php no encontrado.");
-    if (!$config)   throw new Exception("includes/config.php no encontrado. Verifica que esté en la carpeta includes/");
-    
-    require_once $autoload;
-    require_once $config;
+    // 🔍 RESOLUCIÓN DE RUTAS SEGURA PARA RAILWAY
+    $projectRoot = dirname(dirname(__DIR__)); // public/api/ → /app/
+    $configPath = $projectRoot . '/includes/config.php';
+    $autoloadPath = $projectRoot . '/vendor/autoload.php';
+
+    error_log("🔍 [Convenios] Project Root: $projectRoot");
+    error_log("📦 vendor/autoload.php: " . (file_exists($autoloadPath) ? '✅' : '❌ Falta'));
+    error_log("⚙️ includes/config.php: " . (file_exists($configPath) ? '✅' : '❌ Falta'));
+
+    if (!file_exists($autoloadPath)) {
+        throw new Exception("vendor/autoload.php no encontrado. Verifica composer install.");
+    }
+    if (!file_exists($configPath)) {
+        throw new Exception("includes/config.php no encontrado en {$projectRoot}. Verifica que fue commitado y push a GitHub.");
+    }
+
+    require_once $autoloadPath;
+    require_once $configPath;
 
     if (session_status() === PHP_SESSION_NONE) session_start();
     
