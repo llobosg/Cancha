@@ -1536,10 +1536,9 @@ button[onclick="abrirModalConvenios()"]:hover {
                                 <td style="padding:0.8rem; text-align:center;"><span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem;"><?= ucfirst($c['estado']) ?></span></td>
                                 <td style="padding:0.8rem; text-align:center;">
                                     <button class="btn-editar-convenio" 
-                                            data-convenio="<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>"
+                                            data-convenio="<?= htmlspecialchars(json_encode($c), ENT_QUOTES, 'UTF-8') ?>"
                                             onclick="debugEditarConvenio(this, event)"
-                                            style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
-                                            onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
+                                            style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
                                         ✏️ Editar
                                     </button>
                                 </td>
