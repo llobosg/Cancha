@@ -1265,6 +1265,11 @@ button[onclick="abrirModalConvenios()"]:hover {
                     style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.2rem; border-radius:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; margin-bottom:1rem;">
                 <span>🤝</span> Convenios
             </button>
+            <button onclick="abrirModalConvenios(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
+                    style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
+                    onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
+                ✏️ Editar
+            </button>
         </div>
     </div>
 
@@ -1301,117 +1306,7 @@ button[onclick="abrirModalConvenios()"]:hover {
 
     <!-- === SUBMODAL CONVENIOS (se superpone sobre la planilla) === -->
     <!-- ✅ SOLO document listener para cerrar -->
-    <div id="submodalConvenios" 
-        class="submodal-overlay" 
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">
-        
-        <div class="submodal-card" 
-            onclick="event.stopPropagation()"
-            style="background:white; border-radius:20px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; display:flex; flex-direction:column;">
-            
-            <!-- Header -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #eee; background:linear-gradient(135deg, #f8f9fa, #e9ecef);">
-                <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 Mantenedor de Convenios</h3>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <button onclick="abrirModalConvenios(); event.stopPropagation();" title="Nuevo Convenio" 
-                            style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #4CAF50, #43A047); border:none; color:white; font-size:1.3rem; cursor:pointer; display:grid; place-items:center; box-shadow:0 4px 12px rgba(76,175,80,0.4);">
-                        +
-                    </button>
-                    <button onclick="cerrarSubmodalConvenios(); event.stopPropagation();" title="Cerrar" 
-                            style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer; display:grid; place-items:center;">
-                        ×
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Contenido: Tabla de convenios -->
-            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem;">
-                <?php
-                // Cargar convenios del recinto actual (solo para este submodal)
-                $stmt_conv = $pdo->prepare("
-                    SELECT 
-                        c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, 
-                        c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado,
-                        COUNT(s.id_socio) as socios_vinculados
-                    FROM convenios c
-                    LEFT JOIN socios s ON c.id_convenio = s.id_convenio AND s.activo = 'Si'
-                    WHERE c.id_recinto = ? 
-                    GROUP BY c.id_convenio
-                    ORDER BY c.nombre_empresa ASC
-                ");
-                $stmt_conv->execute([$_SESSION['id_recinto']]);
-                $convenios_submodal = $stmt_conv->fetchAll();
-                ?>
-                
-                <?php if (empty($convenios_submodal)): ?>
-                    <div style="text-align:center; padding:3rem 1rem; color:#718096;">
-                        <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
-                        <p style="font-weight:500;">Aún no tienes convenios</p>
-                        <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
-                        <button onclick="abrirModalConvenios()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
-                            + Crear mi primer convenio
-                        </button>
-                    </div>
-                <?php else: ?>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                            <thead>
-                                <tr style="background:#F7FAFC; position:sticky; top:0;">
-                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600;">Empresa</th>
-                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; font-weight:600;">Contacto</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Descuento</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Socios</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Vigencia</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Estado</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; font-weight:600;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach($convenios_submodal as $c): ?>
-                                <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
-                                    <td style="padding:0.8rem; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
-                                    <td style="padding:0.8rem;">
-                                        <?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br>
-                                        <small style="color:#718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small>
-                                    </td>
-                                    <td style="padding:0.8rem; text-align:center;">
-                                        <span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;">
-                                            <?= $c['porc_dscto'] ?>%
-                                        </span>
-                                    </td>
-                                    <td style="padding:0.8rem; text-align:center; font-weight:500; color:#4A5568;">
-                                        <?= $c['socios_vinculados'] ?>
-                                    </td>
-                                    <td style="padding:0.8rem; text-align:center; font-size:0.85rem;">
-                                        <?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?>
-                                        <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small style="color:#A0AEC0">(∞)</small>' ?>
-                                    </td>
-                                    <td style="padding:0.8rem; text-align:center;">
-                                        <span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem; font-weight:500;">
-                                            <?= ucfirst($c['estado']) ?>
-                                        </span>
-                                    </td>
-                                    <td style="padding:0.8rem; text-align:center;">
-                                        <button onclick="abrirModalConvenios(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
-                                                style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
-                                                onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
-                                            ✏️ Editar
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-            
-            <!-- Footer opcional -->
-            <div style="padding:0.75rem 1.5rem; border-top:1px solid #eee; background:#F8F9FA; text-align:right; font-size:0.85rem; color:#718096;">
-                💡 Tip: Vincula socios a un convenio desde el mantenedor de socios
-            </div>
-        </div>
-    </div>
+    
 
     <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
@@ -1645,8 +1540,8 @@ function renderizarPlanilla(data, filtroEstado) {
     console.log(`📊 [DEBUG] Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
 
     // === HEADER ===
-    let html = `<div>TEST</div>`;
-    html += `<div>TEST</div>`;
+    let html = `<thead><tr>`;
+    html += `<th style="background:#AB47BC; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
     window.currentCanchasData = data.canchas;
     
@@ -1995,7 +1890,50 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             const tel     = detalle.telefono_cliente || '-';
 
             // Construir cuerpo del modal
-            let html = `<div>TEST</div>`;
+            let html = `
+                <div style="font-size: 0.95rem; line-height: 1.6; color: #333;">
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                        <h4 style="margin: 0; color: #0d47a1;">${val(detalle.fecha)}</h4>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${val(detalle.hora_inicio).substring(0,5)} - ${val(detalle.hora_fin).substring(0,5)}</div>
+                    </div>
+                    <div style="font-size:0.75rem; color:#888; margin:0.5rem 0; text-align:center; padding:0.5rem; background:#F8F9FA; border-radius:6px;">
+                        👤 Creado por: <strong>${userCreacion}</strong> 
+                        ${detalle.created_at ? (() => {
+                            const fecha = new Date(detalle.created_at.replace(' ', 'T'));
+                            return `• ${fecha.toLocaleString('es-CL', { 
+                                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', 
+                                timeZone: 'America/Santiago' 
+                            })}`;
+                        })() : ''}
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div><strong>Cancha:</strong> ${val(detalle.nombre_cancha)}</div>
+                        <div><strong>Deporte:</strong> ${val(detalle.id_deporte)}</div>
+                        <div style="grid-column: span 2;"><strong>Cliente:</strong> ${cliente}</div>
+                        <div style="grid-column: span 2; word-break: break-all;">
+                            <strong>Contacto:</strong> 📧 ${email} | 📱 ${tel}
+                        </div>
+                    </div>
+                    <div style="background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <span style="color:#666; font-size:0.9rem;">Monto Total</span>
+                            <span style="font-weight:bold;">${money(montoTotal)}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <span style="color:#666; font-size:0.9rem;">Abonado</span>
+                            <span style="font-weight:bold; color:#2e7d32;">${money(montoRecaudado)}</span>
+                        </div>
+                        ${esParcial ? `
+                        <div style="display:flex; justify-content:space-between; padding-top:0.5rem; border-top:1px dashed #ccc;">
+                            <span style="color:#c62828; font-weight:bold;">Saldo Pendiente</span>
+                            <span style="font-weight:bold; color:#c62828;">${money(saldoPendiente)}</span>
+                        </div>` : ''}
+                        <div style="margin-top:0.5rem; text-align:right;">
+                            <span style="font-size:0.8rem; color:#666;">Estado: </span>
+                            <span style="font-weight:bold; color:${estadoColor};">${val(detalle.estado_pago).toUpperCase()}</span>
+                        </div>
+                    </div>
+            `;
 
             // === SECCIÓN DE NOTAS ===
             const notas = val(detalle.notas, '');
@@ -3150,10 +3088,18 @@ async function abrirModalInscritos(idTorneo) {
             return;
         }
         
-        let html = `<div>TEST</div>`;
+        let html = `<h3 style="color:#071289; margin-bottom:1rem;">👥 Parejas Inscritas</h3>
+                    <table class="tabla-inscritos" style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="background:#071289; color:white;"><th>Pareja</th><th>Jugador 1</th><th>Jugador 2</th><th>Contacto</th></tr></thead>
+                    <tbody>`;
             
         data.forEach(p => {
-            html += `<div>TEST</div>`;
+            html += `<tr style="border-bottom:1px solid #eee;">
+                <td style="padding:0.8rem; font-weight:600;">${p.nombre_pareja || '-'}</td>
+                <td style="padding:0.8rem;">${p.jugador1}</td>
+                <td style="padding:0.8rem;">${p.jugador2}</td>
+                <td style="padding:0.8rem; font-size:0.85rem; color:#666;">${p.contacto}</td>
+            </tr>`;
         });
         
         html += `</tbody></table>`;
@@ -3347,21 +3293,28 @@ function verResultados(idTorneo) {
                 rondas[key].push(partido);
             });
 
-            let html = `<div>TEST</div>`;
-            html += `<div>TEST 3351</div>`;
-            html += `<div>TEST 3352</div>`;
+            let html = `<h3 style="color:#071289;">📊 Resultados Generales</h3>`;
+            html += `<table style="width:100%; border-collapse:collapse; margin-top:1rem; font-size:0.9rem;">`;
+            html += `<thead><tr style="background:#071289; color:white;"><th>Ronda</th><th>Pareja 1</th><th>Res</th><th>Pareja 2</th></tr></thead><tbody>`;
 
             let numRonda = 1;
             Object.values(rondas).forEach(partidos => {
                 partidos.forEach(p => {
                     const ganador = (parseInt(p.juegos1) > parseInt(p.juegos2)) ? p.pareja1 : p.pareja2;
-                    html += `<div>TEST 3358</div>`;
+                    html += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:0.5rem;">Set ${numRonda}</td>
+                            <td style="padding:0.5rem; font-weight:600;">${p.pareja1} (${p.juegos1})</td>
+                            <td style="padding:0.5rem; text-align:center; color:#999;">vs</td>
+                            <td style="padding:0.5rem; font-weight:600;">${p.pareja2} (${p.juegos2})</td>
+                        </tr>
+                    `;
                 });
                 numRonda++;
             });
 
-            html += `<div>TEST 3363</div>`;
-            html += `<div>TEST 3364</div>`;
+            html += `</tbody></table>`;
+            html += `<button class="action-btn" style="margin-top:1rem;" onclick="volverAFixture()">Volver al Fixture</button>`;
             contenido.innerHTML = html;
         });
 }
@@ -3379,17 +3332,23 @@ function verPosicionesTorneo(idTorneo) {
                 return;
             }
 
-            let html = `<div>TEST</div>`;
-            html += `<div>TEST 3383</div>`;
-            html += `<div>TEST 3384</div>`;
+            let html = `<h3 style="color:#071289;">🏆 Tabla de Posiciones – ${data.torneo_nombre}</h3>`;
+            html += `<table style="width:100%; border-collapse:collapse; margin-top:1rem;">`;
+            html += `<thead><tr style="background:#071289; color:white;"><th>#</th><th>Pareja</th><th>Sets Ganados</th></tr></thead><tbody>`;
 
             data.posiciones.forEach((p, index) => {
                 const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
-                html += `<div>TEST 3388</div>`;
+                html += `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:0.8rem; text-align:center;">${medal} ${index + 1}</td>
+                        <td style="padding:0.8rem; font-weight:600;">${p.nombre_pareja}</td>
+                        <td style="padding:0.8rem; text-align:center; font-weight:bold; color:#071289;">${p.sets_ganados}</td>
+                    </tr>
+                `;
             });
 
-            html += `<div>TEST 3391</div>`;
-            html += `<div>TEST 3392</div>`;
+            html += `</tbody></table>`;
+            html += `<button class="action-btn" style="margin-top:1rem;" onclick="volverAFixture()">Volver al Fixture</button>`;
             contenido.innerHTML = html;
         })
         .catch(err => {
@@ -3446,7 +3405,7 @@ function verFixture(idTorneo) {
                         return;
                     }
 
-                    let html = `<div>TEST</div>`;
+                    let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-size:1.2rem;">🎾 Fixture - ${nombreTorneo}</h3>`;
                     
                     const rondas = {};
                     data.forEach(partido => {
@@ -3461,7 +3420,12 @@ function verFixture(idTorneo) {
                         const fechaStr = fechaObj.toLocaleDateString('es-CL', {day:'2-digit', month:'short'});
                         const horaStr = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
                         
-                        html += `<div>TEST 3464</div>`;
+                        html += `<div style="margin-bottom:1.5rem; background:#f8f9fa; border-radius:8px; overflow:hidden;">
+                                    <div style="background:#e9ecef; padding:0.6rem 1rem; font-weight:bold; color:#071289; font-size:0.9rem; display:flex; justify-content:space-between;">
+                                        <span>SET ${rondaNum}</span>
+                                        <span style="color:#666; font-weight:normal;">${fechaStr} - ${horaStr}</span>
+                                    </div>
+                                    <div style="padding:0.5rem;">`;
                         
                         partidos.forEach(p => {
                             const tieneResultado = p.juegos_pareja_1 !== null && p.juegos_pareja_2 !== null;
@@ -3475,7 +3439,20 @@ function verFixture(idTorneo) {
                             const safeP1 = (p.pareja1 || '').replace(/'/g, "\\'");
                             const safeP2 = (p.pareja2 || '').replace(/'/g, "\\'");
 
-                            html += `<div>TEST 3478</div>`;
+                            html += `
+                                <div class="partido-card ${claseEstado}" style="display:flex; justify-content:space-between; align-items:center; margin:0.5rem 0; background:white; padding:0.8rem; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05); border-left: 3px solid ${tieneResultado ? '#4CAF50' : '#FFC107'};">
+                                    <div class="pareja-nombre ${g1}" style="flex:1; text-align:right; padding-right:0.5rem; font-size:0.9rem;">${p.pareja1}</div>
+                                    
+                                    <div style="min-width:60px; text-align:center; ${estiloMarcador}; font-size:1rem;">${marcador}</div>
+                                    
+                                    <div class="pareja-nombre ${g2}" style="flex:1; text-align:left; padding-left:0.5rem; font-size:0.9rem;">${p.pareja2}</div>
+                                    
+                                    <button style="margin-left:0.5rem; background:#071289; color:white; border:none; padding:0.4rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.75rem; min-width:70px;" 
+                                            onclick="abrirResultado(${p.id_partido}, '${safeP1}', '${safeP2}')">
+                                        ${tieneResultado ? '✏️ Editar' : '📝 Resultado'}
+                                    </button>
+                                </div>
+                            `;
                         });
                         html += `</div></div>`;
                         rondaNum++;
@@ -3486,7 +3463,11 @@ function verFixture(idTorneo) {
         })
         .catch(err => {
             console.error('❌ Error cargando fixture:', err);
-            contenido.innerHTML = `<div>TEST 3489</div>`;
+            contenido.innerHTML = `
+                <div style="text-align:center; color:#c62828; padding:2rem;">
+                    ⚠️ Error: ${err.message}<br>
+                    <button class="action-btn" style="margin-top:0.5rem;" onclick="verFixture(${idTorneo})">Reintentar</button>
+                </div>`;
         });
 }
 
@@ -3508,7 +3489,33 @@ function abrirModalEditarResultado(idPartido, pareja1, pareja2, val1, val2) {
     const cleanP1 = pareja1.replace(/&quot;/g, '"').replace(/\\'/g, "'");
     const cleanP2 = pareja2.replace(/&quot;/g, '"').replace(/\\'/g, "'");
     
-    contenido.innerHTML = `<div>TEST 3511</div>`;
+    contenido.innerHTML = `
+        <div style="text-align:center; max-width:400px; margin:0 auto;">
+            <h3 style="color:#071289; margin-bottom:1rem;">📊 Registrar Resultado</h3>
+            <p style="margin-bottom:1.5rem; font-weight:600; font-size:0.9rem;">${cleanP1} <span style="color:#999;">vs</span> ${cleanP2}</p>
+            
+            <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                <div style="text-align:center;">
+                    <label style="display:block; font-size:0.75rem; color:#666; margin-bottom:0.3rem;">Sets P1</label>
+                    <input type="number" id="edit_j1" value="${val1}" min="0" max="7" 
+                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="font-size:1.5rem; font-weight:bold; color:#ccc;">-</div>
+                <div style="text-align:center;">
+                    <label style="display:block; font-size:0.75rem; color:#666; margin-bottom:0.3rem;">Sets P2</label>
+                    <input type="number" id="edit_j2" value="${val2}" min="0" max="7" 
+                           style="width:70px; padding:0.5rem; text-align:center; font-size:1.2rem; font-weight:bold; border:2px solid #ddd; border-radius:8px;">
+                </div>
+            </div>
+            
+            <div id="preview_ganador" style="margin-bottom:1rem; font-weight:bold; color:#071289; height:24px;"></div>
+            
+            <div style="display:flex; gap:0.5rem; justify-content:center;">
+                <button class="action-btn" style="background:#4CAF50;" onclick="guardarResultadoEditado(${idPartido})">💾 Guardar</button>
+                <button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cancelar</button>
+            </div>
+        </div>
+    `;
     
     const input1 = document.getElementById('edit_j1');
     const input2 = document.getElementById('edit_j2');
@@ -3671,8 +3678,8 @@ function verResultadosTV(idTorneo) {
     .then(([dataResultados, dataPosiciones]) => {
         
         // --- COLUMNA IZQUIERDA: FIXTURE (80%) ---
-        let htmlFixture = `<div>TEST</div>`;
-        htmlFixture += `<div>TEST</div>`;
+        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333; scrollbar-width: thin;">`;
+        htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin-bottom: 2rem; text-transform:uppercase; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
         
         // Agrupar por sets
         const rondas = {};
@@ -3697,7 +3704,13 @@ function verResultadosTV(idTorneo) {
                 const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
                 const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
                 
-                htmlFixture += `<div>TEST</div>`;
+                htmlFixture += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; font-size: 1.6rem; background:rgba(255,255,255,0.05); padding:1.2rem; border-radius:12px; border: 1px solid rgba(255,255,255,0.1);">
+                        <span style="flex:1; text-align:right; padding-right:1.5rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
+                        <span style="padding:0 2rem; font-weight:bold; font-size: 2.2rem; color:white; background:rgba(0,0,0,0.4); border-radius:12px; min-width:140px; text-align:center; letter-spacing: 2px;">${j1} - ${j2}</span>
+                        <span style="flex:1; text-align:left; padding-left:1.5rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
+                    </div>
+                `;
             });
             htmlFixture += `</div>`;
             setNum++;
@@ -3705,8 +3718,8 @@ function verResultadosTV(idTorneo) {
         htmlFixture += `</div>`;
 
         // --- COLUMNA DERECHA: POSICIONES (20%) ---
-        let htmlPosiciones = `<div>TEST</div>`;
-        htmlPosiciones += `<div>TEST</div>`;
+        let htmlPosiciones = `<div style="width: 20%; height: 100%; overflow-y: auto; padding: 1.5rem; background: rgba(0,0,0,0.2);">`;
+        htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin-bottom: 1.5rem; font-size: 1.4rem; text-transform:uppercase;">Posiciones</h3>`;
         
         if (dataPosiciones && dataPosiciones.posiciones && dataPosiciones.posiciones.length > 0) {
             // Letra aumentada 50% (de 0.9rem a ~1.35rem)
@@ -3716,11 +3729,17 @@ function verResultadosTV(idTorneo) {
                 const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}.`));
                 const bgRow = index < 3 ? 'background:rgba(255,215,0,0.1);' : '';
                 
-                htmlPosiciones += `<div>TEST</div>`;
+                htmlPosiciones += `
+                    <tr style="border-bottom:1px solid #444; ${bgRow}">
+                        <td style="padding:0.8rem 0.2rem; font-weight:bold;">${medal}</td>
+                        <td style="padding:0.8rem 0.2rem; font-weight:500; line-height:1.1; word-wrap: break-word;">${p.nombre_pareja}</td>
+                        <td style="padding:0.8rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4;">${p.sets_ganados}</td>
+                    </tr>
+                `;
             });
-            htmlPosiciones += `<div>TEST</div>`;
+            htmlPosiciones += `</table>`;
         } else {
-            htmlPosiciones += `<div>TEST</div>`;
+            htmlPosiciones += `<p style="text-align:center; color:#666; font-size:1rem;">Sin datos de posiciones aún.</p>`;
         }
         
         htmlPosiciones += `</div>`;
@@ -3899,7 +3918,24 @@ async function abrirLogReserva(idReserva) {
                     }
                 }
                 
-                return `<div>TEST</div>`;
+                return `
+                <tr style="border-bottom:1px solid #F1F5F9;">
+                    <td style="padding:10px; color:#4A5568; font-weight:500; white-space:nowrap;">
+                        ${fechaFormateada}
+                    </td>
+                    <td style="padding:10px; color:#2D3748;">${log.usuario || '-'}</td>
+                    <td style="padding:10px;">
+                        <span style="padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:500; background:${getAccionColor(log.accion)}; color:white;">
+                            ${formatAccion(log.accion)}
+                        </span>
+                    </td>
+                    <td style="padding:10px; color:#4A5568; font-size:0.9rem;">
+                        ${log.descripcion || '-'}
+                        ${log.monto_anterior !== undefined || log.monto_nuevo !== undefined ? 
+                            `<br><small style="color:#666;">$${log.monto_anterior !== undefined ? log.monto_anterior : '?'} → $${log.monto_nuevo !== undefined ? log.monto_nuevo : '?'}</small>` : ''}
+                    </td>
+                </tr>
+                `;
             }).join('');
         } else {
             tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Sin registros de auditoría</td></tr>';
@@ -3968,8 +4004,19 @@ async function registrarLogReserva(idReserva, accion, descripcion, metadata = nu
 function verDetalleExtras(idReserva, montoExtras) {
     // Toast personalizado con más info
     const toast = document.createElement('div');
-    toast.innerHTML = `<div>TEST</div>`;
-    toast.style.cssText = `<div>TEST</div>`;
+    toast.innerHTML = `
+        <div style="text-align:left;">
+            <strong>🎒 Extras - Reserva #${idReserva}</strong><br>
+            <span style="font-size:0.9rem;">Monto: $${Math.round(montoExtras).toLocaleString('es-CL')}</span><br>
+            <small style="color:#888;">Detalle completo en ficha de reserva</small>
+        </div>
+    `;
+    toast.style.cssText = `
+        position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+        background:white; color:#333; padding:0.8rem 1.2rem; border-radius:12px;
+        box-shadow:0 8px 25px rgba(0,0,0,0.2); z-index:4000; max-width:280px;
+        border-left:4px solid #FFC107; font-size:0.9rem;
+    `;
     document.body.appendChild(toast);
     
     // Auto-ocultar
