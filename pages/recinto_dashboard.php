@@ -1212,6 +1212,199 @@ button[onclick="abrirModalConvenios()"]:hover {
     opacity: 1 !important;
     pointer-events: auto !important;
 }
+/* ========================================
+   MODAL PRINCIPAL: CONVENIOS (CREAR/EDITAR)
+   ======================================== */
+#modalConvenio {
+    position: fixed;
+    inset: 0;
+    z-index: 1600; /* ✅ Mayor que el submodal (1500) */
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(6px);
+    display: none; /* Oculto por defecto, se activa con JS */
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease;
+}
+
+#modalConvenio.active {
+    display: flex;
+}
+
+#modalConvenio .modal-card {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 650px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* HEADER */
+#modalConvenio .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+#modalConvenio .modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modalConvenio .btn-close-modal {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    border: none;
+    color: #475569;
+    font-size: 1.3rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.2s;
+}
+
+#modalConvenio .btn-close-modal:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+    transform: rotate(90deg);
+}
+
+/* BODY / FORMULARIO */
+#modalConvenio .modal-body {
+    padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+#modalConvenio .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+#modalConvenio .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+#modalConvenio label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: 0.02em;
+}
+
+#modalConvenio input,
+#modalConvenio select,
+#modalConvenio textarea {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: #0f172a;
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+#modalConvenio input:focus,
+#modalConvenio select:focus,
+#modalConvenio textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+#modalConvenio textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* FOOTER / BOTONES */
+#modalConvenio .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+#modalConvenio .btn {
+    padding: 0.65rem 1.3rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+#modalConvenio .btn-cancel {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+#modalConvenio .btn-cancel:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+}
+
+#modalConvenio .btn-save {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+#modalConvenio .btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+}
+
+/* ANIMACIONES */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(24px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* RESPONSIVE */
+@media (max-width: 640px) {
+    #modalConvenio { padding: 0.5rem; }
+    #modalConvenio .modal-card { max-width: 100%; border-radius: 14px; }
+    #modalConvenio .modal-header,
+    #modalConvenio .modal-body,
+    #modalConvenio .modal-footer { padding: 1rem; }
+    #modalConvenio .form-row { grid-template-columns: 1fr; gap: 0.75rem; }
+    #modalConvenio .modal-footer { flex-direction: column; }
+    #modalConvenio .btn { width: 100%; justify-content: center; }
+}
 </style>
 </head>
 <body>
@@ -1262,13 +1455,8 @@ button[onclick="abrirModalConvenios()"]:hover {
             </button>
             <!-- Botón Convenios con stopPropagation -->
             <button onclick="abrirSubmodalConvenios(event)" 
-                    style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.2rem; border-radius:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; margin-bottom:1rem;">
-                <span>🤝</span> Convenios
-            </button>
-            <button onclick="abrirModalConvenios(<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)" 
-                    style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
-                    onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
-                ✏️ Editar
+                style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.2rem; border-radius:12px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem;">
+                <span>🤝</span> Gestionar Convenios
             </button>
         </div>
     </div>
@@ -1305,8 +1493,58 @@ button[onclick="abrirModalConvenios()"]:hover {
     </div>
 
     <!-- === SUBMODAL CONVENIOS (se superpone sobre la planilla) === -->
-    <!-- ✅ SOLO document listener para cerrar -->
-    
+    <!-- === SUBMODAL: LISTA DE CONVENIOS === -->
+    <div id="submodalConvenios" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:1500; justify-content:center; align-items:center; padding:1rem;">
+        <div onclick="event.stopPropagation()" style="background:white; border-radius:16px; width:95%; max-width:900px; max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #eee; background:#f8fafc;">
+                <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 Mantenedor de Convenios</h3>
+                <button onclick="cerrarSubmodalConvenios()" style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer;">&times;</button>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem;">
+                <?php
+                $stmt_conv = $pdo->prepare("SELECT c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado, COUNT(s.id_socio) as socios_vinculados FROM convenios c LEFT JOIN socios s ON c.id_convenio = s.id_convenio AND s.activo = 'Si' WHERE c.id_recinto = ? GROUP BY c.id_convenio ORDER BY c.nombre_empresa ASC");
+                $stmt_conv->execute([$_SESSION['id_recinto']]);
+                $convenios_list = $stmt_conv->fetchAll();
+                ?>
+                <?php if (empty($convenios_list)): ?>
+                    <div style="text-align:center; padding:3rem 1rem; color:#718096;">
+                        <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
+                        <p style="font-weight:500;">Aún no tienes convenios</p>
+                        <button onclick="cerrarSubmodalConvenios(); abrirModalConvenios()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; cursor:pointer; margin-top:0.5rem;">+ Crear mi primer convenio</button>
+                    </div>
+                <?php else: ?>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                        <thead>
+                            <tr style="background:#F7FAFC; position:sticky; top:0;">
+                                <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0;">Empresa</th>
+                                <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0;">Contacto</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Descuento</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Socios</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Vigencia</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Estado</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($convenios_list as $c): ?>
+                            <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
+                                <td style="padding:0.8rem; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
+                                <td style="padding:0.8rem;"><?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br><small style="color:#718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small></td>
+                                <td style="padding:0.8rem; text-align:center;"><span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;"><?= $c['porc_dscto'] ?>%</span></td>
+                                <td style="padding:0.8rem; text-align:center; font-weight:500;"><?= $c['socios_vinculados'] ?></td>
+                                <td style="padding:0.8rem; text-align:center; font-size:0.85rem;"><?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?> <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small>(∞)</small>' ?></td>
+                                <td style="padding:0.8rem; text-align:center;"><span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem;"><?= ucfirst($c['estado']) ?></span></td>
+                                <td style="padding:0.8rem; text-align:center;">
+                                    <button class="btn-editar-convenio" data-convenio="<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>" style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">✏️ Editar</button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
 
     <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
@@ -4054,109 +4292,29 @@ function toggleNuevoSocioPanel(mostrar) {
     }
 }
 
-async function guardarConvenio(e) {
-    e.preventDefault();
-    
-    const form = e.target;
-    const action = document.getElementById('convenio_action').value;
-    const idConvenio = document.getElementById('convenio_id').value;
-    
-    const data = {
-        action: action,
-        nombre_empresa: document.getElementById('convenio_nombre').value,
-        contacto_nombre: document.getElementById('convenio_contacto').value,
-        contacto_email: document.getElementById('convenio_email').value,
-        contacto_telefono: document.getElementById('convenio_telefono').value,
-        porc_dscto: parseFloat(document.getElementById('convenio_dscto').value),
-        vigente_desde: document.getElementById('convenio_desde').value || null,
-        vigente_hasta: document.getElementById('convenio_hasta').value || null
-    };
-    
-    if (action === 'update') {
-        data.id_convenio = parseInt(idConvenio);
-        data.estado = document.getElementById('convenio_estado').value;
-    }
-    
-    // Feedback visual
-    const btn = form.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-    btn.textContent = '💾 Guardando...';
-    btn.disabled = true;
-    
-    try {
-        const res = await fetch('../api/guardar_convenio.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        
-        if (result.success) {
-            showToast('✅ ' + result.message, 'success');
-            cerrarModalConvenio({target: document.getElementById('modalConvenio')});
-            setTimeout(() => location.reload(), 800);
-        } else {
-            showToast('❌ ' + result.message, 'error');
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    } catch (err) {
-        console.error('Error guardar convenio:', err);
-        showToast('❌ Error de conexión', 'error');
-        btn.textContent = originalText;
-        btn.disabled = false;
-    }
-}
-
 // === TRAZA: SUBMODAL CONVENIOS ===
 let submodalConveniosDebug = false; // Cambiar a true para ver todos los logs de cierre
 
-// === SUBMODAL CONVENIOS (CORREGIDO) ===
+// === SUBMODAL: LISTA ===
 function abrirSubmodalConvenios(e) {
     if (e) e.stopPropagation();
-    console.log('🔍 [APERTURA] Click en botón Convenios');
-    
     const modal = document.getElementById('submodalConvenios');
-    if (!modal) {
-        console.error('❌ [APERTURA] No se encontró #submodalConvenios');
-        return;
-    }
-
-    modal.style.display = 'flex';
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ [APERTURA] Submodal visible. Display:', modal.style.display);
+    if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+}
+function cerrarSubmodalConvenios() {
+    const modal = document.getElementById('submodalConvenios');
+    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
 }
 
-function cerrarSubmodalConvenios(e) {
-    if (e && e.type) console.log(`🔴 [CIERRE] Cerrando vía: ${e.type}`);
-    
-    const modal = document.getElementById('submodalConvenios');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.style.display = 'none';
-        }, 300);
-        document.body.style.overflow = '';
-        console.log('🔴 [CIERRE] Submodal cerrado');
-    }
-}
-
-// === MODAL CREAR/EDITAR CONVENIO ===
+// === MODAL: FORMULARIO ===
 function abrirModalConvenios(datos = null) {
-    console.log('🔍 [Modal Convenio] Abriendo...', datos);
     const modal = document.getElementById('modalConvenio');
-    if (!modal) {
-        console.error('❌ [Modal Convenio] No se encontró #modalConvenio');
-        return;
-    }
+    if (!modal) return;
     
     const form = document.getElementById('formConvenio');
     const campoEstado = document.getElementById('campo_estado');
     const titulo = document.getElementById('modalConvenioTitulo');
     
-    // Reset
     form.reset();
     document.getElementById('convenio_action').value = 'create';
     document.getElementById('convenio_id').value = '';
@@ -4164,7 +4322,6 @@ function abrirModalConvenios(datos = null) {
     if (campoEstado) campoEstado.style.display = 'none';
     
     if (datos && typeof datos === 'object') {
-        // Modo Edición
         document.getElementById('convenio_action').value = 'update';
         document.getElementById('convenio_id').value = datos.id_convenio || '';
         document.getElementById('convenio_nombre').value = datos.nombre_empresa || '';
@@ -4177,7 +4334,7 @@ function abrirModalConvenios(datos = null) {
         
         if (campoEstado) {
             document.getElementById('convenio_estado').value = datos.estado || 'activo';
-            campoEstado.style.display = 'block';
+            campoEstado.style.display = 'flex';
         }
         if (titulo) titulo.textContent = 'Editar Convenio';
     }
@@ -4186,15 +4343,41 @@ function abrirModalConvenios(datos = null) {
     document.body.style.overflow = 'hidden';
 }
 
-function cerrarModalConvenio(e) {
-    // Cerrar si click en fondo o botón X
-    if (!e || e.target.id === 'modalConvenio' || e.target.classList.contains('modal-close')) {
-        const modal = document.getElementById('modalConvenio');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
+function cerrarModalConvenio() {
+    const modal = document.getElementById('modalConvenio');
+    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
+// === LISTENER UNIFICADO PARA EDITAR ===
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-editar-convenio');
+    if (btn) {
+        e.stopPropagation();
+        try {
+            const datos = JSON.parse(btn.dataset.convenio);
+            abrirModalConvenios(datos);
+        } catch (err) {
+            console.error('❌ Error al cargar convenio:', err);
         }
     }
+});
+
+// === GUARDAR (AJAX) ===
+function guardarConvenio(e) {
+    e.preventDefault();
+    const formData = new FormData(document.getElementById('formConvenio'));
+    
+    fetch('api/convenios.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                cerrarModalConvenio();
+                location.reload(); // Recarga para reflejar cambios en la tabla
+            } else {
+                alert(data.error || 'Error al guardar');
+            }
+        })
+        .catch(err => console.error('❌ Error red:', err));
 }
 
 // Listeners globales para cerrar con ESC o click fuera
@@ -4208,20 +4391,6 @@ document.addEventListener('click', (e) => {
     const submodal = document.getElementById('submodalConvenios');
     if (submodal && submodal.style.display === 'flex' && e.target === submodal) {
         cerrarSubmodalConvenios();
-    }
-});
-// === LISTENER PARA BOTÓN EDITAR CONVENIO (SEGURO) ===
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.btn-editar-convenio');
-    if (btn) {
-        e.stopPropagation();
-        try {
-            const datos = JSON.parse(btn.dataset.convenio);
-            abrirModalConvenios(datos);
-        } catch (err) {
-            console.error('❌ Error al parsear convenio:', err);
-            showToast('❌ Error al cargar datos', 'error');
-        }
     }
 });
 </script>
@@ -4430,135 +4599,106 @@ document.addEventListener('click', function(e) {
 
     <!-- === MODAL BITÁCORA DE RESERVA === -->
     <div id="modalLogReserva" class="modal-overlay" style="display:none;" onclick="cerrarModalLog(event)">
-    <div class="modal-content" style="max-width:580px; padding:1.5rem; border-radius:16px;">
-        
-        <!-- Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <h3 style="margin:0; color:#AB47BC; font-size:1.1rem;">📋 Bitácora de Reserva #<span id="logReservaId"></span></h3>
-        <button onclick="cerrarModalLog(event)" 
-                style="background:none; border:none; font-size:1.3rem; color:#999; cursor:pointer; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;">
-            &times;
-        </button>
+        <div class="modal-content" style="max-width:580px; padding:1.5rem; border-radius:16px;">
+            
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="margin:0; color:#AB47BC; font-size:1.1rem;">📋 Bitácora de Reserva #<span id="logReservaId"></span></h3>
+            <button onclick="cerrarModalLog(event)" 
+                    style="background:none; border:none; font-size:1.3rem; color:#999; cursor:pointer; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;">
+                &times;
+            </button>
+            </div>
+            
+            <!-- Tabla de logs -->
+            <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead style="position:sticky; top:0; background:#F7FAFC; z-index:1;">
+                <tr>
+                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Fecha</th>
+                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Usuario</th>
+                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Acción</th>
+                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Detalle</th>
+                </tr>
+                </thead>
+                <tbody id="logReservaBody">
+                <tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Cargando historial...</td></tr>
+                </tbody>
+            </table>
+            </div>
+            
+            <!-- Footer -->
+            <div style="margin-top:1rem; text-align:right; font-size:0.8rem; color:#888;">
+            Ordenado por fecha (más reciente primero)
+            </div>
         </div>
-        
-        <!-- Tabla de logs -->
-        <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px;">
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-            <thead style="position:sticky; top:0; background:#F7FAFC; z-index:1;">
-            <tr>
-                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Fecha</th>
-                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Usuario</th>
-                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Acción</th>
-                <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Detalle</th>
-            </tr>
-            </thead>
-            <tbody id="logReservaBody">
-            <tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Cargando historial...</td></tr>
-            </tbody>
-        </table>
-        </div>
-        
-        <!-- Footer -->
-        <div style="margin-top:1rem; text-align:right; font-size:0.8rem; color:#888;">
-        Ordenado por fecha (más reciente primero)
-        </div>
-    </div>
     </div>
 
-    <!-- === MODAL CREAR/EDITAR CONVENIO (minimal) === -->
-    <div id="modalConvenio" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; padding:1rem;" onclick="if(event.target===this)cerrarModalConvenio(event)">
-        <div style="background:white; border-radius:16px; padding:1.5rem; max-width:500px; width:95%; position:relative;">
-            <button onclick="cerrarModalConvenio(event)" style="position:absolute; top:0.75rem; right:0.75rem; background:#E2E8F0; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer;">&times;</button>
-            <h3 style="margin:0 0 1rem 0;">🤝 <span id="modalConvenioTitulo">Nuevo Convenio</span></h3>
+    <!-- === MODAL: CREAR/EDITAR CONVENIO (FORMULARIO) === -->
+    <div id="modalConvenio" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1600; justify-content:center; align-items:center; padding:1rem;" onclick="if(event.target===this) cerrarModalConvenio()">
+        <div onclick="event.stopPropagation()" style="background:white; border-radius:16px; width:95%; max-width:550px; box-shadow:0 20px 60px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #eee; background:#f8fafc;">
+                <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 <span id="modalConvenioTitulo">Nuevo Convenio</span></h3>
+                <button onclick="cerrarModalConvenio()" style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer;">&times;</button>
+            </div>
+            
+            <form id="formConvenio" onsubmit="guardarConvenio(event)" style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                <input type="hidden" id="convenio_id" name="id_convenio">
+                <input type="hidden" id="convenio_action" name="action" value="create">
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Empresa / Organización *</label>
+                        <input type="text" id="convenio_nombre" name="nombre_empresa" required style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Descuento (%)</label>
+                        <input type="number" id="convenio_dscto" name="porc_dscto" min="0" max="100" step="0.01" value="0" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                    <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Nombre de Contacto</label>
+                    <input type="text" id="convenio_contacto" name="contacto_nombre" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Email</label>
+                        <input type="email" id="convenio_email" name="contacto_email" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Teléfono</label>
+                        <input type="tel" id="convenio_telefono" name="contacto_telefono" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Vigente Desde</label>
+                        <input type="date" id="convenio_desde" name="vigente_desde" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Vigente Hasta</label>
+                        <input type="date" id="convenio_hasta" name="vigente_hasta" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                    </div>
+                </div>
+
+                <div id="campo_estado" style="display:none; flex-direction:column; gap:0.3rem;">
+                    <label style="font-size:0.8rem; font-weight:600; color:#4A5568;">Estado</label>
+                    <select id="convenio_estado" name="estado" style="padding:0.6rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                    </select>
+                </div>
+            </form>
+
+            <div style="display:flex; gap:0.5rem; padding:1rem 1.5rem; border-top:1px solid #eee; background:#f8fafc;">
+                <button type="button" onclick="cerrarModalConvenio()" style="flex:1; padding:0.7rem; border-radius:10px; border:2px solid #E2E8F0; background:white; cursor:pointer; font-weight:500;">Cancelar</button>
+                <button type="submit" form="formConvenio" style="flex:1; padding:0.7rem; border-radius:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; font-weight:600; cursor:pointer;">💾 Guardar</button>
+            </div>
         </div>
-        <form id="formConvenio" onsubmit="guardarConvenio(event)">
-            <input type="hidden" id="convenio_id" name="id_convenio">
-            <input type="hidden" id="convenio_action" name="action" value="create">
-            <!-- Contenido: Tabla de convenios -->
-            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem; color: #2D3748;">
-                <?php
-                    $stmt_conv = $pdo->prepare("
-                        SELECT c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, 
-                        c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado,
-                        COUNT(s.id_socio) as socios_vinculados
-                        FROM convenios c
-                        LEFT JOIN socios s ON c.id_convenio = s.id_convenio AND s.activo = 'Si'
-                        WHERE c.id_recinto = ? 
-                        GROUP BY c.id_convenio
-                        ORDER BY c.nombre_empresa ASC
-                    ");
-                    $stmt_conv->execute([$_SESSION['id_recinto']]);
-                    $convenios_submodal = $stmt_conv->fetchAll();
-                ?>
-                    
-                <?php if (empty($convenios_submodal)): ?>
-                    <div style="text-align:center; padding:3rem 1rem; color:#718096;">
-                        <div style="font-size:3rem; margin-bottom:0.5rem;">🤝</div>
-                        <p style="font-weight:500;">Aún no tienes convenios</p>
-                        <p style="font-size:0.9rem; margin-bottom:1rem;">Crea tu primer convenio para aplicar descuentos automáticos</p>
-                        <button onclick="abrirModalConvenios()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; font-weight:500; cursor:pointer;">
-                            + Crear mi primer convenio
-                        </button>
-                    </div>
-                <?php else: ?>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #2D3748;">
-                            <thead>
-                                <tr style="background:#F7FAFC; position:sticky; top:0;">
-                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Empresa</th>
-                                    <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Contacto</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Descuento</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Socios</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Vigencia</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Estado</th>
-                                    <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #1a74ea; font-weight:600; color: #4A5568;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach($convenios_submodal as $c): ?>
-                                    <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
-                                        <td style="padding:0.8rem; color: #718096; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
-                                        <td style="padding:0.8rem;">
-                                            <?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br>
-                                            <small style="color: #718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small>
-                                        </td>
-                                        <td style="padding:0.8rem; text-align:center;">
-                                            <span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;">
-                                                <?= $c['porc_dscto'] ?>%
-                                            </span>
-                                        </td>
-                                        <td style="padding:0.8rem; text-align:center; font-weight:500; color: #4A5568;">
-                                            <?= $c['socios_vinculados'] ?>
-                                        </td>
-                                        <td style="padding:0.8rem; text-align:center; font-size:0.85rem;">
-                                            <?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?>
-                                            <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small style="color: #A0AEC0">(∞)</small>' ?>
-                                        </td>
-                                        <td style="padding:0.8rem; text-align:center;">
-                                            <span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem; font-weight:500;">
-                                                <?= ucfirst($c['estado']) ?>
-                                            </span>
-                                        </td>
-                                        <td style="padding:0.8rem; text-align:center;">
-                                            <button type="button" 
-                                                class="btn-editar-convenio"
-                                                data-convenio='<?= htmlspecialchars(json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>'
-                                                style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
-                                                ✏️ Editar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-                <button type="button" onclick="cerrarModalConvenio(event)" style="flex:1; padding:0.7rem; border-radius:10px; border:2px solid #E2E8F0; background:white; cursor:pointer;">Cancelar</button>
-                <button type="submit" style="flex:1; padding:0.7rem; border-radius:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; font-weight:600; cursor:pointer;">💾 Guardar</button>
-            </div>
-        </form>
     </div>
+    
 </body>
 </html>
