@@ -4368,13 +4368,14 @@ document.addEventListener('click', function(e) {
 });
 
 // === GUARDAR (AJAX) ===
-ffunction guardarConvenio(e) {
+function guardarConvenio(e) {
     e.preventDefault();
     const form = document.getElementById('formConvenio');
     if (!form) return;
 
     const formData = new FormData(form);
-    // Ruta absoluta segura desde la raíz pública
+    formData.append('id_recinto', <?= json_encode($_SESSION['id_recinto'] ?? 0) ?>); // Envía recinto por seguridad
+
     fetch('/api/convenios.php', { method: 'POST', body: formData })
         .then(r => r.text())
         .then(text => {
@@ -4383,8 +4384,8 @@ ffunction guardarConvenio(e) {
         .then(data => {
             if (data.success) {
                 cerrarModalConvenio();
-                cerrarSubmodalConvenios();
-                location.reload();
+                cerrarSubmodalConvenios(); // Cierra ambos modales
+                location.reload(); // Recarga para actualizar la tabla
             } else {
                 alert('❌ ' + (data.error || 'Error al guardar'));
             }
