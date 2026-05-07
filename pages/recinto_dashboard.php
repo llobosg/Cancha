@@ -1535,7 +1535,13 @@ button[onclick="abrirModalConvenios()"]:hover {
                                 <td style="padding:0.8rem; text-align:center; font-size:0.85rem;"><?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?> <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small>(∞)</small>' ?></td>
                                 <td style="padding:0.8rem; text-align:center;"><span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem;"><?= ucfirst($c['estado']) ?></span></td>
                                 <td style="padding:0.8rem; text-align:center;">
-                                    <button class="btn-editar-convenio" data-convenio="<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>" style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">✏️ Editar</button>
+                                    <button class="btn-editar-convenio" 
+                                            data-convenio="<?= json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT) ?>"
+                                            onclick="debugEditarConvenio(this, event)"
+                                            style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer; transition:background 0.2s;"
+                                            onmouseover="this.style.background='#3182CE'" onmouseout="this.style.background='#4299E1'">
+                                        ✏️ Editar
+                                    </button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -4393,6 +4399,84 @@ document.addEventListener('click', (e) => {
         cerrarSubmodalConvenios();
     }
 });
+
+// 🔍 FUNCIÓN DEBUG: Traza completa del flujo Editar
+function debugEditarConvenio(btn, event) {
+    event.stopPropagation(); // Evita que el click cierre el submodal padre
+    console.log('🟢 [DEBUG-EDITAR] Click detectado en botón');
+    
+    // 1. Verificar atributo data
+    const rawData = btn.getAttribute('data-convenio');
+    console.log('📦 [DEBUG-EDITAR] Atributo data-convenio:', rawData);
+    if (!rawData) {
+        console.error('❌ [DEBUG-EDITAR] Falta data-convenio en el botón. Verificar PHP json_encode');
+        return;
+    }
+
+    // 2. Parsear JSON
+    let datos;
+    try {
+        datos = JSON.parse(rawData);
+        console.log('✅ [DEBUG-EDITAR] JSON parseado:', datos);
+    } catch (e) {
+        console.error('💥 [DEBUG-EDITAR] Error parseando JSON:', e);
+        return;
+    }
+
+    // 3. Verificar existencia de elementos DOM
+    const modal = document.getElementById('modalConvenio');
+    if (!modal) {
+        console.error('❌ [DEBUG-EDITAR] No se encontró #modalConvenio en el DOM');
+        return;
+    }
+    console.log('🔍 [DEBUG-EDITAR] Modal encontrado. Display actual:', modal.style.display, 'Z-Index:', modal.style.zIndex);
+
+    // 4. Mapear campos
+    const campos = {
+        'convenio_id': datos.id_convenio || '',
+        'convenio_action': 'update',
+        'convenio_nombre': datos.nombre_empresa || '',
+        'convenio_contacto': datos.contacto_nombre || '',
+        'convenio_email': datos.contacto_email || '',
+        'convenio_telefono': datos.contacto_telefono || '',
+        'convenio_dscto': datos.porc_dscto || 0,
+        'convenio_desde': datos.vigente_desde || '',
+        'convenio_hasta': datos.vigente_hasta || ''
+    };
+
+    let camposOk = 0;
+    for (const [id, val] of Object.entries(campos)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = val;
+            camposOk++;
+        } else {
+            console.warn(`⚠️ [DEBUG-EDITAR] Campo #${id} no existe en el DOM`);
+        }
+    }
+    console.log(`📝 [DEBUG-EDITAR] ${camposOk}/${Object.keys(campos).length} campos actualizados`);
+
+    // 5. Mostrar campo Estado (solo en edición)
+    const campoEstado = document.getElementById('campo_estado');
+    if (campoEstado) {
+        document.getElementById('convenio_estado').value = datos.estado || 'activo';
+        campoEstado.style.display = 'flex';
+        console.log('🟡 [DEBUG-EDITAR] Campo Estado visible');
+    }
+
+    // 6. Actualizar título
+    const titulo = document.getElementById('modalConvenioTitulo');
+    if (titulo) {
+        titulo.textContent = 'Editar Convenio';
+        console.log('🏷️ [DEBUG-EDITAR] Título actualizado');
+    }
+
+    // 7. FORZAR apertura del modal
+    modal.style.display = 'flex';
+    modal.style.zIndex = '1600';
+    document.body.style.overflow = 'hidden';
+    console.log('🟡 [DEBUG-EDITAR] ✅ Modal FORZADO a visible. Display:', modal.style.display);
+}
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
