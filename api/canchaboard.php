@@ -126,8 +126,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 $placeholders = implode(',', array_fill(0, count($id_canchas_list), '?'));
 
                 // 2. Obtener TODAS las reservas confirmadas para estas canchas y fecha
-                // ✅ CLAVE: No filtrar por id_club aquí, porque queremos ver reservas individuales también
-                // Solo filtramos por: Cancha del recinto + Fecha + Estado != cancelada
+                // ✅ CORRECCIÓN: Usar solo marcadores posicionales (?)
                 $sql_reservas = "
                     SELECT 
                         r.id_reserva,
@@ -147,12 +146,13 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                     JOIN canchas c ON r.id_cancha = c.id_cancha
                     LEFT JOIN socios s ON r.id_socio = s.id_socio
                     WHERE c.id_cancha IN ($placeholders)
-                    AND r.fecha = :fecha
+                    AND r.fecha = ?
                     AND r.estado != 'cancelada'
                 ";
 
+                // Preparar los parámetros: primero los IDs de cancha, luego la fecha
                 $params = $id_canchas_list;
-                $params[] = $fecha; // Agregar fecha al final para :fecha
+                $params[] = $fecha; // Asegúrate de que $fecha esté definida antes (ej: $_GET['fecha'])
 
                 $stmt_reservas = $pdo->prepare($sql_reservas);
                 $stmt_reservas->execute($params);
@@ -162,11 +162,10 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 if ($deporte !== 'todos') {
                     $reservas_filtradas = [];
                     foreach ($reservas_raw as $res) {
-                        // Normalizar deporte para comparación (ej: 'padel', 'Padel', 'Pádel')
+                        // Normalizar deporte para comparación
                         $deporte_db = strtolower(trim($res['id_deporte'] ?? ''));
                         $deporte_busqueda = strtolower(trim($deporte));
                         
-                        // Mapeo simple si los nombres difieren ligeramente
                         if ($deporte_db === $deporte_busqueda || 
                             ($deporte_busqueda === 'padel' && strpos($deporte_db, 'padel') !== false) ||
                             ($deporte_busqueda === 'futbol' && strpos($deporte_db, 'futbol') !== false) ||
@@ -177,11 +176,10 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                     $reservas_raw = $reservas_filtradas;
                 }
 
-                // 4. Formatear para el frontend (clave: cancha_id_hora_inicio)
+                // 4. Formatear para el frontend
                 $reservas_format = [];
                 foreach ($reservas_raw as $r) {
-                    // Normalizar hora inicio a HH:MM para coincidir con slots de 30 min
-                    $hora_inicio_norm = substr($r['hora_inicio'], 0, 5); // "21:00"
+                    $hora_inicio_norm = substr($r['hora_inicio'], 0, 5); 
                     $key = $r['id_cancha'] . '_' . $hora_inicio_norm;
                     
                     $reservas_format[$key] = [
@@ -199,7 +197,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 echo json_encode([
                     'canchas' => $canchas,
                     'reservas' => $reservas_format,
-                    'slots' => generarSlotsHorarios() // Tu función existente para generar slots de 30min
+                    'slots' => generarSlotsHorarios()
                 ]);
 
             case 'get_lista_kpi':
