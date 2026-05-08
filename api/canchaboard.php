@@ -106,6 +106,13 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 break;
 
             case 'get_planilla_reservas':
+                // ✅ CORRECCIÓN CRÍTICA: Obtener fecha y deporte de los parámetros de entrada
+                $fecha = $_GET['fecha'] ?? date('Y-m-d'); // Fecha por defecto: hoy
+                $deporte = $_GET['deporte'] ?? 'todos';    // Deporte por defecto: todos
+                
+                // Log para debug (opcional)
+                error_log("📅 [API] Planilla solicitada para fecha: $fecha | Deporte: $deporte");
+
                 // 1. Obtener todas las canchas del recinto activo
                 $stmt_canchas = $pdo->prepare("
                     SELECT id_cancha, nombre_cancha, nro_cancha, id_deporte 
@@ -123,10 +130,16 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
 
                 // Extraer IDs de canchas para filtrar reservas
                 $id_canchas_list = array_column($canchas, 'id_cancha');
+                
+                // Si no hay canchas, salir temprano
+                if (empty($id_canchas_list)) {
+                     echo json_encode(['canchas' => $canchas, 'reservas' => [], 'slots' => generarSlotsHorarios()]);
+                     break;
+                }
+
                 $placeholders = implode(',', array_fill(0, count($id_canchas_list), '?'));
 
                 // 2. Obtener TODAS las reservas confirmadas para estas canchas y fecha
-                // ✅ CORRECCIÓN: Usar solo marcadores posicionales (?)
                 $sql_reservas = "
                     SELECT 
                         r.id_reserva,
@@ -152,7 +165,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
 
                 // Preparar los parámetros: primero los IDs de cancha, luego la fecha
                 $params = $id_canchas_list;
-                $params[] = $fecha; // Asegúrate de que $fecha esté definida antes (ej: $_GET['fecha'])
+                $params[] = $fecha; // ✅ Ahora $fecha existe y tiene valor
 
                 $stmt_reservas = $pdo->prepare($sql_reservas);
                 $stmt_reservas->execute($params);
@@ -199,6 +212,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                     'reservas' => $reservas_format,
                     'slots' => generarSlotsHorarios()
                 ]);
+                break; // Importante: terminar el case
 
             case 'get_lista_kpi':
                 $tipo = $_GET['tipo'] ?? ''; // 'parcial' o 'deuda'
