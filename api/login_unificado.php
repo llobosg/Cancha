@@ -90,6 +90,9 @@ try {
         $_SESSION['recinto_usuario'] = $admin['usuario'];
         $_SESSION['nombre_recinto'] = $admin['nombre_recinto'];
         $_SESSION['recinto_rol'] = $admin['rol'] ?? 'admin';
+        $_SESSION['user_id']   = $row['id_usuario'];
+        $_SESSION['id_recinto'] = $row['id_recinto']; // O el ID del recinto actual
+        $_SESSION['user_role']  = $row['rol'];
         
         echo json_encode([
             'success' => true, 

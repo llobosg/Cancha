@@ -24,10 +24,23 @@ try {
     require_once $autoloadPath;
     require_once $configPath;
 
-    if (session_status() === PHP_SESSION_NONE) session_start();
+    // 🔐 CONFIGURACIÓN DE SESIÓN COMPATIBLE CON RAILWAY/PHP-CLI
+    ini_set('session.use_strict_mode', '0');
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.cookie_path', '/');
+    ini_set('session.use_cookies', '1');
+    
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // 📝 LOG DE DIAGNÓSTICO (solo visible en Railway logs, nunca en el cliente)
+    error_log("🔐 [Convenios API] Session ID: " . session_id());
+    error_log("🔐 [Convenios API] Cookies recibidas: " . print_r($_COOKIE, true));
+    error_log("🔐 [Convenios API] $_SESSION actual: " . print_r($_SESSION, true));
     
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['id_recinto'])) {
-        throw new Exception('No autorizado. Sesión inválida.', 401);
+        throw new Exception('No autorizado. Faltan user_id o id_recinto en sesión. Verifica el flujo de login.', 401);
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
