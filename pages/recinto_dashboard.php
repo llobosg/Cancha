@@ -1798,93 +1798,86 @@ async function cargarPlanillaReservas() {
 function renderizarPlanilla(data, filtroEstado) {
     const table = document.getElementById('tablaPlanilla');
     if (!table) return;
+
     if (!data.canchas || !data.canchas.length) {
         table.innerHTML = '<tr><td style="padding:2rem; text-align:center;">No hay canchas operativas.</td></tr>';
         return;
     }
 
     console.log(`📊 [DEBUG] Renderizando: ${data.canchas.length} canchas, ${Object.keys(data.reservas || {}).length} reservas`);
+    console.log("🔍 [DEBUG] Claves de reservas recibidas:", Object.keys(data.reservas || {})); // <-- AGREGA ESTO PARA VER LAS CLAVES REALES
 
     // === HEADER ===
     let html = `<thead><tr>`;
     html += `<th style="background:#AB47BC; left:0; z-index:20; width:60px; min-width:60px; max-width:60px;">Hora</th>`;
     
     window.currentCanchasData = data.canchas;
-    
-    data.canchas.forEach((c, index) => {
+    data.canchas.forEach((c) => {
         const icono = iconosDeporte[c.id_deporte] || iconosDeporte['default'];
-        html += `<th style="background:#AB47BC; width:110px; font-size:0.75rem;" 
-                data-cancha-id="${c.id_cancha}">
-                    <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
-                </th>`;
+        html += `<th style="background:#AB47BC; width:110px; font-size:0.75rem;" data-cancha-id="${c.id_cancha}">
+            <div style="white-space:normal; line-height:1.1;">${c.nombre_cancha}</div>
+        </th>`;
     });
     html += `</tr></thead><tbody>`;
 
     // === CUERPO: Slots de 30 minutos ===
     const ahora = new Date();
-    let skipCells = {};
+    let skipCells = {}; // Para manejar rowspan
     let celdasPintadas = 0;
 
     data.slots.forEach(slot => {
-        if (slot.is_label_row) {
-            html += `<tr>`;
-            html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
+        // Saltar filas de etiqueta si existen (tu lógica actual parece usar solo slots clickeables)
+        if (slot.is_label_row) return; 
 
-            data.canchas.forEach((cancha, idxCancha) => {
-                // Saltar si está cubierta por rowspan anterior
-                if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
-                    skipCells[idxCancha]--;
-                    return;
-                }
+        html += `<tr>`;
+        
+        // Celda de Hora (Sticky Left)
+        html += `<td style="background:rgba(255,255,255,0.9); font-weight:bold; position:sticky; left:0; z-index:1; width:60px; font-size:0.75rem; text-align:center; border-right:1px solid #eee;">${slot.label}</td>`;
 
-                // 🔑 CLAVE: Normalizar slot.label para match exacto con BD
-                const slotLabelNormalized = slot.label.substring(0, 5); // "21:00:00" → "21:00"
-                const key = `${cancha.id_cancha}_${slotLabelNormalized}`;
-                const res = data.reservas[key];
+        data.canchas.forEach((cancha, idxCancha) => {
+            // Saltar si está cubierta por rowspan anterior
+            if (skipCells[idxCancha] && skipCells[idxCancha] > 0) {
+                skipCells[idxCancha]--;
+                return;
+            }
 
-                if (res) {
-                    // === CELDA RESERVADA ===
-                    let bgClass = 'estado-pendiente';
-                    if (res.estado === 'cancelada') {
-                        bgClass = 'estado-cancelada'; // Usa la nueva clase CSS
-                    } else if (res.estado_pago === 'pagado') {
-                        bgClass = 'estado-pagado';
-                    } else if (res.estado_pago === 'parcial') {
-                        bgClass = 'estado-parcial';
-                    }
+            // 🔑 CLAVE: Construir la clave exacta que usa la API
+            // slot.label viene como "21:00", cancha.id_cancha es número
+            const key = `${cancha.id_cancha}_${slot.label}`;
+            
+            // Verificar si existe la reserva en ese slot
+            const res = data.reservas[key];
 
-                    // Calcular duración y rowspan
-                    const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
-                    const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
-                    const duracionMin = hFin - hIni;
-                    const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
+            if (res) {
+                // === CELDA RESERVADA ===
+                let bgClass = 'estado-pendiente';
+                if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
+                else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
 
-                    console.log(`✅ MATCH: Key="${key}" | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
+                // Calcular duración y rowspan
+                const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
+                const hFin = parseInt(res.hora_fin.substring(0,2)) * 60 + parseInt(res.hora_fin.substring(3,5));
+                const duracionMin = hFin - hIni;
+                const rowspan = Math.max(1, Math.ceil(duracionMin / 30));
 
-                    if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
+                console.log(`✅ MATCH: Key="${key}" | ${res.hora_inicio}-${res.hora_fin} | Rowspan: ${rowspan}`);
+                
+                if (rowspan > 1) skipCells[idxCancha] = rowspan - 1;
 
-                    const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
-
-                // 1. Parsear extras desde notas (formato [EXTRAS:5000])
+                const nombre = (res.nombre_cliente || res.nombre_socio || 'Reserva').substring(0, 15);
+                
+                // Extras y Notas (tu lógica existente)
                 let extrasMonto = 0;
                 if (res.notas && typeof res.notas === 'string') {
                     const match = res.notas.match(/\[EXTRAS:(\d+(?:\.\d+)?)\]/);
                     if (match) extrasMonto = parseFloat(match[1]);
                 }
-
-                // 2. Badge compacto y clickeable (BONUS)
+                
                 let extrasHtml = '';
                 if (extrasMonto > 0) {
-                    extrasHtml = `
-                        <div class="badge-extras" 
-                            style="cursor:pointer; display:inline-block; background:#FFF3CD; color:#856404; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:600; margin-top:2px; white-space:nowrap;"
-                            title="Click para ver detalle de extras"
-                            onclick="event.stopPropagation(); verDetalleExtras(${res.id_reserva}, ${extrasMonto})">
-                            🎒 Extras $${Math.round(extrasMonto).toLocaleString('es-CL')}
-                        </div>`;
+                    extrasHtml = `<div class="badge-extras" style="cursor:pointer; display:inline-block; background:#FFF3CD; color:#856404; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:600; margin-top:2px; white-space:nowrap;" title="Click para ver detalle de extras" onclick="event.stopPropagation(); verDetalleExtras(${res.id_reserva}, ${extrasMonto})">🎒 Extras $${Math.round(extrasMonto).toLocaleString('es-CL')}</div>`;
                 }
 
-                // 3. Notas visibles (solo si NO hay extras, para no duplicar)
                 let notasHtml = '';
                 if (res.notas && res.notas.trim() !== '' && extrasMonto === 0) {
                     const notasCortas = res.notas.length > 15 ? res.notas.substring(0, 15) + '...' : res.notas;
@@ -1892,53 +1885,44 @@ function renderizarPlanilla(data, filtroEstado) {
                     notasHtml = `<div style="font-size:0.65rem; color:#666; margin-top:2px;" title="${res.notas.replace(/"/g, '&quot;')}">📝 ${notasCortas}</div>`;
                 }
 
-                // 4. Construir celda (con max-width para no desplazar grilla)
-                html += `<td class="${bgClass} cell-reserva" 
-                            rowspan="${rowspan}" 
-                            draggable="true" 
-                            ondragstart="dragStart(event, ${parseInt(res.id_reserva)})" 
-                            ondragend="dragEnd(event)"
-                            style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; max-width:140px; overflow:hidden;" 
-                            onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
-                            <div style="font-size:0.7rem; font-weight:bold; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nombre}</div>
-                            <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
-                            ${extrasHtml}
-                            ${notasHtml}
-                        </td>`;
-                    celdasPintadas++;
-                    
+                html += `<td class="${bgClass} cell-reserva"
+                    rowspan="${rowspan}"
+                    draggable="true"
+                    ondragstart="dragStart(event, ${parseInt(res.id_reserva)})"
+                    ondragend="dragEnd(event)"
+                    style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; max-width:140px; overflow:hidden;"
+                    onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
+                    <div style="font-size:0.7rem; font-weight:bold; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nombre}</div>
+                    <div style="font-size:0.6rem; opacity:0.9;">${res.hora_inicio.substring(0,5)}-${res.hora_fin.substring(0,5)}</div>
+                    ${extrasHtml}
+                    ${notasHtml}
+                </td>`;
+                celdasPintadas++;
+            } else {
+                // === CELDA DISPONIBLE ===
+                const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
+                const esPasado = slotFecha <= ahora;
+                
+                if (esPasado) {
+                    html += `<td class="estado-disponible" data-cancha-id="${cancha.id_cancha}" style="opacity:0.3; cursor:not-allowed;"></td>`;
                 } else {
-                    // === CELDA DISPONIBLE ===
-                    const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
-                    const esPasado = slotFecha <= ahora;
-                    
-                    if (esPasado) {
-                        html += `<td class="estado-disponible" 
-                                    data-cancha-id="${cancha.id_cancha}"
-                                    style="opacity:0.3; cursor:not-allowed;"></td>`;
-                    } else {
-                        html += `<td class="estado-disponible drop-zone" 
-                                    data-cancha-id="${cancha.id_cancha}"
-                                    ondragover="dragOver(event)" 
-                                    ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
-                    }
+                    html += `<td class="estado-disponible drop-zone"
+                        data-cancha-id="${cancha.id_cancha}"
+                        ondragover="dragOver(event)"
+                        ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                        onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
                 }
-            });
-            html += `</tr>`;
-        }
+            }
+        });
+        html += `</tr>`;
     });
-    
+
     html += `</tbody>`;
     table.innerHTML = html;
-    
-    // Debug opcional: verificar rowspan aplicado
+
     setTimeout(() => {
         const celdas = document.querySelectorAll('td.cell-reserva[rowspan]');
         console.log(`🔍 [DEBUG] Celdas con rowspan: ${celdas.length}`);
-        celdas.forEach((td, i) => {
-            console.log(`   [${i}] rowspan="${td.getAttribute('rowspan')}" | offsetHeight=${td.offsetHeight}px`);
-        });
     }, 100);
     
     console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas`);

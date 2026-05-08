@@ -210,7 +210,12 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                 // 4. Formatear para el frontend
                 $reservas_format = [];
                 foreach ($reservas_raw as $r) {
+                    // ✅ CLAVE CRÍTICA: Normalizar hora inicio a HH:MM (sin segundos)
+                    // Ejemplo: "21:00:00" -> "21:00"
                     $hora_inicio_norm = substr($r['hora_inicio'], 0, 5); 
+                    
+                    // La clave debe ser: id_cancha_hora_normalizada
+                    // Ejemplo: "26_21:00"
                     $key = $r['id_cancha'] . '_' . $hora_inicio_norm;
                     
                     $reservas_format[$key] = [
@@ -227,10 +232,9 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
 
                 echo json_encode([
                     'canchas' => $canchas,
-                    'reservas' => $reservas_format,
+                    'reservas' => $reservas_format, // Esto debe ser un OBJETO/ARRAY asociativo, NO indexado
                     'slots' => generarSlotsHorarios()
                 ]);
-
                 break; // Importante: terminar el case
 
             case 'get_lista_kpi':
