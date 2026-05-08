@@ -1999,48 +1999,47 @@ function dragOver(e) {
 async function dropReserva(e, canchaId, hora) {
     e.preventDefault();
     console.log(`🎯 Drop: canchaId=${canchaId}, hora=${hora}, draggedId=${draggedReservaId}`);
-    e.stopPropagation(); // 🔑 EVITA QUE EL EVENTO BUBBLEE A OTROS LISTENERS
-     // Validación adicional por seguridad
-    if (!draggedReservaId || !canchaId || !hora) {
-        console.warn('⚠️ Datos incompletos para mover reserva');
-        return;
-    }
-
     
+    // Validaciones básicas
+    if (!draggedReservaId || !canchaId || !hora) return;
+
     const targetCell = e.target.closest('td');
     if (targetCell) {
         targetCell.classList.add('drop-anim');
         setTimeout(() => targetCell.classList.remove('drop-anim'), 300);
     }
-    
     limpiarHighlights();
-    if (!draggedReservaId) {
-        console.warn('⚠️ No hay reserva arrastrada');
-        return;
-    }
 
-    if (confirm(`📅 ¿Mover reserva ID ${draggedReservaId} a las ${hora} en Cancha ${canchaId}?`)) {
-        try {
-            const res = await fetch('../api/mover_reserva.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    id_reserva: draggedReservaId,
-                    id_cancha: canchaId,
-                    hora_inicio: hora + ':00',
-                    fecha: fechaPlanillaActual
-                })
-            });
-            const data = await res.json();
-            showToast(data.success ? '✅ Reserva movida' : '❌ ' + data.message, 
-                     data.success ? 'success' : 'error');
-            if (data.success) cargarPlanillaReservas();
-        } catch (err) {
-            console.error('❌ Error en drop:', err);
-            showToast('❌ Error de conexión', 'error');
+    // Confirmación simple (opcional, puedes quitarla si quieres velocidad)
+    // if (!confirm(`¿Mover reserva ID ${draggedReservaId} a las ${hora}?`)) return;
+
+    try {
+        const res = await fetch('../api/mover_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_reserva: draggedReservaId,
+                id_cancha: canchaId,
+                hora_inicio: hora + ':00', // Asegurar formato HH:MM:SS si la API lo requiere
+                fecha: fechaPlanillaActual
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('✅ Reserva movida', 'success');
+            cargarPlanillaReservas(); // Recargar planilla para ver cambios
+        } else {
+            // Mostrar el mensaje de error específico de la API (ej: colisión)
+            showToast(data.message || '❌ Error al mover', 'error');
         }
+    } catch (err) {
+        console.error('❌ Error en drop:', err);
+        showToast('❌ Error de conexión', 'error');
+    } finally {
+        draggedReservaId = null; // Limpiar ID arrastrado
     }
-    draggedReservaId = null;
 }
 
 document.addEventListener('dragend', (e) => {
