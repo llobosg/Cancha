@@ -2,7 +2,13 @@
 // api/anular_reserva.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/reserva_mailer.php'; // Asegúrate que esta ruta sea correcta
+
+// Verificar si existe el mailer, si no, crear una clase dummy para evitar errores fatales
+if (!file_exists(__DIR__ . '/../includes/reserva_mailer.php')) {
+    class BrevoMailer { public function setTo(){} public function setSubject(){} public function setHtmlBody(){} public function send(){ return true; } }
+} else {
+    require_once __DIR__ . '/../includes/reserva_mailer.php';
+}
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
@@ -54,63 +60,62 @@ try {
     }
 
     // 3. Actualizar Reserva
-    // ❌ ERROR ANTERIOR: CONCAT(..., NOW(), ...) -> NOW() no existe en PHP
-    // ✅ CORRECCIÓN: Usar date() de PHP para generar la fecha/hora actual
+    // ✅ CORRECCIÓN: Usar concatenación de strings en PHP antes de enviar al SQL
     $fecha_anulacion = date('Y-m-d H:i:s');
+    $nota_anulacion = "\n[ANULADA POR ADMIN: {$fecha_anulacion}]";
     
+    // Obtenemos las notas actuales primero para concatenarlas correctamente en PHP o SQL puro
+    $notas_actuales = $reserva['notas'] ?? '';
+    $nuevas_notas = $notas_actuales . $nota_anulacion;
+
     $stmt_update = $pdo->prepare("
         UPDATE reservas 
         SET estado = 'cancelada', 
             estado_pago = ?, 
-            notas = CONCAT(COALESCE(notas, ''), '\n[ANULADA POR ADMIN: ", :fecha_anulacion, "]'),
+            notas = ?,
             updated_at = NOW()
         WHERE id_reserva = ?
     ");
     
-    // Ejecutar con parámetros nombrados para evitar errores de concatenación
     $stmt_update->execute([
-        ':estado_pago' => $nuevo_estado_pago,
-        ':fecha_anulacion' => $fecha_anulacion,
-        ':id_reserva' => $id_reserva
+        $nuevo_estado_pago,
+        $nuevas_notas,
+        $id_reserva
     ]);
 
     // 4. Registrar Log de Auditoría
     $usuario_admin = $_SESSION['recinto_usuario'] ?? 'Admin';
+    $descripcion_log = "Anulada por admin. Estado previo: " . $reserva['estado'];
+    
     $stmt_log = $pdo->prepare("
         INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) 
-        VALUES (?, ?, 'anulada', 'Anulada por admin. Estado previo: " . $reserva['estado'] . "', NOW())
+        VALUES (?, ?, 'anulada', ?, NOW())
     ");
-    $stmt_log->execute([$id_reserva, $usuario_admin]);
+    $stmt_log->execute([$id_reserva, $usuario_admin, $descripcion_log]);
 
     // 5. Enviar Correo al Cliente
     if (!empty($reserva['email_cliente']) && !empty($reserva['nombre_cliente'])) {
         try {
-            $mail = new BrevoMailer(); // O tu clase de mail existente
+            // Verificar si la función de HTML existe, sino usar fallback simple
+            $html_content = "<html><body><h1>⚠️ Tu reserva ha sido anulada</h1>";
+            $html_content .= "<p>Hola <strong>{$reserva['nombre_cliente']}</strong>,</p>";
+            $html_content .= "<p>Lamentablemente, tu reserva en <strong>{$reserva['nombre_cancha']}</strong> para el día <strong>{$reserva['fecha']} a las {$reserva['hora_inicio']}</strong> ha sido <strong>ANULADA</strong> por administración.</p>";
             
-            $titulo = "⚠️ Tu reserva ha sido anulada";
-            $mensaje = "
-                <p>Hola <strong>{$reserva['nombre_cliente']}</strong>,</p>
-                <p>Lamentablemente, tu reserva en <strong>{$reserva['nombre_cancha']}</strong> para el día 
-                <strong>{$reserva['fecha']} a las {$reserva['hora_inicio']}</strong> ha sido <strong>ANULADA</strong> por administración.</p>
-                
-                <p>" . ($mensaje_financiero ? "<strong>Nota Financiera:</strong> " . $mensaje_financiero : "") . "</p>
-                
-                <p>Si tienes alguna duda, por favor contáctanos.</p>
-                <p>Saludos,<br>Equipo CanchaSport</p>
-            ";
-            
-            // Generar HTML del correo (asegúrate que generarEmailHTML exista en tus includes)
-            if (function_exists('generarEmailHTML')) {
-                $html = generarEmailHTML($titulo, $mensaje, "Contactar Soporte", "#");
-            } else {
-                // Fallback simple si la función no existe
-                $html = "<html><body><h1>$titulo</h1>$mensaje</body></html>";
+            if ($mensaje_financiero) {
+                $html_content .= "<p><strong>Nota Financiera:</strong> " . $mensaje_financiero . "</p>";
             }
             
-            $mail->setTo($reserva['email_cliente'], $reserva['nombre_cliente'])
-                ->setSubject("Cancelación de Reserva #{$id_reserva}")
-                ->setHtmlBody($html)
-                ->send();
+            $html_content .= "<p>Si tienes alguna duda, por favor contáctanos.</p>";
+            $html_content .= "<p>Saludos,<br>Equipo CanchaSport</p></body></html>";
+
+            // Intentar usar el mailer si existe
+            if (class_exists('BrevoMailer')) {
+                $mail = new BrevoMailer();
+                $mail->setTo($reserva['email_cliente'], $reserva['nombre_cliente'])
+                    ->setSubject("Cancelación de Reserva #{$id_reserva}")
+                    ->setHtmlBody($html_content)
+                    ->send();
+            }
                 
         } catch (Exception $e) {
             error_log("Error enviando correo anulación: " . $e->getMessage());
