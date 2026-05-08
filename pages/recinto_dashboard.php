@@ -130,16 +130,17 @@ try {
     $monto_pendiente = $s_parcial->fetchColumn() ?: 0;
 
     // === EN RESERVA: Monto total de reservas FUTURAS no pagadas (pendiente + parcial) ===
-    $q_reserva = "SELECT COALESCE(SUM(r.monto_total), 0) 
-                  FROM reservas r 
-                  JOIN canchas c ON r.id_cancha = c.id_cancha 
-                  WHERE c.id_recinto = :id 
-                  AND DATE(r.fecha) > :hoy 
-                  AND r.estado_pago IN ('pendiente', 'parcial') 
-                  AND r.estado != 'cancelada'";
-    $s_reserva = $pdo->prepare($q_reserva);
-    $s_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-    $monto_en_reserva = $s_reserva->fetchColumn() ?: 0;
+   $q_reserva = "SELECT COALESCE(SUM(r.monto_total), 0)
+                    FROM reservas r
+                    JOIN canchas c ON r.id_cancha = c.id_cancha
+                    WHERE c.id_recinto = :id
+                    AND DATE(r.fecha) > :hoy          -- Solo futuras
+                    AND r.estado_pago IN ('pendiente', 'parcial') -- Solo no pagadas totalmente
+                    AND r.estado != 'cancelada'       -- ✅ EXCLUIR CANCELADAS
+                    ";
+                    $s_reserva = $pdo->prepare($q_reserva);
+                    $s_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+                    $monto_en_reserva = $s_reserva->fetchColumn() ?: 0;
 
     // Cantidad de reservas en reserva (para subtexto)
     $q_cant_reserva = "SELECT COUNT(*) 
@@ -154,16 +155,17 @@ try {
     $cant_en_reserva = $s_cant_reserva->fetchColumn() ?: 0;
 
     // === DEUDA VENCIDA: reservas PASADAS no pagadas ===
-    $q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0) 
-                FROM reservas r 
-                JOIN canchas c ON r.id_cancha = c.id_cancha 
-                WHERE c.id_recinto = :id 
-                AND DATE(r.fecha) < :hoy 
-                AND r.estado_pago IN ('pendiente', 'parcial') 
-                AND r.estado != 'cancelada'";
-    $s_deuda = $pdo->prepare($q_deuda);
-    $s_deuda->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-    $monto_deuda = $s_deuda->fetchColumn() ?: 0;
+   $q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0)
+                        FROM reservas r
+                        JOIN canchas c ON r.id_cancha = c.id_cancha
+                        WHERE c.id_recinto = :id
+                        AND DATE(r.fecha) < :hoy          -- Solo pasadas
+                        AND r.estado_pago IN ('pendiente', 'parcial')
+                        AND r.estado != 'cancelada'       -- ✅ EXCLUIR CANCELADAS
+                        ";
+                        $s_deuda = $pdo->prepare($q_deuda);
+                        $s_deuda->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+                        $monto_deuda = $s_deuda->fetchColumn() ?: 0;
 
 } catch (PDOException $e) {
     // Logging seguro sin exponer detalles en producción

@@ -2,17 +2,10 @@
 // api/anular_reserva.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
-
-// Verificar si existe el mailer, si no, crear una clase dummy para evitar errores fatales
-if (!file_exists(__DIR__ . '/../includes/reserva_mailer.php')) {
-    class BrevoMailer { public function setTo(){} public function setSubject(){} public function setHtmlBody(){} public function send(){ return true; } }
-} else {
-    require_once __DIR__ . '/../includes/reserva_mailer.php';
-}
+require_once __DIR__ . '/../includes/reserva_mailer.php';
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-// Validar sesión
 if (!isset($_SESSION['id_recinto'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'No autorizado']);
@@ -47,24 +40,39 @@ try {
         throw new Exception("La reserva ya está anulada");
     }
 
+    // === REGLA DE NEGOCIO 1 & 2: Validar Pagos y Deudas ===
+    $monto_total = (float)$reserva['monto_total'];
+    $monto_recaudado = (float)$reserva['monto_recaudacion'];
+    $fecha_reserva = $reserva['fecha'];
+    $hoy = date('Y-m-d');
+
+    // Si hay pago parcial (recaudado > 0 pero < total), NO permitir anulación simple
+    if ($monto_recaudado > 0 && $monto_recaudado < $monto_total) {
+        throw new Exception("⚠️ No se puede anular una reserva con pago parcial. Debe procesarse un reembolso primero.");
+    }
+
+    // Si es una reserva pasada (deuda pendiente), NO permitir anulación automática
+    // Solo se pueden anular reservas futuras o del día actual
+    if ($fecha_reserva < $hoy) {
+        throw new Exception("⚠️ No se puede anular una reserva vencida (deuda). Contacte administración para regularización.");
+    }
+
     // 2. Determinar acción financiera
     $mensaje_financiero = "";
     $nuevo_estado_pago = $reserva['estado_pago'];
     
-    // Si estaba pagada o parcialmente pagada, marcamos como reembolsado
-    if ($reserva['monto_recaudacion'] > 0) {
+    // Si estaba pagada totalmente, marcamos como reembolsado
+    if ($monto_recaudado >= $monto_total && $monto_total > 0) {
         $nuevo_estado_pago = 'reembolsado'; 
         $mensaje_financiero = "Se ha registrado un reembolso automático por la anulación.";
     } else {
+        // Si no había cobrado nada, queda pendiente/cancelada
         $nuevo_estado_pago = 'pendiente'; 
     }
 
     // 3. Actualizar Reserva
-    // ✅ CORRECCIÓN: Usar concatenación de strings en PHP antes de enviar al SQL
     $fecha_anulacion = date('Y-m-d H:i:s');
     $nota_anulacion = "\n[ANULADA POR ADMIN: {$fecha_anulacion}]";
-    
-    // Obtenemos las notas actuales primero para concatenarlas correctamente en PHP o SQL puro
     $notas_actuales = $reserva['notas'] ?? '';
     $nuevas_notas = $notas_actuales . $nota_anulacion;
 
@@ -96,7 +104,6 @@ try {
     // 5. Enviar Correo al Cliente
     if (!empty($reserva['email_cliente']) && !empty($reserva['nombre_cliente'])) {
         try {
-            // Verificar si la función de HTML existe, sino usar fallback simple
             $html_content = "<html><body><h1>⚠️ Tu reserva ha sido anulada</h1>";
             $html_content .= "<p>Hola <strong>{$reserva['nombre_cliente']}</strong>,</p>";
             $html_content .= "<p>Lamentablemente, tu reserva en <strong>{$reserva['nombre_cancha']}</strong> para el día <strong>{$reserva['fecha']} a las {$reserva['hora_inicio']}</strong> ha sido <strong>ANULADA</strong> por administración.</p>";
@@ -105,10 +112,8 @@ try {
                 $html_content .= "<p><strong>Nota Financiera:</strong> " . $mensaje_financiero . "</p>";
             }
             
-            $html_content .= "<p>Si tienes alguna duda, por favor contáctanos.</p>";
-            $html_content .= "<p>Saludos,<br>Equipo CanchaSport</p></body></html>";
+            $html_content .= "<p>Si tienes alguna duda, por favor contáctanos.</p></body></html>";
 
-            // Intentar usar el mailer si existe
             if (class_exists('BrevoMailer')) {
                 $mail = new BrevoMailer();
                 $mail->setTo($reserva['email_cliente'], $reserva['nombre_cliente'])
@@ -116,10 +121,8 @@ try {
                     ->setHtmlBody($html_content)
                     ->send();
             }
-                
         } catch (Exception $e) {
             error_log("Error enviando correo anulación: " . $e->getMessage());
-            // No fallamos la operación principal por error de mail
         }
     }
 
