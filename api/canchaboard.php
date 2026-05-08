@@ -13,6 +13,24 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
     header('Content-Type: application/json; charset=utf-8');
     require_once __DIR__ . '/../includes/config.php';
 
+    // === AGREGAR ESTA FUNCIÓN A api/canchaboard.php ===
+    function generarSlotsHorarios() {
+        $slots = [];
+        // Generar slots desde las 08:00 hasta las 23:30 (ajusta según tus horarios operativos)
+        for ($h = 8; $h < 24; $h++) {
+            for ($m = 0; $m < 60; $m += 30) {
+                $hora = sprintf('%02d:%02d', $h, $m);
+                
+                // Si es hora exacta (:00), puede ser una fila de etiqueta opcional, 
+                // pero para simplificar, generamos todos los slots clickeables
+                $slots[] = [
+                    'label' => $hora,
+                    'is_label_row' => false // Todos son slots válidos para drop
+                ];
+            }
+        }
+        return $slots;
+    }
 
     try {
         // 1. Verificar autenticación
@@ -212,6 +230,7 @@ ini_set('error_log', __DIR__ . '/../logs/php_errors.log');  // Ruta ajustable
                     'reservas' => $reservas_format,
                     'slots' => generarSlotsHorarios()
                 ]);
+
                 break; // Importante: terminar el case
 
             case 'get_lista_kpi':
