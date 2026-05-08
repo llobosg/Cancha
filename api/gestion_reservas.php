@@ -1,430 +1,166 @@
 <?php
 // api/gestion_reservas.php
-// === LIMPIEZA DE OUTPUT PARA EVITAR JSON ROTO ===
-if (ob_get_level() > 0) { ob_clean(); }
 header('Content-Type: application/json; charset=utf-8');
-
-// Manejar errores de PHP para que no rompan el JSON
-error_reporting(E_ALL);
-ini_set('display_errors', 0);  // ❌ No mostrar errores en pantalla
-ini_set('log_errors', 1);      // ✅ Loguear errores en archivo
-ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
-
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/reserva_mailer.php';
 
-try {
-    
-    // 1. Verificar autenticación básica
-    if (!isset($_SESSION['id_recinto'])) {
-        throw new Exception('Sesión no iniciada', 401);
-    }
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-    // 2. Verificar Rol (ACTUALIZADO PARA NUEVOS ROLES)
-    $rol_actual = $_SESSION['recinto_rol'] ?? '';
-    $roles_permitidos = ['admin', 'asistente']; // Aceptamos ambos roles
-
-    if (!in_array($rol_actual, $roles_permitidos)) {
-        error_log("❌ [API GESTIÓN RESERVAS] Acceso denegado. Rol actual: '$rol_actual'. Roles permitidos: " . implode(', ', $roles_permitidos));
-        throw new Exception('Acceso no autorizado: Rol inválido', 401);
-    }
-    
-    $action = $_POST['action'] ?? $_GET['action'] ?? '';
-    
-    // Log de auditoría para saber qué acción se intenta
-    error_log("🎯 [API GESTIÓN RESERVAS] Acción: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
-
-    // Logging para debug (remover en producción)
-    error_log("🔍 [API] Action: " . ($action ?? 'NULL'));
-    error_log("🔍 [API] POST keys: " . implode(', ', array_keys($_POST)));
-    error_log("🔍 [API] Session: id_recinto=" . ($_SESSION['id_recinto'] ?? 'NULL'));
-
-    switch ($action) {
-    case 'procesar_pago':
-        echo json_encode(procesarPagoReserva($pdo, $_POST));
-        break;
-        
-    case 'procesar_pago_parcial':
-        echo json_encode(procesarPagoParcial($pdo, $_POST));
-        break;
-        
-    // ✅ UN SOLO CASE para crear reserva manual (maneja socio existente o nuevo)
-    case 'crear_manual':
-        echo json_encode(crearReservaManualUnificada($pdo, $_POST));
-        break;
-        
-    default:
-        throw new Exception('Acción no válida: ' . $action);
-}
-    
-} catch (Exception $e) {
-    http_response_code($e->getCode() ?: 400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+// Validar sesión
+if (!isset($_SESSION['id_recinto'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'No autorizado']);
     exit;
 }
 
-function procesarPagoReserva($pdo, $data) {
-    $id_reserva = (int)($data['id_reserva'] ?? 0);
-    $metodo_pago = trim($data['metodo_pago'] ?? '');
-    $transaccion_id = trim($data['transaccion_id'] ?? '');
-    $monto_total = (float)($data['monto_total'] ?? 0); // Asumimos pago total
-    
-    if (!$id_reserva || !$metodo_pago) {
-        throw new Exception('Datos incompletos para procesar pago');
-    }
-    
-    // Verificar que la reserva pertenece al recinto del admin
-    $stmt_check = $pdo->prepare("
-        SELECT r.id_reserva, r.estado_pago, r.monto_total, c.id_recinto
-        FROM reservas r
-        JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE r.id_reserva = ? AND c.id_recinto = ?
-    ");
-    $stmt_check->execute([$id_reserva, $_SESSION['id_recinto']]);
-    $reserva = $stmt_check->fetch();
-    
-    if (!$reserva) {
-        throw new Exception('Reserva no encontrada o no pertenece a este recinto');
-    }
-    
-    if ($reserva['estado_pago'] === 'pagado') {
-        throw new Exception('Esta reserva ya está pagada');
-    }
-    
-    // === AGREGAR EXTRAS A NOTAS (formato estructurado) ===
-    $extras = floatval($data['extras'] ?? 0);
-    if ($extras > 0) {
-        // Obtener notas actuales
-        $stmt_notas = $pdo->prepare("SELECT notas FROM reservas WHERE id_reserva = ?");
-        $stmt_notas->execute([$id_reserva]);
-        $notas_actuales = $stmt_notas->fetchColumn() ?? '';
-        
-        // Verificar si ya hay extras registrados (evitar duplicados)
-        if (!preg_match('/\[EXTRAS:\d+(\.\d+)?\]/', $notas_actuales)) {
-            $nota_extras = "\n[EXTRAS:$extras]";
-            $notas_finales = trim($notas_actuales . $nota_extras);
-        } else {
-            $notas_finales = $notas_actuales; // Ya tiene extras, no duplicar
-        }
-    } else {
-        $notas_finales = $data['notas'] ?? '';
-    }
+$id_recinto = (int)$_SESSION['id_recinto'];
+$action = $_POST['action'] ?? '';
 
-    // Luego, en el UPDATE, usa $notas_finales en lugar de $notas_actuales
-    $stmt_update = $pdo->prepare("
-        UPDATE reservas 
-        SET estado_pago = ?,
-            metodo_pago = ?,
-            transaccion_id = ?,
-            monto_recaudacion = ?,
-            notas = ?,  -- ← Aquí van las notas con extras si aplica
-            updated_at = NOW()
-        WHERE id_reserva = ?
-    ");
-    $stmt_update->execute([$nuevo_estado_pago, $metodo_pago, $transaccion_id ?: null, $nuevo_monto_recaudado, $notas_finales, $id_reserva]);
-    
-    // NOTA: Función enviarEmailConfirmacionPago eliminada porque no existe.
-    // Si necesitas enviar emails, debes crear esa función o usar mail() directamente.
-    
-    return [
-        'success' => true,
-        'message' => 'Pago total registrado correctamente',
-        'id_reserva' => $id_reserva
-    ];
-}
-
-function procesarPagoParcial($pdo, $data) {
-    $id_reserva = (int)($data['id_reserva'] ?? 0);
-    $monto_pagado = (float)($data['monto_pagado'] ?? 0);
-    $monto_total_original = (float)($data['monto_total_original'] ?? 0);
-    $metodo_pago = trim($data['metodo_pago'] ?? '');
-    $transaccion_id = trim($data['transaccion_id'] ?? '');
-    $notas_pago = trim($data['notas_pago'] ?? '');
-    
-    if (!$id_reserva || !$metodo_pago || $monto_pagado <= 0) {
-        throw new Exception('Datos incompletos o inválidos');
-    }
-    
-    // 1. Obtener datos actuales (incluyendo monto_recaudacion actual si hubo pagos previos)
-    $stmt_check = $pdo->prepare("SELECT id_reserva, estado_pago, monto_total, monto_recaudacion, notas FROM reservas WHERE id_reserva = ?");
-    $stmt_check->execute([$id_reserva]);
-    $reserva = $stmt_check->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$reserva) {
-        throw new Exception('Reserva no encontrada');
-    }
-    
-    // Si ya está pagado completamente, bloquear
-    if ($reserva['estado_pago'] === 'pagado') {
-        throw new Exception('Esta reserva ya está marcada como PAGADA.');
-    }
-    
-    // Calcular nuevo monto recaudado acumulado
-    $monto_recaudado_actual = (float)($reserva['monto_recaudacion'] ?? 0);
-    $nuevo_monto_recaudado = $monto_recaudado_actual + $monto_pagado;
-    
-    // 2. Determinar nuevo estado
-    $nuevo_estado_pago = 'parcial'; // Por defecto es parcial
-    
-    // Si el acumulado cubre el total, marcamos como pagado
-    if ($nuevo_monto_recaudado >= $monto_total_original) {
-        $nuevo_estado_pago = 'pagado';
-        // Ajustar al monto exacto si se pasó (opcional)
-        // $nuevo_monto_recaudado = $monto_total_original; 
-    }
-    
-    // 3. Construir el texto de notas
-    $fecha_hoy = date('d/m/Y H:i');
-    $nota_nueva = "\n[PAGO {$fecha_hoy}]: $" . number_format($monto_pagado, 0, ',', '.') . " vía {$metodo_pago}";
-    
-    if (!empty($notas_pago)) {
-        $nota_nueva .= " - Obs: {$notas_pago}";
-    }
-    
-    $notas_finales = !empty($reserva['notas']) ? $reserva['notas'] . $nota_nueva : ltrim($nota_nueva);
-    
-    // 4. Actualizar la reserva
-    $stmt_update = $pdo->prepare("
-        UPDATE reservas 
-        SET estado_pago = ?,
-            metodo_pago = ?,
-            transaccion_id = ?,
-            monto_recaudacion = ?, -- ACTUALIZADO: Guardamos el acumulado
-            notas = ?,
-            updated_at = NOW()
-        WHERE id_reserva = ?
-    ");
-    
-    $stmt_update->execute([
-        $nuevo_estado_pago,
-        $metodo_pago,
-        $transaccion_id,
-        $nuevo_monto_recaudado,
-        $notas_finales,
-        $id_reserva
-    ]);
-    
-    return [
-        'success' => true,
-        'message' => 'Pago registrado correctamente. Estado: ' . $nuevo_estado_pago,
-        'estado_nuevo' => $nuevo_estado_pago,
-        'monto_recaudado' => $nuevo_monto_recaudado
-    ];
-}
-// === FUNCION UNIFICADA: Crear reserva manual (socio existente o nuevo) ===
-function crearReservaManualUnificada($pdo, $data) {
-    $id_cancha = isset($data['id_cancha']) ? (int)$data['id_cancha'] : 0;
-    $fecha = isset($data['fecha']) ? $data['fecha'] : '';
-    $hora_inicio = isset($data['hora_inicio']) ? $data['hora_inicio'] : '';
-    $hora_fin = isset($data['hora_fin']) ? $data['hora_fin'] : '';
-    $monto_total = isset($data['monto_total']) ? (float)$data['monto_total'] : 0;
-    
-    // Validaciones basicas
-    if (!$id_cancha || !$fecha || !$hora_inicio) {
-        throw new Exception('Datos incompletos para crear reserva');
-    }
-    
-    // Verificar cancha pertenece al recinto
-    $stmt = $pdo->prepare("SELECT id_recinto FROM canchas WHERE id_cancha = ?");
-    $stmt->execute([$id_cancha]);
-    if ($stmt->fetchColumn() != $_SESSION['id_recinto']) {
-        throw new Exception('Cancha no valida');
-    }
-    
-    // Verificar disponibilidad
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
-    $stmt->execute([$id_cancha, $fecha, $hora_inicio]);
-    if ($stmt->fetchColumn() > 0) {
-        throw new Exception('Horario ocupado');
-    }
-    
-    // === 1. DETERMINAR ID_SOCIO Y DATOS DEL CLIENTE ===
-    $id_socio = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
-    $nombre_cliente = '';
-    $email_cliente = '';
-    $telefono_cliente = '';
-    
-    if ($id_socio) {
-        // SOCIO EXISTENTE: Obtener datos de la tabla socios
-        $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
-        $stmt_s->execute([$id_socio]);
-        $socio_data = $stmt_s->fetch(PDO::FETCH_ASSOC);
-        if ($socio_data) {
-            $nombre_cliente = $socio_data['nombre'] ? $socio_data['nombre'] : '';
-            $email_cliente = $socio_data['email'] ? $socio_data['email'] : '';
-            $telefono_cliente = $socio_data['celular'] ? $socio_data['celular'] : '';
+try {
+    if ($action === 'crear_manual') {
+        // === CREAR RESERVA MANUAL ===
+        
+        // 1. Obtener datos del POST
+        $id_cancha = (int)($_POST['id_cancha'] ?? 0);
+        $fecha = $_POST['fecha'] ?? '';
+        $hora_inicio = $_POST['hora_inicio'] ?? '';
+        $hora_fin = $_POST['hora_fin'] ?? '';
+        $id_socio = !empty($_POST['id_socio']) ? (int)$_POST['id_socio'] : null;
+        $usuario_creacion = trim($_POST['usuario_creacion'] ?? $_SESSION['recinto_usuario'] ?? 'Admin');
+        
+        // Datos opcionales para nuevo socio
+        $nuevo_nombre = trim($_POST['nombreNuevoSocio'] ?? '');
+        $nuevo_email = trim($_POST['emailNuevoSocio'] ?? '');
+        $nuevo_tel = trim($_POST['telNuevoSocio'] ?? '');
+        
+        // Validaciones básicas
+        if (!$id_cancha || !$fecha || !$hora_inicio || !$hora_fin) {
+            throw new Exception("Faltan datos obligatorios (cancha, fecha, hora)");
         }
-    } else {
-        // NUEVO SOCIO: Crear registro y usar datos del formulario
-        $email_nuevo = trim(isset($data['emailNuevoSocio']) ? $data['emailNuevoSocio'] : '');
-        $nombre_nuevo = trim(isset($data['nombreNuevoSocio']) ? $data['nombreNuevoSocio'] : 'Nuevo Socio');
-        $tel_nuevo = trim(isset($data['telNuevoSocio']) ? $data['telNuevoSocio'] : '');
+
+        // 2. Calcular duración y precio
+        $hIni = strtotime($hora_inicio);
+        $hFin = strtotime($hora_fin);
+        $duracion_min = ($hFin - $hIni) / 60;
         
-        if (!$email_nuevo) throw new Exception('Email requerido para nuevo socio');
+        if ($duracion_min <= 0) {
+            throw new Exception("Hora fin debe ser posterior a hora inicio");
+        }
+
+        // Obtener precio base de la cancha
+        $stmt_cancha = $pdo->prepare("SELECT valor_arriendo FROM canchas WHERE id_cancha = ? AND id_recinto = ?");
+        $stmt_cancha->execute([$id_cancha, $id_recinto]);
+        $cancha = $stmt_cancha->fetch();
         
-        // Verificar si ya existe por email
-        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-        $stmt->execute([$email_nuevo]);
-        $existente = $stmt->fetch();
+        if (!$cancha) {
+            throw new Exception("Cancha no encontrada o no pertenece a este recinto");
+        }
+
+        $precio_hora = (float)$cancha['valor_arriendo'];
+        $horas = $duracion_min / 60;
+        $monto_base = $precio_hora * $horas;
+        $monto_total = $monto_base; // Inicialmente igual al base
+
+        // 3. Manejar Socio (Existente o Nuevo)
+        $final_id_socio = $id_socio;
         
-        if ($existente) {
-            $id_socio = $existente['id_socio'];
-            $nombre_cliente = $nombre_nuevo;
-            $email_cliente = $email_nuevo;
-            $telefono_cliente = $tel_nuevo;
-        } else {
-            // Crear nuevo socio
-            $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
-            $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
-            $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
-            $id_socio = $pdo->lastInsertId();
+        if (!$final_id_socio && !empty($nuevo_email)) {
+            // Verificar si ya existe
+            $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
+            $stmt_check->execute([$nuevo_email]);
+            $existing = $stmt_check->fetch();
             
-            $nombre_cliente = $nombre_nuevo;
-            $email_cliente = $email_nuevo;
-            $telefono_cliente = $tel_nuevo;
+            if ($existing) {
+                $final_id_socio = $existing['id_socio'];
+            } else {
+                // Crear nuevo socio
+                $stmt_insert = $pdo->prepare("
+                    INSERT INTO socios (nombre, alias, email, celular, rol, activo, email_verified, created_at) 
+                    VALUES (?, ?, ?, ?, 'Jugador', 'Si', 0, NOW())
+                ");
+                $alias = explode(' ', $nuevo_nombre)[0] ?? substr($nuevo_email, 0, 5);
+                $stmt_insert->execute([
+                    $nuevo_nombre ?: 'Sin Nombre', 
+                    $alias, 
+                    $nuevo_email, 
+                    $nuevo_tel ?: ''
+                ]);
+                $final_id_socio = (int)$pdo->lastInsertId();
+            }
         }
-    }
-    
-    // === 1. CALCULAR MONTO CON DESCUENTO DE CONVENIO ===
-    $monto_base = $precio_hora * $horas; // o tu lógica de cálculo actual
-    $monto_final = $monto_base;
-    $id_convenio_aplicado = null;
-    $porc_dscto_aplicado = 0;
-    $monto_descuento = 0;
 
-    // Verificar si el socio tiene convenio activo
-    if ($id_socio) {
-        $stmt_conv = $pdo->prepare("
-            SELECT c.id_convenio, c.porc_dscto, c.nombre_empresa
-            FROM socios s
-            JOIN convenios c ON s.id_convenio = c.id_convenio
-            WHERE s.id_socio = ? 
-            AND c.estado = 'activo'  -- ✅ Usar 'estado' en lugar de 'activo'
-            AND (c.vigente_hasta IS NULL OR c.vigente_hasta >= CURDATE())
-            LIMIT 1
+        // 4. Aplicar Descuento de Convenio SI EXISTE SOCIO
+        if ($final_id_socio) {
+            $stmt_conv = $pdo->prepare("
+                SELECT c.porc_dscto 
+                FROM socios s
+                JOIN convenios c ON s.id_convenio = c.id_convenio
+                WHERE s.id_socio = ? 
+                AND c.estado = 'activo'
+                AND (c.vigente_hasta IS NULL OR c.vigente_hasta >= CURDATE())
+                LIMIT 1
+            ");
+            $stmt_conv->execute([$final_id_socio]);
+            $conv = $stmt_conv->fetch();
+            
+            if ($conv && $conv['porc_dscto'] > 0) {
+                $descuento = $monto_base * ($conv['porc_dscto'] / 100);
+                $monto_total = $monto_base - $descuento;
+            }
+        }
+
+        // 5. Insertar Reserva
+        $stmt_reserva = $pdo->prepare("
+            INSERT INTO reservas (
+                id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente,
+                fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, usuario_creacion, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', ?, NOW())
         ");
-        $stmt_conv->execute([$id_socio]);
-        $conv = $stmt_conv->fetch();
         
-        if ($conv && $conv['porc_dscto'] > 0) {
-            $id_convenio_aplicado = $conv['id_convenio'];
-            $porc_dscto_aplicado = $conv['porc_dscto'];
-            $monto_descuento = $monto_base * ($porc_dscto_aplicado / 100);
-            $monto_final = $monto_base - $monto_descuento;
+        // Si hay socio, intentar obtener sus datos de contacto
+        $cliente_nom = 'Reserva Manual';
+        $cliente_mail = '';
+        $cliente_tel = '';
+        
+        if ($final_id_socio) {
+            $stmt_socio_data = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
+            $stmt_socio_data->execute([$final_id_socio]);
+            $socio_data = $stmt_socio_data->fetch();
+            if ($socio_data) {
+                $cliente_nom = $socio_data['nombre'];
+                $cliente_mail = $socio_data['email'];
+                $cliente_tel = $socio_data['celular'];
+            }
         }
+
+        $stmt_reserva->execute([
+            $id_cancha,
+            $final_id_socio,
+            $cliente_nom,
+            $cliente_mail,
+            $cliente_tel,
+            $fecha,
+            $hora_inicio,
+            $hora_fin,
+            $monto_total,
+            $usuario_creacion
+        ]);
+        
+        $id_reserva = $pdo->lastInsertId();
+
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Reserva creada correctamente',
+            'id_reserva' => $id_reserva,
+            'monto_final' => $monto_total
+        ]);
+
+    } else {
+        throw new Exception("Acción no reconocida: " . $action);
     }
 
-    // === 2. INSERTAR RESERVA CON TODOS LOS DATOS (CLIENTE + CONVENIO) ===
-    $stmt = $pdo->prepare("
-        INSERT INTO reservas (
-            id_cancha, id_socio, id_convenio,
-            nombre_cliente, email_cliente, telefono_cliente,
-            fecha, hora_inicio, hora_fin,
-            monto_base, monto_descuento, monto_total, porc_dscto_aplicado,
-            estado_pago, estado, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
-    ");
-    $stmt->execute([
-        $id_cancha,
-        $id_socio,
-        $id_convenio_aplicado,
-        $nombre_cliente,
-        $email_cliente,
-        $telefono_cliente,
-        $fecha,
-        $hora_inicio,
-        $hora_fin,
-        $monto_base,
-        $monto_descuento,
-        $monto_final,
-        $porc_dscto_aplicado
-    ]);
-    $id_reserva = $pdo->lastInsertId();
-    
-    // === 3. REGISTRAR LOG DE BITACORA ===
-    $usuario = isset($_SESSION['recinto_usuario']) ? $_SESSION['recinto_usuario'] : (isset($_SESSION['recinto_rol']) ? $_SESSION['recinto_rol'] : 'Sistema');
-    $stmt_log = $pdo->prepare("INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) VALUES (?, ?, 'creada', 'Reserva manual', NOW())");
-    $stmt_log->execute([$id_reserva, $usuario]);
-
-    // === 4. EMAILS (SOLO SI ES SOCIO NUEVO) ===
-    if (empty($data['id_socio']) && $email_cliente) {
-        require_once __DIR__ . '/../includes/reserva_mailer.php';
-        require_once __DIR__ . '/../includes/email_helper.php';
-
-        // A. Generar Token de Seguridad
-        $token = bin2hex(random_bytes(32));
-        $link_registro = "https://" . $_SERVER['HTTP_HOST'] . "/pages/completar_registro.php?token=" . $token;
-        
-        // Guardar token en la BD
-        $stmt_token = $pdo->prepare("UPDATE socios SET registro_token = ? WHERE id_socio = ?");
-        $stmt_token->execute([$token, $id_socio]);
-
-        // === 🔍 OBTENER DATOS DE LA RESERVA PARA EL CORREO ===
-        // 1. Nombre de cancha y deporte desde la tabla canchas
-        $stmt_cancha = $pdo->prepare("SELECT nombre_cancha, id_deporte, id_recinto FROM canchas WHERE id_cancha = ?");
-        $stmt_cancha->execute([$id_cancha]);
-        $cancha_data = $stmt_cancha->fetch(PDO::FETCH_ASSOC);
-        
-        $nombre_cancha = $cancha_data['nombre_cancha'] ?? 'Cancha';
-        $deporte = $cancha_data['id_deporte'] ?? 'Deporte';
-        $id_recinto_reserva = $cancha_data['id_recinto'] ?? $_SESSION['id_recinto'];
-        
-        // 2. Nombre del recinto desde la tabla recintos_deportivos
-        $stmt_recinto = $pdo->prepare("SELECT nombre FROM recintos_deportivos WHERE id_recinto = ?");
-        $stmt_recinto->execute([$id_recinto_reserva]);
-        $recinto_data = $stmt_recinto->fetch(PDO::FETCH_ASSOC);
-        $recinto_nombre = $recinto_data['nombre'] ?? 'Recinto Deportivo';
-
-        // B. Configurar contenido del correo con variables YA DEFINIDAS
-        $titulo = "¡Bienvenido a CanchaSport 🎾!";
-        $mensaje = "
-            <p>Hola <strong>{$nombre_cliente}</strong>,</p>
-            <p>Tu cuenta ha sido creada exitosamente para tu próxima reserva:</p>
-            
-            <!-- Caja de Detalles de Reserva -->
-            <div style='background: #f9f9f9; border-left: 4px solid #AB47BC; padding: 15px; margin: 20px 0; border-radius: 4px;'>
-                <table style='width:100%; border-collapse:collapse;'>
-                    <tr>
-                        <td style='padding:5px; color:#666;'>🏟️ Cancha:</td>
-                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars($nombre_cancha) . "</td>
-                    </tr>
-                    <tr>
-                        <td style='padding:5px; color:#666;'>🎾 Deporte:</td>
-                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars(ucfirst($deporte)) . "</td>
-                    </tr>
-                    <tr>
-                        <td style='padding:5px; color:#666;'>📅 Fecha:</td>
-                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars(date('d/m/Y', strtotime($fecha))) . "</td>
-                    </tr>
-                    <tr>
-                        <td style='padding:5px; color:#666;'>⏰ Hora:</td>
-                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars(substr($hora_inicio,0,5)) . " - " . htmlspecialchars(substr($hora_fin,0,5)) . "</td>
-                    </tr>
-                    <tr>
-                        <td style='padding:5px; color:#666;'>📍 Recinto:</td>
-                        <td style='padding:5px; font-weight:bold;'>" . htmlspecialchars($recinto_nombre) . "</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p>Para gestionar tus reservas y perfil, solo falta definir tu contraseña:</p>
-        ";
-        
-        $texto_boton = "Crear mi contraseña";
-        
-        // C. Generar y enviar email
-        $html = generarEmailHTML($titulo, $mensaje, $texto_boton, $link_registro);
-
-        $mail = new BrevoMailer();
-        $mail->setTo($email_cliente, $nombre_cliente)
-            ->setSubject("👋 ¡Bienvenido! Completa tu registro en CanchaSport")
-            ->setHtmlBody($html)
-            ->send();
-            
-        // Log opcional para debug
-        error_log("✅ Email bienvenida enviado a {$email_cliente} para reserva en {$nombre_cancha}");
-    }
-
-    return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio];
+} catch (Exception $e) {
+    error_log("❌ Error gestión_reservas: " . $e->getMessage());
+    http_response_code(400); // Código HTTP válido
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
