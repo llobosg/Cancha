@@ -1405,6 +1405,14 @@ button[onclick="abrirModalConvenios()"]:hover {
     #modalConvenio .modal-footer { flex-direction: column; }
     #modalConvenio .btn { width: 100%; justify-content: center; }
 }
+/* Estilo para reservas anuladas en la planilla */
+td.estado-cancelada {
+    background: #FFEBEE !important; /* Rojo muy claro */
+    color: #B71C1C !important;      /* Texto rojo oscuro */
+    text-decoration: line-through;  /* Tachado */
+    opacity: 0.6;                   /* Semitransparente */
+    border: 1px dashed #EF5350 !important;
+}
 </style>
 </head>
 <body>
@@ -1822,8 +1830,15 @@ function renderizarPlanilla(data, filtroEstado) {
                 if (res) {
                     // === CELDA RESERVADA ===
                     let bgClass = 'estado-pendiente';
-                    if (res.estado_pago === 'pagado') bgClass = 'estado-pagado';
-                    else if (res.estado_pago === 'parcial') bgClass = 'estado-parcial';
+                    // Dentro de renderizarPlanilla, donde defines bgClass:
+                    let bgClass = 'estado-pendiente';
+                    if (res.estado === 'cancelada') {
+                        bgClass = 'estado-cancelada'; // Usa la nueva clase CSS
+                    } else if (res.estado_pago === 'pagado') {
+                        bgClass = 'estado-pagado';
+                    } else if (res.estado_pago === 'parcial') {
+                        bgClass = 'estado-parcial';
+                    }
 
                     // Calcular duración y rowspan
                     const hIni = parseInt(res.hora_inicio.substring(0,2)) * 60 + parseInt(res.hora_inicio.substring(3,5));
@@ -2261,7 +2276,56 @@ function volverAlDetalle() {
 }
 function cerrarModalListaKPI() { document.getElementById('modalListaKPI').style.display = 'none'; }
 
-function anularReserva() { alert("Función Anular: En desarrollo"); }
+// === ANULAR RESERVA (MEJORADA) ===
+async function anularReserva() {
+    const res = window.reservaActualSeleccionada;
+    if (!res || !res.id_reserva) {
+        showToast("❌ No hay reserva seleccionada", "error");
+        return;
+    }
+
+    // 1. Confirmación estricta
+    const confirmMsg = `¿Estás seguro de ANULAR la reserva #${res.id_reserva}?
+    
+Cliente: ${res.nombre_cliente || 'N/A'}
+Fecha: ${res.fecha} ${res.hora_inicio}
+Monto: $${parseFloat(res.monto_total).toLocaleString()}
+
+Esta acción enviará un correo de notificación al cliente.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    // Feedback visual
+    showToast("🔄 Anulando reserva...", "info");
+
+    try {
+        const response = await fetch('../api/anular_reserva.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_reserva: res.id_reserva })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast("✅ Reserva anulada correctamente", "success");
+            
+            // Cerrar modal de detalle
+            cerrarModalDetalle();
+            
+            // Recargar planilla para ver cambios (celda desaparecerá o cambiará color)
+            cargarPlanillaReservas();
+            
+            // Refrescar KPIs si es necesario (opcional, la recarga de página lo haría todo)
+            // location.reload(); 
+        } else {
+            showToast("❌ " + data.message, "error");
+        }
+    } catch (err) {
+        console.error("Error anular:", err);
+        showToast("❌ Error de conexión al anular", "error");
+    }
+}
 
 function abrirModalPagoDesdeDetalle() {
     if (!window.reservaActualSeleccionada) return;
