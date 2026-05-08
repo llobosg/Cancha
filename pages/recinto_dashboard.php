@@ -130,42 +130,55 @@ try {
     $monto_pendiente = $s_parcial->fetchColumn() ?: 0;
 
     // === EN RESERVA: Monto total de reservas FUTURAS no pagadas (pendiente + parcial) ===
-   $q_reserva = "SELECT COALESCE(SUM(r.monto_total), 0)
-                    FROM reservas r
-                    JOIN canchas c ON r.id_cancha = c.id_cancha
-                    WHERE c.id_recinto = :id
-                    AND DATE(r.fecha) > :hoy          -- Solo futuras
-                    AND r.estado_pago IN ('pendiente', 'parcial') -- Solo no pagadas totalmente
-                    AND r.estado != 'cancelada'       -- ✅ EXCLUIR CANCELADAS
-                    ";
-                    $s_reserva = $pdo->prepare($q_reserva);
-                    $s_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-                    $monto_en_reserva = $s_reserva->fetchColumn() ?: 0;
+    // ✅ CRÍTICO: Excluir reservas canceladas y solo contar futuras
+    $q_reserva = "SELECT COALESCE(SUM(r.monto_total), 0)
+                FROM reservas r
+                JOIN canchas c ON r.id_cancha = c.id_cancha
+                WHERE c.id_recinto = :id
+                AND DATE(r.fecha) >= :hoy          -- Hoy y futuro
+                AND r.estado_pago IN ('pendiente', 'parcial') -- Solo si no está pagado totalmente
+                AND r.estado != 'cancelada'        -- ✅ EXCLUIR CANCELADAS
+                ";
+                $s_reserva = $pdo->prepare($q_reserva);
+                $s_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+                $monto_en_reserva = $s_reserva->fetchColumn() ?: 0;
+
+    // Cantidad de reservas en reserva (para subtexto)
+    $q_cant_reserva = "SELECT COUNT(*)
+                FROM reservas r
+                JOIN canchas c ON r.id_cancha = c.id_cancha
+                WHERE c.id_recinto = :id
+                AND DATE(r.fecha) >= :hoy
+                AND r.estado_pago IN ('pendiente', 'parcial')
+                AND r.estado != 'cancelada'";
+                $s_cant_reserva = $pdo->prepare($q_cant_reserva);
+                $s_cant_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+                $cant_en_reserva = $s_cant_reserva->fetchColumn() ?: 0;
 
     // Cantidad de reservas en reserva (para subtexto)
     $q_cant_reserva = "SELECT COUNT(*) 
-                       FROM reservas r 
-                       JOIN canchas c ON r.id_cancha = c.id_cancha 
-                       WHERE c.id_recinto = :id 
-                       AND DATE(r.fecha) > :hoy 
-                       AND r.estado_pago IN ('pendiente', 'parcial') 
-                       AND r.estado != 'cancelada'";
+                FROM reservas r 
+                JOIN canchas c ON r.id_cancha = c.id_cancha 
+                WHERE c.id_recinto = :id 
+                AND DATE(r.fecha) > :hoy 
+                AND r.estado_pago IN ('pendiente', 'parcial') 
+                AND r.estado != 'cancelada'";
     $s_cant_reserva = $pdo->prepare($q_cant_reserva);
     $s_cant_reserva->execute([':id' => $id_recinto, ':hoy' => $hoy]);
     $cant_en_reserva = $s_cant_reserva->fetchColumn() ?: 0;
 
     // === DEUDA VENCIDA: reservas PASADAS no pagadas ===
-   $q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0)
-                        FROM reservas r
-                        JOIN canchas c ON r.id_cancha = c.id_cancha
-                        WHERE c.id_recinto = :id
-                        AND DATE(r.fecha) < :hoy          -- Solo pasadas
-                        AND r.estado_pago IN ('pendiente', 'parcial')
-                        AND r.estado != 'cancelada'       -- ✅ EXCLUIR CANCELADAS
-                        ";
-                        $s_deuda = $pdo->prepare($q_deuda);
-                        $s_deuda->execute([':id' => $id_recinto, ':hoy' => $hoy]);
-                        $monto_deuda = $s_deuda->fetchColumn() ?: 0;
+    $q_deuda = "SELECT COALESCE(SUM(r.monto_total), 0)
+                    FROM reservas r
+                    JOIN canchas c ON r.id_cancha = c.id_cancha
+                    WHERE c.id_recinto = :id
+                    AND DATE(r.fecha) < :hoy           -- Solo pasado
+                    AND r.estado_pago IN ('pendiente', 'parcial')
+                    AND r.estado != 'cancelada'        -- ✅ EXCLUIR CANCELADAS
+                    ";
+                    $s_deuda = $pdo->prepare($q_deuda);
+                    $s_deuda->execute([':id' => $id_recinto, ':hoy' => $hoy]);
+                    $monto_deuda = $s_deuda->fetchColumn() ?: 0;
 
 } catch (PDOException $e) {
     // Logging seguro sin exponer detalles en producción
@@ -2044,7 +2057,7 @@ async function dropReserva(e, canchaId, hora) {
         
         if (data.success) {
             showToast('✅ Reserva movida', 'success');
-            cargarPlanillaReservas(); // Recargar planilla para ver cambios
+            setTimeout(() => location.reload(), 800); // Recarga completa
         } else {
             // Mostrar el mensaje de error específico de la API (ej: colisión)
             showToast(data.message || '❌ Error al mover', 'error');
@@ -2263,7 +2276,6 @@ function volverAlDetalle() {
 }
 function cerrarModalListaKPI() { document.getElementById('modalListaKPI').style.display = 'none'; }
 
-// === ANULAR RESERVA (MEJORADA) ===
 async function anularReserva() {
     const res = window.reservaActualSeleccionada;
     if (!res || !res.id_reserva) {
@@ -2271,7 +2283,6 @@ async function anularReserva() {
         return;
     }
 
-    // 1. Confirmación estricta
     const confirmMsg = `¿Estás seguro de ANULAR la reserva #${res.id_reserva}?
     
 Cliente: ${res.nombre_cliente || 'N/A'}
@@ -2282,7 +2293,6 @@ Esta acción enviará un correo de notificación al cliente.`;
 
     if (!confirm(confirmMsg)) return;
 
-    // Feedback visual
     showToast("🔄 Anulando reserva...", "info");
 
     try {
@@ -2297,14 +2307,14 @@ Esta acción enviará un correo de notificación al cliente.`;
         if (data.success) {
             showToast("✅ Reserva anulada correctamente", "success");
             
-            // Cerrar modal de detalle
+            // Cerrar modal
             cerrarModalDetalle();
             
-            // Recargar planilla para ver cambios (celda desaparecerá o cambiará color)
-            cargarPlanillaReservas();
+            // ✅ SOLUCIÓN: Recargar toda la página para actualizar KPIs y Planilla
+            setTimeout(() => {
+                location.reload(); 
+            }, 800);
             
-            // Refrescar KPIs si es necesario (opcional, la recarga de página lo haría todo)
-            // location.reload(); 
         } else {
             showToast("❌ " + data.message, "error");
         }
@@ -3152,7 +3162,7 @@ async function guardarReservaAdmin(e) {
 
             if (data.success) {
                 showToast(`✅ ${data.created} reservas creadas${data.skipped > 0 ? ` | ⚠️ ${data.skipped} saltadas` : ''}`);
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => location.reload(), 800); // Recarga completa
             } else {
                 showToast(`❌ ${data.message}`, 'error');
                 btn.disabled = false;
