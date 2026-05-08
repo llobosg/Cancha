@@ -1830,8 +1830,6 @@ function renderizarPlanilla(data, filtroEstado) {
                 if (res) {
                     // === CELDA RESERVADA ===
                     let bgClass = 'estado-pendiente';
-                    // Dentro de renderizarPlanilla, donde defines bgClass:
-                    let bgClass = 'estado-pendiente';
                     if (res.estado === 'cancelada') {
                         bgClass = 'estado-cancelada'; // Usa la nueva clase CSS
                     } else if (res.estado_pago === 'pagado') {
@@ -2255,21 +2253,8 @@ function toggleActionMenuModal() {
     if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
 }
 
-function toggleAcciones() {
-    const contenedor = document.getElementById('contenedor-acciones');
-    const icono = document.getElementById('icon-operaciones');
-    if (contenedor && icono) {
-        if (contenedor.style.display === 'none') {
-            contenedor.style.display = 'flex';
-            icono.classList.add('rotated');
-        } else {
-            contenedor.style.display = 'none';
-            icono.classList.remove('rotated');
-        }
-    }
-}
-
 function cerrarModalDetalle() { document.getElementById('modalDetalleReserva').style.display = 'none'; }
+
 function volverAlDetalle() { 
     document.getElementById('modalPago').style.display = 'none'; 
     document.getElementById('modalDetalleReserva').style.display = 'flex'; 
@@ -4554,6 +4539,32 @@ function debugEditarConvenio(btn, event) {
     document.body.style.overflow = 'hidden';
     console.log('🟡 [DEBUG-EDITAR] ✅ Modal FORZADO a visible. Display:', modal.style.display);
 }
+
+// === FUNCIÓN FALTANTE: TOGGLE ACCIONES (MENÚ LATERAL) ===
+function toggleAcciones() {
+    const contenedor = document.getElementById('contenedor-acciones');
+    const icono = document.getElementById('icon-operaciones');
+    
+    if (contenedor && icono) {
+        if (contenedor.style.display === 'none' || contenedor.style.display === '') {
+            // Mostrar menú
+            contenedor.style.display = 'flex';
+            icono.classList.add('rotated');
+        } else {
+            // Ocultar menú
+            contenedor.style.display = 'none';
+            icono.classList.remove('rotated');
+        }
+    }
+}
+
+// Asegurar que el menú esté oculto al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    const contenedor = document.getElementById('contenedor-acciones');
+    if (contenedor) {
+        contenedor.style.display = 'none';
+    }
+});
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
