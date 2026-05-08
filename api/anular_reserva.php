@@ -45,28 +45,34 @@ try {
     $mensaje_financiero = "";
     $nuevo_estado_pago = $reserva['estado_pago'];
     
-    // Si estaba pagada o parcialmente pagada, marcamos como reembolsado (o pendiente de reembolso según política)
-    // Aquí asumimos que al anular, el dinero debe ser devuelto o la deuda se borra.
-    // Opción A: Marcar como 'reembolsado' si había cobrado algo.
-    // Opción B: Marcar como 'pendiente' pero con estado 'cancelada' para auditoría.
-    
+    // Si estaba pagada o parcialmente pagada, marcamos como reembolsado
     if ($reserva['monto_recaudacion'] > 0) {
-        $nuevo_estado_pago = 'reembolsado'; // O 'pendiente_reembolso' si tienes ese enum
+        $nuevo_estado_pago = 'reembolsado'; 
         $mensaje_financiero = "Se ha registrado un reembolso automático por la anulación.";
     } else {
-        $nuevo_estado_pago = 'pendiente'; // Mantiene el estado original pero la reserva muere
+        $nuevo_estado_pago = 'pendiente'; 
     }
 
     // 3. Actualizar Reserva
+    // ❌ ERROR ANTERIOR: CONCAT(..., NOW(), ...) -> NOW() no existe en PHP
+    // ✅ CORRECCIÓN: Usar date() de PHP para generar la fecha/hora actual
+    $fecha_anulacion = date('Y-m-d H:i:s');
+    
     $stmt_update = $pdo->prepare("
         UPDATE reservas 
         SET estado = 'cancelada', 
             estado_pago = ?, 
-            notas = CONCAT(COALESCE(notas, ''), '\n[ANULADA POR ADMIN: ", NOW(), "]'),
+            notas = CONCAT(COALESCE(notas, ''), '\n[ANULADA POR ADMIN: ", :fecha_anulacion, "]'),
             updated_at = NOW()
         WHERE id_reserva = ?
     ");
-    $stmt_update->execute([$nuevo_estado_pago, $id_reserva]);
+    
+    // Ejecutar con parámetros nombrados para evitar errores de concatenación
+    $stmt_update->execute([
+        ':estado_pago' => $nuevo_estado_pago,
+        ':fecha_anulacion' => $fecha_anulacion,
+        ':id_reserva' => $id_reserva
+    ]);
 
     // 4. Registrar Log de Auditoría
     $usuario_admin = $_SESSION['recinto_usuario'] ?? 'Admin';
@@ -93,7 +99,13 @@ try {
                 <p>Saludos,<br>Equipo CanchaSport</p>
             ";
             
-            $html = generarEmailHTML($titulo, $mensaje, "Contactar Soporte", "#"); // Botón dummy o link real
+            // Generar HTML del correo (asegúrate que generarEmailHTML exista en tus includes)
+            if (function_exists('generarEmailHTML')) {
+                $html = generarEmailHTML($titulo, $mensaje, "Contactar Soporte", "#");
+            } else {
+                // Fallback simple si la función no existe
+                $html = "<html><body><h1>$titulo</h1>$mensaje</body></html>";
+            }
             
             $mail->setTo($reserva['email_cliente'], $reserva['nombre_cliente'])
                 ->setSubject("Cancelación de Reserva #{$id_reserva}")
