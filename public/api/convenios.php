@@ -39,9 +39,14 @@ try {
     error_log("🔐 [Convenios API] Cookies recibidas: " . print_r($_COOKIE, true));
     error_log("🔐 [Convenios API] $_SESSION actual: " . print_r($_SESSION, true));
     
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['id_recinto'])) {
-        throw new Exception('No autorizado. Faltan user_id o id_recinto en sesión. Verifica el flujo de login.', 401);
+       // 🔐 VALIDACIÓN DE SESIÓN (Alineada a login_unificado.php)
+    if (!isset($_SESSION['id_admin']) || !isset($_SESSION['id_recinto'])) {
+        error_log("❌ [Convenios] Sesión incompleta. Keys detectadas: " . implode(', ', array_keys($_SESSION)));
+        throw new Exception('No autorizado. Sesión de administrador no válida.', 401);
     }
+    
+    $id_recinto = $_SESSION['id_recinto'];
+    $user_id = $_SESSION['id_admin']; // ✅ Usamos la clave real del login
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new Exception('Método no permitido.', 405);
