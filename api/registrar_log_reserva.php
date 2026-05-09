@@ -18,7 +18,7 @@ try {
     
     $id_reserva = (int)$input['id_reserva'];
     $accion = $input['accion'];  // ya validado por ENUM en BD
-    $descripcion = $input['descripcion'] ?? '';
+    $descripcion = $input['descripcion'] . " | Antes: $" . ($input['monto_anterior'] ?? 0) . " | Ahora: $" . ($input['monto_nuevo'] ?? 0);
     $monto_anterior = $input['monto_anterior'] ?? null;
     $monto_nuevo = $input['monto_nuevo'] ?? null;
     $metadata = $input['metadata'] ?? null;

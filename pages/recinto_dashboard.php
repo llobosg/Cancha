@@ -1641,12 +1641,18 @@ td.estado-cancelada {
         <h3 style="color:#071289; margin-bottom:1rem; text-align:center;">💳 Registrar Pago</h3>
         <div style="margin-bottom:1.5rem; font-size:0.9rem; color:#555; background:#f8f9fa; padding:1rem; border-radius:8px; text-align:center;">
             <div><strong>ID:</strong> <span id="infoIdReserva">...</span></div>
-            <div><strong>Total:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;">$0</span></div>
+            <div><strong>Total Reserva:</strong> <span id="infoMontoTotal" style="font-weight:bold; color:#071289;">$0</span></div>
+            <div style="margin-top:0.5rem;"><strong>Saldo Pendiente:</strong> <span id="infoSaldoPendiente" style="font-weight:bold; color:#c62828;">$0</span></div>
         </div>
         <form id="formPago">
             <div style="margin-bottom:1rem;">
-                <label>Monto a Abonar ($)</label>
-                <input type="number" id="montoPagar" name="monto_pagar" step="100" required style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:8px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                <div style="margin-bottom:1rem;">
+                <label>Monto a Abonar ($) *</label>
+                <!-- Input editable -->
+                <input type="number" id="montoPagar" name="monto_pagar" step="100" required 
+                       style="width:100%; padding:0.8rem; border:2px solid #4CAF50; border-radius:8px; font-size:1.2rem; font-weight:bold; color:#2e7d32; text-align:right;">
+                <small style="color:#666; display:block; margin-top:0.3rem;">Deja vacío o 0 para pagar solo extras</small>
+            </div>
             </div>
             <div style="margin-bottom:1rem;">
                 <label style="font-weight:bold;">🎒 Extras (palas, bebidas, etc.)</label>
@@ -2109,33 +2115,33 @@ async function abrirDetalleDesdePlanilla(idReserva) {
             else if (detalle.estado_pago === 'parcial') estadoColor = '#f4e346';
 
             // === ENCABEZADO FLEXBOX: [⋮ + Título] [×] ===
+            // Dentro de abrirDetalleDesdePlanilla, después de obtener 'detalle'
             const userCreacion = detalle.usuario_creacion || USUARIO_ACTIVO || 'Admin';
-            
-            // Menú 3 puntos (solo para admin) - Lógica JS pura
-            const menuDotsHtml = (typeof ROL_USUARIO !== 'undefined' && ROL_USUARIO === 'admin') ? `
-                <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
-                    <span style="font-size:1.4rem; color:#666;">⋮</span>
-                    <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
-                        <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})" 
-                             style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;"
-                             onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
-                            📋 Ver bitácora
-                        </div>
-                    </div>
-                </div>
-            ` : '';
 
-            // Construir header con flexbox
-            const headerHtml = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
-                    <div style="display:flex; align-items:center;">
-                        ${menuDotsHtml}
-                        <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
-                            📋 Detalle de Reserva
-                        </h3>
+            // Menú 3 puntos (siempre visible para admin/asistente con permisos)
+            const menuDotsHtml = `
+            <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
+                <span style="font-size:1.4rem; color:#666;">⋮</span>
+                <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
+                    <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})"
+                        style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;"
+                        onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                        📋 Ver bitácora
                     </div>
-                    <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
                 </div>
+            </div>
+            `;
+
+            const headerHtml = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.8rem; border-bottom:1px solid #eee;">
+                <div style="display:flex; align-items:center;">
+                    ${menuDotsHtml}
+                    <h3 style="margin:0; color:#071289; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
+                        📋 Detalle de Reserva
+                    </h3>
+                </div>
+                <button onclick="cerrarModalDetalle()" style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer; padding:4px; line-height:0.8;">&times;</button>
+            </div>
             `;
 
             // === SECCIÓN DE DATOS DEL CLIENTE ===
@@ -2311,11 +2317,21 @@ Esta acción enviará un correo de notificación al cliente.`;
 function abrirModalPagoDesdeDetalle() {
     if (!window.reservaActualSeleccionada) return;
     const d = window.reservaActualSeleccionada;
+    
+    const montoTotal = parseFloat(d.monto_total) || 0;
+    const montoRecaudado = parseFloat(d.monto_recaudacion) || 0;
+    const saldoPendiente = montoTotal - montoRecaudado;
+
     document.getElementById('infoIdReserva').textContent = d.id_reserva;
-    document.getElementById('infoMontoTotal').textContent = '$' + parseFloat(d.monto_total).toLocaleString();
-    document.getElementById('montoPagar').value = d.monto_total;
+    document.getElementById('infoMontoTotal').textContent = '$' + montoTotal.toLocaleString();
+    document.getElementById('infoSaldoPendiente').textContent = '$' + saldoPendiente.toLocaleString();
+    
+    // Prellenar con el saldo pendiente, pero permitir edición
+    document.getElementById('montoPagar').value = saldoPendiente > 0 ? saldoPendiente : '';
+    
     document.getElementById('formPago').dataset.idReserva = d.id_reserva;
     document.getElementById('formPago').dataset.montoOriginal = d.monto_total;
+    
     document.getElementById('modalDetalleReserva').style.display = 'none';
     document.getElementById('modalPago').style.display = 'flex';
 }
@@ -2360,9 +2376,28 @@ document.getElementById('formPago')?.addEventListener('submit', async function(e
                 msg = `⚠️ Pago Parcial. Faltan $${(montoOriginal - montoPagado).toLocaleString()}.`;
                 type = "warning";
             }
+
+             // Calcular nuevo saldo para el log
+            const montoTotal = parseFloat(document.getElementById('formPago').dataset.montoOriginal);
+            const montoPagado = parseFloat(document.getElementById('montoPagar').value);
+            const nuevoRecaudado = (parseFloat(window.reservaActualSeleccionada.monto_recaudacion) || 0) + montoPagado;
+            const nuevoSaldo = montoTotal - nuevoRecaudado;
+
+            // Registrar Log
+            registrarLogReserva(
+                data.id_reserva || window.reservaActualSeleccionada.id_reserva,
+                'cobro_parcial', // o 'cobro_total' si nuevoSaldo <= 0
+                `Pago registrado: $${montoPagado.toLocaleString()}`,
+                null,
+                { 
+                    anterior: window.reservaActualSeleccionada.monto_recaudacion || 0, // Recaudado antes
+                    nuevo: nuevoRecaudado // Recaudado después
+                }
+            );
             showToast(msg, type);
             document.getElementById('modalPago').style.display = 'none';
             document.getElementById('modalDetalleReserva').style.display = 'none';
+            cerrarModalPago();
             cargarPlanillaReservas();
         } else {
             showToast("❌ Error: " + data.message, "error");
@@ -2795,23 +2830,29 @@ function actualizarHoraFin(horaInicio, duracionMin) {
     const elBase = document.getElementById('admin_monto_base');
     const elDisplayMonto = document.getElementById('modalMontoDisplay');
     const elDisplayHora = document.getElementById('modalHoraDisplay');
-
-    if (!horaInicio || !elHoraFin) return; // Salir seguro si no hay datos
-
+    
+    if (!horaInicio || !elHoraFin) return;
+    
     const [h, m] = horaInicio.split(':').map(Number);
     if (isNaN(h) || isNaN(m)) return;
-
+    
     const fin = new Date();
-    fin.setHours(h, m + duracionMin, 0, 0);
+    fin.setHours(h, m + parseInt(duracionMin), 0, 0);
     const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
-
+    
     elHoraFin.value = horaFin;
     if (elDisplayHora) elDisplayHora.textContent = `${horaInicio} - ${horaFin}`;
-
-    // Recalcular monto solo si existen los elementos
+    
+    // Recalcular monto
     if (elBase && elMonto && elDisplayMonto) {
         const base = parseFloat(elBase.value) || 0;
-        const total = Math.round(base * (duracionMin === 90 ? 1.5 : 1));
+        // Factor: 30min=0.5x, 60min=1x, 90min=1.5x, 120min=2x
+        let factor = 1;
+        if (duracionMin == 30) factor = 0.5;
+        else if (duracionMin == 90) factor = 1.5;
+        else if (duracionMin == 120) factor = 2;
+        
+        const total = Math.round(base * factor);
         elMonto.value = total;
         elDisplayMonto.textContent = `$${total.toLocaleString('es-CL')}`;
     }
@@ -4604,15 +4645,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <!-- ✅ Selector de duración (60/90 min) -->
+                <!-- ✅ Selector de duración (30/60/90/120 min) -->
                 <div style="margin-bottom:1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>
-                    <div style="display:flex; gap:0.5rem;">
-                    <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
-                        <input type="radio" name="duracion" value="60" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 60 min
-                    </label>
-                    <label style="flex:1; padding:0.6rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s;">
-                        <input type="radio" name="duracion" value="90" checked onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.4rem;"> 90 min
-                    </label>
+                    <div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
+                            <input type="radio" name="duracion" value="30" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 30m
+                        </label>
+                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
+                            <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 60m
+                        </label>
+                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
+                            <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 90m
+                        </label>
+                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
+                            <input type="radio" name="duracion" value="120" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 120m
+                        </label>
                     </div>
                 </div>
 
