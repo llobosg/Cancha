@@ -1,6 +1,7 @@
 <?php
 // pages/recuperar_contraseña.php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/reserva_mailer.php'; // Asegurar que BrevoMailer esté disponible
 
 $mensaje = '';
 $error = '';
@@ -12,39 +13,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($identificador)) {
         $error = 'Ingresa tu email, usuario o alias';
     } else {
-        // Llamamos a la API interna para procesar
-        // Nota: En producción, esto podría ser un fetch AJAX, pero aquí lo hacemos directo para simplicidad
-        require_once __DIR__ . '/../api/solicitar_reset_password.php';
-        
-        // La API imprime JSON, así que capturamos la salida si queremos mostrar mensaje en esta misma página
-        // O mejor aún, redirigimos a una página de "Enviado" o mostramos el mensaje directamente aquí.
-        // Para mantenerlo simple, vamos a ejecutar la lógica aquí mismo copiando la esencia de la API.
-        
         try {
-            // 1. Buscar en SOCIOS
+            $usuario_encontrado = false;
+            $tipo_usuario = ''; // 'socio' o 'admin'
+            $nombre_destinatario = '';
+            $email_destino = '';
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+            // 1. BUSCAR EN SOCIOS (Email o Alias)
             $stmt_socio = $pdo->prepare("SELECT id_socio, email, nombre FROM socios WHERE email = ? OR alias = ? LIMIT 1");
             $stmt_socio->execute([$identificador, $identificador]);
             $user = $stmt_socio->fetch();
             
             if ($user) {
-                // Generar token para socio
-                $token = bin2hex(random_bytes(32));
-                $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+                $usuario_encontrado = true;
+                $tipo_usuario = 'socio';
+                $nombre_destinatario = $user['nombre'];
+                $email_destino = $user['email'];
                 
-                // Guardar en tabla password_reset_tokens (asumiendo que existe)
-                $stmt_token = $pdo->prepare("INSERT INTO password_reset_tokens (id_socio, token, expires_at, used) VALUES (?, ?, ?, 0) ON DUPLICATE KEY UPDATE token=?, expires_at=?");
+                // Guardar token en tabla password_reset_tokens
+                // Usamos INSERT ... ON DUPLICATE KEY UPDATE por si ya había un token pendiente
+                $stmt_token = $pdo->prepare("
+                    INSERT INTO password_reset_tokens (id_socio, token, expires_at, used) 
+                    VALUES (?, ?, ?, 0) 
+                    ON DUPLICATE KEY UPDATE token=?, expires_at=?
+                ");
                 $stmt_token->execute([$user['id_socio'], $token, $expires, $token, $expires]);
                 
-                // Enviar correo
-                require_once __DIR__ . '/../includes/reserva_mailer.php';
+                // Link de recuperación para SOCIO
                 $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/reset_password.php?token=" . $token;
+            } 
+            
+            // 2. SI NO ES SOCIO, BUSCAR EN ADMIN_RECINTOS (Email o Usuario)
+            if (!$usuario_encontrado) {
+                $stmt_admin = $pdo->prepare("SELECT id_admin, email, nombre_completo FROM admin_recintos WHERE email = ? OR usuario = ? LIMIT 1");
+                $stmt_admin->execute([$identificador, $identificador]);
+                $admin = $stmt_admin->fetch();
                 
-                $email_body = "
+                if ($admin) {
+                    $usuario_encontrado = true;
+                    $tipo_usuario = 'admin';
+                    $nombre_destinatario = $admin['nombre_completo'];
+                    $email_destino = $admin['email'];
+                    
+                    // Actualizar token en tabla admin_recintos
+                    $update = $pdo->prepare("UPDATE admin_recintos SET reset_token = ?, reset_token_expires = ? WHERE id_admin = ?");
+                    $update->execute([$token, $expires, $admin['id_admin']]);
+                    
+                    // Link de recuperación para ADMIN
+                    $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/reset_password_admin.php?token=" . $token;
+                }
+            }
+
+            // 3. ENVIAR CORREO SI SE ENCONTRÓ ALGUIEN
+            if ($usuario_encontrado) {
+                // Plantilla HTML del correo
+                $titulo_email = ($tipo_usuario === 'admin') ? '🔐 Recuperación Admin - CanchaSport' : '🔐 Restablece tu contraseña - CanchaSport';
+                $cuerpo_html = "
                 <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:20px;border-radius:12px;'>
                     <div style='text-align:center;background:linear-gradient(135deg,#CE93D8,#AB47BC);color:white;padding:15px;border-radius:8px;margin-bottom:20px;'>
                         <h2 style='margin:0;'>🔐 Recuperación de Contraseña</h2>
                     </div>
-                    <p style='font-size:1.1rem;'>Hola <strong>" . htmlspecialchars($user['nombre']) . "</strong>,</p>
+                    <p style='font-size:1.1rem;'>Hola <strong>" . htmlspecialchars($nombre_destinatario) . "</strong>,</p>
                     <p>Recibimos una solicitud para restablecer tu contraseña de CanchaSport.</p>
                     
                     <div style='background:white;padding:20px;border-radius:8px;border-left:4px solid #AB47BC;margin:20px 0;text-align:center;'>
@@ -54,72 +85,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </a>
                     </div>
                     
-                    <p style='font-size:0.9rem;color:#666;'><strong>⏰ Este enlace expira en 1 hora</strong>.</p>
+                    <p style='font-size:0.9rem;color:#666;'><strong>⏰ Este enlace expira en 1 hora</strong> por seguridad.</p>
                     <p style='font-size:0.9rem;color:#666;'>Si no solicitaste este cambio, ignora este mensaje.</p>
+                    
+                    <hr style='margin:25px 0;border:0;border-top:1px solid #eee;'>
+                    <p style='text-align:center;font-size:0.9rem;color:#888;'>
+                        ¿Necesitas ayuda? <a href='mailto:contacto@canchasport.com' style='color:#AB47BC;'>contacto@canchasport.com</a>
+                    </p>
                 </div>";
-                
+
+                // Enviar usando BrevoMailer
                 $mail = new BrevoMailer();
-                $mail->setTo($user['email'], $user['nombre'])
-                     ->setSubject('🔐 Restablece tu contraseña - CanchaSport')
-                     ->setHtmlBody($email_body)
-                     ->send();
-                     
-                $exito = true;
-                $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
-            } else {
-                // 2. Buscar en ADMIN_RECINTOS
-                $stmt_admin = $pdo->prepare("SELECT id_admin, email, nombre_completo FROM admin_recintos WHERE email = ? OR usuario = ? LIMIT 1");
-                $stmt_admin->execute([$identificador, $identificador]);
-                $admin = $stmt_admin->fetch();
+                $sent = $mail
+                    ->setTo($email_destino, $nombre_destinatario)
+                    ->setSubject($titulo_email)
+                    ->setReplyTo('contacto@canchasport.com', 'Soporte CanchaSport')
+                    ->setHtmlBody($cuerpo_html)
+                    ->send();
                 
-                if ($admin) {
-                    // Generar token para admin
-                    $token = bin2hex(random_bytes(32));
-                    $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
-                    
-                    // Actualizar tabla admin_recintos (asumiendo columnas reset_token y reset_token_expires)
-                    $update = $pdo->prepare("UPDATE admin_recintos SET reset_token = ?, reset_token_expires = ? WHERE id_admin = ?");
-                    $update->execute([$token, $expires, $admin['id_admin']]);
-                    
-                    // Enviar correo
-                    require_once __DIR__ . '/../includes/reserva_mailer.php';
-                    $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/pages/reset_password_admin.php?token=" . $token;
-                    
-                    $email_body = "
-                    <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:20px;border-radius:12px;'>
-                        <div style='text-align:center;background:linear-gradient(135deg,#CE93D8,#AB47BC);color:white;padding:15px;border-radius:8px;margin-bottom:20px;'>
-                            <h2 style='margin:0;'>🔐 Recuperación Admin</h2>
-                        </div>
-                        <p style='font-size:1.1rem;'>Hola <strong>" . htmlspecialchars($admin['nombre_completo']) . "</strong>,</p>
-                        <p>Recibimos una solicitud para restablecer tu contraseña de administrador.</p>
-                        
-                        <div style='background:white;padding:20px;border-radius:8px;border-left:4px solid #AB47BC;margin:20px 0;text-align:center;'>
-                            <a href='" . $reset_link . "' 
-                               style='background:#AB47BC;color:white;padding:14px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:bold;font-size:1rem;'>
-                                🔗 Restablecer mi contraseña
-                            </a>
-                        </div>
-                        
-                        <p style='font-size:0.9rem;color:#666;'><strong>⏰ Este enlace expira en 1 hora</strong>.</p>
-                    </div>";
-                    
-                    $mail = new BrevoMailer();
-                    $mail->setTo($admin['email'], $admin['nombre_completo'])
-                         ->setSubject('🔐 Restablece tu contraseña Admin - CanchaSport')
-                         ->setHtmlBody($email_body)
-                         ->send();
-                         
-                    $exito = true;
-                    $mensaje = "✅ Si existe una cuenta de admin asociada, recibirás un enlace en tu email.";
+                // Por seguridad, siempre decimos que se envió si la cuenta existe, 
+                // pero si falla el mail, logueamos el error sin mostrarlo al usuario
+                if (!$sent) {
+                    error_log("⚠️ [RESET] Fallo al enviar email a: {$email_destino}");
                 } else {
-                    // No encontrado en ninguna tabla, pero por seguridad decimos que se envió
-                    $exito = true;
-                    $mensaje = "✅ Si existe una cuenta asociada, recibirás un enlace en tu email.";
+                    error_log("✅ [RESET] Email enviado a: {$email_destino} (Tipo: {$tipo_usuario})");
                 }
+                
+                $exito = true;
+                $mensaje = "✅ Si existe una cuenta asociada a ese identificador, recibirás un enlace en tu email. Revisa también la carpeta de Spam.";
+            } else {
+                // Usuario no encontrado en ninguna tabla
+                // Mensaje genérico por seguridad (no revelar si existe o no la cuenta)
+                $exito = true;
+                $mensaje = "✅ Si existe una cuenta asociada a ese identificador, recibirás un enlace en tu email.";
+                error_log("ℹ️ [RESET] Intento con identificador no encontrado: " . substr($identificador, 0, 10) . "...");
             }
+
         } catch (Exception $e) {
-            error_log("Error reset password: " . $e->getMessage());
-            $error = "Ocurrió un error interno. Intenta más tarde.";
+            error_log("❌ Error en recuperación contraseña: " . $e->getMessage());
+            $error = "Ocurrió un error interno. Por favor intenta más tarde.";
         }
     }
 }
