@@ -642,9 +642,7 @@ $_SESSION['visited_index'] = true;
         </form>
         
         <div style="text-align:center; margin-top:1rem; font-size:0.85rem; color:var(--text-light);">
-            <a href="#" onclick="showToast('🔜 Recuperación de contraseña próximamente'); return false;" style="color:var(--primary-end); text-decoration:none;">
-                ¿Olvidaste tu contraseña?
-            </a>
+            <a href="pages/recuperar_contraseña.php">¿Olvidaste tu contraseña?</a>
         </div>
         
         <!-- Toggle para mostrar/ocultar opciones de registro -->
