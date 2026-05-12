@@ -1276,8 +1276,7 @@ async function bajarse(id) {
 }
 
 // === 6. MODAL INSCRITOS ===
-// === FUNCIÓN PARA VER INSCRITOS (DASHBOARD SOCIO - ACTUALIZADA) ===
-// === FUNCIÓN PARA VER INSCRITOS (DASHBOARD SOCIO - VERSIÓN LIMPIA) ===
+// === FUNCIÓN PARA VER INSCRITOS (DASHBOARD SOCIO - CON STANDBY) ===
 async function verInscritos(idReserva) {
     const modal = document.getElementById('modalInscritos');
     const lista = document.getElementById('listaInscritos');
@@ -1311,26 +1310,26 @@ async function verInscritos(idReserva) {
             let statusBadge = '';
             
             if (inscrito.estado_inscripcion === 'espera') {
-                // EN LISTA DE ESPERA
+                // 🛐 STANDBY (Fuera de cupo)
                 statusBadge = `
                     <span style="
-                        background: #FFF3E0; 
-                        color: #E65100; 
+                        background: #E3F2FD; /* Azul muy suave */
+                        color: #1565C0;      /* Azul oscuro */
                         font-size: 0.7rem; 
                         padding: 2px 6px; 
                         border-radius: 4px; 
                         font-weight: bold;
                         display: inline-block;
                         margin-top: 4px;
-                        border: 1px solid #FFCC80;">
-                        ⏳ En Espera (#${inscrito.posicion_en_lista})
+                        border: 1px solid #90CAF9;">
+                        🛐 StandBy (#${inscrito.posicion_en_lista})
                     </span>`;
             } else {
-                // CONFIRMADO
+                // ✅ CONFIRMADO (Dentro del cupo)
                 statusBadge = `
                     <span style="
-                        background: #E8F5E9; 
-                        color: #2E7D32; 
+                        background: #E8F5E9; /* Verde muy suave */
+                        color: #2E7D32;      /* Verde oscuro */
                         font-size: 0.7rem; 
                         padding: 2px 6px; 
                         border-radius: 4px; 
@@ -1346,7 +1345,6 @@ async function verInscritos(idReserva) {
             const fechaInsc = inscrito.fecha_inscripcion || '-';
 
             // Estilo de la fila: Fondo blanco limpio, borde sutil
-            // ❌ ELIMINADO: Muestra de equipo ("Blanco"/"Rojo") y posición
             html += `
             <div style="
                 display: flex; 
@@ -1365,7 +1363,6 @@ async function verInscritos(idReserva) {
                     </div>
                     <div style="font-size: 0.75rem; color: #718096; margin-top: 2px;">
                         📅 Inscrito: ${fechaInsc}
-                        <!-- Se eliminó la línea que mostraba: Equipo, Posición, Cerveza -->
                     </div>
                 </div>
                 
