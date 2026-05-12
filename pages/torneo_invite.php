@@ -2,61 +2,105 @@
 // pages/torneo_invite.php
 require_once __DIR__ . '/../includes/config.php';
 
+// Determinar si es acceso por ID (QR Admin) o por CODE (Invitación Pareja)
 $id_torneo = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$code_pareja = $_GET['code'] ?? '';
 
-if (!$id_torneo) {
-    die("<h3 style='text-align:center; color:red;'>❌ ID de torneo inválido</h3>");
-}
+$torneo = null;
+$error_message = "";
 
-try {
-    // 1. Obtener datos del torneo
-    $stmt = $pdo->prepare("
-        SELECT t.*, r.nombre as recinto_nombre 
-        FROM torneos t
-        JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto
-        WHERE t.id_torneo = ?
-    ");
-    $stmt->execute([$id_torneo]);
-    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($id_torneo > 0) {
+    // === CASO 1: Acceso por ID (QR del Admin) ===
+    try {
+        $stmt = $pdo->prepare("
+            SELECT t.*, r.nombre as recinto_nombre 
+            FROM torneos t
+            JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto
+            WHERE t.id_torneo = ?
+        ");
+        $stmt->execute([$id_torneo]);
+        $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$torneo) {
-        die("<h3 style='text-align:center; color:red;'>❌ Torneo no encontrado</h3>");
+        if (!$torneo) {
+            die("<h3 style='text-align:center; color:red;'>❌ Torneo no encontrado</h3>");
+        }
+        
+        // Validar estado
+        if (!in_array($torneo['estado'], ['abierto', 'borrador'])) {
+            die("<h3 style='text-align:center; color:red;'>❌ Inscripciones cerradas para este torneo</h3>");
+        }
+
+    } catch (Exception $e) {
+        error_log("Error torneo_invite ID: " . $e->getMessage());
+        die("<h3 style='text-align:center; color:red;'>❌ Error interno</h3>");
     }
 
-    // ✅ CORRECCIÓN: Validar valor_inscripcion antes de usarlo
-    $valor_inscripcion = isset($torneo['valor_inscripcion']) && $torneo['valor_inscripcion'] !== null 
-                         ? (float)$torneo['valor_inscripcion'] 
-                         : 0.00;
+} else if (!empty($code_pareja)) {
+    // === CASO 2: Acceso por CODE (Invitación de Pareja) ===
+    // Buscar la pareja usando el código
+    try {
+        $stmt_pareja = $pdo->prepare("
+            SELECT pt.id_torneo, pt.codigo_pareja, t.nombre as torneo_nombre, t.slug, t.estado
+            FROM parejas_torneo pt
+            JOIN torneos t ON pt.id_torneo = t.id_torneo
+            WHERE pt.codigo_pareja = ?
+        ");
+        $stmt_pareja->execute([$code_pareja]);
+        $pareja_data = $stmt_pareja->fetch(PDO::FETCH_ASSOC);
 
-    // Contar parejas inscritas actualmente
-    $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) as total FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'torneo'");
-    $stmt_inscritos->execute([$id_torneo]);
-    $inscritos_count = $stmt_inscritos->fetchColumn();
+        if (!$pareja_data) {
+            die("<h3 style='text-align:center; color:red;'>❌ Código de invitación inválido o expirado</h3>");
+        }
 
-    // 2. Generar Link de Invitación Único
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $host = $_SERVER['HTTP_HOST'];
+        // Obtener datos completos del torneo para mostrar info
+        $stmt_torneo = $pdo->prepare("
+            SELECT t.*, r.nombre as recinto_nombre 
+            FROM torneos t
+            JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto
+            WHERE t.id_torneo = ?
+        ");
+        $stmt_torneo->execute([$pareja_data['id_torneo']]);
+        $torneo = $stmt_torneo->fetch(PDO::FETCH_ASSOC);
+        
+        // Guardamos el code en sesión o hidden input para usarlo al inscribirse
+        $_SESSION['invite_code'] = $code_pareja;
 
-    // Usar el slug si existe, sino generar uno temporal basado en ID
-    $slug_torneo = $torneo['slug'] ?? substr(md5($id_torneo), 0, 8);
+    } catch (Exception $e) {
+        error_log("Error torneo_invite CODE: " . $e->getMessage());
+        die("<h3 style='text-align:center; color:red;'>❌ Error interno</h3>");
+    }
 
-    $link_invitacion = $protocol . $host . "/pages/torneo_inscripcion.php?slug=" . $slug_torneo;
-    
-    // Mensaje para WhatsApp
-    $mensaje_whatsapp = urlencode(
-        "🎾 ¡Hola! Te invitamos al torneo *" . htmlspecialchars($torneo['nombre']) . "* en " . htmlspecialchars($torneo['recinto_nombre']) . ".\n\n" .
-        "📅 Fecha: " . date('d/m/Y', strtotime($torneo['fecha_inicio'])) . "\n" .
-        "⏰ Hora: " . date('H:i', strtotime($torneo['hora_inicio'] ?? '00:00:00')) . "\n" .
-        "🏆 Categoría: " . ($torneo['categoria'] ?? 'Abierto') . "\n" .
-        "💰 Inscripción: $" . number_format($valor_inscripcion, 0, ',', '.') . " (por pareja)\n" .
-        "👥 Cupos: " . $inscritos_count . "/" . ($torneo['num_parejas_max'] ?? '∞') . " parejas\n\n" .
-        "¡Inscríbete aquí!: " . $link_invitacion
-    );
-
-} catch (Exception $e) {
-    error_log("Error torneo_invite: " . $e->getMessage());
-    die("<h3 style='text-align:center; color:red;'>❌ Error interno al cargar el torneo</h3>");
+} else {
+    die("<h3 style='text-align:center; color:red;'>❌ Enlace inválido</h3>");
 }
+
+// === DATOS COMUNES PARA AMBOS CASOS ===
+// Extraer fecha y hora de fecha_inicio (formato datetime: 2026-05-17 13:00:00)
+$fecha_inicio_obj = new DateTime($torneo['fecha_inicio']);
+$fecha_display = $fecha_inicio_obj->format('d/m/Y');
+$hora_display = $fecha_inicio_obj->format('H:i');
+
+// Valor inscripción (columna 'valor')
+$valor_inscripcion = isset($torneo['valor']) && $torneo['valor'] !== null 
+                     ? (float)$torneo['valor'] 
+                     : 0.00;
+
+// Generar Link de Invitación Único (siempre basado en slug o id)
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+$host = $_SERVER['HTTP_HOST'];
+
+// Si tenemos un slug, usamos eso, sino usamos el ID
+$slug_torneo = $torneo['slug'] ?? substr(md5($torneo['id_torneo']), 0, 8);
+$link_invitacion = $protocol . $host . "/pages/torneo_inscripcion.php?slug=" . $slug_torneo;
+
+// Mensaje para WhatsApp
+$mensaje_whatsapp = urlencode(
+    "🎾 ¡Hola! Te invitamos al torneo *" . htmlspecialchars($torneo['nombre']) . "* en " . htmlspecialchars($torneo['recinto_nombre']) . ".\n\n" .
+    "📅 Fecha: " . $fecha_display . "\n" .
+    "⏰ Hora: " . $hora_display . "\n" .
+    "💰 Inscripción: $" . number_format($valor_inscripcion, 0, ',', '.') . " (por pareja)\n\n" .
+    "¡Inscríbete aquí!: " . $link_invitacion
+);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -67,203 +111,123 @@ try {
     <!-- Librería QRCode.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
+        h2 { color: #071289; margin-bottom: 0.5rem; }
+        p { color: #666; margin-bottom: 1.5rem; }
+        .btn-inscribir {
+            display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+            text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem;
+            transition: transform 0.2s; cursor: pointer; border: none;
         }
-        .card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            max-width: 400px;
-            width: 100%;
-            overflow: hidden;
-            text-align: center;
-            position: relative;
-        }
-        .header {
-            /* ✅ Degradado Morado/Azul Oscuro solicitado */
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem 1rem;
-        }
-        .header h2 {
-            margin: 0;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        .header p {
-            margin: 0.5rem 0 0;
-            opacity: 0.9;
-            font-size: 0.9rem;
-        }
-        .content {
-            padding: 2rem 1.5rem;
-        }
-        
-        /* ✅ QR Container con fondo blanco explícito */
-        #qrcode {
-            background: white; 
-            padding: 15px;
-            border-radius: 12px;
-            display: inline-block;
-            margin-bottom: 1.5rem;
-            border: 1px solid #eee;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        
-        .info-box {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            text-align: left;
-            font-size: 0.9rem;
-            color: #555;
-        }
-        .info-box strong {
-            color: #333;
-        }
-        
-        /* ✅ Botón WhatsApp con Degradado y Márgenes Equilibrados */
-        .btn-whatsapp {
-            display: block;
-            width: 100%; /* Ocupa todo el ancho disponible dentro del contenedor */
-            padding: 12px;
-            /* Degradado igual que el header */
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: none;
-            cursor: pointer;
-            margin-top: 1rem;
-            /* Centrado automático por ser block en un contenedor centrado */
-        }
-        .btn-whatsapp:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4); /* Sombra morada */
-            margin-top: 1rem;
-        }
-        
-        .copy-link-box {
-            display: flex;
-            gap: 10px;
-            margin-top: 1rem;
-            /* Asegura que este bloque tenga el mismo ancho visual que el botón */
-            width: 100%; 
-        }
-        .copy-input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            background: #fafafa;
-        }
-        .btn-copy {
-            padding: 10px 15px;
-            background: #667eea; /* Color sólido similar al inicio del degradado */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            white-space: nowrap; /* Evita que el texto se rompa */
-        }
-        .btn-copy:hover {
-            background: #5a6fd6;
-        }
+        .btn-inscribir:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4); }
+        .info-torneo { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; font-size: 0.9rem; }
+        .error-msg { background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
     </style>
 </head>
 <body>
-
     <div class="card">
-        <div class="header">
+        <?php if ($error_message): ?>
+            <div class="error-msg">
+                <h3>⚠️ <?= $error_message ?></h3>
+            </div>
+        <?php else: ?>
             <h2>🎾 <?= htmlspecialchars($torneo['nombre']) ?></h2>
             <p><?= htmlspecialchars($torneo['recinto_nombre']) ?></p>
-        </div>
-        
-        <div class="content">
-            <!-- Info Básica -->
-            <div class="info-box">
-                <!-- ✅ Agregada hora de inicio -->
-                <div><strong>📅 Inicio:</strong> <?= date('d/m/Y', strtotime($torneo['fecha_inicio'])) ?> a las <?= date('H:i', strtotime($torneo['hora_inicio'] ?? '00:00:00')) ?></div>
-                
-                <!-- ✅ Monto con "(por pareja)" -->
-                <div><strong>💰 Inscripción:</strong> $<?= number_format($valor_inscripcion, 0, ',', '.') ?> (por pareja)</div>
-                
+            
+            <div class="info-torneo">
+                <strong>📅 Fecha:</strong> <?= $fecha_display ?><br>
+                <strong>⏰ Hora:</strong> <?= $hora_display ?><br>
+                <strong>💰 Valor:</strong> $<?= number_format($valor_inscripcion, 0, ',', '.') ?> (por pareja)<br>
                 <?php if ($torneo['num_parejas_max']): ?>
-                <!-- ✅ Cupos totales vs Inscritos actuales -->
-                <div><strong>👥 Cupos:</strong> <?= $inscritos_count ?>/<?= $torneo['num_parejas_max'] ?> parejas</div>
+                <strong>👥 Cupos:</strong> <?= $torneo['num_parejas_max'] ?> parejas
                 <?php endif; ?>
             </div>
 
-            <!-- QR Code Container -->
-            <div id="qrcode"></div>
-            
-            <p style="font-size:0.85rem; color:#888; margin-bottom:1rem;">Escanea para inscribirte</p>
+            <?php if (!empty($code_pareja)): ?>
+                <!-- CASO: INVITACIÓN DE PAREJA -->
+                <p style="font-size:0.9rem; color:#555;">Has sido invitado a completar tu pareja.</p>
+                
+                <?php if (isset($_SESSION['id_socio'])): ?>
+                    <!-- Socio Logueado: Inscribe directamente como segunda pareja -->
+                    <button class="btn-inscribir" onclick="inscribirseComoPareja()">✅ Aceptar Invitación</button>
+                <?php else: ?>
+                    <!-- No logueado: Ir a login/registro -->
+                    <a href="../index.php?redirect=<?= urlencode('/pages/torneo_invite.php?code=' . $code_pareja) ?>" class="btn-inscribir">
+                        🔐 Iniciar Sesión / Registrarse
+                    </a>
+                    <p style="font-size:0.8rem; margin-top:1rem;">Debes iniciar sesión para aceptar la invitación.</p>
+                <?php endif; ?>
 
-            <!-- Botón WhatsApp -->
-            <a href="https://wa.me/?text=<?= $mensaje_whatsapp ?>" target="_blank" class="btn-whatsapp">
-                📱 Enviar Invitación por WhatsApp
-            </a>
+            <?php else: ?>
+                <!-- CASO: QR GENERAL (Admin/Socio busca inscribirse) -->
+                
+                <!-- QR Code Container -->
+                <div id="qrcode" style="background:white; padding:15px; border-radius:12px; display:inline-block; margin-bottom:1.5rem; border:1px solid #eee;"></div>
+                <p style="font-size:0.85rem; color:#888; margin-bottom:1rem;">Escanea para inscribirte</p>
 
-            <!-- Copiar Link -->
-            <div class="copy-link-box">
-                <input type="text" class="copy-input" value="<?= $link_invitacion ?>" readonly id="linkInput">
-                <button class="btn-copy" onclick="copiarLink()">Copiar</button>
-            </div>
-        </div>
+                <!-- Botón WhatsApp -->
+                <a href="https://wa.me/?text=<?= $mensaje_whatsapp ?>" target="_blank" class="btn-inscribir" style="background:linear-gradient(135deg, #667eea, #764ba2); margin-bottom:1rem;">
+                    📱 Enviar Invitación por WhatsApp
+                </a>
+
+                <!-- Copiar Link -->
+                <div style="display:flex; gap:10px; margin-top:1rem;">
+                    <input type="text" value="<?= $link_invitacion ?>" readonly id="linkInput" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.85rem; background:#fafafa;">
+                    <button onclick="copiarLink()" style="padding:10px 15px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Copiar</button>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
     </div>
 
     <script>
-        // === GENERAR QR CON COLORES MORADOS OSCUROS ===
+        // Generar QR solo si es caso general (no code_pareja)
+        <?php if (empty($code_pareja)): ?>
         document.addEventListener('DOMContentLoaded', function() {
             const qrContainer = document.getElementById("qrcode");
             if (qrContainer) {
-               new QRCode(qrContainer, {
+                new QRCode(qrContainer, {
                     text: "<?= $link_invitacion ?>",
                     width: 200,
                     height: 200,
-                    // ✅ Color Morado Oscuro (similar al final del degradado #764ba2)
-                    colorDark : "#764ba2", 
-                    // Fondo Blanco Puro
-                    colorLight : "#ffffff", 
+                    colorDark : "#764ba2",
+                    colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
                 });
             }
         });
+        <?php endif; ?>
 
-        // === FUNCIÓN COPIAR LINK ===
+        // Función copiar link
         function copiarLink() {
             const copyText = document.getElementById("linkInput");
             copyText.select();
-            copyText.setSelectionRange(0, 99999); // Para móviles
             navigator.clipboard.writeText(copyText.value).then(() => {
-                const btn = document.querySelector('.btn-copy');
-                const originalText = btn.textContent;
-                btn.textContent = "✅ Copiado";
-                btn.style.background = "#4CAF50";
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.background = "#667eea";
-                }, 2000);
-            }).catch(err => {
-                console.error('Error al copiar:', err);
-                alert("No se pudo copiar automáticamente. Por favor selecciona y copia manualmente.");
+                alert("Link copiado!");
             });
         }
-    </script>
 
+        // Función para inscribirse como pareja invitada
+        async function inscribirseComoPareja() {
+            const code = '<?= $code_pareja ?>';
+            try {
+                const res = await fetch('../api/aceptar_invitacion_pareja.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ codigo_pareja: code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ¡Te has unido a la pareja! Revisa tu correo.');
+                    window.location.href = '../dashboard_socio.php';
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error de conexión');
+            }
+        }
+    </script>
 </body>
 </html>
