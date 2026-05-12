@@ -253,6 +253,40 @@ $js_vars = [
     'CLUB_ID' => $club_id,
     'CLUB_NOMBRE' => $club_nombre
 ];
+
+<!-- === FICHAS DE PRÓXIMOS EVENTOS/TORNEOS === -->
+if (isset($_SESSION['id_socio'])) {
+    $id_socio = $_SESSION['id_socio'];
+    
+    // 1. Obtener Próximas Reservas (Canchas)
+    $stmt_reservas = $pdo->prepare("
+        SELECT r.*, c.nombre_cancha, c.id_deporte 
+        FROM reservas r
+        JOIN canchas c ON r.id_cancha = c.id_cancha
+        WHERE r.id_socio = ? 
+        AND r.fecha >= CURDATE()
+        AND r.estado != 'cancelada'
+        ORDER BY r.fecha ASC, r.hora_inicio ASC
+        LIMIT 3
+    ");
+    $stmt_reservas->execute([$id_socio]);
+    $proximas_reservas = $stmt_reservas->fetchAll();
+
+    // 2. Obtener Próximos Torneos (Parejas)
+    $stmt_torneos = $pdo->prepare("
+        SELECT t.*, pt.id_pareja, pt.codigo_pareja
+        FROM parejas_torneo pt
+        JOIN torneos t ON pt.id_torneo = t.id_torneo
+        WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
+        AND t.fecha_inicio >= CURDATE()
+        AND t.estado IN ('abierto', 'en_progreso')
+        ORDER BY t.fecha_inicio ASC
+        LIMIT 3
+    ");
+    $stmt_torneos->execute([$id_socio, $id_socio]);
+    $proximos_torneos = $stmt_torneos->fetchAll();
+
+    if (!empty($proximas_reservas) || !empty($proximos_torneos)):
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -973,6 +1007,89 @@ $js_vars = [
                     <a href="reservar_cancha.php" style="display:inline-block; background:white; color:var(--tennis-green); padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
                 </div>
             <?php endif; ?>
+            <!-- === FICHAS DE PRÓXIMOS EVENTOS/TORNEOS === -->
+            <?php
+            if (isset($_SESSION['id_socio'])) {
+                $id_socio = $_SESSION['id_socio'];
+                
+                // 1. Obtener Próximas Reservas (Canchas)
+                $stmt_reservas = $pdo->prepare("
+                    SELECT r.*, c.nombre_cancha, c.id_deporte 
+                    FROM reservas r
+                    JOIN canchas c ON r.id_cancha = c.id_cancha
+                    WHERE r.id_socio = ? 
+                    AND r.fecha >= CURDATE()
+                    AND r.estado != 'cancelada'
+                    ORDER BY r.fecha ASC, r.hora_inicio ASC
+                    LIMIT 3
+                ");
+                $stmt_reservas->execute([$id_socio]);
+                $proximas_reservas = $stmt_reservas->fetchAll();
+
+                // 2. Obtener Próximos Torneos (Parejas)
+                $stmt_torneos = $pdo->prepare("
+                    SELECT t.*, pt.id_pareja, pt.codigo_pareja
+                    FROM parejas_torneo pt
+                    JOIN torneos t ON pt.id_torneo = t.id_torneo
+                    WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
+                    AND t.fecha_inicio >= CURDATE()
+                    AND t.estado IN ('abierto', 'en_progreso')
+                    ORDER BY t.fecha_inicio ASC
+                    LIMIT 3
+                ");
+                $stmt_torneos->execute([$id_socio, $id_socio]);
+                $proximos_torneos = $stmt_torneos->fetchAll();
+
+                if (!empty($proximas_reservas) || !empty($proximos_torneos)):
+            ?>
+            <div style="margin-bottom: 2rem;">
+                <h3 style="color:white; margin-bottom:1rem; font-size:1.2rem;">📅 Próximos Eventos</h3>
+                
+                <!-- Grid de Fichas -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
+                    
+                    <!-- Fichas de Reservas de Cancha -->
+                    <?php foreach ($proximas_reservas as $reserva): ?>
+                        <div style="background:white; border-radius:12px; padding:1rem; box-shadow:0 4px 10px rgba(0,0,0,0.1); border-left:4px solid #AB47BC;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                                <span style="font-weight:bold; color:#071289;">🏟️ <?= htmlspecialchars($reserva['nombre_cancha']) ?></span>
+                                <span style="font-size:0.8rem; background:#f0f0f0; padding:2px 6px; border-radius:4px;"><?= strtoupper($reserva['id_deporte']) ?></span>
+                            </div>
+                            <div style="font-size:0.9rem; color:#555;">
+                                📅 <?= date('d/m/Y', strtotime($reserva['fecha'])) ?><br>
+                                ⏰ <?= substr($reserva['hora_inicio'], 0, 5) ?> - <?= substr($reserva['hora_fin'], 0, 5) ?>
+                            </div>
+                            <div style="margin-top:0.5rem; font-size:0.85rem; color:#666;">
+                                💰 $<?= number_format($reserva['monto_total'], 0, ',', '.') ?> | 
+                                <span style="color:<?= $reserva['estado_pago'] == 'pagado' ? 'green' : 'orange' ?>; font-weight:bold;">
+                                    <?= ucfirst($reserva['estado_pago']) ?>
+                                </span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <!-- Fichas de Torneos -->
+                    <?php foreach ($proximos_torneos as $torneo): ?>
+                        <div style="background:white; border-radius:12px; padding:1rem; box-shadow:0 4px 10px rgba(0,0,0,0.1); border-left:4px solid #FFD700;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                                <span style="font-weight:bold; color:#071289;">🏆 <?= htmlspecialchars($torneo['nombre']) ?></span>
+                                <span style="font-size:0.8rem; background:#FFFDE7; color:#F57F17; padding:2px 6px; border-radius:4px;"><?= strtoupper($torneo['deporte']) ?></span>
+                            </div>
+                            <div style="font-size:0.9rem; color:#555;">
+                                📅 Inicio: <?= date('d/m/Y', strtotime($torneo['fecha_inicio'])) ?><br>
+                                👥 Pareja ID: <code><?= htmlspecialchars($torneo['codigo_pareja']) ?></code>
+                            </div>
+                            <div style="margin-top:0.5rem; font-size:0.85rem; color:#666;">
+                                📍 <?= htmlspecialchars($torneo['recinto_nombre'] ?? 'Recinto') ?>
+                            </div>
+                            <a href="torneo_detalle.php?id=<?= $torneo['id_torneo'] ?>" style="display:inline-block; margin-top:0.5rem; font-size:0.8rem; color:#AB47BC; text-decoration:none; font-weight:bold;">Ver detalles →</a>
+                        </div>
+                    <?php endforeach; ?>
+                    
+                </div>
+            </div>
+            <?php endif; ?>
+            <!-- FIN FICHAS PRÓXIMOS EVENTOS -->
         </div>
     </div>
 

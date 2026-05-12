@@ -205,8 +205,16 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="success-msg">
                 <h3>✅ Éxito</h3>
                 <p><?= htmlspecialchars($success_message) ?></p>
-                <a href="/pages/dashboard_socio.php" class="btn-inscribir">Ir a mi Dashboard</a>
+                <!-- Botón con redirección forzada vía JS para evitar problemas de sesión -->
+                <button onclick="window.location.href='/pages/dashboard_socio.php';" class="btn-inscribir">Ir a mi Dashboard</button>
             </div>
+            
+            <script>
+                // Redirigir automáticamente después de 2 segundos si el usuario no hace click
+                setTimeout(() => {
+                    window.location.href = '/pages/dashboard_socio.php';
+                }, 3000);
+            </script>
         <?php else: ?>
             <h2>🎾 <?= htmlspecialchars($torneo['nombre']) ?></h2>
             <p><?= htmlspecialchars($torneo['recinto_nombre']) ?></p>
