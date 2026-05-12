@@ -1309,7 +1309,7 @@ async function verInscritos(idReserva) {
             // Determinar Badge de Estado
             let statusBadge = '';
             
-            if (inscrito.estado_inscripcion === 'espera') {
+            if (inscrito.posicion_en_lista > 14) {
                 // Mostrar StandBy
                 statusBadge = `... 🛐 StandBy (#${inscrito.posicion_en_lista}) ...`;
             } else {
