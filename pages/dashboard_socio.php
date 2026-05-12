@@ -885,7 +885,7 @@ $js_vars = [
         if (isset($_SESSION['id_socio'])) {
             $id_socio = $_SESSION['id_socio'];
             $todos_eventos = [];
-            $primer_evento_es_futbol = false; // Variable para controlar los 3 puntitos
+            $primer_evento_es_futbol = false; 
 
             // 1. Obtener Reservas Futuras
             $stmt_reservas = $pdo->prepare("
@@ -901,12 +901,10 @@ $js_vars = [
             $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($reservas as $r) {
-                // Calcular inscritos para cada reserva individualmente
                 $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
                 $stmt_inscritos->execute([$r['id_reserva']]);
                 $inscritos = $stmt_inscritos->fetchColumn();
                 
-                // Verificar si es el primer evento y si es fútbol
                 if (empty($todos_eventos)) {
                     $deporte_lower = strtolower($r['id_deporte']);
                     if ($deporte_lower === 'futbol' || $deporte_lower === 'futbolito') {
@@ -918,7 +916,7 @@ $js_vars = [
                     'tipo' => 'reserva',
                     'id' => $r['id_reserva'],
                     'fecha' => $r['fecha'],
-                    'hora' => substr($r['hora_inicio'], 0, 5),
+                    'hora' => substr($r['hora_inicio'], 0, 5), // Asegurar HH:MM
                     'titulo' => htmlspecialchars($r['nombre_cancha']),
                     'deporte' => strtoupper($r['id_deporte']),
                     'subtitulo' => date('d/m/Y', strtotime($r['fecha'])) . ' • ' . substr($r['hora_fin'], 0, 5) . ' hrs',
@@ -944,17 +942,14 @@ $js_vars = [
             $torneos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($torneos as $t) {
-                // Si ya hay eventos, no importa si es fútbol o no para los 3 puntitos (solo aplica al primero)
-                if (empty($todos_eventos)) {
-                    // Opcional: Si quisieras que los torneos de fútbol también tuvieran el menú, lo pondrías aquí.
-                    // Por ahora, asumimos que solo las reservas de fútbol tienen esta lógica específica de "Paso/IA".
-                }
+                // Extraer solo la hora HH:MM del datetime
+                $hora_torneo = substr(date('H:i:s', strtotime($t['fecha_inicio'])), 0, 5);
 
                 $todos_eventos[] = [
                     'tipo' => 'torneo',
                     'id' => $t['id_torneo'],
-                    'fecha' => $t['fecha_inicio'],
-                    'hora' => date('H:i', strtotime($t['fecha_inicio'])),
+                    'fecha' => date('Y-m-d', strtotime($t['fecha_inicio'])), // Normalizar fecha a Y-m-d
+                    'hora' => $hora_torneo, // Usar la hora extraída limpia
                     'titulo' => htmlspecialchars($t['nombre']),
                     'deporte' => strtoupper($t['deporte']),
                     'subtitulo' => date('d/m/Y', strtotime($t['fecha_inicio'])) . ' • ' . htmlspecialchars($t['recinto_nombre'] ?? 'Recinto'),
@@ -968,9 +963,14 @@ $js_vars = [
 
             // 3. Ordenar TODOS los eventos cronológicamente
             usort($todos_eventos, function($a, $b) {
-                $dateA = new DateTime($a['fecha'] . ' ' . $a['hora']);
-                $dateB = new DateTime($b['fecha'] . ' ' . $b['hora']);
-                return $dateA <=> $dateB;
+                // Construir string de fecha/hora válido: "YYYY-MM-DD HH:MM"
+                $dateStrA = $a['fecha'] . ' ' . $a['hora'];
+                $dateStrB = $b['fecha'] . ' ' . $b['hora'];
+                
+                $timeA = strtotime($dateStrA);
+                $timeB = strtotime($dateStrB);
+                
+                return $timeA <=> $timeB;
             });
         } else {
             $todos_eventos = [];
