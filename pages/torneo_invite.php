@@ -2,13 +2,6 @@
 // pages/torneo_invite.php
 require_once __DIR__ . '/../includes/config.php';
 
-// 1. Validar sesión básica (opcional, pero recomendado para seguridad)
-// Si quieres que cualquiera pueda ver la invitación sin login, comenta esto.
-// if (!isset($_SESSION['id_socio'])) {
-//     header('Location: ../index.php');
-//     exit;
-// }
-
 $id_torneo = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$id_torneo) {
@@ -16,7 +9,7 @@ if (!$id_torneo) {
 }
 
 try {
-    // 2. Obtener datos del torneo
+    // 1. Obtener datos del torneo
     $stmt = $pdo->prepare("
         SELECT t.*, r.nombre as recinto_nombre 
         FROM torneos t
@@ -30,8 +23,12 @@ try {
         die("<h3 style='text-align:center; color:red;'>❌ Torneo no encontrado</h3>");
     }
 
-    // 3. Generar Link de Invitación Único
-    // Usamos el mismo dominio desde donde se accede
+    // ✅ CORRECCIÓN: Validar valor_inscripcion antes de usarlo
+    $valor_inscripcion = isset($torneo['valor_inscripcion']) && $torneo['valor_inscripcion'] !== null 
+                         ? (float)$torneo['valor_inscripcion'] 
+                         : 0.00;
+
+    // 2. Generar Link de Invitación Único
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $host = $_SERVER['HTTP_HOST'];
     $link_invitacion = $protocol . $host . "/pages/torneo_inscripcion.php?id=" . $id_torneo;
@@ -41,7 +38,7 @@ try {
         "🎾 ¡Hola! Te invitamos al torneo *" . htmlspecialchars($torneo['nombre']) . "* en " . htmlspecialchars($torneo['recinto_nombre']) . ".\n\n" .
         "📅 Fecha: " . date('d/m/Y', strtotime($torneo['fecha_inicio'])) . "\n" .
         "🏆 Categoría: " . ($torneo['categoria'] ?? 'Abierto') . "\n" .
-        "💰 Inscripción: $" . number_format($torneo['valor_inscripcion'], 0, ',', '.') . "\n\n" .
+        "💰 Inscripción: $" . number_format($valor_inscripcion, 0, ',', '.') . "\n\n" .
         "¡Inscríbete aquí!: " . $link_invitacion
     );
 
@@ -80,6 +77,7 @@ try {
             position: relative;
         }
         .header {
+            /* ✅ Degradado Morado/Azul Oscuro solicitado */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 2rem 1rem;
@@ -98,20 +96,15 @@ try {
             padding: 2rem 1.5rem;
         }
         
-        /* ✅ CORRECCIÓN QR: Fondo blanco explícito y contenedor */
+        /* ✅ QR Container con fondo blanco explícito */
         #qrcode {
-            background: white; /* Fondo blanco forzoso */
+            background: white; 
             padding: 15px;
             border-radius: 12px;
             display: inline-block;
             margin-bottom: 1.5rem;
             border: 1px solid #eee;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        
-        /* Forzar color negro a las imágenes generadas por la librería */
-        #qrcode img {
-            filter: invert(0); /* Asegura que no esté invertido */
         }
         
         .info-box {
@@ -127,11 +120,13 @@ try {
             color: #333;
         }
         
+        /* ✅ Botón WhatsApp con Degradado y Márgenes Equilibrados */
         .btn-whatsapp {
             display: block;
-            width: 100%;
+            width: 100%; /* Ocupa todo el ancho disponible dentro del contenedor */
             padding: 12px;
-            background: #25D366;
+            /* Degradado igual que el header */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             text-decoration: none;
             border-radius: 10px;
@@ -141,16 +136,19 @@ try {
             border: none;
             cursor: pointer;
             margin-top: 1rem;
+            /* Centrado automático por ser block en un contenedor centrado */
         }
         .btn-whatsapp:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4); /* Sombra morada */
         }
         
         .copy-link-box {
             display: flex;
             gap: 10px;
             margin-top: 1rem;
+            /* Asegura que este bloque tenga el mismo ancho visual que el botón */
+            width: 100%; 
         }
         .copy-input {
             flex: 1;
@@ -162,12 +160,13 @@ try {
         }
         .btn-copy {
             padding: 10px 15px;
-            background: #667eea;
+            background: #667eea; /* Color sólido similar al inicio del degradado */
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+            white-space: nowrap; /* Evita que el texto se rompa */
         }
         .btn-copy:hover {
             background: #5a6fd6;
@@ -186,7 +185,8 @@ try {
             <!-- Info Básica -->
             <div class="info-box">
                 <div><strong>📅 Inicio:</strong> <?= date('d/m/Y', strtotime($torneo['fecha_inicio'])) ?></div>
-                <div><strong>💰 Inscripción:</strong> $<?= number_format($torneo['valor_inscripcion'], 0, ',', '.') ?></div>
+                <!-- ✅ Usamos la variable segura $valor_inscripcion -->
+                <div><strong>💰 Inscripción:</strong> $<?= number_format($valor_inscripcion, 0, ',', '.') ?></div>
                 <?php if ($torneo['num_parejas_max']): ?>
                 <div><strong>👥 Cupos:</strong> <?= $torneo['num_parejas_max'] ?> parejas</div>
                 <?php endif; ?>
@@ -211,7 +211,7 @@ try {
     </div>
 
     <script>
-        // === GENERAR QR CON COLORES CORRECTOS ===
+        // === GENERAR QR CON COLORES MORADOS OSCUROS ===
         document.addEventListener('DOMContentLoaded', function() {
             const qrContainer = document.getElementById("qrcode");
             if (qrContainer) {
@@ -219,8 +219,10 @@ try {
                     text: "<?= $link_invitacion ?>",
                     width: 200,
                     height: 200,
-                    colorDark : "#000000", // ✅ NEGRO Puro para máximo contraste
-                    colorLight : "#ffffff", // ✅ BLANCO Puro para fondo
+                    // ✅ Color Morado Oscuro (similar al final del degradado #764ba2)
+                    colorDark : "#764ba2", 
+                    // Fondo Blanco Puro
+                    colorLight : "#ffffff", 
                     correctLevel : QRCode.CorrectLevel.H
                 });
             }
