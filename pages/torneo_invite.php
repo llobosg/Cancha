@@ -36,7 +36,11 @@ try {
     // 2. Generar Link de Invitación Único
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $host = $_SERVER['HTTP_HOST'];
-    $link_invitacion = $protocol . $host . "/pages/torneo_inscripcion.php?id=" . $id_torneo;
+
+    // Usar el slug si existe, sino generar uno temporal basado en ID
+    $slug_torneo = $torneo['slug'] ?? substr(md5($id_torneo), 0, 8);
+
+    $link_invitacion = $protocol . $host . "/pages/torneo_inscripcion.php?slug=" . $slug_torneo;
     
     // Mensaje para WhatsApp
     $mensaje_whatsapp = urlencode(
@@ -148,6 +152,7 @@ try {
         .btn-whatsapp:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4); /* Sombra morada */
+            margin-top: 1rem;
         }
         
         .copy-link-box {
@@ -226,8 +231,8 @@ try {
         document.addEventListener('DOMContentLoaded', function() {
             const qrContainer = document.getElementById("qrcode");
             if (qrContainer) {
-                new QRCode(qrContainer, {
-                    text: "<?= $link_invitacion ?>",
+               new QRCode(qrContainer, {
+                    text: "<?= $link_invitacion ?>"
                     width: 200,
                     height: 200,
                     // ✅ Color Morado Oscuro (similar al final del degradado #764ba2)
