@@ -191,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="login-header">
             <div class="login-logo">🔐</div>
             <h1 class="login-title">Recuperar Acceso</h1>
-            <p class="login-subtitle">Ingresa tu email, usuario o alias</p>
+            <p class="login-subtitle">Ingresa a tu correo para enlace recuperación</p>
         </div>
         
         <?php if ($error): ?>

@@ -205,14 +205,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .login-card { padding: 1.5rem; }
             .login-title { font-size: 1.2rem; }
         }
+        /* Wrapper para input de contraseña con icono */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .password-wrapper input {
+            width: 100%;
+            padding-right: 45px; /* Espacio para el icono SVG */
+        }
+        .toggle-password-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #718096; /* Color gris suave */
+            transition: color 0.2s;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toggle-password-icon:hover {
+            color: #AB47BC; /* Color morado al hover */
+        }
     </style>
 </head>
 <body>
     <div class="login-card">
         <div class="login-header">
             <div class="login-logo">🔐</div>
-            <h1 class="login-title">Restablecer Contraseña</h1>
-            <p class="login-subtitle">Ingresa tu nueva contraseña segura</p>
+            <h1 class="login-title">Contraseña actualizada</h1>
+            <p class="login-subtitle">tu nueva contraseña está OK!</p>
         </div>
         
         <?php if ($error): ?>
@@ -228,12 +253,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <div class="form-group">
                     <label for="new_password">Nueva Contraseña *</label>
-                    <input type="password" id="new_password" name="new_password" required placeholder="Mínimo 6 caracteres">
+                    <div class="password-wrapper">
+                        <input type="password" id="new_password" name="new_password" required placeholder="Mínimo 6 caracteres">
+                        <!-- Icono Toggle -->
+                        <span class="toggle-password-icon" 
+                            onclick="togglePasswordVisibility('new_password', this)"
+                            data-eye='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
+                            data-hide='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>'>
+                            <!-- Icono inicial: Ojo abierto -->
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </span>
+                    </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="confirm_password">Confirmar Contraseña *</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required placeholder="Repite la contraseña">
+                    <div class="password-wrapper">
+                        <input type="password" id="confirm_password" name="confirm_password" required placeholder="Repite la contraseña">
+                        <!-- Icono Toggle -->
+                        <span class="toggle-password-icon" 
+                            onclick="togglePasswordVisibility('confirm_password', this)"
+                            data-eye='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
+                            data-hide='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>'>
+                            <!-- Icono inicial: Ojo abierto -->
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </span>
+                    </div>
                 </div>
                 
                 <button type="submit" class="btn-login">Actualizar Contraseña</button>
@@ -242,5 +287,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="../index.php" class="back-link">← Cancelar y volver al inicio</a>
         <?php endif; ?>
     </div>
+    <script>
+    // Toggle visibilidad de contraseña con SVGs
+    function togglePasswordVisibility(inputId, iconElement) {
+        const input = document.getElementById(inputId);
+        if (!input || !iconElement) return;
+        
+        // Obtener los SVGs guardados en los atributos data
+        const eyeSvg = iconElement.getAttribute('data-eye');
+        const hideSvg = iconElement.getAttribute('data-hide');
+        
+        if (input.type === 'password') {
+            // Mostrar contraseña → Cambiar a tipo texto y poner icono "Ojo"
+            input.type = 'text';
+            iconElement.innerHTML = eyeSvg;
+        } else {
+            // Ocultar contraseña → Volver a password y poner icono "Tachado"
+            input.type = 'password';
+            iconElement.innerHTML = hideSvg;
+        }
+    }
+    </script>
 </body>
 </html>
