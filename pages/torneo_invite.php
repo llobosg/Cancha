@@ -28,6 +28,11 @@ try {
                          ? (float)$torneo['valor_inscripcion'] 
                          : 0.00;
 
+    // Contar parejas inscritas actualmente
+    $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) as total FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'torneo'");
+    $stmt_inscritos->execute([$id_torneo]);
+    $inscritos_count = $stmt_inscritos->fetchColumn();
+
     // 2. Generar Link de Invitación Único
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $host = $_SERVER['HTTP_HOST'];
@@ -37,8 +42,10 @@ try {
     $mensaje_whatsapp = urlencode(
         "🎾 ¡Hola! Te invitamos al torneo *" . htmlspecialchars($torneo['nombre']) . "* en " . htmlspecialchars($torneo['recinto_nombre']) . ".\n\n" .
         "📅 Fecha: " . date('d/m/Y', strtotime($torneo['fecha_inicio'])) . "\n" .
+        "⏰ Hora: " . date('H:i', strtotime($torneo['hora_inicio'] ?? '00:00:00')) . "\n" .
         "🏆 Categoría: " . ($torneo['categoria'] ?? 'Abierto') . "\n" .
-        "💰 Inscripción: $" . number_format($valor_inscripcion, 0, ',', '.') . "\n\n" .
+        "💰 Inscripción: $" . number_format($valor_inscripcion, 0, ',', '.') . " (por pareja)\n" .
+        "👥 Cupos: " . $inscritos_count . "/" . ($torneo['num_parejas_max'] ?? '∞') . " parejas\n\n" .
         "¡Inscríbete aquí!: " . $link_invitacion
     );
 
@@ -184,11 +191,15 @@ try {
         <div class="content">
             <!-- Info Básica -->
             <div class="info-box">
-                <div><strong>📅 Inicio:</strong> <?= date('d/m/Y', strtotime($torneo['fecha_inicio'])) ?></div>
-                <!-- ✅ Usamos la variable segura $valor_inscripcion -->
-                <div><strong>💰 Inscripción:</strong> $<?= number_format($valor_inscripcion, 0, ',', '.') ?></div>
+                <!-- ✅ Agregada hora de inicio -->
+                <div><strong>📅 Inicio:</strong> <?= date('d/m/Y', strtotime($torneo['fecha_inicio'])) ?> a las <?= date('H:i', strtotime($torneo['hora_inicio'] ?? '00:00:00')) ?></div>
+                
+                <!-- ✅ Monto con "(por pareja)" -->
+                <div><strong>💰 Inscripción:</strong> $<?= number_format($valor_inscripcion, 0, ',', '.') ?> (por pareja)</div>
+                
                 <?php if ($torneo['num_parejas_max']): ?>
-                <div><strong>👥 Cupos:</strong> <?= $torneo['num_parejas_max'] ?> parejas</div>
+                <!-- ✅ Cupos totales vs Inscritos actuales -->
+                <div><strong>👥 Cupos:</strong> <?= $inscritos_count ?>/<?= $torneo['num_parejas_max'] ?> parejas</div>
                 <?php endif; ?>
             </div>
 
