@@ -1,9 +1,8 @@
 <?php
-// api/get_inscritos_reserva.php - VERSIÓN ACTUALIZADA CON LISTA DE ESPERA
+// api/get_inscritos_reserva.php - VERSIÓN FINAL CON ORDEN ASCENDENTE
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
-// Validar sesión (Aceptamos tanto socio como admin si es necesario, ajustado a tu config)
 if (!isset($_SESSION['id_socio']) && !isset($_SESSION['id_recinto'])) {
     echo json_encode(['error' => 'No autorizado']);
     exit;
@@ -17,14 +16,14 @@ if (!$id_reserva) {
 }
 
 try {
-    // 1. Obtener el límite de jugadores esperado para esta reserva
+    // 1. Obtener el límite de jugadores esperado
     $stmt_limit = $pdo->prepare("SELECT jugadores_esperados FROM reservas WHERE id_reserva = ?");
     $stmt_limit->execute([$id_reserva]);
     $reserva_data = $stmt_limit->fetch(PDO::FETCH_ASSOC);
     $limite_cupos = (int)($reserva_data['jugadores_esperados'] ?? 0);
 
-    // 2. Consultar inscritos ORDENADOS POR FECHA DE INSCRIPCIÓN (DESCENDENTE)
-    // Esto pone al último inscrito ARRIBA en la lista
+    // 2. Consultar inscritos ORDENADOS POR FECHA DE INSCRIPCIÓN (ASCENDENTE)
+    // Esto pone al PRIMERO inscrito ARRIBA
     $stmt = $pdo->prepare("
         SELECT
             i.id_inscrito,
@@ -34,7 +33,7 @@ try {
             i.equipo,
             i.posicion_jugador,
             i.lleva_cerveza,
-            i.created_at as fecha_inscripcion, -- Importante para mostrar cuándo se anotó
+            i.created_at as fecha_inscripcion,
             r.fecha,
             r.hora_inicio,
             c.monto AS cuota_monto,
@@ -47,7 +46,7 @@ try {
             AND i.id_socio = c.id_socio 
             AND c.tipo_actividad = 'reserva'
         WHERE r.id_reserva = ?
-        ORDER BY i.created_at DESC -- ✅ CLAVE: Último inscrito primero
+        ORDER BY i.created_at ASC -- ✅ CLAVE: Primer inscrito primero
     ");
     
     $stmt->execute([$id_reserva]);
@@ -57,8 +56,8 @@ try {
     $output = [];
     
     foreach ($inscritos_raw as $index => $row) {
-        // Calcular posición basada en el índice del array (que ya está ordenado DESC)
-        // Índice 0 = Posición 1 (El más reciente)
+        // Calcular posición basada en el índice del array (que ya está ordenado ASC)
+        // Índice 0 = Posición 1 (El primero en inscribirse)
         $posicion_actual = $index + 1;
         
         // Determinar estado según el límite

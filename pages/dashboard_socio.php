@@ -1277,9 +1277,10 @@ async function bajarse(id) {
 
 // === 6. MODAL INSCRITOS ===
 // === FUNCIÓN PARA VER INSCRITOS (DASHBOARD SOCIO - ACTUALIZADA) ===
+// === FUNCIÓN PARA VER INSCRITOS (DASHBOARD SOCIO - VERSIÓN LIMPIA) ===
 async function verInscritos(idReserva) {
-    const modal = document.getElementById('modalInscritos'); // Ajusta el ID si tu modal tiene otro nombre
-    const lista = document.getElementById('listaInscritos'); // Ajusta el ID del contenedor
+    const modal = document.getElementById('modalInscritos');
+    const lista = document.getElementById('listaInscritos');
     
     if (!modal || !lista) return;
     
@@ -1300,51 +1301,43 @@ async function verInscritos(idReserva) {
             return;
         }
         
-        // Obtener límite de jugadores desde la primera reserva (todos tienen el mismo límite)
-        // Nota: La API ahora devuelve 'estado_inscripcion' y 'posicion_en_lista'
-        // Si necesitas saber el límite exacto para mostrar "Lleno", puedes pasarlo desde PHP o calcularlo
-        
         let html = '';
         
-        // Ordenar por posición (el API ya viene ordenado DESC por fecha, pero aseguramos visualmente)
-        // data ya viene ordenado por created_at DESC gracias al cambio en la API
-        
-        data.forEach((inscrito, index) => {
-            const esYo = inscrito.id_socio == window.SOCIO_ID; // Verificar si soy yo
+        // La API devuelve los datos ordenados ASC (primero inscrito = #1)
+        data.forEach((inscrito) => {
+            const esYo = inscrito.id_socio == window.SOCIO_ID;
             
-            // Determinar estilos según estado
-            let bgStyle = '';
+            // Determinar Badge de Estado
             let statusBadge = '';
-            let rowBorder = '';
             
             if (inscrito.estado_inscripcion === 'espera') {
                 // EN LISTA DE ESPERA
-                bgStyle = 'background-color: #FFF8E1; border-left: 4px solid #FFC107;';
                 statusBadge = `
                     <span style="
-                        background: #FFC107; 
-                        color: #5D4037; 
+                        background: #FFF3E0; 
+                        color: #E65100; 
                         font-size: 0.7rem; 
                         padding: 2px 6px; 
-                        border-radius: 10px; 
+                        border-radius: 4px; 
                         font-weight: bold;
                         display: inline-block;
-                        margin-top: 4px;">
+                        margin-top: 4px;
+                        border: 1px solid #FFCC80;">
                         ⏳ En Espera (#${inscrito.posicion_en_lista})
                     </span>`;
             } else {
                 // CONFIRMADO
-                bgStyle = 'background-color: #F1F8E9; border-left: 4px solid #4CAF50;';
                 statusBadge = `
                     <span style="
-                        background: #4CAF50; 
-                        color: white; 
+                        background: #E8F5E9; 
+                        color: #2E7D32; 
                         font-size: 0.7rem; 
                         padding: 2px 6px; 
-                        border-radius: 10px; 
+                        border-radius: 4px; 
                         font-weight: bold;
                         display: inline-block;
-                        margin-top: 4px;">
+                        margin-top: 4px;
+                        border: 1px solid #C8E6C9;">
                         ✅ Confirmado (#${inscrito.posicion_en_lista})
                     </span>`;
             }
@@ -1352,25 +1345,27 @@ async function verInscritos(idReserva) {
             // Formatear fecha de inscripción
             const fechaInsc = inscrito.fecha_inscripcion || '-';
 
+            // Estilo de la fila: Fondo blanco limpio, borde sutil
+            // ❌ ELIMINADO: Muestra de equipo ("Blanco"/"Rojo") y posición
             html += `
             <div style="
                 display: flex; 
                 justify-content: space-between; 
                 align-items: center; 
-                padding: 10px; 
+                padding: 12px; 
                 margin-bottom: 8px; 
                 border-radius: 8px; 
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                ${bgStyle}
+                background: white; /* ✅ Fondo blanco limpio */
+                border: 1px solid #E2E8F0; /* ✅ Borde sutil gris */
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             ">
                 <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 600; color: #333; font-size: 0.95rem;">
+                    <div style="font-weight: 600; color: #2D3748; font-size: 0.95rem;">
                         ${esYo ? '👤 <strong>Tú</strong>' : inscrito.nombre}
                     </div>
-                    <div style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                    <div style="font-size: 0.75rem; color: #718096; margin-top: 2px;">
                         📅 Inscrito: ${fechaInsc}
-                        ${inscrito.equipo !== '-' ? ` • 🎽 ${inscrito.equipo}` : ''}
-                        ${inscrito.lleva_cerveza ? ' • 🍺 Cerveza' : ''}
+                        <!-- Se eliminó la línea que mostraba: Equipo, Posición, Cerveza -->
                     </div>
                 </div>
                 
