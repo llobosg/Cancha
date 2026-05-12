@@ -232,7 +232,7 @@ try {
             const qrContainer = document.getElementById("qrcode");
             if (qrContainer) {
                new QRCode(qrContainer, {
-                    text: "<?= $link_invitacion ?>"
+                    text: "<?= $link_invitacion ?>",
                     width: 200,
                     height: 200,
                     // ✅ Color Morado Oscuro (similar al final del degradado #764ba2)
