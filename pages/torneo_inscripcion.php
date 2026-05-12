@@ -205,7 +205,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="success-msg">
                 <h3>✅ Éxito</h3>
                 <p><?= htmlspecialchars($success_message) ?></p>
-                <a href="../dashboard_socio.php" class="btn-inscribir">Ir a mi Dashboard</a>
+                <a href="/pages/dashboard_socio.php" class="btn-inscribir">Ir a mi Dashboard</a>
             </div>
         <?php else: ?>
             <h2>🎾 <?= htmlspecialchars($torneo['nombre']) ?></h2>
