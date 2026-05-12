@@ -1,17 +1,15 @@
 <?php
-// api/get_inscritos_reserva.php - VERSIÓN CORREGIDA (usa tabla 'inscritos')
+// api/get_inscritos_reserva.php - VERSIÓN ACTUALIZADA CON LISTA DE ESPERA
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 
-// Validar sesión
-if (!isset($_SESSION['id_socio'])) {
+// Validar sesión (Aceptamos tanto socio como admin si es necesario, ajustado a tu config)
+if (!isset($_SESSION['id_socio']) && !isset($_SESSION['id_recinto'])) {
     echo json_encode(['error' => 'No autorizado']);
     exit;
 }
 
 $id_reserva = (int)($_GET['id_reserva'] ?? 0);
-$id_socio = $_SESSION['id_socio'];
-$club_id = $_SESSION['club_id'] ?? null;
 
 if (!$id_reserva) {
     echo json_encode(['error' => 'ID de reserva requerido']);
@@ -19,7 +17,14 @@ if (!$id_reserva) {
 }
 
 try {
-    // === CONSULTA CORREGIDA: Usa tabla 'inscritos' (NO 'reservas_participantes') ===
+    // 1. Obtener el límite de jugadores esperado para esta reserva
+    $stmt_limit = $pdo->prepare("SELECT jugadores_esperados FROM reservas WHERE id_reserva = ?");
+    $stmt_limit->execute([$id_reserva]);
+    $reserva_data = $stmt_limit->fetch(PDO::FETCH_ASSOC);
+    $limite_cupos = (int)($reserva_data['jugadores_esperados'] ?? 0);
+
+    // 2. Consultar inscritos ORDENADOS POR FECHA DE INSCRIPCIÓN (DESCENDENTE)
+    // Esto pone al último inscrito ARRIBA en la lista
     $stmt = $pdo->prepare("
         SELECT
             i.id_inscrito,
@@ -29,6 +34,7 @@ try {
             i.equipo,
             i.posicion_jugador,
             i.lleva_cerveza,
+            i.created_at as fecha_inscripcion, -- Importante para mostrar cuándo se anotó
             r.fecha,
             r.hora_inicio,
             c.monto AS cuota_monto,
@@ -41,15 +47,26 @@ try {
             AND i.id_socio = c.id_socio 
             AND c.tipo_actividad = 'reserva'
         WHERE r.id_reserva = ?
-        ORDER BY s.alias ASC
+        ORDER BY i.created_at DESC -- ✅ CLAVE: Último inscrito primero
     ");
     
     $stmt->execute([$id_reserva]);
-    $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $inscritos_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Normalizar salida para el frontend
+    // 3. Procesar datos para determinar Estado (Confirmado vs Espera)
     $output = [];
-    foreach ($inscritos as $row) {
+    
+    foreach ($inscritos_raw as $index => $row) {
+        // Calcular posición basada en el índice del array (que ya está ordenado DESC)
+        // Índice 0 = Posición 1 (El más reciente)
+        $posicion_actual = $index + 1;
+        
+        // Determinar estado según el límite
+        $estado = 'confirmado';
+        if ($limite_cupos > 0 && $posicion_actual > $limite_cupos) {
+            $estado = 'espera';
+        }
+
         $output[] = [
             'id_inscrito' => $row['id_inscrito'],
             'id_socio' => $row['id_socio'],
@@ -59,7 +76,12 @@ try {
             'lleva_cerveza' => (bool)$row['lleva_cerveza'],
             'cuota_monto' => (float)($row['cuota_monto'] ?? 0),
             'estado_cuota' => $row['estado_cuota'] ?? 'pendiente',
-            'comentario' => $row['comentario'] ?? ''
+            'comentario' => $row['comentario'] ?? '',
+            
+            // ✅ NUEVOS CAMPOS PARA EL FRONTEND
+            'fecha_inscripcion' => date('d/m/Y H:i', strtotime($row['fecha_inscripcion'])),
+            'posicion_en_lista' => $posicion_actual,
+            'estado_inscripcion' => $estado // 'confirmado' o 'espera'
         ];
     }
     

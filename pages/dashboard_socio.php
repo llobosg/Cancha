@@ -1276,9 +1276,10 @@ async function bajarse(id) {
 }
 
 // === 6. MODAL INSCRITOS ===
+// === FUNCIÓN PARA VER INSCRITOS (DASHBOARD SOCIO - ACTUALIZADA) ===
 async function verInscritos(idReserva) {
-    const modal = document.getElementById('modalInscritos');
-    const lista = document.getElementById('listaInscritos');
+    const modal = document.getElementById('modalInscritos'); // Ajusta el ID si tu modal tiene otro nombre
+    const lista = document.getElementById('listaInscritos'); // Ajusta el ID del contenedor
     
     if (!modal || !lista) return;
     
@@ -1289,43 +1290,98 @@ async function verInscritos(idReserva) {
         const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
         const data = await res.json();
         
-        // Manejar error de API
         if (data.error) {
             lista.innerHTML = `<p style="text-align:center; color:#C62828;">❌ ${data.error}</p>`;
             return;
         }
         
-        // Manejar array vacío
         if (!Array.isArray(data) || data.length === 0) {
             lista.innerHTML = '<p style="text-align:center; color:#888;">Sin inscritos aún</p>';
             return;
         }
         
-        // Renderizar lista
-        const miId = window.SOCIO_ID;
-        const esResponsable = window.ES_RESPONSABLE;
+        // Obtener límite de jugadores desde la primera reserva (todos tienen el mismo límite)
+        // Nota: La API ahora devuelve 'estado_inscripcion' y 'posicion_en_lista'
+        // Si necesitas saber el límite exacto para mostrar "Lleno", puedes pasarlo desde PHP o calcularlo
         
         let html = '';
-        data.forEach(p => {
-            const esYo = p.id_socio === miId;
-            const puedeBajar = (esYo || esResponsable);
+        
+        // Ordenar por posición (el API ya viene ordenado DESC por fecha, pero aseguramos visualmente)
+        // data ya viene ordenado por created_at DESC gracias al cambio en la API
+        
+        data.forEach((inscrito, index) => {
+            const esYo = inscrito.id_socio == window.SOCIO_ID; // Verificar si soy yo
             
+            // Determinar estilos según estado
+            let bgStyle = '';
+            let statusBadge = '';
+            let rowBorder = '';
+            
+            if (inscrito.estado_inscripcion === 'espera') {
+                // EN LISTA DE ESPERA
+                bgStyle = 'background-color: #FFF8E1; border-left: 4px solid #FFC107;';
+                statusBadge = `
+                    <span style="
+                        background: #FFC107; 
+                        color: #5D4037; 
+                        font-size: 0.7rem; 
+                        padding: 2px 6px; 
+                        border-radius: 10px; 
+                        font-weight: bold;
+                        display: inline-block;
+                        margin-top: 4px;">
+                        ⏳ En Espera (#${inscrito.posicion_en_lista})
+                    </span>`;
+            } else {
+                // CONFIRMADO
+                bgStyle = 'background-color: #F1F8E9; border-left: 4px solid #4CAF50;';
+                statusBadge = `
+                    <span style="
+                        background: #4CAF50; 
+                        color: white; 
+                        font-size: 0.7rem; 
+                        padding: 2px 6px; 
+                        border-radius: 10px; 
+                        font-weight: bold;
+                        display: inline-block;
+                        margin-top: 4px;">
+                        ✅ Confirmado (#${inscrito.posicion_en_lista})
+                    </span>`;
+            }
+
+            // Formatear fecha de inscripción
+            const fechaInsc = inscrito.fecha_inscripcion || '-';
+
             html += `
-            <div style="padding:0.8rem 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
-                <div style="flex:1; min-width:0;">
-                    <div style="font-weight:500; color:#2D3748;">
-                        ${esYo ? '👤 <strong>Tú</strong>' : htmlspecialchars_js(p.nombre)}
+            <div style="
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                padding: 10px; 
+                margin-bottom: 8px; 
+                border-radius: 8px; 
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                ${bgStyle}
+            ">
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 600; color: #333; font-size: 0.95rem;">
+                        ${esYo ? '👤 <strong>Tú</strong>' : inscrito.nombre}
                     </div>
-                    <div style="font-size:0.75rem; color: #666; margin-top:0.2rem;">
-                        ${p.equipo !== '-' ? `🎽 ${p.equipo}` : ''}
-                        ${p.posicion !== '-' ? ` • 📍 ${p.posicion}` : ''}
-                        ${p.lleva_cerveza ? ' • 🍺 Cerveza' : ''}
+                    <div style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                        📅 Inscrito: ${fechaInsc}
+                        ${inscrito.equipo !== '-' ? ` • 🎽 ${inscrito.equipo}` : ''}
+                        ${inscrito.lleva_cerveza ? ' • 🍺 Cerveza' : ''}
                     </div>
                 </div>
-                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.3rem;">                    
-                    ${puedeBajar ? `
-                    <button onclick="bajarInscrito(${p.id_inscrito}, ${idReserva}, '${p.nombre.replace(/'/g, "\\'")}', ${esYo ? 1 : 0})" 
-                            style="background:none; border:none; color:#C62828; font-size:0.75rem; font-weight:600; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px;">
+                
+                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
+                    ${statusBadge}
+                    
+                    <!-- Botón de baja solo si soy yo o soy responsable -->
+                    ${esYo || window.ES_RESPONSABLE ? `
+                    <button onclick="bajarInscrito(${inscrito.id_inscrito}, ${idReserva}, '${inscrito.nombre.replace(/'/g, "\\'")}', ${esYo ? 1 : 0})" 
+                            style="background:none; border:none; color:#C62828; font-size:0.75rem; font-weight:600; cursor:pointer; padding:0.2rem 0.4rem; border-radius:4px; margin-top:4px;"
+                            onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='none'">
                         ${esYo ? 'Bajarme' : 'Bajar'}
                     </button>` : ''}
                 </div>
