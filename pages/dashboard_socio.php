@@ -1310,35 +1310,11 @@ async function verInscritos(idReserva) {
             let statusBadge = '';
             
             if (inscrito.estado_inscripcion === 'espera') {
-                // 🛐 STANDBY (Fuera de cupo)
-                statusBadge = `
-                    <span style="
-                        background: #E3F2FD; /* Azul muy suave */
-                        color: #1565C0;      /* Azul oscuro */
-                        font-size: 0.7rem; 
-                        padding: 2px 6px; 
-                        border-radius: 4px; 
-                        font-weight: bold;
-                        display: inline-block;
-                        margin-top: 4px;
-                        border: 1px solid #90CAF9;">
-                        🛐 StandBy (#${inscrito.posicion_en_lista})
-                    </span>`;
+                // Mostrar StandBy
+                statusBadge = `... 🛐 StandBy (#${inscrito.posicion_en_lista}) ...`;
             } else {
-                // ✅ CONFIRMADO (Dentro del cupo)
-                statusBadge = `
-                    <span style="
-                        background: #E8F5E9; /* Verde muy suave */
-                        color: #2E7D32;      /* Verde oscuro */
-                        font-size: 0.7rem; 
-                        padding: 2px 6px; 
-                        border-radius: 4px; 
-                        font-weight: bold;
-                        display: inline-block;
-                        margin-top: 4px;
-                        border: 1px solid #C8E6C9;">
-                        ✅ Confirmado (#${inscrito.posicion_en_lista})
-                    </span>`;
+                // Mostrar Confirmado
+                statusBadge = `... ✅ Confirmado (#${inscrito.posicion_en_lista}) ...`;
             }
 
             // Formatear fecha de inscripción

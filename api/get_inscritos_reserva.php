@@ -65,6 +65,16 @@ try {
         if ($limite_cupos > 0 && $posicion_actual > $limite_cupos) {
             $estado = 'espera';
         }
+        $limite_cupos_int = (int)$limite_cupos;
+
+        if ($limite_cupos_int > 0 && $posicion_actual > $limite_cupos_int) {
+            $estado = 'espera';
+            } else if ($limite_cupos_int === 0 && $posicion_actual > 14) {
+                // ⚠️ FALLBACK: Si no hay límite definido pero hay más de 14, 
+                // opcionalmente podrías marcarlos como espera también. 
+                // Descomenta la siguiente línea si quieres aplicar un límite por defecto de 14 cuando el campo esté vacío:
+                // $estado = 'espera'; 
+        }
 
         $output[] = [
             'id_inscrito' => $row['id_inscrito'],
@@ -76,11 +86,11 @@ try {
             'cuota_monto' => (float)($row['cuota_monto'] ?? 0),
             'estado_cuota' => $row['estado_cuota'] ?? 'pendiente',
             'comentario' => $row['comentario'] ?? '',
+            'estado_inscripcion' => $estado
             
             // ✅ NUEVOS CAMPOS PARA EL FRONTEND
             'fecha_inscripcion' => date('d/m/Y H:i', strtotime($row['fecha_inscripcion'])),
             'posicion_en_lista' => $posicion_actual,
-            'estado_inscripcion' => $estado // 'confirmado' o 'espera'
         ];
     }
     
