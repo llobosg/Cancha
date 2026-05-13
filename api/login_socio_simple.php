@@ -19,7 +19,7 @@ try {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password_hash'])) {
-        // Iniciar sesión
+        // Iniciar sesión solo si no está activa
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }

@@ -1,10 +1,9 @@
 <?php
 // pages/dashboard_socio.php
 
-// ✅ CORRECCIÓN: Verificar si la sesión ya está activa antes de intentar cambiar nombre
+// ✅ CORRECCIÓN CRÍTICA: No usar session_name() ni session_start() aquí si config.php ya lo hace.
+// Solo verificamos si la sesión está activa para evitar warnings.
 if (session_status() === PHP_SESSION_NONE) {
-    // Solo establecer nombre si la sesión no ha comenzado
-    // session_name('socio_session'); // Descomenta solo si es crítico tener nombres distintos
     session_start();
 }
 
