@@ -130,27 +130,11 @@ if ($torneo) {
         #qrcode { margin: 1rem auto; padding: 10px; background: white; border: 1px solid #eee; display: inline-block; }
         .btn-copy { display: block; width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 1rem; }
         .btn-copy:hover { background: #5a6fd6; }
-        /* Botón Cerrar */
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #999;
-            cursor: pointer;
-            z-index: 10;
-            line-height: 1;
-        }
-        .close-btn:hover { color: #333; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <!-- ✅ BOTÓN X PARA SALIR -->
-        <button class="close-btn" onclick="window.history.back()" title="Volver">&times;</button>
         <?php if ($error_message): ?>
             <div class="error-msg"><h3>⚠️ <?= $error_message ?></h3></div>
         <?php elseif ($success_message): ?>
@@ -172,7 +156,7 @@ if ($torneo) {
             <?php if ($modo_invitacion): ?>
                 <!-- === VISTA: INVITADO (SEGUNDO JUGADOR) === -->
                 <p style="font-size:1rem; color:#333; font-weight:500; margin-bottom:1.5rem;">
-                    Has sido invitado por <strong><?= htmlspecialchars($invitante_nombre) ?></strong> para completar pareja al torneo.
+                    Has sido invitado por <strong><?= htmlspecialchars($invitante_nombre) ?></strong> a completar tu pareja.
                 </p>
                 
                 <?php if (isset($_SESSION['id_socio'])): ?>
@@ -294,46 +278,24 @@ if ($torneo) {
             btn.disabled = true;
             btn.textContent = 'Verificando...';
 
-            console.log("🔍 [LOGIN] Iniciando login socio...");
-            console.log("🔍 [LOGIN] Email:", form.email.value);
-            
             try {
-                // Verificar URL base
-                const apiUrl = '../api/login_socio_simple.php';
-                console.log("🔍 [LOGIN] Llamando a:", apiUrl);
-
-                const res = await fetch(apiUrl, {
+                const res = await fetch('../api/login_socio_simple.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email: form.email.value, password: form.password.value })
                 });
-
-                console.log("🔍 [LOGIN] Estado HTTP:", res.status);
-                
-                // Intentar leer el texto crudo primero para debug
-                const responseText = await res.text();
-                console.log("🔍 [LOGIN] Respuesta cruda (primeros 200 chars):", responseText.substring(0, 200));
-
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (jsonErr) {
-                    throw new Error("La respuesta no es JSON válido. Probablemente un error 404 o 500.");
-                }
+                const data = await res.json();
 
                 if (data.success) {
-                    console.log("✅ [LOGIN] Login exitoso");
                     cerrarModalLogin();
                     aceptarInvitacionSocio(); // Proceder a aceptar invitación
                 } else {
-                    console.warn("⚠️ [LOGIN] Login falló:", data.message);
                     alert('❌ ' + data.message);
                     btn.disabled = false;
                     btn.textContent = 'Ingresar';
                 }
             } catch (err) {
-                console.error("❌ [LOGIN] Error de conexión:", err);
-                alert('❌ Error de conexión: ' + err.message);
+                alert('❌ Error de conexión');
                 btn.disabled = false;
                 btn.textContent = 'Ingresar';
             }
