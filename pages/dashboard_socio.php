@@ -1157,24 +1157,24 @@ $js_vars = [
                                     </div>
                                 </div>
 
-                                <!-- Botones de Acción Dinámicos según inscripción -->
+                                                                <!-- Botones de Acción Dinámicos según inscripción -->
                                 <div style="display:flex; flex-direction:column; gap:0.5rem;">
                                     
                                     <?php if ($esta_inscrito_en_esto): ?>
-                                        <!-- SI ESTOY INSCRITO: Mostrar Bajarse -->
+                                        <!-- === CASO: USUARIO INSCRITO === -->
+                                        
+                                        <!-- Botón Bajarme -->
                                         <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828; transition:all 0.2s;" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='#FFF'">
                                             ❌ Bajarme del partido
                                         </button>
                                         
-                                        <!-- Opciones adicionales si soy responsable -->
-                                        <?php if ($es_responsable): ?>
-                                            <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                                                👁️ Ver Inscritos / Gestionar
-                                            </button>
-                                        <?php endif; ?>
+                                        <!-- Botón Ver Inscritos (Siempre visible si estoy inscrito) -->
+                                        <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                            👁️ Ver Inscritos
+                                        </button>
 
                                     <?php else: ?>
-                                        <!-- SI NO ESTOY INSCRITO: Mostrar Anotarse y Paso -->
+                                        <!-- === CASO: USUARIO NO INSCRITO === -->
                                         
                                         <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
                                             <!-- Cupos Llenos -->
