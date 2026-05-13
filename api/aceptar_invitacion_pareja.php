@@ -3,40 +3,38 @@
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
 
-session_start();
+$data = json_decode(file_get_contents('php://input'), true);
+$code_pareja = $data['codigo_pareja'] ?? '';
 
+// Validar sesión
 if (!isset($_SESSION['id_socio'])) {
-    echo json_encode(['success' => false, 'message' => 'No autorizado. Debes estar logueado.']);
+    echo json_encode(['success' => false, 'message' => 'No autorizado']);
     exit;
 }
 
-$data = json_decode(file_get_contents('php://input'), true);
-$code_pareja = $data['codigo_pareja'] ?? '';
-$id_socio_2 = $_SESSION['id_socio'];
+$id_socio_actual = $_SESSION['id_socio'];
 
 try {
     if (!$code_pareja) {
         throw new Exception('Código de invitación requerido');
     }
 
-    // 1. Buscar la pareja existente con ese código
-    $stmt_pareja = $pdo->prepare("
-        SELECT pt.id_pareja, pt.id_torneo, pt.id_socio_1, t.nombre as torneo_nombre
-        FROM parejas_torneo pt
-        JOIN torneos t ON pt.id_torneo = t.id_torneo
-        WHERE pt.codigo_pareja = ?
+    // 1. Buscar la pareja
+    $stmt = $pdo->prepare("
+        SELECT pt.id_pareja, pt.id_torneo, pt.id_socio_1 
+        FROM parejas_torneo pt 
+        WHERE pt.codigo_pareja = ? AND pt.id_socio_2 IS NULL
     ");
-    $stmt_pareja->execute([$code_pareja]);
-    $pareja = $stmt_pareja->fetch(PDO::FETCH_ASSOC);
+    $stmt->execute([$code_pareja]);
+    $pareja = $stmt->fetch();
 
     if (!$pareja) {
         throw new Exception('Invitación inválida, expirada o ya completada');
     }
 
-    // 2. Verificar si YA es parte de esta pareja (ej: mismo dispositivo)
-    if ($pareja['id_socio_2'] == $id_socio_2) {
-         echo json_encode(['success' => true, 'message' => 'Ya eres parte de esta pareja.']);
-         exit;
+    // 2. Verificar que no sea el mismo usuario aceptando su propia invitación (opcional, pero buena práctica)
+    if ($pareja['id_socio_1'] == $id_socio_actual) {
+        throw new Exception('No puedes unirte a tu propia pareja como segundo jugador.');
     }
 
     // 3. Verificar si está inscrito en OTRO torneo activo (Regla de negocio opcional)
@@ -48,12 +46,12 @@ try {
     // Aquí asumimos que SÍ puede estar en otros torneos, pero no duplicarse en el mismo.
     
     // 4. Actualizar la pareja agregando el segundo socio
-    $stmt_update = $pdo->prepare("
+       $stmt_update = $pdo->prepare("
         UPDATE parejas_torneo 
-        SET id_socio_2 = ?, estado = 'completa'
+        SET id_socio_2 = ?, estado = 'completa' 
         WHERE id_pareja = ?
     ");
-    $stmt_update->execute([$id_socio_2, $pareja['id_pareja']]);
+    $stmt_update->execute([$id_socio_actual, $pareja['id_pareja']]);
 
     // 5. Enviar correo de confirmación
     require_once __DIR__ . '/../includes/reserva_mailer.php';

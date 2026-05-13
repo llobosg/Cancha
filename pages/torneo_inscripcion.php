@@ -230,7 +230,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="info-torneo">
                 <strong>📅 Fecha:</strong> <?= date('d/m/Y H:i', strtotime($torneo['fecha_inicio'])) ?><br>
                 <strong>💰 Valor:</strong> $<?= number_format($torneo['valor'] ?? 0, 0, ',', '.') ?> (por pareja)<br>
-                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 10) - $inscritos) ?>
+                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 10) - ($inscritos ?? 0)) ?>
             </div>
 
             <?php if ($error_message): ?>
