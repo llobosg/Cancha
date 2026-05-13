@@ -1,16 +1,15 @@
 <?php
 // pages/dashboard_socio.php
 
-// ✅ INICIALIZACIÓN SEGURA DE SESIÓN
-// Solo iniciamos si NO está activa. Esto evita el warning "Session name cannot be changed".
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// ✅ CORRECCIÓN CRÍTICA: 
+// NO iniciar sesión aquí. config.php ya lo hace con session_name('CANCHASPORT_SESSION').
+// Si iniciamos sesión aquí antes de cargar config.php, causamos el conflicto.
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Verificar autenticación
+// Verificar autenticación DESPUÉS de cargar config (donde la sesión ya está activa)
 if (!isset($_SESSION['id_socio'])) {
+    // Usar exit; después de header para asegurar que el script termine
     header('Location: ../index.php');
     exit;
 }

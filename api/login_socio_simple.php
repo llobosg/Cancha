@@ -2,13 +2,7 @@
 // api/login_socio_simple.php
 header('Content-Type: application/json');
 
-// ✅ INICIALIZAR SESIÓN ANTES DE REQUERIR CONFIG
-// Esto asegura que la sesión esté lista antes de cargar config.php
-// que podría intentar iniciarla otra vez o usar variables de sesión.
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
+// Cargar config primero para tener acceso a $pdo y asegurar sesión
 require_once __DIR__ . '/../includes/config.php';
 
 // Obtener datos del cuerpo JSON
@@ -27,7 +21,7 @@ try {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password_hash'])) {
-        // Establecer variables de sesión
+        // Establecer variables de sesión (la sesión ya está activa gracias a config.php)
         $_SESSION['id_socio'] = $user['id_socio'];
         $_SESSION['nombre_socio'] = $user['nombre'];
         $_SESSION['rol'] = $user['rol'] ?? 'Jugador';
