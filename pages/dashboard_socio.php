@@ -240,23 +240,30 @@ try {
 // === 8. DEUDAS PENDIENTES ===
 $deuda_mas_vigente = null;
 $cuotas_pendientes = 0;
+
+// Solo buscar deudas si estamos en modo club (ya que las deudas individuales se manejan diferente o no aplican aquí)
 if (!$modo_individual && $club_id) {
     try {
-        // ✅ CORRECCIÓN: Eliminar columna 'detalle_origen' que no existe
+        // ✅ CORRECCIÓN: Eliminar id_club de la cláusula WHERE si la tabla cuotas no lo tiene.
+        // Asumimos que las cuotas están vinculadas solo por id_socio y estado.
+        // Si necesitas filtrar por club, asegúrate de que la tabla cuotas tenga esa columna.
+        
         $stmt_deuda = $pdo->prepare("
             SELECT id_cuota, monto, fecha_vencimiento, tipo_actividad
             FROM cuotas 
-            WHERE id_socio = ? AND estado = 'pendiente' AND id_club = ?
+            WHERE id_socio = ? AND estado = 'pendiente'
             ORDER BY fecha_vencimiento ASC LIMIT 1
         ");
-        $stmt_deuda->execute([$id_socio, $club_id]);
+        $stmt_deuda->execute([$id_socio]);
         $deuda_mas_vigente = $stmt_deuda->fetch();
         
-        $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND estado = 'pendiente' AND id_club = ?");
-        $stmt_count->execute([$id_socio, $club_id]);
+        $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
+        $stmt_count->execute([$id_socio]);
         $cuotas_pendientes = (int)$stmt_count->fetchColumn();
+        
     } catch (PDOException $e) {
-        error_log("Error deudas: " . $e->getMessage());
+        // Loguear pero no romper la página
+        error_log("Error deudas Socio {$id_socio}: " . $e->getMessage());
     }
 }
 
@@ -1087,6 +1094,10 @@ $js_vars = [
             <div style="display:flex; flex-direction:column; gap:1rem;">
                 
                 <?php 
+                error_log("[DEBUG FICHAS] Total eventos encontrados: " . count($todos_eventos));
+                if (!empty($todos_eventos)) {
+                    error_log("[DEBUG FICHAS] Primer evento: " . json_encode($todos_eventos[0]));
+                }
                 $index = 0; // Contador para identificar la primera ficha
                 foreach ($todos_eventos as $evento): 
                     
