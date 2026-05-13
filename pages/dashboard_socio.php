@@ -132,7 +132,11 @@ if (!$modo_individual && $club_id) {
     $_SESSION['current_club'] = $club_slug;
 }
 
-error_log("[DEBUG] Socio ID: {$id_socio} | Club ID Session: {$_SESSION['club_id'] ?? 'N/A'} | Parametro URL id_club: {$_GET['id_club'] ?? 'N/A'} | Modo Individual: " . ($modo_individual ? 'SI' : 'NO'));
+// Extraer valores seguros para evitar errores de sintaxis en interpolación
+$club_id_session = $_SESSION['club_id'] ?? 'N/A';
+$url_club_param = $_GET['id_club'] ?? 'N/A';
+
+error_log("[DEBUG] Socio ID: {$id_socio} | Club ID Session: {$club_id_session} | Parametro URL id_club: {$url_club_param} | Modo Individual: " . ($modo_individual ? 'SI' : 'NO'));
 error_log("[DEBUG] Club ID calculado: {$club_id}");
 // === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA PARA CLUBES E INDIVIDUAL ===
 $proximo_evento = null;
