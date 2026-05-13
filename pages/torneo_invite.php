@@ -6,31 +6,52 @@ $id_torneo = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $code_pareja = $_GET['code'] ?? '';
 
 $torneo = null;
+$invitante_nombre = "";
 $error_message = "";
+$success_message = "";
 
-if ($id_torneo > 0) {
-    // CASO 1: QR General (Admin/Socio busca inscribirse o ver info)
+if (!empty($code_pareja)) {
     try {
-        $stmt = $pdo->prepare("SELECT t.*, r.nombre as recinto_nombre FROM torneos t JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto WHERE t.id_torneo = ?");
-        $stmt->execute([$id_torneo]);
-        $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$torneo) die("<h3 style='text-align:center; color:red;'>❌ Torneo no encontrado</h3>");
-    } catch (Exception $e) { die("<h3 style='text-align:center; color:red;'>❌ Error interno</h3>"); }
-
-} else if (!empty($code_pareja)) {
-    // CASO 2: Invitación Específica de Pareja (?code=...)
-    try {
-        $stmt_pareja = $pdo->prepare("SELECT pt.id_torneo, pt.codigo_pareja, t.slug, t.estado FROM parejas_torneo pt JOIN torneos t ON pt.id_torneo = t.id_torneo WHERE pt.codigo_pareja = ?");
+        // 1. Buscar la pareja y el torneo
+        $stmt_pareja = $pdo->prepare("
+            SELECT pt.id_torneo, pt.codigo_pareja, pt.id_socio_1, t.slug, t.estado, t.nombre as torneo_nombre
+            FROM parejas_torneo pt
+            JOIN torneos t ON pt.id_torneo = t.id_torneo
+            WHERE pt.codigo_pareja = ?
+        ");
         $stmt_pareja->execute([$code_pareja]);
         $pareja_data = $stmt_pareja->fetch(PDO::FETCH_ASSOC);
 
-        if (!$pareja_data) die("<h3 style='text-align:center; color:red;'>❌ Código de invitación inválido o expirado</h3>");
-        
-        $stmt_torneo = $pdo->prepare("SELECT t.*, r.nombre as recinto_nombre FROM torneos t JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto WHERE t.id_torneo = ?");
+        if (!$pareja_data) {
+            die("<h3 style='text-align:center; color:red;'>❌ Código de invitación inválido</h3>");
+        }
+
+        // 2. Obtener datos completos del torneo
+        $stmt_torneo = $pdo->prepare("
+            SELECT t.*, r.nombre as recinto_nombre 
+            FROM torneos t
+            JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto
+            WHERE t.id_torneo = ?
+        ");
         $stmt_torneo->execute([$pareja_data['id_torneo']]);
         $torneo = $stmt_torneo->fetch(PDO::FETCH_ASSOC);
-        $_SESSION['invite_code'] = $code_pareja; // Guardar code para usarlo al registrarse
-    } catch (Exception $e) { die("<h3 style='text-align:center; color:red;'>❌ Error interno</h3>"); }
+        
+        // 3. Obtener nombre del invitante (Jugador Principal)
+        if ($pareja_data['id_socio_1']) {
+            $stmt_invitante = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
+            $stmt_invitante->execute([$pareja_data['id_socio_1']]);
+            $invitante_nombre = $stmt_invitante->fetchColumn() ?: "un jugador";
+        } else {
+            $invitante_nombre = "un jugador";
+        }
+
+        $_SESSION['invite_code'] = $code_pareja;
+        $_SESSION['invite_torneo_id'] = $pareja_data['id_torneo'];
+
+    } catch (Exception $e) {
+        error_log("Error torneo_invite CODE: " . $e->getMessage());
+        die("<h3 style='text-align:center; color:red;'>❌ Error interno</h3>");
+    }
 } else {
     die("<h3 style='text-align:center; color:red;'>❌ Enlace inválido</h3>");
 }
@@ -40,16 +61,6 @@ $fecha_inicio_obj = new DateTime($torneo['fecha_inicio']);
 $fecha_display = $fecha_inicio_obj->format('d/m/Y');
 $hora_display = $fecha_inicio_obj->format('H:i');
 $valor_inscripcion = isset($torneo['valor']) && $torneo['valor'] !== null ? (float)$torneo['valor'] : 0.00;
-
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-$host = $_SERVER['HTTP_HOST'];
-$slug_torneo = $torneo['slug'] ?? substr(md5($torneo['id_torneo']), 0, 8);
-$link_invitacion = $protocol . $host . "/pages/torneo_inscripcion.php?slug=" . $slug_torneo;
-
-$mensaje_whatsapp = urlencode(
-    "🎾 ¡Hola! Te invitamos al torneo *" . htmlspecialchars($torneo['nombre']) . "* en " . htmlspecialchars($torneo['recinto_nombre']) . ".\n\n" .
-    "📅 Fecha: " . $fecha_display . "\n⏰ Hora: " . $hora_display . "\n💰 Inscripción: $" . number_format($valor_inscripcion, 0, ',', '.') . " (por pareja)\n\n¡Inscríbete aquí!: " . $link_invitacion
-);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -57,7 +68,6 @@ $mensaje_whatsapp = urlencode(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invitación - <?= htmlspecialchars($torneo['nombre']) ?></title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; position: relative; }
@@ -67,8 +77,9 @@ $mensaje_whatsapp = urlencode(
         .btn-inscribir:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4); }
         .info-torneo { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; font-size: 0.9rem; }
         .error-msg { background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .success-msg { background: #e8f5e9; color: #2e7d32; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
         
-        /* Modal Registro Rápido */
+        /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: none; justify-content: center; align-items: center; padding: 1rem; }
         .modal-content { background: white; padding: 2rem; border-radius: 16px; max-width: 400px; width: 100%; position: relative; }
         .form-group { margin-bottom: 1rem; text-align: left; }
@@ -82,13 +93,14 @@ $mensaje_whatsapp = urlencode(
 <body>
 
     <div class="card">
-        <!-- Botón X para cerrar/volver -->
-        <?php if (isset($_SESSION['id_recinto'])): ?>
-            <a href="javascript:history.back()" style="position:absolute; top:15px; right:15px; color:#999; text-decoration:none; font-size:1.5rem;">&times;</a>
-        <?php endif; ?>
-
         <?php if ($error_message): ?>
             <div class="error-msg"><h3>⚠️ <?= $error_message ?></h3></div>
+        <?php elseif ($success_message): ?>
+             <div class="success-msg">
+                <h3>✅ Éxito</h3>
+                <p><?= htmlspecialchars($success_message) ?></p>
+                <button onclick="window.location.href='/pages/dashboard_socio.php'" class="btn-inscribir">Ir al Dashboard</button>
+            </div>
         <?php else: ?>
             <h2>🎾 <?= htmlspecialchars($torneo['nombre']) ?></h2>
             <p><?= htmlspecialchars($torneo['recinto_nombre']) ?></p>
@@ -97,54 +109,53 @@ $mensaje_whatsapp = urlencode(
                 <strong>📅 Fecha:</strong> <?= $fecha_display ?><br>
                 <strong>⏰ Hora:</strong> <?= $hora_display ?><br>
                 <strong>💰 Valor:</strong> $<?= number_format($valor_inscripcion, 0, ',', '.') ?> (por pareja)<br>
-                <?php if ($torneo['num_parejas_max']): ?>
-                <strong>👥 Cupos:</strong> <?= $torneo['num_parejas_max'] ?> parejas
-                <?php endif; ?>
             </div>
 
-            <?php if (!empty($code_pareja)): ?>
-                <!-- CASO: INVITACIÓN DE PAREJA -->
-                <p style="font-size:0.9rem; color:#555;">Has sido invitado a completar tu pareja.</p>
-                
-                <?php if (isset($_SESSION['id_socio'])): ?>
-                    <!-- Socio Logueado -->
-                    <button class="btn-inscribir" onclick="aceptarInvitacionSocio()">✅ Aceptar Invitación</button>
-                <?php else: ?>
-                    <!-- No logueado: Opciones Híbridas -->
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <a href="../index.php?redirect=<?= urlencode('/pages/torneo_invite.php?code=' . $code_pareja) ?>" class="btn-inscribir" style="background:#fff; color:#667eea; border:2px solid #667eea;">🔐 Soy Socio (Iniciar Sesión)</a>
-                        <button class="btn-inscribir" onclick="abrirModalRegistroRapido()">👤 Ingresar como Invitado</button>
-                    </div>
-                <?php endif; ?>
-
+            <!-- MENSAJE PERSONALIZADO -->
+            <p style="font-size:1rem; color:#333; font-weight:500; margin-bottom:1.5rem;">
+                Has sido invitado por <strong><?= htmlspecialchars($invitante_nombre) ?></strong> a completar tu pareja.
+            </p>
+            
+            <?php if (isset($_SESSION['id_socio'])): ?>
+                <!-- Usuario Logueado -->
+                <button class="btn-inscribir" onclick="aceptarInvitacionSocio()">✅ Aceptar Invitación</button>
             <?php else: ?>
-                <!-- CASO: QR GENERAL (Admin/Socio busca inscribirse) -->
-                
-                <!-- QR Code Container -->
-                <div id="qrcode" style="background:white; padding:15px; border-radius:12px; display:inline-block; margin-bottom:1.5rem; border:1px solid #eee;"></div>
-                <p style="font-size:0.85rem; color:#888; margin-bottom:1rem;">Escanea para inscribirte</p>
-
-                <!-- Botón WhatsApp -->
-                <a href="https://wa.me/?text=<?= $mensaje_whatsapp ?>" target="_blank" class="btn-inscribir" style="margin-bottom:1rem;">
-                    📱 Enviar Invitación por WhatsApp
-                </a>
-
-                <!-- Copiar Link -->
-                <div style="display:flex; gap:10px; margin-top:1rem;">
-                    <input type="text" value="<?= $link_invitacion ?>" readonly id="linkInput" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.85rem; background:#fafafa;">
-                    <button onclick="copiarLink()" style="padding:10px 15px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Copiar</button>
+                <!-- No logueado: Opciones Híbridas -->
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn-inscribir" style="background:#fff; color:#667eea; border:2px solid #667eea;" onclick="abrirModalLogin()">🔐 Soy Socio (Iniciar Sesión)</button>
+                    <button class="btn-inscribir" onclick="abrirModalRegistroRapido()">👤 Ingresar como Invitado</button>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
     </div>
 
-    <!-- MODAL REGISTRO RÁPIDO (INVITADO) -->
+    <!-- MODAL LOGIN SOCIO -->
+    <div id="modalLoginSocio" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="cerrarModalLogin()">&times;</span>
+            <h3 style="color:#071289; margin-bottom:1rem;">🔐 Iniciar Sesión</h3>
+            <form id="formLoginSocio" onsubmit="loginSocio(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required placeholder="tu@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="password-wrapper">
+                        <input type="password" name="password" required placeholder="Tu contraseña">
+                        <span class="toggle-password-icon" onclick="togglePassword(this)">🙈</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-inscribir">Ingresar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRO RÁPIDO -->
     <div id="modalRegistroRapido" class="modal-overlay">
         <div class="modal-content">
             <span class="close-modal" onclick="cerrarModalRegistro()">&times;</span>
             <h3 style="color:#071289; margin-bottom:1rem;">👤 Registro Rápido</h3>
-            <p style="font-size:0.85rem; color:#666; margin-bottom:1.5rem;">Ingresa tus datos para unirte a la pareja. Luego podrás completar tu perfil.</p>
-            
             <form id="formRegistroRapido" onsubmit="registrarInvitado(event)">
                 <div class="form-group">
                     <label>Nombre Completo *</label>
@@ -178,28 +189,8 @@ $mensaje_whatsapp = urlencode(
     </div>
 
     <script>
-        // Generar QR solo si es caso general
-        <?php if (empty($code_pareja)): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const qrContainer = document.getElementById("qrcode");
-            if (qrContainer) {
-                new QRCode(qrContainer, {
-                    text: "<?= $link_invitacion ?>",
-                    width: 200, height: 200,
-                    colorDark : "#764ba2", colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-            }
-        });
-        <?php endif; ?>
+        const codePareja = '<?= $code_pareja ?>';
 
-        function copiarLink() {
-            const copyText = document.getElementById("linkInput");
-            copyText.select();
-            navigator.clipboard.writeText(copyText.value).then(() => alert("Link copiado!"));
-        }
-
-        // Toggle Password Icon
         function togglePassword(icon) {
             const input = icon.previousElementSibling;
             if (input.type === 'password') {
@@ -211,34 +202,65 @@ $mensaje_whatsapp = urlencode(
             }
         }
 
-        // Modal Logic
-        function abrirModalRegistroRapido() {
-            document.getElementById('modalRegistroRapido').style.display = 'flex';
-        }
-        function cerrarModalRegistro() {
-            document.getElementById('modalRegistroRapido').style.display = 'none';
+        // Modales
+        function abrirModalLogin() { document.getElementById('modalLoginSocio').style.display = 'flex'; }
+        function cerrarModalLogin() { document.getElementById('modalLoginSocio').style.display = 'none'; }
+        function abrirModalRegistroRapido() { document.getElementById('modalRegistroRapido').style.display = 'flex'; }
+        function cerrarModalRegistro() { document.getElementById('modalRegistroRapido').style.display = 'none'; }
+
+        // Login Socio Existente
+        async function loginSocio(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
+
+            try {
+                const res = await fetch('../api/login_socio_simple.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: form.email.value, password: form.password.value })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    cerrarModalLogin();
+                    aceptarInvitacionSocio(); // Proceder a aceptar invitación
+                } else {
+                    alert('❌ ' + data.message);
+                    btn.disabled = false;
+                    btn.textContent = 'Ingresar';
+                }
+            } catch (err) {
+                alert('❌ Error de conexión');
+                btn.disabled = false;
+                btn.textContent = 'Ingresar';
+            }
         }
 
-        // Aceptar invitación si ya es socio
+        // Aceptar Invitación (Lógica común para socio logueado)
         async function aceptarInvitacionSocio() {
-            const code = '<?= $code_pareja ?>';
             try {
                 const res = await fetch('../api/aceptar_invitacion_pareja.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ codigo_pareja: code })
+                    body: JSON.stringify({ codigo_pareja: codePareja })
                 });
                 const data = await res.json();
+                
                 if (data.success) {
-                    alert('✅ ¡Te has unido a la pareja! Revisa tu correo.');
-                    window.location.href = '../dashboard_socio.php';
+                    window.location.href = '/pages/dashboard_socio.php';
                 } else {
-                    alert('❌ Error: ' + data.message);
+                    alert('❌ ' + data.message);
                 }
-            } catch (err) { alert('❌ Error de conexión'); }
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error de conexión');
+            }
         }
 
-        // Registrar Invitado y Unirse
+        // Registro Rápido Invitado
         async function registrarInvitado(e) {
             e.preventDefault();
             const form = e.target;
@@ -255,7 +277,7 @@ $mensaje_whatsapp = urlencode(
             btn.textContent = 'Procesando...';
 
             try {
-                // 1. Registrar usuario básico (como socio individual/incompleto)
+                // 1. Registrar usuario
                 const regRes = await fetch('../api/registro_rapido_invitado.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -266,21 +288,29 @@ $mensaje_whatsapp = urlencode(
                         password: password
                     })
                 });
-                const regData = await regRes.json();
+                
+                // Verificar si la respuesta es válida JSON
+                const regText = await regRes.text();
+                let regData;
+                try {
+                    regData = JSON.parse(regText);
+                } catch (jsonErr) {
+                    throw new Error("Error en servidor: " + regText.substring(0, 100));
+                }
 
                 if (!regData.success) throw new Error(regData.message);
 
-                // 2. Ahora que está registrado y logueado, aceptar la invitación
+                // 2. Aceptar invitación
                 const accRes = await fetch('../api/aceptar_invitacion_pareja.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ codigo_pareja: '<?= $code_pareja ?>' })
+                    body: JSON.stringify({ codigo_pareja: codePareja })
                 });
                 const accData = await accRes.json();
 
                 if (accData.success) {
                     alert('✅ ¡Registro exitoso y te has unido a la pareja!');
-                    window.location.href = '../dashboard_socio.php';
+                    window.location.href = '/pages/dashboard_socio.php';
                 } else {
                     alert('❌ Error al unirte a la pareja: ' + accData.message);
                     btn.disabled = false;

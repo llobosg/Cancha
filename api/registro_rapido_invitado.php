@@ -1,6 +1,9 @@
 <?php
 // api/registro_rapido_invitado.php
 header('Content-Type: application/json');
+// Suprimir errores visuales para devolver JSON limpio
+error_reporting(0); 
+
 require_once __DIR__ . '/../includes/config.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
@@ -15,26 +18,24 @@ try {
     }
 
     // Verificar si ya existe
-    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ?");
+    $stmt_check = $pdo->prepare("SELECT id_socio, password_hash FROM socios WHERE email = ?");
     $stmt_check->execute([$email]);
-    if ($stmt_check->fetch()) {
-        // Si ya existe, intentamos loguearlo automáticamente
-        session_start();
-        $stmt_pass = $pdo->prepare("SELECT password_hash FROM socios WHERE email = ?");
-        $stmt_pass->execute([$email]);
-        $hash = $stmt_pass->fetchColumn();
-        
-        if (password_verify($password, $hash)) {
-            $stmt_user = $pdo->prepare("SELECT * FROM socios WHERE email = ?");
-            $stmt_user->execute([$email]);
-            $user = $stmt_user->fetch();
+    $existing_user = $stmt_check->fetch();
+
+    if ($existing_user) {
+        // Si ya existe, verificar contraseña para loguearlo
+        if (password_verify($password, $existing_user['password_hash'])) {
+            session_start();
+            $_SESSION['id_socio'] = $existing_user['id_socio'];
+            // Obtener nombre
+            $stmt_name = $pdo->prepare("SELECT nombre FROM socios WHERE id_socio = ?");
+            $stmt_name->execute([$existing_user['id_socio']]);
+            $_SESSION['nombre_socio'] = $stmt_name->fetchColumn();
             
-            $_SESSION['id_socio'] = $user['id_socio'];
-            $_SESSION['nombre_socio'] = $user['nombre'];
             echo json_encode(['success' => true, 'message' => 'Usuario existente logueado']);
             exit;
         } else {
-            throw new Exception('El email ya está registrado. Intenta iniciar sesión.');
+            throw new Exception('Contraseña incorrecta para este email registrado.');
         }
     }
 
@@ -65,6 +66,7 @@ try {
     echo json_encode(['success' => true, 'message' => 'Registro exitoso']);
 
 } catch (Exception $e) {
+    // Loguear internamente pero devolver JSON limpio
     error_log("Error registro rapido: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

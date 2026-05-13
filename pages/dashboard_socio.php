@@ -1,8 +1,14 @@
 <?php
-// pages/dashboard_socio.php - BLOQUE INICIAL BLINDADO
-require_once __DIR__ . '/../includes/config.php';
+// pages/dashboard_socio.php
 
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+// ✅ CORRECCIÓN: Verificar si la sesión ya está activa antes de intentar cambiar nombre
+if (session_status() === PHP_SESSION_NONE) {
+    // Solo establecer nombre si la sesión no ha comenzado
+    // session_name('socio_session'); // Descomenta solo si es crítico tener nombres distintos
+    session_start();
+}
+
+require_once __DIR__ . '/../includes/config.php';
 
 // === 1. DEFAULTS ABSOLUTOS (evitar undefined) ===
 $id_socio = $_SESSION['id_socio'] ?? 0;
