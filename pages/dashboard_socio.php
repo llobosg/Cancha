@@ -154,15 +154,14 @@ try {
 
     if (!$modo_individual && $club_id) {
         // ✅ MODO CLUB: Mostrar próximas reservas DEL CLUB
-        // No importa quién creó la reserva, siempre que pertenezca al club
+        // IMPORTANTE: No filtrar por id_socio aquí, porque la reserva puede ser creada por un Admin/Responsable
+        // Solo filtramos por el ID del Club al que pertenece el socio
         $where_parts[] = "r.id_club = ?";
         $params[] = $club_id;
         
-        // Opcional: Si quieres mostrar SOLO reservas creadas por miembros activos del club:
-        // Ya está cubierto por id_club, pero aseguramos que el socio tenga acceso
-        
     } else {
         // ✅ MODO INDIVIDUAL: Mostrar solo reservas personales del socio (sin club asociado)
+        // Aquí sí filtramos por id_socio porque son reservas privadas
         $where_parts[] = "(r.id_club IS NULL OR r.id_club = 0) AND r.id_socio = ?";
         $params[] = $id_socio;
     }
@@ -180,8 +179,8 @@ try {
         LIMIT 1
     ";
 
-    // Debug Log
-    error_log("[DASHBOARD] Query Próximo Partido: " . $sql . " | Params: " . json_encode($params));
+    // Debug Log para verificar qué params se están usando
+    error_log("[DASHBOARD] Query Próximo Partido Socio {$id_socio} | Club {$club_id}: " . json_encode($params));
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -223,7 +222,7 @@ try {
         $stmt_check->execute([$id_reserva, $id_socio]);
         $ya_inscrito = (bool)$stmt_check->fetch();
         
-        error_log("[DASHBOARD] Próximo evento encontrado: ID {$id_reserva} | Inscritos: {$inscritos_actuales}/{$jugadores_esperados} | Ya inscrito: " . ($ya_inscrito ? 'Sí' : 'No'));
+        error_log("[DASHBOARD] Evento encontrado: ID {$id_reserva} | Inscritos: {$inscritos_actuales}/{$jugadores_esperados} | Ya inscrito: " . ($ya_inscrito ? 'Sí' : 'No'));
     } else {
         error_log("[DASHBOARD] No se encontró próximo partido para Socio ID {$id_socio} | Club ID {$club_id}");
     }
