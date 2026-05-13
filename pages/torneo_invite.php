@@ -294,24 +294,46 @@ if ($torneo) {
             btn.disabled = true;
             btn.textContent = 'Verificando...';
 
+            console.log("🔍 [LOGIN] Iniciando login socio...");
+            console.log("🔍 [LOGIN] Email:", form.email.value);
+            
             try {
-                const res = await fetch('../api/login_socio_simple.php', {
+                // Verificar URL base
+                const apiUrl = '../api/login_socio_simple.php';
+                console.log("🔍 [LOGIN] Llamando a:", apiUrl);
+
+                const res = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email: form.email.value, password: form.password.value })
                 });
-                const data = await res.json();
+
+                console.log("🔍 [LOGIN] Estado HTTP:", res.status);
+                
+                // Intentar leer el texto crudo primero para debug
+                const responseText = await res.text();
+                console.log("🔍 [LOGIN] Respuesta cruda (primeros 200 chars):", responseText.substring(0, 200));
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonErr) {
+                    throw new Error("La respuesta no es JSON válido. Probablemente un error 404 o 500.");
+                }
 
                 if (data.success) {
+                    console.log("✅ [LOGIN] Login exitoso");
                     cerrarModalLogin();
                     aceptarInvitacionSocio(); // Proceder a aceptar invitación
                 } else {
+                    console.warn("⚠️ [LOGIN] Login falló:", data.message);
                     alert('❌ ' + data.message);
                     btn.disabled = false;
                     btn.textContent = 'Ingresar';
                 }
             } catch (err) {
-                alert('❌ Error de conexión');
+                console.error("❌ [LOGIN] Error de conexión:", err);
+                alert('❌ Error de conexión: ' + err.message);
                 btn.disabled = false;
                 btn.textContent = 'Ingresar';
             }
