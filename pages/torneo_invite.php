@@ -172,7 +172,7 @@ if ($torneo) {
             <?php if ($modo_invitacion): ?>
                 <!-- === VISTA: INVITADO (SEGUNDO JUGADOR) === -->
                 <p style="font-size:1rem; color:#333; font-weight:500; margin-bottom:1.5rem;">
-                    Has sido invitado por <strong><?= htmlspecialchars($invitante_nombre) ?></strong> a completar tu pareja.
+                    Has sido invitado por <strong><?= htmlspecialchars($invitante_nombre) ?></strong> para completar pareja al torneo.
                 </p>
                 
                 <?php if (isset($_SESSION['id_socio'])): ?>
