@@ -130,11 +130,27 @@ if ($torneo) {
         #qrcode { margin: 1rem auto; padding: 10px; background: white; border: 1px solid #eee; display: inline-block; }
         .btn-copy { display: block; width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 1rem; }
         .btn-copy:hover { background: #5a6fd6; }
+        /* Botón Cerrar */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            z-index: 10;
+            line-height: 1;
+        }
+        .close-btn:hover { color: #333; }
     </style>
 </head>
 <body>
 
     <div class="card">
+        <!-- ✅ BOTÓN X PARA SALIR -->
+        <button class="close-btn" onclick="window.history.back()" title="Volver">&times;</button>
         <?php if ($error_message): ?>
             <div class="error-msg"><h3>⚠️ <?= $error_message ?></h3></div>
         <?php elseif ($success_message): ?>

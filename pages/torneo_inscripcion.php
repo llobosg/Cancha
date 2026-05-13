@@ -4,33 +4,30 @@ session_start();
 require_once __DIR__ . '/../includes/config.php';
 
 $slug = $_GET['slug'] ?? '';
-$id_param = $_GET['id'] ?? ''; // Soportar búsqueda por ID directo
+$id_param = $_GET['id'] ?? ''; 
 $code_pareja = $_GET['code'] ?? '';
 
 $torneo = null;
 $error_message = "";
 $success_message = "";
+$inscritos = 0; // ✅ INICIALIZAR VARIABLE POR DEFECTO PARA EVITAR WARNING
 
 // 1. Identificar Torneo
 if ($slug) {
-    // Intentar buscar por SLUG
     $stmt = $pdo->prepare("SELECT t.*, r.nombre as recinto_nombre FROM torneos t JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto WHERE t.slug = ? AND t.estado IN ('abierto', 'borrador')");
     $stmt->execute([$slug]);
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Si no encuentra por slug, intentar buscar por ID si se pasó como parámetro alternativo (fallback)
     if (!$torneo && !empty($id_param)) {
         $stmt_id = $pdo->prepare("SELECT t.*, r.nombre as recinto_nombre FROM torneos t JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto WHERE t.id_torneo = ? AND t.estado IN ('abierto', 'borrador')");
         $stmt_id->execute([intval($id_param)]);
         $torneo = $stmt_id->fetch(PDO::FETCH_ASSOC);
     }
 } else if (!empty($id_param)) {
-    // Buscar directamente por ID
     $stmt = $pdo->prepare("SELECT t.*, r.nombre as recinto_nombre FROM torneos t JOIN recintos_deportivos r ON t.id_recinto = r.id_recinto WHERE t.id_torneo = ? AND t.estado IN ('abierto', 'borrador')");
     $stmt->execute([intval($id_param)]);
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
 } else if ($code_pareja) {
-    // Si viene por invitación de pareja, buscamos el torneo vía el código de pareja
     $stmt_pareja = $pdo->prepare("SELECT pt.id_torneo FROM parejas_torneo pt WHERE pt.codigo_pareja = ?");
     $stmt_pareja->execute([$code_pareja]);
     $pareja_data = $stmt_pareja->fetch();
@@ -47,10 +44,10 @@ if (!$torneo) {
     die("<h3 style='text-align:center; color:red;'>❌ Enlace inválido o torneo no encontrado</h3>");
 }
 
-// 2. Verificar Cupos
+// 2. Verificar Cupos (Definimos $inscritos aquí seguro)
 $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
 $stmt_count->execute([$torneo['id_torneo']]);
-$inscritos = (int)$stmt_count->fetchColumn();
+$inscritos = (int)$stmt_count->fetchColumn(); // ✅ AHORA SIEMPRE TIENE VALOR
 $cupo_lleno = ($inscritos >= $torneo['num_parejas_max']);
 
 // 3. Procesar Inscripción (POST)
@@ -59,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         if ($action === 'login_socio') {
-            // --- FLUJO: SOCIO EXISTENTE ---
             $email = trim($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
             
@@ -79,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
         } elseif ($action === 'registro_express') {
-            // --- FLUJO: REGISTRO EXPRESS (INVITADO) ---
             $nombre = trim($_POST['nombre'] ?? '');
             $email = trim($_POST['email'] ?? '');
             $telefono = trim($_POST['telefono'] ?? '');
@@ -120,7 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja = null) {
     global $success_message, $error_message, $torneo;
     
-    // 1. Verificar si YA está inscrito
     $stmt_check = $pdo->prepare("SELECT 1 FROM parejas_torneo WHERE id_torneo = ? AND (id_socio_1 = ? OR id_socio_2 = ?)");
     $stmt_check->execute([$id_torneo, $id_socio, $id_socio]);
     
@@ -129,7 +123,6 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
         return;
     }
     
-    // 2. Si tiene code_pareja, aceptar invitación
     if ($code_pareja) {
         $stmt_pareja = $pdo->prepare("SELECT pt.id_pareja FROM parejas_torneo pt WHERE pt.codigo_pareja = ? AND pt.id_socio_2 IS NULL");
         $stmt_pareja->execute([$code_pareja]);
@@ -144,7 +137,6 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
         }
     }
     
-    // 3. Inscribirse como nuevo jugador principal
     $max_parejas = $torneo['num_parejas_max'] ?? 10;
     
     if ($inscritos >= $max_parejas) {
@@ -175,7 +167,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
     <title>Inscripción - <?= htmlspecialchars($torneo['nombre']) ?></title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
+        .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; position: relative; }
         h2 { color: #071289; margin-bottom: 0.5rem; }
         p { color: #666; margin-bottom: 1.5rem; }
         .btn-inscribir { display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; transition: transform 0.2s; cursor: pointer; border: none; margin-top: 1rem; }
@@ -190,10 +182,28 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
         .tab-btn { flex: 1; padding: 10px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; border-radius: 8px; font-weight: 600; color: #666; }
         .tab-btn.active { background: #667eea; color: white; border-color: #667eea; }
         .hidden { display: none; }
+        
+        /* Botón Cerrar */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            z-index: 10;
+            line-height: 1;
+        }
+        .close-btn:hover { color: #333; }
     </style>
 </head>
 <body>
     <div class="card">
+        <!-- ✅ BOTÓN X PARA SALIR -->
+        <button class="close-btn" onclick="window.history.back()" title="Volver">&times;</button>
+
         <?php if ($cupo_lleno): ?>
             <div class="error-msg">
                 <h3>⚠️ Cupo Lleno</h3>
@@ -218,9 +228,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="info-torneo">
                 <strong>📅 Fecha:</strong> <?= date('d/m/Y H:i', strtotime($torneo['fecha_inicio'])) ?><br>
                 <strong>💰 Valor:</strong> $<?= number_format($torneo['valor'] ?? 0, 0, ',', '.') ?> (por pareja)<br>
-                
-                <!-- ✅ CORRECCIÓN: Usar ?? 0 para evitar error si $inscritos no está definida -->
-                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 0) - ($inscritos ?? 0)) ?>
+                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 0) - $inscritos) ?>
             </div>
 
             <?php if ($error_message): ?>
