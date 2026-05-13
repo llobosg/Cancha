@@ -1,7 +1,8 @@
 <?php
 // pages/dashboard_socio.php
 
-// ✅ NO llamar a session_start() aquí. config.php ya lo hizo.
+// ✅ NO HAY session_start() NI session_name() AQUÍ.
+// includes/config.php ya maneja la sesión centralizadamente.
 require_once __DIR__ . '/../includes/config.php';
 
 // Verificar autenticación
@@ -42,22 +43,28 @@ if (!$id_socio) {
 
 // === 3. DATOS DEL SOCIO ===
 try {
-    $stmt = $pdo->prepare("SELECT * FROM socios WHERE id_socio = ?");
+    $stmt = $pdo->prepare("SELECT nombre, alias, email, celular, rol, activo, es_responsable FROM socios WHERE id_socio = ?");
     $stmt->execute([$id_socio]);
     $socio = $stmt->fetch();
     
     if ($socio) {
         $nombre_mostrar = $socio['alias'] ?: explode(' ', $socio['nombre'])[0];
         
-        // ✅ CORRECCIÓN CRÍTICA: Forzar valor booleano explícito
-        // Verificamos si la columna existe y su valor es 1 o 'Si' o true
-        if (isset($socio['es_responsable'])) {
-            $es_responsable = ($socio['es_responsable'] == 1 || strtolower($socio['es_responsable']) === 'si');
+        // ✅ LEER ES_RESPONSABLE DIRECTAMENTE DE LA FILA OBTENIDA
+        // La columna es_responsable suele ser tinyint(1) o enum('Si','No')
+        $val_resp_db = $socio['es_responsable'];
+        
+        // Convertir explícitamente a booleano
+        if ($val_resp_db == 1 || strtolower($val_resp_db) === 'si' || strtolower($val_resp_db) === 'true') {
+            $es_responsable = true;
         } else {
             $es_responsable = false;
         }
         
-        error_log("[DEBUG] Socio {$id_socio} - es_responsable: " . ($es_responsable ? 'TRUE' : 'FALSE'));
+        // Log para confirmar que se leyó bien aquí
+        error_log("[DEBUG INICIO] Socio {$id_socio} - Valor DB: {$val_resp_db} -> Booleano: " . ($es_responsable ? 'TRUE' : 'FALSE'));
+    } else {
+        $es_responsable = false;
     }
 } catch (PDOException $e) {
     error_log("Error socio: " . $e->getMessage());
@@ -1375,13 +1382,10 @@ window.LIMITE_LLENO = <?= $limite_lleno ? 'true' : 'false' ?>;
 window.PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
 // ✅ ASIGNACIÓN EXPLÍCITA Y SEGURA
 window.SOCIO_ID = <?= (int)$id_socio ?>;
-    
-// ✅ ASIGNACIÓN EXPLÍCITA CON LOG
-const isResp = <?= $es_responsable ? 'true' : 'false' ?>;
-window.ES_RESPONSABLE = isResp;
+window.ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
     
 console.log('✅ Variables globales cargadas | SOCIO_ID:', window.SOCIO_ID);
-console.log('✅ ES_RESPONSABLE (Forzado):', window.ES_RESPONSABLE);
+console.log('✅ ES_RESPONSABLE:', window.ES_RESPONSABLE);
 
 // === 2. UTILITARIAS ===
 function showToast(msg, type = 'success') {
