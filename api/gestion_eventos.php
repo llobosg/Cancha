@@ -299,11 +299,25 @@ try {
 
     echo json_encode(['success' => true, 'message' => $mensaje]);
 
-} catch (Exception $e) {
-    error_log("Gestión eventos error: " . $e->getMessage());
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-}
+    // === SALIDA FINAL LIMPIA ===
+    // Limpiar cualquier buffer residual para evitar contenido extra después del JSON
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Asegurar que solo se envíe el JSON
+    exit;
 
-ob_end_flush();
+} catch (Exception $e) {
+   error_log("Gestión eventos error: " . $e->getMessage());
+    http_response_code(400);
+    
+    // Limpiar buffer en caso de error también
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    exit;
+}
 ?>
