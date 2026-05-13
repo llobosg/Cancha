@@ -10,7 +10,7 @@ $code_pareja = $_GET['code'] ?? '';
 $torneo = null;
 $error_message = "";
 $success_message = "";
-$inscritos = 0; // ✅ INICIALIZAR VARIABLE POR DEFECTO PARA EVITAR WARNING
+$inscritos = 0; // ✅ INICIALIZACIÓN SEGURA POR DEFECTO
 
 // 1. Identificar Torneo
 if ($slug) {
@@ -40,15 +40,16 @@ if ($slug) {
     }
 }
 
+// Si no hay torneo, salir inmediatamente
 if (!$torneo) {
     die("<h3 style='text-align:center; color:red;'>❌ Enlace inválido o torneo no encontrado</h3>");
 }
 
-// 2. Verificar Cupos (Definimos $inscritos aquí seguro)
+// 2. Verificar Cupos (Siempre ejecutar esto después de confirmar que $torneo existe)
 $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
 $stmt_count->execute([$torneo['id_torneo']]);
-$inscritos = (int)$stmt_count->fetchColumn(); // ✅ AHORA SIEMPRE TIENE VALOR
-$cupo_lleno = ($inscritos >= $torneo['num_parejas_max']);
+$inscritos = (int)$stmt_count->fetchColumn(); // ✅ AHORA SIEMPRE TIENE VALOR ENTERO
+$cupo_lleno = ($inscritos >= ($torneo['num_parejas_max'] ?? 10));
 
 // 3. Procesar Inscripción (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -113,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja = null) {
-    global $success_message, $error_message, $torneo;
+    global $success_message, $error_message, $torneo, $inscritos;
     
     $stmt_check = $pdo->prepare("SELECT 1 FROM parejas_torneo WHERE id_torneo = ? AND (id_socio_1 = ? OR id_socio_2 = ?)");
     $stmt_check->execute([$id_torneo, $id_socio, $id_socio]);
@@ -139,7 +140,12 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
     
     $max_parejas = $torneo['num_parejas_max'] ?? 10;
     
-    if ($inscritos >= $max_parejas) {
+    // Recalcular inscritos justo antes de insertar para máxima precisión
+    $stmt_count_final = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
+    $stmt_count_final->execute([$id_torneo]);
+    $inscritos_actuales = (int)$stmt_count_final->fetchColumn();
+
+    if ($inscritos_actuales >= $max_parejas) {
         $error_message = "❌ Cupo lleno.";
         return;
     }
@@ -228,7 +234,8 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="info-torneo">
                 <strong>📅 Fecha:</strong> <?= date('d/m/Y H:i', strtotime($torneo['fecha_inicio'])) ?><br>
                 <strong>💰 Valor:</strong> $<?= number_format($torneo['valor'] ?? 0, 0, ',', '.') ?> (por pareja)<br>
-                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 0) - $inscritos) ?>
+                <!-- ✅ CORRECCIÓN FINAL: Usar ?? 0 como fallback seguro -->
+                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 10) - ($inscritos ?? 0)) ?>
             </div>
 
             <?php if ($error_message): ?>
