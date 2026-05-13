@@ -132,6 +132,8 @@ if (!$modo_individual && $club_id) {
     $_SESSION['current_club'] = $club_slug;
 }
 
+error_log("[DEBUG] Socio ID: {$id_socio} | Club ID Session: {$_SESSION['club_id'] ?? 'N/A'} | Parametro URL id_club: {$_GET['id_club'] ?? 'N/A'} | Modo Individual: " . ($modo_individual ? 'SI' : 'NO'));
+error_log("[DEBUG] Club ID calculado: {$club_id}");
 // === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA PARA CLUBES E INDIVIDUAL ===
 $proximo_evento = null;
 $ya_inscrito = false;
