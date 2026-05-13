@@ -10,7 +10,7 @@ $code_pareja = $_GET['code'] ?? '';
 $torneo = null;
 $error_message = "";
 $success_message = "";
-$inscritos = 0; // ✅ INICIALIZACIÓN SEGURA POR DEFECTO
+$inscritos = 0; // Inicializar variable
 
 // 1. Identificar Torneo
 if ($slug) {
@@ -40,15 +40,14 @@ if ($slug) {
     }
 }
 
-// Si no hay torneo, salir inmediatamente
 if (!$torneo) {
     die("<h3 style='text-align:center; color:red;'>❌ Enlace inválido o torneo no encontrado</h3>");
 }
 
-// 2. Verificar Cupos (Siempre ejecutar esto después de confirmar que $torneo existe)
+// 2. Verificar Cupos
 $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
 $stmt_count->execute([$torneo['id_torneo']]);
-$inscritos = (int)$stmt_count->fetchColumn(); // ✅ AHORA SIEMPRE TIENE VALOR ENTERO
+$inscritos = (int)$stmt_count->fetchColumn();
 $cupo_lleno = ($inscritos >= ($torneo['num_parejas_max'] ?? 10));
 
 // 3. Procesar Inscripción (POST)
@@ -114,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja = null) {
-    global $success_message, $error_message, $torneo, $inscritos;
+    global $success_message, $error_message, $torneo;
     
     $stmt_check = $pdo->prepare("SELECT 1 FROM parejas_torneo WHERE id_torneo = ? AND (id_socio_1 = ? OR id_socio_2 = ?)");
     $stmt_check->execute([$id_torneo, $id_socio, $id_socio]);
@@ -140,12 +139,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
     
     $max_parejas = $torneo['num_parejas_max'] ?? 10;
     
-    // Recalcular inscritos justo antes de insertar para máxima precisión
-    $stmt_count_final = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
-    $stmt_count_final->execute([$id_torneo]);
-    $inscritos_actuales = (int)$stmt_count_final->fetchColumn();
-
-    if ($inscritos_actuales >= $max_parejas) {
+    if ($inscritos >= $max_parejas) {
         $error_message = "❌ Cupo lleno.";
         return;
     }
@@ -219,10 +213,12 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="success-msg">
                 <h3>✅ Éxito</h3>
                 <p><?= htmlspecialchars($success_message) ?></p>
+                <!-- Redirección forzada vía JS para evitar problemas de sesión -->
                 <button onclick="window.location.href='/pages/dashboard_socio.php';" class="btn-inscribir">Ir a mi Dashboard</button>
             </div>
             
             <script>
+                // Redirigir automáticamente después de 2 segundos si el usuario no hace click
                 setTimeout(() => {
                     window.location.href = '/pages/dashboard_socio.php';
                 }, 2000);
@@ -234,8 +230,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
             <div class="info-torneo">
                 <strong>📅 Fecha:</strong> <?= date('d/m/Y H:i', strtotime($torneo['fecha_inicio'])) ?><br>
                 <strong>💰 Valor:</strong> $<?= number_format($torneo['valor'] ?? 0, 0, ',', '.') ?> (por pareja)<br>
-                <!-- ✅ CORRECCIÓN FINAL: Usar ?? 0 como fallback seguro -->
-                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 10) - ($inscritos ?? 0)) ?>
+                <strong>👥 Cupos restantes:</strong> <?= max(0, ($torneo['num_parejas_max'] ?? 10) - $inscritos) ?>
             </div>
 
             <?php if ($error_message): ?>

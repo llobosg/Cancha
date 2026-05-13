@@ -224,8 +224,9 @@ $deuda_mas_vigente = null;
 $cuotas_pendientes = 0;
 if (!$modo_individual && $club_id) {
     try {
+        // ✅ CORRECCIÓN: Eliminar columna 'detalle_origen' que no existe
         $stmt_deuda = $pdo->prepare("
-            SELECT id_cuota, monto, fecha_vencimiento, tipo_actividad, detalle_origen
+            SELECT id_cuota, monto, fecha_vencimiento, tipo_actividad
             FROM cuotas 
             WHERE id_socio = ? AND estado = 'pendiente' AND id_club = ?
             ORDER BY fecha_vencimiento ASC LIMIT 1
@@ -1204,7 +1205,7 @@ $js_vars = [
         <div style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); border-radius:20px; padding:1.25rem; margin-bottom:1rem; color:#071289; box-shadow:0 6px 20px rgba(231,76,60,0.3);">
             <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">💰 Deuda Pendiente</h3>
             <div style="background:rgba(255,255,255,0.8); padding:0.75rem; border-radius:12px; font-size:0.9rem;">
-                <strong><?= htmlspecialchars($deuda_mas_vigente['detalle_origen'] ?? 'Cuota') ?></strong><br>
+                <strong><?= htmlspecialchars($deuda_mas_vigente['tipo_actividad'] ?? 'Cuota') ?></strong><br>
                 📅 <?= date('d/m', strtotime($deuda_mas_vigente['fecha_vencimiento'])) ?> • 
                 💲 $<?= number_format($deuda_mas_vigente['monto'], 0, ',', '.') ?>
                 <button class="btn-hero" style="margin-top:0.5rem; background:#E74C3C; color:white; padding:0.5rem; font-size:0.9rem;" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">Pagar ahora</button>
