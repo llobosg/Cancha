@@ -22,18 +22,22 @@ try {
     $id_club = $_SESSION['club_id'];
     $club_slug = $_SESSION['current_club'] ?? ($_SESSION['club_id'] ?? 'default');
 
-    // Determinar el socio objetivo
-    if (isset($_POST['id_socio_objetivo'])) {
-        $stmt_check_responsable = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ? AND id_club = ?");
-        $stmt_check_responsable->execute([$_SESSION['id_socio'], $id_club]);
-        $es_responsable = $stmt_check_responsable->fetch()['es_responsable'] ?? 0;
+    // Determinar el socio objetivo para acciones de gestión
+    if (isset($_POST['id_socio_objetivo']) && !empty($_POST['id_socio_objetivo'])) {
+        // ✅ CORRECCIÓN: Usar socio_club para validar pertenencia y permiso
+        $stmt_check_responsable = $pdo->prepare("
+            SELECT s.es_responsable 
+            FROM socios s
+            JOIN socio_club sc ON s.id_socio = sc.id_socio
+            WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+        ");
+        $stmt_check_responsable->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
+        $es_responsable = $stmt_check_responsable->fetchColumn() ?? 0;
         
         if (!$es_responsable) {
-            throw new Exception('Solo el responsable puede dar de baja a otros socios');
+            throw new Exception('Solo el responsable puede gestionar a otros socios');
         }
-        $id_socio = (int)$_POST['id_socio_objetivo'];
-    } else {
-        $id_socio = $_SESSION['id_socio'];
+        // No sobrescribimos $id_socio aquí, lo hacemos en cada acción específica
     }
 
     if ($action !== 'anotarse' && $action !== 'bajarse') {
@@ -92,13 +96,18 @@ try {
         // Determinar qué socio bajar
         $id_socio_a_bajar = isset($_POST['id_socio_objetivo']) && !empty($_POST['id_socio_objetivo']) 
             ? (int)$_POST['id_socio_objetivo'] 
-            : $id_socio_actual;
+            : $_SESSION['id_socio']; // Usar sesión directamente
 
         // Verificar permisos si es un responsable bajando a otro
-        if ($id_socio_a_bajar !== $id_socio_actual) {
-            // Verificar si el usuario actual tiene permiso para gestionar jugadores
-            $stmt_check_permiso = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
-            $stmt_check_permiso->execute([$id_socio_actual]);
+        if ($id_socio_a_bajar !== $_SESSION['id_socio']) {
+            // ✅ CORRECCIÓN: Validar permiso usando tabla socio_club (no id_club en socios)
+            $stmt_check_permiso = $pdo->prepare("
+                SELECT s.es_responsable 
+                FROM socios s
+                JOIN socio_club sc ON s.id_socio = sc.id_socio
+                WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
+            ");
+            $stmt_check_permiso->execute([$_SESSION['id_socio'], $_SESSION['club_id']]);
             $es_resp = $stmt_check_permiso->fetchColumn();
 
             if (!$es_resp) {
@@ -106,17 +115,14 @@ try {
             }
         }
 
-        // ✅ CORRECCIÓN: Eliminar cualquier referencia a id_club en el WHERE
-        // La tabla 'inscritos' no tiene columna id_club, solo id_evento, id_socio y tipo_actividad
-        
-        // Ejecutar baja en inscritos
+        // Ejecutar baja en inscritos (sin id_club, que no existe en esta tabla)
         $stmt_delete = $pdo->prepare("
             DELETE FROM inscritos 
             WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?
         ");
         $stmt_delete->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
         
-        // Opcional: Borrar cuota asociada si existe (también sin id_club)
+        // Opcional: Borrar cuota asociada si existe
         $stmt_cuota = $pdo->prepare("
             DELETE FROM cuotas 
             WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?
