@@ -1,6 +1,14 @@
 <?php
 // api/login_socio_simple.php
 header('Content-Type: application/json');
+
+// ✅ INICIALIZAR SESIÓN ANTES DE REQUERIR CONFIG
+// Esto asegura que la sesión esté lista antes de cargar config.php
+// que podría intentar iniciarla otra vez o usar variables de sesión.
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../includes/config.php';
 
 // Obtener datos del cuerpo JSON
@@ -19,11 +27,7 @@ try {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password_hash'])) {
-        // Iniciar sesión solo si no está activa
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
+        // Establecer variables de sesión
         $_SESSION['id_socio'] = $user['id_socio'];
         $_SESSION['nombre_socio'] = $user['nombre'];
         $_SESSION['rol'] = $user['rol'] ?? 'Jugador';

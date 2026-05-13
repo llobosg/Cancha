@@ -1,13 +1,22 @@
 <?php
 // pages/dashboard_socio.php
 
-// ✅ CORRECCIÓN CRÍTICA: No usar session_name() ni session_start() aquí si config.php ya lo hace.
-// Solo verificamos si la sesión está activa para evitar warnings.
+// ✅ INICIALIZACIÓN SEGURA DE SESIÓN
+// Solo iniciamos si NO está activa. Esto evita el warning "Session name cannot be changed".
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 require_once __DIR__ . '/../includes/config.php';
+
+// Verificar autenticación
+if (!isset($_SESSION['id_socio'])) {
+    header('Location: ../index.php');
+    exit;
+}
+
+$id_socio = $_SESSION['id_socio'];
+$nombre_socio = $_SESSION['nombre_socio'] ?? 'Socio';
 
 // === 1. DEFAULTS ABSOLUTOS (evitar undefined) ===
 $id_socio = $_SESSION['id_socio'] ?? 0;
