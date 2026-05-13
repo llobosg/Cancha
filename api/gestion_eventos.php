@@ -106,12 +106,21 @@ try {
             }
         }
 
-        // Ejecutar baja
-        $stmt_delete = $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?");
+        // ✅ CORRECCIÓN: Eliminar cualquier referencia a id_club en el WHERE
+        // La tabla 'inscritos' no tiene columna id_club, solo id_evento, id_socio y tipo_actividad
+        
+        // Ejecutar baja en inscritos
+        $stmt_delete = $pdo->prepare("
+            DELETE FROM inscritos 
+            WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?
+        ");
         $stmt_delete->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
         
-        // Opcional: Borrar cuota asociada si existe
-        $stmt_cuota = $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?");
+        // Opcional: Borrar cuota asociada si existe (también sin id_club)
+        $stmt_cuota = $pdo->prepare("
+            DELETE FROM cuotas 
+            WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?
+        ");
         $stmt_cuota->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
         
         echo json_encode(['success' => true, 'message' => 'Baja registrada']);
