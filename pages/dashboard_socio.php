@@ -48,10 +48,20 @@ try {
     
     if ($socio) {
         $nombre_mostrar = $socio['alias'] ?: explode(' ', $socio['nombre'])[0];
-        $es_responsable = !empty($socio['es_responsable']) && $socio['es_responsable'] == 1;
+        
+        // ✅ CORRECCIÓN CRÍTICA: Forzar valor booleano explícito
+        // Verificamos si la columna existe y su valor es 1 o 'Si' o true
+        if (isset($socio['es_responsable'])) {
+            $es_responsable = ($socio['es_responsable'] == 1 || strtolower($socio['es_responsable']) === 'si');
+        } else {
+            $es_responsable = false;
+        }
+        
+        error_log("[DEBUG] Socio {$id_socio} - es_responsable: " . ($es_responsable ? 'TRUE' : 'FALSE'));
     }
 } catch (PDOException $e) {
     error_log("Error socio: " . $e->getMessage());
+    $es_responsable = false;
 }
 
 // === 4. DETECTAR MODO: INDIVIDUAL O CLUB ===
@@ -1359,13 +1369,16 @@ if (typeof showToast !== 'function') {
     }
 }
 // === 1. INYECCIÓN SEGURA DE VARIABLES (EVITA REDECLARACIONES) ===
-window.SOCIO_ID = <?= (int)($id_socio ?? 0) ?>;
 window.ES_MULTICLUB = <?= $es_multiclub ? 'true' : 'false' ?>;
 window.CLUB_ACTUAL = "<?= $club_actual_slug ?? '' ?>";
 window.LIMITE_LLENO = <?= $limite_lleno ? 'true' : 'false' ?>;
 window.PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
+// ✅ ASIGNACIÓN EXPLÍCITA Y SEGURA
+window.SOCIO_ID = <?= (int)$id_socio ?>;
 window.ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
-
+    
+console.log('✅ Variables globales cargadas | SOCIO_ID:', window.SOCIO_ID);
+console.log('✅ ES_RESPONSABLE:', window.ES_RESPONSABLE); // Agrega este log para verificar en F12
 console.log('✅ Variables globales cargadas | SOCIO_ID:', window.SOCIO_ID);
 
 // === 2. UTILITARIAS ===
