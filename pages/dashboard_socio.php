@@ -944,20 +944,63 @@ $js_vars = [
             foreach ($torneos as $t) {
                 // Extraer solo la hora HH:MM del datetime
                 $hora_torneo = substr(date('H:i:s', strtotime($t['fecha_inicio'])), 0, 5);
+                
+                // === NUEVA LÓGICA: Calcular Posición de Pareja y Estado ===
+                $posicion_pareja = 0;
+                $total_parejas_inscritas = 0;
+                $estado_pareja_texto = "Esperando completar";
+                $pareja_completa = false;
+
+                // Contar cuántas parejas hay inscritas hasta ahora (ordenadas por ID o fecha de inscripción)
+                // Asumimos que id_pareja es auto_increment, así que ordenar por ID da el orden cronológico aproximado
+                $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
+                $stmt_count->execute([$t['id_torneo']]);
+                $total_parejas_inscritas = $stmt_count->fetchColumn();
+
+                // Obtener el ID de la pareja actual del socio
+                $stmt_mypair = $pdo->prepare("SELECT pt.id_pareja FROM parejas_torneo pt WHERE pt.id_torneo = ? AND (pt.id_socio_1 = ? OR pt.id_socio_2 = ?) LIMIT 1");
+                $stmt_mypair->execute([$t['id_torneo'], $id_socio, $id_socio]);
+                $my_pair_id = $stmt_mypair->fetchColumn();
+
+                if ($my_pair_id) {
+                    // Calcular posición: cuántas parejas tienen un ID menor al mío + 1
+                    $stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ? AND id_pareja <= ?");
+                    $stmt_pos->execute([$t['id_torneo'], $my_pair_id]);
+                    $posicion_pareja = $stmt_pos->fetchColumn();
+                    
+                    // Verificar si está completa
+                    $stmt_check_complete = $pdo->prepare("SELECT id_socio_2 FROM parejas_torneo WHERE id_pareja = ?");
+                    $stmt_check_complete->execute([$my_pair_id]);
+                    $socio_2 = $stmt_check_complete->fetchColumn();
+                    
+                    if (!empty($socio_2)) {
+                        $pareja_completa = true;
+                        $estado_pareja_texto = "Pareja Completa ✅";
+                    } else {
+                        $estado_pareja_texto = "Esperando Pareja ⏳";
+                    }
+                }
 
                 $todos_eventos[] = [
                     'tipo' => 'torneo',
                     'id' => $t['id_torneo'],
-                    'fecha' => date('Y-m-d', strtotime($t['fecha_inicio'])), // Normalizar fecha a Y-m-d
-                    'hora' => $hora_torneo, // Usar la hora extraída limpia
+                    'fecha' => date('Y-m-d', strtotime($t['fecha_inicio'])), 
+                    'hora' => $hora_torneo, 
                     'titulo' => htmlspecialchars($t['nombre']),
                     'deporte' => strtoupper($t['deporte']),
-                    'subtitulo' => date('d/m/Y', strtotime($t['fecha_inicio'])) . ' • ' . htmlspecialchars($t['recinto_nombre'] ?? 'Recinto'),
+                    // Agregamos la hora al subtitulo
+                    'subtitulo' => date('d/m/Y', strtotime($t['fecha_inicio'])) . ' • ' . $hora_torneo . ' hrs • ' . htmlspecialchars($t['recinto_nombre'] ?? 'Recinto'),
                     'cupos_total' => null,
                     'cupos_ocupados' => null,
                     'monto' => $t['valor'],
                     'codigo_pareja' => $t['codigo_pareja'],
-                    'icono' => '🏆'
+                    'icono' => '🏆',
+                    // Nuevos campos dinámicos
+                    'posicion_pareja' => $posicion_pareja,
+                    'total_parejas' => $total_parejas_inscritas,
+                    'estado_pareja' => $estado_pareja_texto,
+                    'es_completa' => $pareja_completa,
+                    'recinto_nombre' => htmlspecialchars($t['recinto_nombre'] ?? 'Recinto')
                 ];
             }
 
@@ -1083,38 +1126,57 @@ $js_vars = [
                             </div>
                         </div>
 
-                    <?php elseif ($evento['tipo'] === 'torneo'): ?>
-                        <!-- FICHA DE TORNEO -->
-                        <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column; border-left:5px solid #FFD700;">
-                            
-                            <!-- Header de la Ficha -->
-                            <div style="padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <span style="font-size:1.5rem;"><?= $evento['icono'] ?></span>
-                                    <span style="font-weight:bold; color:#071289; margin-left:0.5rem; font-size:1.1rem;"><?= $evento['titulo'] ?></span>
-                                </div>
-                                <span style="background:#FFFDE7; color:#F57F17; padding:4px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold;"><?= $evento['deporte'] ?></span>
+                                    <?php elseif ($evento['tipo'] === 'torneo'): ?>
+                    <!-- FICHA DE TORNEO -->
+                    <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column; border-left:5px solid #FFD700;">
+                        
+                        <!-- Header de la Ficha -->
+                        <div style="padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <span style="font-size:1.5rem;"><?= $evento['icono'] ?></span>
+                                <span style="font-weight:bold; color:#071289; margin-left:0.5rem; font-size:1.1rem;"><?= $evento['titulo'] ?></span>
+                            </div>
+                            <span style="background:#FFFDE7; color:#F57F17; padding:4px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold;"><?= $evento['deporte'] ?></span>
+                        </div>
+                        
+                        <!-- Cuerpo de la Ficha -->
+                        <div style="padding:1rem;">
+                            <!-- Fecha, Hora y Recinto -->
+                            <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
+                                📅 <?= $evento['subtitulo'] ?>
                             </div>
                             
-                            <!-- Cuerpo de la Ficha -->
-                            <div style="padding:1rem;">
-                                <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
-                                    📅 <?= $evento['subtitulo'] ?>
-                                </div>
+                            <!-- Info de Pareja Dinámica -->
+                            <div style="background:#FFFDE7; padding:0.75rem; border-radius:10px; margin-bottom:1rem; text-align:center;">
+                                <div style="font-size:0.8rem; color:#888; margin-bottom:4px;">Estado de tu Pareja</div>
                                 
-                                <!-- Info Pareja -->
-                                <div style="background:#FFFDE7; padding:0.75rem; border-radius:10px; margin-bottom:1rem; text-align:center;">
-                                    <div style="font-size:0.8rem; color:#888;">Código de Invitación</div>
-                                    <code style="font-family:monospace; font-size:1.1rem; font-weight:bold; color:#5D4037; letter-spacing:1px;"><?= $evento['codigo_pareja'] ?></code>
-                                </div>
+                                <?php if ($evento['posicion_pareja'] > 0): ?>
+                                    <div style="font-family:monospace; font-size:1.1rem; font-weight:bold; color:#5D4037; letter-spacing:1px; margin-bottom:4px;">
+                                        Pareja <?= $evento['posicion_pareja'] ?> de <?= $evento['total_parejas'] ?>
+                                    </div>
+                                    <div style="font-size:0.9rem; font-weight:600; color:<?= $evento['es_completa'] ? '#2E7D32' : '#F57F17' ?>">
+                                        <?= $evento['estado_pareja'] ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div style="font-size:0.9rem; color:#888;">Sin asignar aún</div>
+                                <?php endif; ?>
+                            </div>
 
-                                <!-- Botón de Acción -->
+                            <!-- Botón de Acción Dinámico -->
+                            <?php if (!$evento['es_completa']): ?>
+                                <!-- Si NO está completa: Enviar Invitación -->
+                                <button onclick="enviarInvitacionTorneo(<?= $evento['id'] ?>, '<?= $evento['codigo_pareja'] ?>')" style="display:block; width:100%; padding:0.7rem; background:linear-gradient(135deg, #AB47BC, #7B1FA2); color:white; text-align:center; border-radius:8px; border:none; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                    📩 Enviar Link a Pareja
+                                </button>
+                            <?php else: ?>
+                                <!-- Si SÍ está completa: Ver Torneo -->
                                 <a href="torneo_detalle.php?id=<?= $evento['id'] ?>" style="display:block; width:100%; padding:0.7rem; background:linear-gradient(135deg, #FFD700, #FFA000); color:white; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                                     Ver Torneo →
                                 </a>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
+                <?php endif; ?>
                     
                     <?php $index++; ?>
                 <?php endforeach; ?>
@@ -1735,6 +1797,14 @@ async function pagarCuota(idCuota) {
 function cerrarSesion() {
     showToast('👋 Cerrando sesión...', 'info');
     window.location.href = '../api/logout.php';
+}
+// Función para enviar invitación de torneo
+function enviarInvitacionTorneo(idTorneo, codigoPareja) {
+    const linkInvitacion = window.location.origin + '/pages/torneo_invite.php?code=' + codigoPareja;
+    const mensajeWhatsApp = encodeURIComponent("🎾 ¡Hola! Te invito a ser mi pareja en el torneo de CanchaSport. \n\nInscríbete aquí con este link único: " + linkInvitacion);
+    
+    // Intentar abrir WhatsApp Web/App
+    window.open('https://wa.me/?text=' + mensajeWhatsApp, '_blank');
 }
 </script>
 </body>
