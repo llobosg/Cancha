@@ -920,23 +920,41 @@ $js_vars = [
     </div>
 
     <?php
-        // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS ===
+                // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS ===
         if (isset($_SESSION['id_socio'])) {
             $id_socio = $_SESSION['id_socio'];
             $todos_eventos = [];
             $primer_evento_es_futbol = false; 
 
             // 1. Obtener Reservas Futuras
-            $stmt_reservas = $pdo->prepare("
+            // ✅ CORRECCIÓN CRÍTICA: Ajustar WHERE según si es Modo Club o Individual
+            $where_reservas = [];
+            $params_reservas = [];
+
+            if (!$modo_individual && $club_id) {
+                // MODO CLUB: Buscar reservas del CLUB, sin importar quién las creó
+                $where_reservas[] = "r.id_club = ?";
+                $params_reservas[] = $club_id;
+            } else {
+                // MODO INDIVIDUAL: Buscar solo reservas personales del socio
+                $where_reservas[] = "(r.id_club IS NULL OR r.id_club = 0) AND r.id_socio = ?";
+                $params_reservas[] = $id_socio;
+            }
+            
+            // Agregar condiciones comunes
+            $where_reservas[] = "r.fecha >= CURDATE()";
+            $where_reservas[] = "r.estado != 'cancelada'";
+
+            $sql_reservas = "
                 SELECT r.*, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
                 FROM reservas r
                 JOIN canchas c ON r.id_cancha = c.id_cancha
-                WHERE r.id_socio = ? 
-                AND r.fecha >= CURDATE()
-                AND r.estado != 'cancelada'
+                WHERE " . implode(" AND ", $where_reservas) . "
                 ORDER BY r.fecha ASC, r.hora_inicio ASC
-            ");
-            $stmt_reservas->execute([$id_socio]);
+            ";
+
+            $stmt_reservas = $pdo->prepare($sql_reservas);
+            $stmt_reservas->execute($params_reservas);
             $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($reservas as $r) {
@@ -955,7 +973,7 @@ $js_vars = [
                     'tipo' => 'reserva',
                     'id' => $r['id_reserva'],
                     'fecha' => $r['fecha'],
-                    'hora' => substr($r['hora_inicio'], 0, 5), // Asegurar HH:MM
+                    'hora' => substr($r['hora_inicio'], 0, 5), 
                     'titulo' => htmlspecialchars($r['nombre_cancha']),
                     'deporte' => strtoupper($r['id_deporte']),
                     'subtitulo' => date('d/m/Y', strtotime($r['fecha'])) . ' • ' . substr($r['hora_fin'], 0, 5) . ' hrs',
