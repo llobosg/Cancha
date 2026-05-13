@@ -1375,11 +1375,13 @@ window.LIMITE_LLENO = <?= $limite_lleno ? 'true' : 'false' ?>;
 window.PROXIMO_ID = <?= $proximo['id_reserva'] ?? 0 ?>;
 // ✅ ASIGNACIÓN EXPLÍCITA Y SEGURA
 window.SOCIO_ID = <?= (int)$id_socio ?>;
-window.ES_RESPONSABLE = <?= $es_responsable ? 'true' : 'false' ?>;
+    
+// ✅ ASIGNACIÓN EXPLÍCITA CON LOG
+const isResp = <?= $es_responsable ? 'true' : 'false' ?>;
+window.ES_RESPONSABLE = isResp;
     
 console.log('✅ Variables globales cargadas | SOCIO_ID:', window.SOCIO_ID);
-console.log('✅ ES_RESPONSABLE:', window.ES_RESPONSABLE); // Agrega este log para verificar en F12
-console.log('✅ Variables globales cargadas | SOCIO_ID:', window.SOCIO_ID);
+console.log('✅ ES_RESPONSABLE (Forzado):', window.ES_RESPONSABLE);
 
 // === 2. UTILITARIAS ===
 function showToast(msg, type = 'success') {
