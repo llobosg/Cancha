@@ -212,7 +212,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
                 }, 2000);
             </script>
         <?php else: ?>
-            h2>🎾 <?= htmlspecialchars($torneo['nombre']) ?></h2>
+            <h2>🎾 <?= htmlspecialchars($torneo['nombre']) ?></h2>
             <p><?= htmlspecialchars($torneo['recinto_nombre']) ?></p>
             
             <div class="info-torneo">
