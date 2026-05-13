@@ -1591,12 +1591,25 @@ async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
     if (!confirm(confirmMsg)) return;
     
     try {
+        // Construir body manualmente para evitar problemas de codificación
+        const formData = new URLSearchParams();
+        formData.append('action', 'bajarse');
+        formData.append('id_actividad', idReserva);
+        formData.append('tipo_actividad', 'reserva'); // Asegurar tipo
+        
+        // Si soy yo, no envío id_socio_objetivo (la API usará mi sesión)
+        // Si soy responsable, envío el ID del otro
+        if (!esMiInscripcion) {
+            formData.append('id_socio_objetivo', idInscrito);
+        }
+
         const res = await fetch('../api/gestion_eventos.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `action=bajarse&id_actividad=${idReserva}&id_socio_objetivo=${esMiInscripcion ? '' : idInscrito}`,
+            body: formData.toString(),
             credentials: 'include'
         });
+        
         const data = await res.json();
         
         if (data.success) {
@@ -1606,18 +1619,9 @@ async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
             showToast('❌ ' + (data.message || 'Error'), 'error');
         }
     } catch (e) {
+        console.error(e);
         showToast('❌ Error de conexión', 'error');
     }
-}
-
-async function bajarJugador(idSocio, idReserva, nombre) {
-    if (!confirm(`¿Bajar a ${nombre}?`)) return;
-    try {
-        const r = await fetch('../api/bajar_jugador_reserva.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id_reserva:idReserva, id_socio_a_bajar:idSocio, id_responsable:window.SOCIO_ID}) });
-        const d = await r.json();
-        showToast(d.success ? `✅ ${nombre} bajado` : '❌ '+d.message, d.success?'success':'error');
-        if (d.success) verInscritos(idReserva);
-    } catch(e) { showToast('❌ Error conexión', 'error'); }
 }
 
 function cerrarModal(e) {

@@ -3,14 +3,14 @@
 session_start(); 
 require_once __DIR__ . '/../includes/config.php';
 
-$slug = $_GET['slug'] ?? '';
-$id_param = $_GET['id'] ?? ''; 
-$code_pareja = $_GET['code'] ?? '';
-
+// ✅ INICIALIZACIÓN SEGURA DE VARIABLES GLOBALES
+$inscritos = 0; 
 $torneo = null;
 $error_message = "";
 $success_message = "";
-$inscritos = 0; // Inicializar variable
+$slug = $_GET['slug'] ?? '';
+$id_param = $_GET['id'] ?? ''; 
+$code_pareja = $_GET['code'] ?? '';
 
 // 1. Identificar Torneo
 if ($slug) {
