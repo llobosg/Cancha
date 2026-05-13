@@ -132,7 +132,7 @@ if (!$modo_individual && $club_id) {
     $_SESSION['current_club'] = $club_slug;
 }
 
-// === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA ===
+// === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA PARA CLUBES E INDIVIDUAL ===
 $proximo_evento = null;
 $ya_inscrito = false;
 $cupos_llenos = false;
@@ -145,16 +145,25 @@ $jugadores_esperados = 0;
 $lunes_semana_evento = null;
 
 try {
-    $where_parts = ["r.estado = 'confirmada'", "r.fecha >= CURDATE()"];
+    $where_parts = [];
     $params = [];
 
+    // Condición base: Reserva activa y futura
+    $where_parts[] = "r.estado IN ('confirmada', 'pendiente')"; 
+    $where_parts[] = "r.fecha >= CURDATE()";
+
     if (!$modo_individual && $club_id) {
-        // ✅ CORREGIDO: Mostrar próxima reserva del club, sin importar quién la creó
+        // ✅ MODO CLUB: Mostrar próximas reservas DEL CLUB
+        // No importa quién creó la reserva, siempre que pertenezca al club
         $where_parts[] = "r.id_club = ?";
         $params[] = $club_id;
+        
+        // Opcional: Si quieres mostrar SOLO reservas creadas por miembros activos del club:
+        // Ya está cubierto por id_club, pero aseguramos que el socio tenga acceso
+        
     } else {
-        // MODO INDIVIDUAL: Mostrar solo reservas personales del socio
-        $where_parts[] = "r.id_club IS NULL AND r.id_socio = ?";
+        // ✅ MODO INDIVIDUAL: Mostrar solo reservas personales del socio (sin club asociado)
+        $where_parts[] = "(r.id_club IS NULL OR r.id_club = 0) AND r.id_socio = ?";
         $params[] = $id_socio;
     }
 
@@ -170,6 +179,9 @@ try {
         ORDER BY r.fecha ASC, r.hora_inicio ASC
         LIMIT 1
     ";
+
+    // Debug Log
+    error_log("[DASHBOARD] Query Próximo Partido: " . $sql . " | Params: " . json_encode($params));
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -210,7 +222,12 @@ try {
         ");
         $stmt_check->execute([$id_reserva, $id_socio]);
         $ya_inscrito = (bool)$stmt_check->fetch();
+        
+        error_log("[DASHBOARD] Próximo evento encontrado: ID {$id_reserva} | Inscritos: {$inscritos_actuales}/{$jugadores_esperados} | Ya inscrito: " . ($ya_inscrito ? 'Sí' : 'No'));
+    } else {
+        error_log("[DASHBOARD] No se encontró próximo partido para Socio ID {$id_socio} | Club ID {$club_id}");
     }
+
 } catch (Exception $e) {
     error_log("Error próximo partido: " . $e->getMessage());
 }

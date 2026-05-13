@@ -288,6 +288,7 @@ if ($torneo) {
         function cerrarModalRegistro() { document.getElementById('modalRegistroRapido').style.display = 'none'; }
 
         // Login Socio Existente
+                // Login Socio Existente
         async function loginSocio(e) {
             e.preventDefault();
             const form = e.target;
@@ -295,24 +296,40 @@ if ($torneo) {
             btn.disabled = true;
             btn.textContent = 'Verificando...';
 
+            console.log("🔍 [LOGIN] Iniciando login socio...");
+            
             try {
                 const res = await fetch('../api/login_socio_simple.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email: form.email.value, password: form.password.value })
                 });
-                const data = await res.json();
+                
+                console.log("🔍 [LOGIN] Estado HTTP:", res.status);
+                
+                // Intentar leer texto crudo para debug si falla JSON
+                const text = await res.text();
+                console.log("🔍 [LOGIN] Respuesta cruda:", text.substring(0, 200));
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (err) {
+                    throw new Error("La respuesta no es JSON válido. Probablemente un error de servidor.");
+                }
 
                 if (data.success) {
+                    console.log("✅ [LOGIN] Login exitoso");
                     cerrarModalLogin();
-                    aceptarInvitacionSocio(); // Proceder a aceptar invitación
+                    aceptarInvitacionSocio(); 
                 } else {
                     alert('❌ ' + data.message);
                     btn.disabled = false;
                     btn.textContent = 'Ingresar';
                 }
             } catch (err) {
-                alert('❌ Error de conexión');
+                console.error("❌ [LOGIN] Error:", err);
+                alert('❌ Error de conexión: ' + err.message);
                 btn.disabled = false;
                 btn.textContent = 'Ingresar';
             }
@@ -320,22 +337,37 @@ if ($torneo) {
 
         // Aceptar Invitación (Lógica común para socio logueado)
         async function aceptarInvitacionSocio() {
+            console.log("🔍 [INVITACIÓN] Iniciando aceptación...");
+            console.log("🔍 [INVITACIÓN] Código pareja:", codePareja);
+
             try {
                 const res = await fetch('../api/aceptar_invitacion_pareja.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ codigo_pareja: codePareja })
                 });
-                const data = await res.json();
+
+                console.log("🔍 [INVITACIÓN] Estado HTTP:", res.status);
                 
+                const text = await res.text();
+                console.log("🔍 [INVITACIÓN] Respuesta cruda:", text.substring(0, 200));
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (err) {
+                    throw new Error("La respuesta no es JSON válido. Verifica logs de Railway.");
+                }
+
                 if (data.success) {
+                    console.log("✅ [INVITACIÓN] Éxito");
                     window.location.href = '/pages/dashboard_socio.php';
                 } else {
                     alert('❌ ' + data.message);
                 }
             } catch (err) {
-                console.error(err);
-                alert('❌ Error de conexión');
+                console.error("❌ [INVITACIÓN] Error de conexión:", err);
+                alert('❌ Error de conexión: ' + err.message);
             }
         }
 
