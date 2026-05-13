@@ -1092,7 +1092,6 @@ $js_vars = [
 
         // Variables auxiliares para el menú del primer evento (si aplica)
         $primer_id_reserva = !empty($todos_eventos) && $todos_eventos[0]['tipo'] === 'reserva' ? $todos_eventos[0]['id'] : 0;
-        $es_responsable = isset($_SESSION['rol']) && in_array($_SESSION['rol'], ['admin', 'responsable']);
         $cupos_llenos_primer_evento = false;
         $deuda_mas_vigente = null;
 
