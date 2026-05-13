@@ -97,9 +97,6 @@ try {
         // Verificar permisos si es un responsable bajando a otro
         if ($id_socio_a_bajar !== $id_socio_actual) {
             // Verificar si el usuario actual tiene permiso para gestionar jugadores
-            // Opción A: Por Rol (si usas columnas de rol)
-            // Opción B: Por columna 'es_responsable' (más común en tu estructura)
-            
             $stmt_check_permiso = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
             $stmt_check_permiso->execute([$id_socio_actual]);
             $es_resp = $stmt_check_permiso->fetchColumn();

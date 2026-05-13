@@ -920,29 +920,35 @@ $js_vars = [
     </div>
 
     <?php
-                // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS ===
+                // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (FILTRADO POR MES ACTUAL) ===
         if (isset($_SESSION['id_socio'])) {
             $id_socio = $_SESSION['id_socio'];
             $todos_eventos = [];
             $primer_evento_es_futbol = false; 
 
-            // 1. Obtener Reservas Futuras
-            // ✅ CORRECCIÓN CRÍTICA: Ajustar WHERE según si es Modo Club o Individual
+            // Variable auxiliar para filtrar por mes actual (YYYY-MM)
+            $mes_actual = date('Y-m');
+
+            // 1. Obtener Reservas Futuras (Solo del mes actual)
             $where_reservas = [];
             $params_reservas = [];
 
+            // Filtro por mes actual
+            $where_reservas[] = "DATE_FORMAT(r.fecha, '%Y-%m') = ?";
+            $params_reservas[] = $mes_actual;
+
             if (!$modo_individual && $club_id) {
-                // MODO CLUB: Buscar reservas del CLUB, sin importar quién las creó
+                // MODO CLUB
                 $where_reservas[] = "r.id_club = ?";
                 $params_reservas[] = $club_id;
             } else {
-                // MODO INDIVIDUAL: Buscar solo reservas personales del socio
+                // MODO INDIVIDUAL
                 $where_reservas[] = "(r.id_club IS NULL OR r.id_club = 0) AND r.id_socio = ?";
                 $params_reservas[] = $id_socio;
             }
             
-            // Agregar condiciones comunes
-            $where_reservas[] = "r.fecha >= CURDATE()";
+            // Condiciones comunes
+            $where_reservas[] = "r.fecha >= CURDATE()"; // Solo fechas futuras/hoy
             $where_reservas[] = "r.estado != 'cancelada'";
 
             $sql_reservas = "
@@ -985,47 +991,44 @@ $js_vars = [
                 ];
             }
 
-            // 2. Obtener Torneos Futuros
-            $stmt_torneos = $pdo->prepare("
+            // 2. Obtener Torneos Futuros (Solo del mes actual)
+            // Nota: Los torneos se filtran por fecha_inicio
+            $sql_torneos = "
                 SELECT t.*, pt.codigo_pareja, 'torneo' as tipo
                 FROM parejas_torneo pt
                 JOIN torneos t ON pt.id_torneo = t.id_torneo
                 WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
+                AND DATE_FORMAT(t.fecha_inicio, '%Y-%m') = ?
                 AND t.fecha_inicio >= CURDATE()
                 AND t.estado IN ('abierto', 'en_progreso')
                 ORDER BY t.fecha_inicio ASC
-            ");
-            $stmt_torneos->execute([$id_socio, $id_socio]);
+            ";
+            
+            $stmt_torneos = $pdo->prepare($sql_torneos);
+            $stmt_torneos->execute([$id_socio, $id_socio, $mes_actual]);
             $torneos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($torneos as $t) {
-                // Extraer solo la hora HH:MM del datetime
                 $hora_torneo = substr(date('H:i:s', strtotime($t['fecha_inicio'])), 0, 5);
                 
-                // === NUEVA LÓGICA: Calcular Posición de Pareja y Estado ===
                 $posicion_pareja = 0;
                 $total_parejas_inscritas = 0;
                 $estado_pareja_texto = "Esperando completar";
                 $pareja_completa = false;
 
-                // Contar cuántas parejas hay inscritas hasta ahora (ordenadas por ID o fecha de inscripción)
-                // Asumimos que id_pareja es auto_increment, así que ordenar por ID da el orden cronológico aproximado
                 $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ?");
                 $stmt_count->execute([$t['id_torneo']]);
                 $total_parejas_inscritas = $stmt_count->fetchColumn();
 
-                // Obtener el ID de la pareja actual del socio
                 $stmt_mypair = $pdo->prepare("SELECT pt.id_pareja FROM parejas_torneo pt WHERE pt.id_torneo = ? AND (pt.id_socio_1 = ? OR pt.id_socio_2 = ?) LIMIT 1");
                 $stmt_mypair->execute([$t['id_torneo'], $id_socio, $id_socio]);
                 $my_pair_id = $stmt_mypair->fetchColumn();
 
                 if ($my_pair_id) {
-                    // Calcular posición: cuántas parejas tienen un ID menor al mío + 1
                     $stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM parejas_torneo WHERE id_torneo = ? AND id_pareja <= ?");
                     $stmt_pos->execute([$t['id_torneo'], $my_pair_id]);
                     $posicion_pareja = $stmt_pos->fetchColumn();
                     
-                    // Verificar si está completa
                     $stmt_check_complete = $pdo->prepare("SELECT id_socio_2 FROM parejas_torneo WHERE id_pareja = ?");
                     $stmt_check_complete->execute([$my_pair_id]);
                     $socio_2 = $stmt_check_complete->fetchColumn();
@@ -1045,14 +1048,12 @@ $js_vars = [
                     'hora' => $hora_torneo, 
                     'titulo' => htmlspecialchars($t['nombre']),
                     'deporte' => strtoupper($t['deporte']),
-                    // Agregamos la hora al subtitulo
                     'subtitulo' => date('d/m/Y', strtotime($t['fecha_inicio'])) . ' • ' . $hora_torneo . ' hrs • ' . htmlspecialchars($t['recinto_nombre'] ?? 'Recinto'),
                     'cupos_total' => null,
                     'cupos_ocupados' => null,
                     'monto' => $t['valor'],
                     'codigo_pareja' => $t['codigo_pareja'],
                     'icono' => '🏆',
-                    // Nuevos campos dinámicos
                     'posicion_pareja' => $posicion_pareja,
                     'total_parejas' => $total_parejas_inscritas,
                     'estado_pareja' => $estado_pareja_texto,
@@ -1063,14 +1064,9 @@ $js_vars = [
 
             // 3. Ordenar TODOS los eventos cronológicamente
             usort($todos_eventos, function($a, $b) {
-                // Construir string de fecha/hora válido: "YYYY-MM-DD HH:MM"
                 $dateStrA = $a['fecha'] . ' ' . $a['hora'];
                 $dateStrB = $b['fecha'] . ' ' . $b['hora'];
-                
-                $timeA = strtotime($dateStrA);
-                $timeB = strtotime($dateStrB);
-                
-                return $timeA <=> $timeB;
+                return strtotime($dateStrA) <=> strtotime($dateStrB);
             });
         } else {
             $todos_eventos = [];
