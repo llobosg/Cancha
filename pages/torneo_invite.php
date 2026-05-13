@@ -135,6 +135,9 @@ if ($torneo) {
 <body>
 
     <div class="card">
+        <!-- ✅ BOTÓN X PARA SALIR -->
+        <button class="close-btn" onclick="window.history.back()" title="Volver">&times;</button>
+
         <?php if ($error_message): ?>
             <div class="error-msg"><h3>⚠️ <?= $error_message ?></h3></div>
         <?php elseif ($success_message): ?>
