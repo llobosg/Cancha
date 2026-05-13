@@ -86,13 +86,38 @@ try {
     $ya_inscrito = $stmt_check->fetch();
 
     if ($action === 'bajarse') {
-        $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
-            ->execute([$id_actividad, $id_socio, $tipo_actividad]);
+        $id_actividad = (int)($_POST['id_actividad'] ?? 0);
+        $tipo_actividad = $_POST['tipo_actividad'] ?? 'reserva';
         
-        $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?")
-            ->execute([$id_actividad, $id_socio, $tipo_actividad]);
+        // Determinar qué socio bajar
+        $id_socio_a_bajar = isset($_POST['id_socio_objetivo']) && !empty($_POST['id_socio_objetivo']) 
+            ? (int)$_POST['id_socio_objetivo'] 
+            : $id_socio_actual;
+
+        // Verificar permisos si es un responsable bajando a otro
+        if ($id_socio_a_bajar !== $id_socio_actual) {
+            // Verificar si el usuario actual tiene permiso para gestionar jugadores
+            // Opción A: Por Rol (si usas columnas de rol)
+            // Opción B: Por columna 'es_responsable' (más común en tu estructura)
+            
+            $stmt_check_permiso = $pdo->prepare("SELECT es_responsable FROM socios WHERE id_socio = ?");
+            $stmt_check_permiso->execute([$id_socio_actual]);
+            $es_resp = $stmt_check_permiso->fetchColumn();
+
+            if (!$es_resp) {
+                throw new Exception('No tienes permisos para bajar a otros jugadores');
+            }
+        }
+
+        // Ejecutar baja
+        $stmt_delete = $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?");
+        $stmt_delete->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
         
-        $mensaje = "✅ Te has dado de baja del evento";
+        // Opcional: Borrar cuota asociada si existe
+        $stmt_cuota = $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?");
+        $stmt_cuota->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
+        
+        echo json_encode(['success' => true, 'message' => 'Baja registrada']);
     } else {
         // === VALIDAR CUPO ===
         if ($tipo_actividad === 'reserva' && in_array($deporte, ['futbolito', 'futsal', 'padel', 'tenis'])) {
