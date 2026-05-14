@@ -3404,6 +3404,7 @@ async function abrirModalInscritos(idTorneo) {
         if (!res.ok) throw new Error(`Error ${res.status}`);
         
         const data = await res.json();
+        console.log('🔍 Datos recibidos:', data);
         
         // Validación estricta
         if (!Array.isArray(data)) {
@@ -3432,10 +3433,16 @@ async function abrirModalInscritos(idTorneo) {
                     <tbody>`;
             
         data.forEach(p => {
+            console.log('🔍 Pareja individual:', p); // Debug individual
+            
+            const numeroPareja = p.nombre_pareja || p.numero ? '#' + p.numero : '—';
+            const jugador1 = p.jugador1 && p.jugador1 !== '—' ? p.jugador1 : '—';
+            const jugador2 = p.jugador2 && p.jugador2 !== '' ? p.jugador2 : '<em style="color:#888;">Pendiente</em>';
+            const contacto = p.contacto || '—';
+            const idPareja = p.id_pareja || 0;
             // Sanitizar nombres para evitar XSS en el onclick
             const j1Safe = (p.jugador1 || '—').replace(/'/g, "\\'");
             const j2Safe = (p.jugador2 || 'Pendiente').replace(/'/g, "\\'");
-            const idPareja = p.id_pareja || p.id || 0;
             
             html += `<tr style="border-bottom:1px solid #eee;">
                 <td style="padding:0.8rem; font-weight:600;">${p.nombre_pareja || p.numero || '#' + (p.id_pareja || '')}</td>

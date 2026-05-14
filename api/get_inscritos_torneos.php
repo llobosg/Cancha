@@ -18,15 +18,19 @@ if (!$id_torneo) {
 }
 
 try {
-    // ✅ Consulta con JOINs para traer nombres y id_pareja
+    // ✅ Consulta compatible con MySQL 5.7+ (sin ROW_NUMBER)
     $stmt = $pdo->prepare("
         SELECT 
             pt.id_pareja,
-            pt.codigo_pareja as nombre_pareja,
-            ROW_NUMBER() OVER (ORDER BY pt.created_at ASC) as numero,
-            s1.nombre as jugador1,
-            s1.email as contacto,
-            s2.nombre as jugador2
+            pt.codigo_pareja,
+            pt.created_at,
+            -- Jugador 1 (principal)
+            IFNULL(s1.nombre, '—') as jugador1,
+            IFNULL(s1.email, '—') as contacto,
+            IFNULL(s1.celular, '') as celular1,
+            -- Jugador 2 (invitado)
+            IFNULL(s2.nombre, '') as jugador2,
+            IFNULL(s2.email, '') as email2
         FROM parejas_torneo pt
         LEFT JOIN socios s1 ON pt.id_socio_1 = s1.id_socio
         LEFT JOIN socios s2 ON pt.id_socio_2 = s2.id_socio
@@ -36,10 +40,27 @@ try {
     $stmt->execute([$id_torneo]);
     $parejas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    echo json_encode($parejas);
+    // ✅ Transformar datos con numeración manual (compatible con MySQL 5.7)
+    $resultado = [];
+    $numero = 1;
+    foreach ($parejas as $p) {
+        $resultado[] = [
+            'id_pareja' => $p['id_pareja'],
+            'nombre_pareja' => '#' . $numero,
+            'numero' => $numero,
+            'jugador1' => $p['jugador1'],
+            'contacto' => $p['contacto'],
+            'jugador2' => !empty($p['jugador2']) ? $p['jugador2'] : '<em style="color:#888;">Pendiente</em>',
+            'email2' => $p['email2'],
+            'celular1' => $p['celular1']
+        ];
+        $numero++;
+    }
+    
+    echo json_encode($resultado);
     
 } catch (Exception $e) {
     error_log("Error get_inscritos_torneos: " . $e->getMessage());
-    echo json_encode(['error' => 'Error al cargar datos']);
+    echo json_encode(['error' => 'Error: ' . $e->getMessage()]);
 }
 ?>
