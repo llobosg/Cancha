@@ -4819,7 +4819,7 @@ function debugEditarConvenio(btn, event) {
     console.log('🟡 [DEBUG-EDITAR] ✅ Modal FORZADO a visible. Display:', modal.style.display);
 }
 
-// === FUNCIÓN FALTANTE: TOGGLE ACCIONES (MENÚ LATERAL) ===
+// === FUNCIÓN: TOGGLE ACCIONES (MENÚ LATERAL) ===
 function toggleAcciones() {
     const contenedor = document.getElementById('contenedor-acciones');
     const icono = document.getElementById('icon-operaciones');
@@ -4836,6 +4836,8 @@ function toggleAcciones() {
         }
     }
 }
+// ✅ HACERLA GLOBAL PARA onclick inline
+window.toggleAcciones = toggleAcciones;
 
 // Asegurar que el menú esté oculto al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
