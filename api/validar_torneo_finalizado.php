@@ -1,8 +1,12 @@
 <?php
-header('Content-Type: application/json');
-require_once __DIR__ . '/../includes/config.php';
+// api/validar_torneo_finalizado.php
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../includes/config.php'; // Esto inicia sesión
 
-if (!isset($_SESSION['recinto_rol']) || $_SESSION['recinto_rol'] !== 'admin_recinto') {
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+// Validar admin del recinto
+if (!isset($_SESSION['id_recinto']) || !in_array($_SESSION['recinto_rol'] ?? '', ['admin', 'responsable'])) {
     echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
     exit;
 }

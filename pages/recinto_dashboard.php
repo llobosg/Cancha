@@ -2537,27 +2537,56 @@ async function cargarTorneos() {
                                (estado === 'en_progreso' ? '#2196F3' : '#FF9800');
 
             // 3. Lógica de Botones (Según tu requerimiento)
+            // === LÓGICA DE BOTONES SEGÚN ESTADO Y CUPOS ===
             let botonesHtml = '';
-            
+
+            // Parsear valores numéricos de forma segura
+            const inscritosCount = parseInt(t.parejas_inscritas) || 0;
+            const maxParejas = parseInt(t.num_parejas_max) || 6; // Default 6 si no viene
+            const estaLleno = inscritosCount >= maxParejas;
+            const estado = (t.estado || '').toLowerCase();
+
             if (estado === 'abierto') {
-                // ABIERTO: Invitar, Crear Fixture
+                if (!estaLleno) {
+                    // ✅ ETAPA 1: Invitar parejas (único botón visible)
+                    botonesHtml = `
+                        <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar">
+                            📩 Invitar Parejas
+                        </a>
+                    `;
+                } else {
+                    // ✅ ETAPA 2: Cupo lleno → Mostrar "Cerrar inscripciones"
+                    botonesHtml = `
+                        <button class="btn-torneo" onclick="cerrarTorneo(${t.id_torneo})" 
+                                style="background:#EF5350; color:white; border:none;">
+                            🔒 Cerrar Inscripciones
+                        </button>
+                    `;
+                }
+            } 
+            else if (estado === 'cerrado') {
+                // ✅ ETAPA 3: Inscripciones cerradas → Habilitar "Crear Fixture"
                 botonesHtml = `
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
-                        <a href="torneo_invite.php?id=${t.id_torneo}" class="btn-torneo btn-invitar" style="text-align:center; text-decoration:none; padding:0.6rem; border-radius:6px; background:#E0F7FA; color:#006064; font-weight:600; font-size:0.9rem;">📩 Invitar Parejas</a>
-                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="cerrarTorneo(${t.id_torneo})">Cerrar Inscrip..</button>
-                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="generarFixture(${t.id_torneo})">⚙️ Crear Fixture</button>
-                    </div>
+                    <button class="btn-torneo" onclick="generarFixture(${t.id_torneo})" 
+                            style="background:#071289; color:white; border:none;">
+                        🎯 Crear Fixture
+                    </button>
                 `;
-            } else {
-                // EN CURSO / CERRADO: Ver Fixture, Resultados, Finalizar
+            } 
+            else if (['en_progreso', 'finalizado'].includes(estado)) {
+                // ✅ ETAPA 4: Fixture creado → Mostrar 3 botones
                 botonesHtml = `
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
-                        <div style="display:flex; gap:0.5rem;">
-                            <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#f0f0f0; color:#333; border:none; font-weight:600; cursor:pointer;" onclick="verFixture(${t.id_torneo})">🎾 Ver Fixture</button>
-                            <button class="btn-torneo" style="flex:1; padding:0.6rem; border-radius:6px; background:#071289; color:white; border:none; font-weight:600; cursor:pointer;" onclick="verResultadosTV(${t.id_torneo})">📺 TV Mode</button>
-                        </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <button class="btn-torneo" onclick="verFixture(${t.id_torneo})">
+                            👁️ Ver Fixture
+                        </button>
+                        <button class="btn-torneo" onclick="verResultadosTV(${t.id_torneo})" 
+                                style="background:#FF9800; color:white; border:none;">
+                            📺 TV Mode
+                        </button>
                         ${estado !== 'finalizado' ? `
-                        <button class="btn-torneo" style="padding:0.6rem; border-radius:6px; background: #f64242; color:white; border:none; font-weight:600; cursor:pointer; margin-top:0.5rem;" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})">
+                        <button class="btn-torneo" onclick="finalizarTorneoYCalcularRanking(${t.id_torneo})" 
+                                style="background:#4CAF50; color:white; border:none;">
                             ✅ Finalizar + Upgrade Ranking
                         </button>` : ''}
                     </div>
@@ -3994,44 +4023,82 @@ document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
 
-/// === 📺 VER RESULTADOS TV MODE (Split-Screen 80/20 - Todos los Sets) ===
+// === 📺 TV MODE (Split-Screen 80/20 - Auto-refresh cada 10s) ===
+let tvModeInterval = null;
+
 function verResultadosTV(idTorneo) {
-    console.log('📺 Iniciando TV Mode Split-Screen para torneo:', idTorneo);
+    console.log('📺 Iniciando TV Mode para torneo:', idTorneo);
     
     const overlay = document.getElementById('submodalGenerico');
-    const card = overlay.querySelector('.submodal-card');
+    const card = overlay?.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
-    if (!overlay || !card || !contenido) return;
-
-    // 1. Estilos TV Full Screen
+    if (!overlay || !card || !contenido) {
+        console.error('❌ Elementos del modal no encontrados');
+        return;
+    }
+    
+    // 1. Asegurar que el modal esté visible
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth; // Forzar reflow
+    overlay.classList.add('active');
+    
+    // 2. Estilos TV Full Screen
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '98%';
     card.style.height = '95vh';
     card.style.padding = '0';
-    card.style.display = 'flex'; // Flex horizontal
+    card.style.display = 'flex';
     card.style.flexDirection = 'row';
-    card.style.background = '#1a1a1a'; // Fondo oscuro
+    card.style.background = '#1a1a1a';
     card.style.color = 'white';
-    card.style.overflow = 'hidden'; // Sin scroll general
+    card.style.overflow = 'hidden';
     
     contenido.style.display = 'flex';
     contenido.style.width = '100%';
     contenido.style.height = '100%';
     contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
-
-    // 2. Fetch Paralelo
-    Promise.all([
-        fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
-        fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`).then(r => r.json())
-    ])
-    .then(([dataResultados, dataPosiciones]) => {
-        
+    
+    // 3. Función para cargar datos
+    const cargarDatosTV = async () => {
+        try {
+            const [resResultados, resPosiciones] = await Promise.all([
+                fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
+                fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`)
+            ]);
+            
+            // Validar JSON
+            if (!resResultados.headers.get('content-type')?.includes('application/json') ||
+                !resPosiciones.headers.get('content-type')?.includes('application/json')) {
+                throw new Error('Respuesta no JSON de las APIs');
+            }
+            
+            const [dataResultados, dataPosiciones] = await Promise.all([
+                resResultados.json(),
+                resPosiciones.json()
+            ]);
+            
+            renderizarTVMode(dataResultados, dataPosiciones, contenido);
+            
+        } catch (err) {
+            console.error('❌ Error cargando datos TV:', err);
+            contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;">
+                <h3>⚠️ Error al cargar</h3>
+                <p>${err.message}</p>
+                <button onclick="verResultadosTV(${idTorneo})" 
+                        style="margin-top:1rem; padding:0.5rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">
+                    Reintentar
+                </button>
+            </div>`;
+        }
+    };
+    
+    // 4. Renderizar contenido
+    const renderizarTVMode = (dataResultados, dataPosiciones, cont) => {
         // --- COLUMNA IZQUIERDA: FIXTURE (80%) ---
-        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333; scrollbar-width: thin;">`;
-        htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin-bottom: 2rem; text-transform:uppercase; font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🏆 Marcador en Vivo</h2>`;
+        let htmlFixture = `<div style="width: 80%; height: 100%; overflow-y: auto; padding: 2rem; border-right: 1px solid #333;">`;
+        htmlFixture += `<h2 style="text-align:center; color:#FFD700; margin-bottom: 2rem; font-size: 2.2rem;">🏆 Marcador en Vivo</h2>`;
         
-        // Agrupar por sets
         const rondas = {};
         if (Array.isArray(dataResultados)) {
             dataResultados.forEach(p => {
@@ -4044,21 +4111,20 @@ function verResultadosTV(idTorneo) {
 
         let setNum = 1;
         Object.values(rondas).forEach(partidos => {
-            htmlFixture += `<div style="margin-bottom: 3rem;">
-                                <h3 style="color:#4ECDC4; margin-bottom: 1.5rem; font-size: 1.8rem; border-bottom: 2px solid #4ECDC4; padding-bottom: 0.5rem; display:inline-block;">SET ${setNum}</h3>`;
+            htmlFixture += `<div style="margin-bottom: 2.5rem;">
+                <h3 style="color:#4ECDC4; margin-bottom: 1rem; font-size: 1.5rem; border-bottom: 2px solid #4ECDC4; padding-bottom: 0.3rem;">SET ${setNum}</h3>`;
             
             partidos.forEach(p => {
                 const j1 = parseInt(p.juegos1) || 0;
                 const j2 = parseInt(p.juegos2) || 0;
-                
-                const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
-                const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);' : 'color:rgba(255,255,255,0.7);';
+                const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900;' : 'color:rgba(255,255,255,0.7);';
+                const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900;' : 'color:rgba(255,255,255,0.7);';
                 
                 htmlFixture += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; font-size: 1.6rem; background:rgba(255,255,255,0.05); padding:1.2rem; border-radius:12px; border: 1px solid rgba(255,255,255,0.1);">
-                        <span style="flex:1; text-align:right; padding-right:1.5rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
-                        <span style="padding:0 2rem; font-weight:bold; font-size: 2.2rem; color:white; background:rgba(0,0,0,0.4); border-radius:12px; min-width:140px; text-align:center; letter-spacing: 2px;">${j1} - ${j2}</span>
-                        <span style="flex:1; text-align:left; padding-left:1.5rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:0.8rem 0; font-size: 1.4rem; background:rgba(255,255,255,0.05); padding:1rem; border-radius:10px;">
+                        <span style="flex:1; text-align:right; padding-right:1rem; ${styleG1}">${p.pareja1 || 'TBD'}</span>
+                        <span style="padding:0 1.5rem; font-weight:bold; font-size: 1.8rem; color:white; background:rgba(0,0,0,0.4); border-radius:8px; min-width:100px; text-align:center;">${j1} - ${j2}</span>
+                        <span style="flex:1; text-align:left; padding-left:1rem; ${styleG2}">${p.pareja2 || 'TBD'}</span>
                     </div>
                 `;
             });
@@ -4068,39 +4134,67 @@ function verResultadosTV(idTorneo) {
         htmlFixture += `</div>`;
 
         // --- COLUMNA DERECHA: POSICIONES (20%) ---
-        let htmlPosiciones = `<div style="width: 20%; height: 100%; overflow-y: auto; padding: 1.5rem; background: rgba(0,0,0,0.2);">`;
-        htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin-bottom: 1.5rem; font-size: 1.4rem; text-transform:uppercase;">Posiciones</h3>`;
+        let htmlPosiciones = `<div style="width: 20%; height: 100%; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.2);">`;
+        htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin-bottom: 1rem; font-size: 1.2rem;">Posiciones</h3>`;
         
-        if (dataPosiciones && dataPosiciones.posiciones && dataPosiciones.posiciones.length > 0) {
-            // Letra aumentada 50% (de 0.9rem a ~1.35rem)
-            htmlPosiciones += `<table style="width:100%; border-collapse:collapse; font-size: 1.35rem;">`; 
-            
+        if (dataPosiciones?.posiciones?.length > 0) {
+            htmlPosiciones += `<table style="width:100%; border-collapse:collapse; font-size: 1.1rem;">`; 
             dataPosiciones.posiciones.forEach((p, index) => {
                 const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}.`));
-                const bgRow = index < 3 ? 'background:rgba(255,215,0,0.1);' : '';
-                
                 htmlPosiciones += `
-                    <tr style="border-bottom:1px solid #444; ${bgRow}">
-                        <td style="padding:0.8rem 0.2rem; font-weight:bold;">${medal}</td>
-                        <td style="padding:0.8rem 0.2rem; font-weight:500; line-height:1.1; word-wrap: break-word;">${p.nombre_pareja}</td>
-                        <td style="padding:0.8rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4;">${p.sets_ganados}</td>
+                    <tr style="border-bottom:1px solid #444;">
+                        <td style="padding:0.6rem 0.2rem; font-weight:bold;">${medal}</td>
+                        <td style="padding:0.6rem 0.2rem; font-weight:500;">${p.nombre_pareja}</td>
+                        <td style="padding:0.6rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4;">${p.sets_ganados}</td>
                     </tr>
                 `;
             });
             htmlPosiciones += `</table>`;
         } else {
-            htmlPosiciones += `<p style="text-align:center; color:#666; font-size:1rem;">Sin datos de posiciones aún.</p>`;
+            htmlPosiciones += `<p style="text-align:center; color:#888; font-size:0.9rem;">Sin posiciones aún</p>`;
         }
-        
         htmlPosiciones += `</div>`;
 
-        // Unir columnas
-        contenido.innerHTML = htmlFixture + htmlPosiciones;
-    })
-    .catch(err => {
-        console.error('❌ Error TV Mode:', err);
-        contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;"><h3>Error al cargar resultados</h3><p>${err.message}</p></div>`;
-    });
+        cont.innerHTML = htmlFixture + htmlPosiciones;
+    };
+    
+    // 5. Cargar datos inicialmente y configurar auto-refresh
+    cargarDatosTV();
+    
+    // Limpiar intervalo anterior si existe
+    if (tvModeInterval) clearInterval(tvModeInterval);
+    
+    // Auto-refresh cada 10 segundos
+    tvModeInterval = setInterval(cargarDatosTV, 10000);
+    
+    // 6. Limpiar intervalo al cerrar el modal
+    const originalClose = window.cerrarSubmodal;
+    window.cerrarSubmodal = function() {
+        if (tvModeInterval) {
+            clearInterval(tvModeInterval);
+            tvModeInterval = null;
+            console.log('📺 TV Mode: Intervalo limpiado');
+        }
+        // Restaurar estilos
+        if (card) {
+            card.style.maxWidth = '';
+            card.style.height = '';
+            card.style.padding = '';
+            card.style.display = '';
+            card.style.flexDirection = '';
+            card.style.background = '';
+            card.style.color = '';
+            card.style.overflow = '';
+        }
+        if (contenido) {
+            contenido.style.display = '';
+            contenido.style.width = '';
+            contenido.style.height = '';
+        }
+        overlay.style.zIndex = 4000;
+        // Llamar al original si existe
+        if (typeof originalClose === 'function') originalClose();
+    };
 }
 
 function cerrarSubmodalTV() {
@@ -4162,6 +4256,7 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
 
     // 1. Validar que todos los partidos tengan resultado (opcional, pero recomendado)
     fetch(`../api/validar_torneo_finalizado.php?id_torneo=${idTorneo}`)
+    credentials: 'include'
     .then(r => r.json())
     .then(data => {
         if (!data.success) {
@@ -4654,6 +4749,54 @@ async function darDeBajaPareja(idPareja, jugador1, jugador2) {
     } catch (err) {
         console.error('❌ Error darDeBajaPareja:', err);
         showToast('❌ Error de conexión', 'error');
+    }
+}
+// === 🎯 GENERAR FIXTURE DEL TORNEO ===
+async function generarFixture(idTorneo) {
+    if (!confirm('¿Crear fixture automático para este torneo?\n\nSe generarán los sets según el formato de eliminación directa.')) return;
+    
+    const btn = event?.target;
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '🔄 Generando...';
+    }
+    
+    try {
+        const res = await fetch('../api/generar_fixture_torneo.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_torneo: idTorneo }),
+            credentials: 'include' // ✅ CRÍTICO para enviar sesión
+        });
+        
+        // Validar que la respuesta sea JSON
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('❌ Respuesta no JSON:', text.substring(0, 200));
+            throw new Error('El servidor devolvió HTML en lugar de JSON');
+        }
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('✅ Fixture creado correctamente', 'success');
+            // Recargar torneos para actualizar estado
+            cargarTorneos();
+        } else {
+            showToast('❌ ' + (data.message || 'Error al crear fixture'), 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🎯 Crear Fixture';
+            }
+        }
+    } catch (err) {
+        console.error('❌ Error generarFixture:', err);
+        showToast('❌ Error de conexión', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '🎯 Crear Fixture';
+        }
     }
 }
 </script>
