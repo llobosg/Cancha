@@ -2541,7 +2541,6 @@ async function cargarTorneos() {
             let botonesHtml = '';
 
             // Parsear valores numéricos de forma segura
-            const inscritosCount = parseInt(t.parejas_inscritas) || 0;
             const maxParejas = parseInt(t.num_parejas_max) || 6; // Default 6 si no viene
             const estaLleno = inscritosCount >= maxParejas;
             const estado = (t.estado || '').toLowerCase();
