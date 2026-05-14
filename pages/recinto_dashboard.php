@@ -4020,7 +4020,7 @@ document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
 
-// === 📺 TV MODE - LAYOUT CORREGIDO (Header + 5 Sets + Posiciones) ===
+// === 📺 TV MODE - HEADER + 5 SETS + POSICIONES (Layout Corregido) ===
 let tvModeInterval = null;
 
 async function verResultadosTV(idTorneo) {
@@ -4030,20 +4030,23 @@ async function verResultadosTV(idTorneo) {
     const card = overlay?.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
-    if (!overlay || !card || !contenido) return;
+    if (!overlay || !card || !contenido) {
+        console.error('❌ Elementos del modal no encontrados');
+        return;
+    }
     
     // 1. Configurar modal en pantalla completa
     overlay.style.display = 'flex';
-    void overlay.offsetWidth;
+    void overlay.offsetWidth; // Forzar reflow
     overlay.classList.add('active');
     
-    // Estilos TV: layout vertical (header arriba, contenido abajo)
+    // Estilos TV: Header arriba, cuerpo en 2 columnas abajo
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '99vw';
     card.style.height = '98vh';
     card.style.padding = '0';
     card.style.display = 'flex';
-    card.style.flexDirection = 'column'; // ← Header arriba, cuerpo abajo
+    card.style.flexDirection = 'column'; // Layout vertical: Header + Cuerpo
     card.style.background = '#0a0a0a';
     card.style.color = 'white';
     card.style.overflow = 'hidden';
@@ -4055,78 +4058,180 @@ async function verResultadosTV(idTorneo) {
     contenido.style.overflow = 'hidden';
     contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando...</p>';
     
-    try {
-        // 2. Fetch paralelo: resultados + posiciones + datos del torneo/recinto
-        const [resResultados, resPosiciones, resTorneo] = await Promise.all([
-            fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
-            fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`),
-            fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
-        ]);
-        
-        const [dataResultados, dataPosiciones, dataTorneo] = await Promise.all([
-            resResultados.json(),
-            resPosiciones.json(),
-            resTorneo.json()
-        ]);
-        
-        // 3. Renderizar con layout corregido
-        renderizarTVLayoutCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
-        
-        // 4. Auto-refresh cada 10 segundos
-        if (tvModeInterval) clearInterval(tvModeInterval);
-        tvModeInterval = setInterval(async () => {
-            try {
-                const [r1, r2, r3] = await Promise.all([
-                    fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
-                    fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
-                    fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`).then(r => r.json())
-                ]);
-                renderizarTVLayoutCorregido(r1, r2, r3, contenido, idTorneo);
-            } catch (e) {
-                console.warn('⚠️ Error en auto-refresh TV:', e);
-            }
-        }, 10000);
-        
-        // 5. Limpiar intervalo al cerrar
-        const originalClose = window.cerrarSubmodal;
-        window.cerrarSubmodal = function() {
-            if (tvModeInterval) {
-                clearInterval(tvModeInterval);
-                tvModeInterval = null;
-            }
-            // Restaurar estilos
-            if (card) {
-                card.style.maxWidth = '';
-                card.style.height = '';
-                card.style.padding = '';
-                card.style.display = '';
-                card.style.flexDirection = '';
-                card.style.background = '';
-                card.style.color = '';
-                card.style.overflow = '';
-            }
-            if (contenido) {
-                contenido.style.display = '';
-                contenido.style.flexDirection = '';
-                contenido.style.width = '';
-                contenido.style.height = '';
-                contenido.style.overflow = '';
-            }
-            overlay.style.zIndex = 4000;
-            if (typeof originalClose === 'function') originalClose();
-        };
-        
-    } catch (err) {
-        console.error('❌ Error TV Mode:', err);
-        contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;">
-            <h3>⚠️ Error al cargar</h3>
-            <p>${err.message}</p>
-            <button onclick="verResultadosTV(${idTorneo})" 
-                    style="margin-top:1rem; padding:0.5rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">
-                Reintentar
-            </button>
-        </div>`;
+    // 2. Función de carga y renderizado
+    const cargarYRenderizar = async () => {
+        try {
+            // Fetch paralelo seguro
+            const [resResultados, resPosiciones, resTorneo] = await Promise.all([
+                fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
+                fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`),
+                fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
+            ]);
+            
+            const [dataResultados, dataPosiciones, dataTorneo] = await Promise.all([
+                resResultados.json(),
+                resPosiciones.json(),
+                resTorneo.json()
+            ]);
+            
+            renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
+            
+        } catch (err) {
+            console.error('❌ Error en TV Mode:', err);
+            contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;">
+                <h3>⚠️ Error al cargar</h3>
+                <p>${err.message}</p>
+            </div>`;
+        }
+    };
+    
+    // 3. Carga inicial
+    await cargarYRenderizar();
+    
+    // 4. Configurar auto-refresh
+    if (tvModeInterval) clearInterval(tvModeInterval);
+    tvModeInterval = setInterval(cargarYRenderizar, 10000);
+    
+    // 5. Restaurar estilos al cerrar
+    const originalClose = window.cerrarSubmodal;
+    window.cerrarSubmodal = function() {
+        if (tvModeInterval) {
+            clearInterval(tvModeInterval);
+            tvModeInterval = null;
+        }
+        if (card) {
+            card.style.maxWidth = '';
+            card.style.height = '';
+            card.style.padding = '';
+            card.style.display = '';
+            card.style.flexDirection = '';
+            card.style.background = '';
+            card.style.color = '';
+            card.style.overflow = '';
+        }
+        if (contenido) {
+            contenido.style.display = '';
+            contenido.style.flexDirection = '';
+            contenido.style.width = '';
+            contenido.style.height = '';
+            contenido.style.overflow = '';
+        }
+        overlay.style.zIndex = 4000;
+        if (typeof originalClose === 'function') originalClose();
+    };
+}
+
+// === FUNCIÓN AUXILIAR: Renderizar Layout Corregido ===
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
+    const nombreTorneo = dataTorneo?.nombre || 'Torneo';
+    const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
+    
+    // === HEADER FIJO (60px) ===
+    const headerHtml = `
+        <div style="width:100%; height:60px; padding:0 1.5rem; background:linear-gradient(90deg, #071289, #1a237e); 
+                    border-bottom:2px solid #FFD700; display:flex; justify-content:center; align-items:center; flex-shrink:0;">
+            <h1 style="margin:0; color:#FFD700; font-size:1.3rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${nombreRecinto} - 🏆 Marcador en Vivo - ${nombreTorneo}
+            </h1>
+        </div>
+    `;
+    
+    // === CUERPO (Flex horizontal: Fixture 75% + Posiciones 25%) ===
+    const bodyHtml = `<div style="display:flex; flex:1; overflow:hidden;">`;
+    
+    // COLUMNA IZQUIERDA: 5 SETS COMPACTOS (75%)
+    bodyHtml += `<div style="width:75%; height:100%; overflow:hidden; padding:0.5rem; border-right:1px solid #333; display:flex; flex-direction:column;">`;
+    bodyHtml += `<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:0.5rem; height:100%; overflow:hidden;">`;
+    
+    // Agrupar partidos
+    const rondas = {};
+    if (Array.isArray(dataResultados)) {
+        dataResultados.forEach(p => {
+            const fecha = p.fecha_hora_programada || p.fecha || new Date().toISOString();
+            const key = fecha.substring(0, 16);
+            if(!rondas[key]) rondas[key] = [];
+            rondas[key].push(p);
+        });
     }
+    
+    let setNum = 1;
+    Object.values(rondas).slice(0, 5).forEach(partidos => {
+        bodyHtml += `<div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:0.4rem; display:flex; flex-direction:column; gap:0.3rem; overflow:hidden;">
+            <h4 style="margin:0 0 0.3rem 0; color:#4ECDC4; font-size:0.8rem; text-align:center; border-bottom:1px solid #4ECDC4; padding-bottom:0.2rem;">
+                SET ${setNum}
+            </h4>`;
+        
+        partidos.forEach(p => {
+            const j1 = parseInt(p.juegos1) || 0;
+            const j2 = parseInt(p.juegos2) || 0;
+            const g1 = j1 > j2 ? 'color:#4CAF50; font-weight:700;' : 'color:rgba(255,255,255,0.85);';
+            const g2 = j2 > j1 ? 'color:#4CAF50; font-weight:700;' : 'color:rgba(255,255,255,0.85);';
+            
+            // Nombres cortos
+            const p1 = extraerPrimerNombre(p.pareja1);
+            const p2 = extraerPrimerNombre(p.pareja2);
+            
+            bodyHtml += `
+                <div style="display:flex; flex-direction:column; gap:0.1rem; font-size:0.7rem; background:rgba(255,255,255,0.06); padding:0.25rem 0.3rem; border-radius:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="${g1}; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p1}</span>
+                        <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.5); padding:0 0.2rem; border-radius:2px; font-size:0.75rem;">${j1}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="${g2}; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p2}</span>
+                        <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.5); padding:0 0.2rem; border-radius:2px; font-size:0.75rem;">${j2}</span>
+                    </div>
+                </div>
+            `;
+        });
+        bodyHtml += `</div>`;
+        setNum++;
+    });
+    
+    bodyHtml += `</div></div>`; // Cierre grid y columna izquierda
+    
+    // COLUMNA DERECHA: POSICIONES (25%)
+    bodyHtml += `<div style="width:25%; height:100%; overflow-y:auto; padding:0.6rem; background:rgba(0,0,0,0.2);">
+        <h3 style="text-align:center; color:#FFD700; margin:0 0 0.5rem 0; font-size:0.9rem; text-transform:uppercase;">Posiciones</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">`;
+    
+    if (dataPosiciones?.posiciones?.length > 0) {
+        dataPosiciones.posiciones.forEach((p, index) => {
+            const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index+1}.`));
+            const nombres = extraerNombresCortosPareja(p.nombre_pareja);
+            bodyHtml += `
+                <tr style="border-bottom:1px solid #444;">
+                    <td style="padding:0.3rem 0.2rem; font-weight:bold; width:25px;">${medal}</td>
+                    <td style="padding:0.3rem 0.2rem; font-weight:500; line-height:1.1;">${nombres}</td>
+                    <td style="padding:0.3rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4;">${p.sets_ganados}</td>
+                </tr>`;
+        });
+    } else {
+        bodyHtml += `<tr><td colspan="3" style="padding:0.5rem; text-align:center; color:#888; font-size:0.75rem;">Sin posiciones</td></tr>`;
+    }
+    bodyHtml += `</table></div>`;
+    bodyHtml += `</div>`; // Cierre cuerpo
+    
+    cont.innerHTML = headerHtml + bodyHtml;
+}
+
+// === HELPERS PARA NOMBRES CORTOS ===
+function extraerPrimerNombre(nombreCompleto) {
+    if (!nombreCompleto || nombreCompleto === 'TBD') return 'TBD';
+    const partes = nombreCompleto.trim().split(/[\s\-]+/);
+    return partes[0] || nombreCompleto;
+}
+
+function extraerNombresCortosPareja(nombrePareja) {
+    if (!nombrePareja) return '—';
+    if (nombrePareja.includes(' - ')) {
+        const partes = nombrePareja.split(' - ');
+        const n1 = extraerPrimerNombre(partes[0]);
+        const n2 = extraerPrimerNombre(partes[1]);
+        return `${n1} - ${n2}`;
+    }
+    const palabras = nombrePareja.trim().split(/\s+/);
+    return palabras.length >= 2 ? `${palabras[0]} - ${palabras[1]}` : palabras[0];
 }
 
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode Mejorado ===
@@ -4243,49 +4348,6 @@ function renderizarTVLayoutCorregido(dataResultados, dataPosiciones, dataTorneo,
     cont.innerHTML = headerHtml + bodyHtml;
 }
 
-// === HELPER: Extraer nombres cortos de pareja (ej: "Daniel - Sofía") ===
-function extraerNombresCortosPareja(nombrePareja) {
-    if (!nombrePareja || nombrePareja === 'TBD') return 'TBD';
-    
-    // Si ya viene con formato "Nombre1 - Nombre2", devolverlo tal cual
-    if (nombrePareja.includes(' - ')) {
-        const partes = nombrePareja.split(' - ');
-        const n1 = partes[0]?.trim().split(' ')[0] || '';
-        const n2 = partes[1]?.trim().split(' ')[0] || '';
-        return n1 && n2 ? `${n1} - ${n2}` : nombrePareja;
-    }
-    
-    // Si es un solo nombre, intentar separar por espacios
-    const palabras = nombrePareja.trim().split(/\s+/);
-    if (palabras.length >= 2) {
-        return `${palabras[0]} - ${palabras[1]}`;
-    }
-    
-    return palabras[0] || nombrePareja;
-}
-
-// === HELPER: Extraer primer nombre de un string "Nombre Apellido" ===
-function extraerPrimerNombre(nombreCompleto) {
-    if (!nombreCompleto || nombreCompleto === 'TBD') return 'TBD';
-    // Tomar primera palabra antes de espacio o guión
-    const partes = nombreCompleto.trim().split(/[\s\-]+/);
-    return partes[0] || nombreCompleto;
-}
-
-// === HELPER: Extraer "Nombre1 - Nombre2" de una pareja ===
-function extraerNombresCortosPareja(nombrePareja) {
-    if (!nombrePareja) return '—';
-    // Separar por " - " y tomar primer nombre de cada lado
-    const jugadores = nombrePareja.split(' - ');
-    if (jugadores.length >= 2) {
-        const n1 = extraerPrimerNombre(jugadores[0]);
-        const n2 = extraerPrimerNombre(jugadores[1]);
-        return `${n1} - ${n2}`;
-    }
-    // Si no tiene formato esperado, devolver primer nombre del string completo
-    return extraerPrimerNombre(nombrePareja);
-}
-
 function cerrarSubmodalTV() {
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay.querySelector('.submodal-card');
@@ -4312,31 +4374,6 @@ function cerrarSubmodalTV() {
     cerrarSubmodal();
 }
 
-function cerrarSubmodalTV() {
-    const overlay = document.getElementById('submodalGenerico');
-    const card = overlay ? overlay.querySelector('.submodal-card') : null;
-    const contenido = document.getElementById('submodalContenido');
-    
-    // Restaurar estilos
-    if(overlay) overlay.style.zIndex = 4000;
-    if(card) {
-        card.style.maxWidth = ''; 
-        card.style.height = '';
-        card.style.padding = '';
-        card.style.display = '';
-        card.style.flexDirection = '';
-        card.style.background = '';
-        card.style.color = '';
-        card.style.overflow = '';
-    }
-    if(contenido) {
-        contenido.style.display = '';
-        contenido.style.width = '';
-        contenido.style.height = '';
-    }
-    
-    cerrarSubmodal();
-}
 // === ✅ FINALIZAR TORNEO Y CALCULAR RANKING ===
 function finalizarTorneoYCalcularRanking(idTorneo) {
     if (!confirm('⚠️ ¿Estás seguro de FINALIZAR este torneo?\n\nEsto calculará el ranking oficial y cerrará las inscripciones. Esta acción no se puede deshacer.')) return;
