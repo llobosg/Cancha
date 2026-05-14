@@ -4074,7 +4074,7 @@ async function verResultadosTV(idTorneo) {
                 resTorneo.json()
             ]);
             
-            renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, flags = {});
+            renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
             
         } catch (err) {
             console.error('❌ Error en TV Mode:', err);
@@ -4122,111 +4122,25 @@ async function verResultadosTV(idTorneo) {
 }
 
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Gigante (Fix + Layout Restaurado) ===
-// ===============================
-// CACHE GLOBAL (NO TOCAR)
-// ===============================
-let cacheTV = {
-    resultados: null,
-    posiciones: null
-};
-
-// ===============================
-// AUTO REFRESH (LLAMAR UNA VEZ)
-// ===============================
-function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
-
-    async function actualizar() {
-        try {
-            const { dataResultados, dataPosiciones, dataTorneo } = await fetchDataFn();
-
-            const cambiosResultados = JSON.stringify(dataResultados) !== JSON.stringify(cacheTV.resultados);
-            const cambiosPosiciones = JSON.stringify(dataPosiciones) !== JSON.stringify(cacheTV.posiciones);
-
-            renderizarTVProLED(
-                dataResultados,
-                dataPosiciones,
-                dataTorneo,
-                cont,
-                idTorneo,
-                { cambiosResultados, cambiosPosiciones }
-            );
-
-            cacheTV.resultados = dataResultados;
-            cacheTV.posiciones = dataPosiciones;
-
-        } catch (e) {
-            console.error("Error auto refresh:", e);
-        }
-    }
-
-    actualizar();
-    setInterval(actualizar, 5000);
-}
-
-
-// ===============================
-// RENDER PRINCIPAL (TV PRO LED)
-// ===============================
-function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, flags = {}) {
+// === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Pantalla Grande (FIX DEFINITIVO) ===
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
 
-    // ===============================
-    // ESTILOS / ANIMACIONES
-    // ===============================
-    const estilos = `
-    <style>
-        body { margin:0; background:#000; font-family:Arial, sans-serif; }
-
-        @keyframes glowWin {
-            0% { text-shadow: 0 0 5px #39FF14; }
-            50% { text-shadow: 0 0 25px #39FF14; }
-            100% { text-shadow: 0 0 5px #39FF14; }
-        }
-
-        @keyframes flashUpdate {
-            0% { background-color: rgba(0,255,198,0.8); }
-            100% { background-color: transparent; }
-        }
-
-        @keyframes fadeIn {
-            from { transform: translateY(15px); opacity:0; }
-            to { transform: translateY(0); opacity:1; }
-        }
-
-        .win {
-            color:#39FF14;
-            animation: glowWin 1.5s infinite;
-        }
-
-        .updated {
-            animation: flashUpdate 0.7s ease;
-        }
-
-        .fadeIn {
-            animation: fadeIn 0.4s ease;
-        }
-    </style>
-    `;
-
-    // ===============================
-    // HEADER
-    // ===============================
+    // === HEADER ===
     const headerHtml = `
-        <div style="width:100%; height:70px;
+        <div style="width:100%; height:70px; padding:0 2rem;
                     background:linear-gradient(90deg,#000428,#004e92);
                     border-bottom:4px solid #00FFC6;
                     display:flex; justify-content:center; align-items:center;">
-            <h1 style="color:#00FFC6; font-size:2rem; font-weight:900;">
+            <h1 style="margin:0; color:#00FFC6; font-size:2rem; font-weight:900; letter-spacing:2px;">
                 ${nombreRecinto} — MARCADOR EN VIVO — ${nombreTorneo}
             </h1>
         </div>
     `;
 
-    // ===============================
-    // AGRUPAR POR SET
-    // ===============================
+    // === AGRUPAR POR SET ===
     const rondas = {};
     if (Array.isArray(dataResultados)) {
         dataResultados.forEach(p => {
@@ -4238,14 +4152,12 @@ function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, id
 
     const sets = Object.values(rondas).slice(0, 5);
 
-    // ===============================
-    // BODY
-    // ===============================
-    let bodyHtml = `<div style="display:flex; height:calc(100vh - 70px);">`;
+    // === BODY ===
+    let bodyHtml = `<div style="display:flex; width:100%; height:calc(100vh - 70px); background:#000;">`;
 
-    // ===============================
+    // =========================
     // IZQUIERDA (SETS)
-    // ===============================
+    // =========================
     bodyHtml += `<div style="width:75%; display:flex; padding:1rem; gap:1rem;">`;
 
     for (let i = 0; i < 5; i++) {
@@ -4253,15 +4165,20 @@ function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, id
         const partidos = sets[i] || [];
 
         bodyHtml += `
-        <div style="flex:1; background:#0a0a0a; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
-            
-            <div style="text-align:center; padding:0.5rem;
-                        background:#111; color:#00FFC6;
-                        font-weight:900;">
-                SET ${i + 1}
-            </div>
+            <div style="flex:1; background:#0a0a0a; border-radius:14px;
+                        display:flex; flex-direction:column; overflow:hidden;
+                        border:1px solid #111;">
+                
+                <!-- HEADER SET -->
+                <div style="text-align:center; padding:0.6rem;
+                            background:#111; color:#00FFC6;
+                            font-weight:900; font-size:1.4rem;
+                            border-bottom:2px solid #00FFC6;">
+                    SET ${i + 1}
+                </div>
 
-            <div style="flex:1; display:flex; flex-direction:column;">
+                <!-- PARTIDOS -->
+                <div style="flex:1; display:flex; flex-direction:column;">
         `;
 
         partidos.slice(0, 3).forEach(p => {
@@ -4272,120 +4189,107 @@ function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, id
             const gana1 = j1 > j2;
             const gana2 = j2 > j1;
 
-            const claseCambio = flags.cambiosResultados ? "updated" : "";
-
             const p1 = extraerNombresCortosPareja(p.pareja1);
             const p2 = extraerNombresCortosPareja(p.pareja2);
 
+            const cancha = p.nombre_cancha || 'Cancha';
+
+            const styleWin = "color:#39FF14; text-shadow:0 0 15px #39FF14;";
+            const styleLose = "color:#FFFFFF; opacity:0.85;";
+
             bodyHtml += `
-            <div class="fadeIn ${claseCambio}" style="flex:1; padding:0.6rem; border-bottom:1px solid #111;">
+                <div style="flex:1; display:flex; flex-direction:column;
+                            justify-content:center; padding:0.8rem;
+                            border-bottom:1px solid #111;">
 
-                <div style="text-align:center; font-size:0.7rem; color:#777;">
-                    ${p.nombre_cancha || 'Cancha'}
+                    <!-- CANCHA -->
+                    <div style="text-align:center; font-size:0.8rem;
+                                color:#888; margin-bottom:0.3rem;">
+                        ${cancha}
+                    </div>
+
+                    <!-- PAREJA 1 -->
+                    <div style="display:flex; justify-content:space-between;
+                                align-items:center; font-size:1.6rem;
+                                font-weight:900;
+                                ${gana1 ? styleWin : styleLose}">
+                        <span>${p1}</span>
+                        <span style="font-size:2rem;">${j1}</span>
+                    </div>
+
+                    <!-- VS -->
+                    <div style="text-align:center; color:#444; font-size:0.8rem;">VS</div>
+
+                    <!-- PAREJA 2 -->
+                    <div style="display:flex; justify-content:space-between;
+                                align-items:center; font-size:1.6rem;
+                                font-weight:900;
+                                ${gana2 ? styleWin : styleLose}">
+                        <span>${p2}</span>
+                        <span style="font-size:2rem;">${j2}</span>
+                    </div>
+
                 </div>
-
-                <div class="${gana1 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
-                    <span>${p1}</span>
-                    <span>${j1}</span>
-                </div>
-
-                <div style="text-align:center; color:#333;">VS</div>
-
-                <div class="${gana2 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
-                    <span>${p2}</span>
-                    <span>${j2}</span>
-                </div>
-
-            </div>
             `;
         });
 
         bodyHtml += `</div></div>`;
     }
 
-    bodyHtml += `</div>`;
+    bodyHtml += `</div>`; // cierre izquierda
 
-    // ===============================
+
+    // =========================
     // DERECHA (POSICIONES)
-    // ===============================
-    bodyHtml += `<div style="width:25%; padding:1rem; background:#050505;">`;
+    // =========================
+    bodyHtml += `
+        <div style="width:25%; background:#050505; padding:1rem;
+                    display:flex; flex-direction:column;">
+            
+            <div style="text-align:center; color:#FFD700;
+                        font-size:2rem; font-weight:900;
+                        margin-bottom:1rem;">
+                POSICIONES
+            </div>
 
-    bodyHtml += `<div style="text-align:center; color:#FFD700; font-size:1.8rem; font-weight:900;">POSICIONES</div>`;
-
-    bodyHtml += `<div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem;">`;
+            <div style="flex:1; display:flex; flex-direction:column; gap:0.6rem;">
+    `;
 
     if (dataPosiciones?.posiciones?.length > 0) {
 
         dataPosiciones.posiciones.forEach((p, i) => {
 
-            const nombres = extraerNombresCortosPareja(p.nombre_pareja);
-            const claseCambio = flags.cambiosPosiciones ? "updated" : "";
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
 
-            const esTop1 = i === 0 && flags.cambiosPosiciones;
+            const nombres = extraerNombresCortosPareja(p.nombre_pareja);
 
             bodyHtml += `
-            <div class="fadeIn ${claseCambio}" style="
-                display:flex; justify-content:space-between;
-                padding:0.6rem; background:#111; border-radius:8px;
-                font-size:1.3rem; font-weight:900;
-                ${esTop1 ? 'color:#FFD700; animation: glowWin 1s infinite;' : 'color:#FFF;'}
-            ">
-                <span>${i + 1}. ${nombres}</span>
-                <span style="color:#00FFC6;">${p.sets_ganados}</span>
-            </div>
+                <div style="display:flex; justify-content:space-between;
+                            align-items:center; padding:0.8rem;
+                            background:#111; border-radius:10px;
+                            font-size:1.5rem; font-weight:900;">
+
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <span>${medal}</span>
+                        <span style="color:#FFF;">${nombres}</span>
+                    </div>
+
+                    <div style="color:#00FFC6; font-size:2rem;">
+                        ${p.sets_ganados}
+                    </div>
+
+                </div>
             `;
         });
 
     } else {
-        bodyHtml += `<div style="color:#777; text-align:center;">Sin posiciones</div>`;
+        bodyHtml += `<div style="color:#777; text-align:center;">Sin datos</div>`;
     }
 
     bodyHtml += `</div></div>`; // cierre derecha
     bodyHtml += `</div>`; // cierre body
 
-    // ===============================
-    // RENDER FINAL
-    // ===============================
-    cont.innerHTML = estilos + headerHtml + bodyHtml;
-}
-
-let cacheTV = {
-    resultados: null,
-    posiciones: null
-};
-
-function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
-
-    async function actualizar() {
-        try {
-            const { dataResultados, dataPosiciones, dataTorneo } = await fetchDataFn();
-
-            // Detectar cambios
-            const cambiosResultados = JSON.stringify(dataResultados) !== JSON.stringify(cacheTV.resultados);
-            const cambiosPosiciones = JSON.stringify(dataPosiciones) !== JSON.stringify(cacheTV.posiciones);
-
-            renderizarTVProLED(
-                dataResultados,
-                dataPosiciones,
-                dataTorneo,
-                cont,
-                idTorneo,
-                {
-                    cambiosResultados,
-                    cambiosPosiciones
-                }
-            );
-
-            cacheTV.resultados = dataResultados;
-            cacheTV.posiciones = dataPosiciones;
-
-        } catch (e) {
-            console.error("Error auto refresh:", e);
-        }
-    }
-
-    actualizar();
-    setInterval(actualizar, 5000);
+    cont.innerHTML = headerHtml + bodyHtml;
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
