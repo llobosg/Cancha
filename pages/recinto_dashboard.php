@@ -4123,7 +4123,7 @@ async function verResultadosTV(idTorneo) {
 
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Gigante (Fix + Layout Restaurado) ===
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Pantalla Grande (FIX DEFINITIVO) ===
-function renderizarTVcorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
@@ -4290,6 +4290,7 @@ function renderizarTVcorregido(dataResultados, dataPosiciones, dataTorneo, cont,
     bodyHtml += `</div>`; // cierre body
 
     cont.innerHTML = headerHtml + bodyHtml;
+    return renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo);
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
