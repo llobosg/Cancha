@@ -4130,7 +4130,7 @@ async function verResultadosTV(idTorneo) {
 }
 
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode Mejorado ===
-function renderizarTVModeMejorado(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
+function renderizarTVLayoutCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
     
