@@ -1245,7 +1245,7 @@ $js_vars = [
                                         <?php else: ?>
                                             <!-- ⏰ AÚN NO ES EL DÍA O SON ANTES DE LAS 09:00 -->
                                             <div style="text-align:center; padding:0.6rem; background:rgba(255,215,0,0.15); border-radius:8px; font-size:0.85rem; color:#666; margin-bottom:0.5rem;">
-                                                ⏰ La inscripción abre <strong>hoy a las 09:00 hrs</strong>
+                                                ⏰ La inscripción abre <strong>el día del partido a las 09:00 hrs</strong>
                                             </div>
                                         <?php endif; ?>
                                         
