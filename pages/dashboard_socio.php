@@ -1296,12 +1296,10 @@ $js_vars = [
 
                                 <!-- Botón de Acción Dinámico para Torneos -->
                                 <?php if (!$evento['es_completa']): ?>
-                                    <!-- Si NO está completa: Enviar Invitación -->
-                                    <button onclick="enviarInvitacionTorneo(<?= $evento['id'] ?>, '<?= $evento['codigo_pareja'] ?>')" style="display:block; width:100%; padding:0.7rem; background:linear-gradient(135deg, #AB47BC, #7B1FA2); color:white; text-align:center; border-radius:8px; border:none; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                                        📩 Enviar Link a Pareja
+                                    <button onclick="abrirModalInvitacion('<?= $evento['codigo_pareja'] ?>', '<?= addslashes($evento['titulo']) ?>')" style="display:block; width:100%; padding:0.7rem; background:linear-gradient(135deg, #AB47BC, #7B1FA2); color:white; text-align:center; border-radius:8px; border:none; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                        📩 Invitar a mi Pareja
                                     </button>
                                 <?php else: ?>
-                                    <!-- Si SÍ está completa: Ver Torneo -->
                                     <a href="torneo_detalle.php?id=<?= $evento['id'] ?>" style="display:block; width:100%; padding:0.7rem; background:linear-gradient(135deg, #FFD700, #FFA000); color:white; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                                         Ver Torneo →
                                     </a>
@@ -1944,6 +1942,75 @@ function enviarInvitacionTorneo(idTorneo, codigoPareja) {
     // Intentar abrir WhatsApp Web/App
     window.open('https://wa.me/?text=' + mensajeWhatsApp, '_blank');
 }
+// === MODAL INVITACIÓN ===
+let qrInvitacionInstance = null;
+
+function abrirModalInvitacion(codigoPareja, nombreTorneo) {
+    const baseUrl = window.location.origin;
+    const inviteUrl = `${baseUrl}/pages/torneo_invite.php?code=${codigoPareja}`;
+    const msg = `🎾 ¡Hola! Te invito a ser mi pareja en "${nombreTorneo || 'el torneo'}".\nInscríbete con este link único: ${inviteUrl}`;
+    
+    // Asignar valores
+    document.getElementById('linkInvitacionInput').value = inviteUrl;
+    document.getElementById('btnWhatsappInvitacion').href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    
+    // Generar QR
+    const qrContainer = document.getElementById('qrInvitacion');
+    qrContainer.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+        qrInvitacionInstance = new QRCode(qrContainer, {
+            text: inviteUrl, width: 160, height: 160,
+            colorDark: "#000000", colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+    
+    document.getElementById('modalInvitacion').style.display = 'flex';
+}
+
+function cerrarModalInvitacion() {
+    document.getElementById('modalInvitacion').style.display = 'none';
+}
+
+function copiarLinkInvitacion() {
+    const input = document.getElementById('linkInvitacionInput');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        showToast('✅ Link copiado al portapapeles', 'success');
+    }).catch(() => showToast('❌ No se pudo copiar', 'error'));
+}
+
+// Cerrar modal al hacer clic fuera
+document.addEventListener('click', e => {
+    if (e.target.id === 'modalInvitacion') cerrarModalInvitacion();
+});
 </script>
+<!-- === MODAL COMPARTIR INVITACIÓN === -->
+<div id="modalInvitacion" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width:340px; text-align:center;">
+        <button class="modal-close" onclick="cerrarModalInvitacion()">&times;</button>
+        <h3 style="margin:0 0 0.3rem 0; color:#071289;">📩 Invitar a tu Pareja</h3>
+        <p style="font-size:0.9rem; color:#666; margin:0 0 1rem 0;">Elige cómo compartir el acceso:</p>
+        
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+            <!-- 1. QR -->
+            <div style="background:#f8f9fa; padding:1rem; border-radius:12px;">
+                <div id="qrInvitacion" style="margin:0 auto 0.5rem; background:white; padding:8px; border-radius:8px;"></div>
+                <small style="color:#888;">Escanea para inscribirse</small>
+            </div>
+            
+            <!-- 2. Copiar Link -->
+            <div style="display:flex; gap:0.5rem;">
+                <input type="text" id="linkInvitacionInput" readonly style="flex:1; padding:0.6rem; border:1px solid #ddd; border-radius:8px; font-size:0.8rem; background:#fff; color:#333;">
+                <button onclick="copiarLinkInvitacion()" style="padding:0.6rem 0.8rem; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">📋 Copiar</button>
+            </div>
+            
+            <!-- 3. WhatsApp -->
+            <a id="btnWhatsappInvitacion" href="#" target="_blank" style="display:block; width:100%; padding:0.8rem; background:#25D366; color:white; border-radius:8px; text-decoration:none; font-weight:bold; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                💬 Enviar por WhatsApp
+            </a>
+        </div>
+    </div>
+</div>
 </body>
 </html>

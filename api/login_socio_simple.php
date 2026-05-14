@@ -1,6 +1,11 @@
 <?php
 // api/login_socio_simple.php
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+
+ini_set('display_errors', 0);
+error_reporting(0);
+if (ob_get_level()) ob_clean(); // Limpiar buffer previo
+
 
 // Cargar config primero para tener acceso a $pdo y asegurar sesión
 require_once __DIR__ . '/../includes/config.php';

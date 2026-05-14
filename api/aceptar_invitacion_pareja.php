@@ -1,6 +1,9 @@
 <?php
-// api/aceptar_invitacion_pareja.php
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+
+ini_set('display_errors', 0);
+error_reporting(0);
+if (ob_get_level()) ob_clean(); // Limpiar buffer previo
 
 // Suprimir warnings para devolver JSON limpio
 error_reporting(0); 
@@ -55,6 +58,7 @@ try {
     $stmt_update->execute([$id_socio_actual, $pareja['id_pareja']]);
 
     echo json_encode(['success' => true, 'message' => 'Pareja completada']);
+    exit;
 
 } catch (Exception $e) {
     error_log("Error aceptar invitación: " . $e->getMessage());

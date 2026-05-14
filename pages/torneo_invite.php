@@ -185,6 +185,7 @@ if ($torneo) {
                         <button class="btn-inscribir" style="background:#fff; color:#667eea; border:2px solid #667eea;" onclick="abrirModalLogin()">🔐 Soy Socio (Iniciar Sesión)</button>
                         <button class="btn-inscribir" onclick="abrirModalRegistroRapido()">👤 Ingresar como Invitado</button>
                     </div>
+                    <p> Powered by CanchaSport </p>
                 <?php endif; ?>
 
             <?php else: ?>
@@ -341,22 +342,21 @@ if ($torneo) {
             console.log("🔍 [INVITACIÓN] Código pareja:", codePareja);
 
             try {
-                const res = await fetch('../api/aceptar_invitacion_pareja.php', {
+               const res = await fetch('../api/aceptar_invitacion_pareja.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ codigo_pareja: codePareja })
                 });
 
                 console.log("🔍 [INVITACIÓN] Estado HTTP:", res.status);
-                
                 const text = await res.text();
                 console.log("🔍 [INVITACIÓN] Respuesta cruda:", text.substring(0, 200));
-
                 let data;
                 try {
                     data = JSON.parse(text);
-                } catch (err) {
-                    throw new Error("La respuesta no es JSON válido. Verifica logs de Railway.");
+                } catch (e) {
+                    console.error("Respuesta no JSON:", text);
+                    throw new Error("El servidor devolvió HTML/Errores en vez de JSON. Revisa logs.");
                 }
 
                 if (data.success) {
