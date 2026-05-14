@@ -3386,7 +3386,7 @@ document.addEventListener('click', function(e) {
         cerrarSubmodal();
     }
 });
-// === 👁️ VER INSCRITOS Y BAJAR PAREJA (MERGE) ===
+// === 👁️ VER INSCRITOS Y BAJAR PAREJA (CORRECCIÓN DE COLORES) ===
 async function abrirModalInscritos(idTorneo) {
     const overlay = document.getElementById('submodalGenerico');
     const contenido = document.getElementById('submodalContenido');
@@ -3394,79 +3394,71 @@ async function abrirModalInscritos(idTorneo) {
     if(!overlay || !contenido) return;
     
     overlay.style.display = 'flex';
-    void overlay.offsetWidth; // Forzar reflow para animación
+    void overlay.offsetWidth;
     overlay.classList.add('active');
     
-    contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando parejas...</p>';
+    contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#333;">🔄 Cargando parejas...</p>';
     
     try {
         const res = await fetch(`../api/get_inscritos_torneos.php?id_torneo=${idTorneo}`);
         if (!res.ok) throw new Error(`Error ${res.status}`);
         
         const data = await res.json();
-        console.log('🔍 Datos recibidos:', data);
         
-        // Validación estricta
         if (!Array.isArray(data)) {
             console.error('La API no devolvió un array:', data);
             throw new Error(data.error || 'Datos inválidos');
         }
 
         if(data.length === 0) {
-            contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#888;">No hay parejas inscritas aún.</p>';
+            contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#555;">No hay parejas inscritas aún.</p>';
             return;
         }
         
-        // ✅ Tabla con 5 columnas: Pareja, J1, J2, Contacto, Acción
-        let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center;">👥 Parejas Inscritas</h3>
+        // ✅ Tabla con colores explícitos para máxima visibilidad
+        let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center; font-weight:700;">👥 Parejas Inscritas</h3>
                     <div style="overflow-x:auto;">
-                    <table class="tabla-inscritos" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                    <table class="tabla-inscritos" style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#2D3748;">
                     <thead>
                         <tr style="background:#071289; color:white;">
-                            <th style="padding:0.6rem; text-align:left;">Pareja</th>
-                            <th style="padding:0.6rem; text-align:left;">Jugador 1</th>
-                            <th style="padding:0.6rem; text-align:left;">Jugador 2</th>
-                            <th style="padding:0.6rem; text-align:left;">Contacto</th>
-                            <th style="padding:0.6rem; text-align:left;">Acción</th>
+                            <th style="padding:0.6rem; text-align:left; font-weight:600;">Pareja</th>
+                            <th style="padding:0.6rem; text-align:left; font-weight:600;">Jugador 1</th>
+                            <th style="padding:0.6rem; text-align:left; font-weight:600;">Jugador 2</th>
+                            <th style="padding:0.6rem; text-align:left; font-weight:600;">Contacto</th>
+                            <th style="padding:0.6rem; text-align:left; font-weight:600;">Acción</th>
                         </tr>
                     </thead>
-                    <tbody>`;
+                    <tbody style="color:#2D3748;">`;
             
         data.forEach(p => {
-            console.log('🔍 Pareja individual:', p); // Debug individual
-            
-            const numeroPareja = p.nombre_pareja || p.numero ? '#' + p.numero : '—';
-            const jugador1 = p.jugador1 && p.jugador1 !== '—' ? p.jugador1 : '—';
-            const jugador2 = p.jugador2 && p.jugador2 !== '' ? p.jugador2 : '<em style="color:#888;">Pendiente</em>';
-            const contacto = p.contacto || '—';
-            const idPareja = p.id_pareja || 0;
-            // Sanitizar nombres para evitar XSS en el onclick
             const j1Safe = (p.jugador1 || '—').replace(/'/g, "\\'");
             const j2Safe = (p.jugador2 || 'Pendiente').replace(/'/g, "\\'");
+            const idPareja = p.id_pareja || p.id || 0;
             
-            html += `<tr style="border-bottom:1px solid #eee;">
-                <td style="padding:0.8rem; font-weight:600;">${p.nombre_pareja || p.numero || '#' + (p.id_pareja || '')}</td>
-                <td style="padding:0.8rem;">${p.jugador1 || '—'}</td>
-                <td style="padding:0.8rem;">${p.jugador2 || '<em style="color:#888;">Pendiente</em>'}</td>
-                <td style="padding:0.8rem; font-size:0.8rem; color:#666;">${p.contacto || '—'}</td>
+            // Colores explícitos para cada celda
+            html += `<tr style="border-bottom:1px solid #e2e8f0; background:#fff;">
+                <td style="padding:0.8rem; font-weight:600; color:#1A202C;">${p.nombre_pareja || p.numero || '#' + (p.id_pareja || '')}</td>
+                <td style="padding:0.8rem; color:#2D3748;">${p.jugador1 || '—'}</td>
+                <td style="padding:0.8rem; color:#2D3748;">${p.jugador2 ? p.jugador2 : '<em style="color:#718096;">Pendiente</em>'}</td>
+                <td style="padding:0.8rem; font-size:0.8rem; color:#4A5568;">${p.contacto || '—'}</td>
                 <td style="padding:0.8rem;">
                     ${idPareja ? `
                     <button onclick="darDeBajaPareja(${idPareja}, '${j1Safe}', '${j2Safe}')" 
                             style="background:#FFE5E5; color:#C62828; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600;"
                             onmouseover="this.style.background='#FFCDD2'" onmouseout="this.style.background='#FFE5E5'">
                         🗑️ Baja
-                    </button>` : '<span style="color:#888; font-size:0.75rem;">—</span>'}
+                    </button>` : '<span style="color:#A0AEC0; font-size:0.75rem;">—</span>'}
                 </td>
             </tr>`;
         });
         
         html += `</tbody></table></div>`;
-        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button></div>`;
+        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;" onclick="cerrarSubmodal()">Cerrar</button></div>`;
         contenido.innerHTML = html;
         
     } catch(e) {
         console.error('❌ Error abrirModalInscritos:', e);
-        contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">⚠️ Error: ${e.message}<br><button class="action-btn" onclick="abrirModalInscritos(${idTorneo})">Reintentar</button></div>`;
+        contenido.innerHTML = `<div style="text-align:center; color:#C62828; padding:2rem;">⚠️ Error: ${e.message}<br><button class="action-btn" style="margin-top:1rem; padding:0.5rem 1rem; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="abrirModalInscritos(${idTorneo})">Reintentar</button></div>`;
     }
 }
 
