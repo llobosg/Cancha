@@ -113,7 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja = null) {
-    global $success_message, $error_message, $torneo;
+    // ✅ Agregar $inscritos a los globals
+    global $success_message, $error_message, $torneo, $inscritos;
     
     $stmt_check = $pdo->prepare("SELECT 1 FROM parejas_torneo WHERE id_torneo = ? AND (id_socio_1 = ? OR id_socio_2 = ?)");
     $stmt_check->execute([$id_torneo, $id_socio, $id_socio]);
@@ -139,6 +140,7 @@ function verificar_e_inscribir_socio($pdo, $id_torneo, $id_socio, $code_pareja =
     
     $max_parejas = $torneo['num_parejas_max'] ?? 10;
     
+    // ✅ Ahora $inscritos sí está disponible
     if ($inscritos >= $max_parejas) {
         $error_message = "❌ Cupo lleno.";
         return;
