@@ -2542,7 +2542,6 @@ async function cargarTorneos() {
 
             // Parsear valores numéricos de forma segura
             const estaLleno = inscritosCount >= maxParejas;
-            const estado = (t.estado || '').toLowerCase();
 
             if (estado === 'abierto') {
                 if (!estaLleno) {
@@ -4671,7 +4670,6 @@ function debugEditarConvenio(btn, event) {
     console.log(`📝 [DEBUG-EDITAR] ${camposOk}/${Object.keys(campos).length} campos actualizados`);
 
     // 5. Mostrar campo Estado (solo en edición)
-    const campoEstado = document.getElementById('campo_estado');
     if (campoEstado) {
         document.getElementById('convenio_estado').value = datos.estado || 'activo';
         campoEstado.style.display = 'flex';
