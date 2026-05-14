@@ -2,11 +2,10 @@
 // api/dar_baja_pareja_admin.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/reserva_mailer.php'; // Tu mailer existente
+require_once __DIR__ . '/../includes/reserva_mailer.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Validar admin
 if (!isset($_SESSION['id_recinto']) || !in_array($_SESSION['recinto_rol'] ?? '', ['admin', 'responsable'])) {
     echo json_encode(['success' => false, 'message' => 'No autorizado']);
     exit;
@@ -21,7 +20,7 @@ if (!$id_pareja) {
 }
 
 try {
-    // 1. Obtener datos de la pareja y torneo antes de borrar
+    // Obtener datos antes de borrar
     $stmt = $pdo->prepare("
         SELECT 
             pt.id_torneo, t.nombre as torneo_nombre, t.fecha_inicio,
@@ -38,61 +37,48 @@ try {
     $stmt->execute([$id_pareja]);
     $pareja = $stmt->fetch();
     
-    if (!$pareja) {
-        throw new Exception('Pareja no encontrada');
-    }
+    if (!$pareja) throw new Exception('Pareja no encontrada');
     
-    // 2. Eliminar la pareja y sus inscritos asociados
-    $pdo->prepare("DELETE FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'torneo_pareja'")
-        ->execute([$pareja['id_torneo']]); // Ajusta según tu estructura
-    
+    // Eliminar pareja
     $pdo->prepare("DELETE FROM parejas_torneo WHERE id_pareja = ?")->execute([$id_pareja]);
     
-    // 3. ✅ Enviar correos de notificación a ambos jugadores
+    // ✅ Enviar correos
     try {
         if (class_exists('BrevoMailer')) {
             $mail = new BrevoMailer();
-            $fecha_torneo = date('d/m/Y', strtotime($pareja['fecha_inicio']));
+            $fecha = date('d/m/Y', strtotime($pareja['fecha_inicio']));
             $asunto = "📢 Información sobre tu inscripción en {$pareja['torneo_nombre']}";
             
-            $cuerpoBase = "
+            $cuerpo = "
                 <h2>Hola {NOMBRE}</h2>
-                <p>Te informamos que, por decisión administrativa del recinto <strong>{$pareja['recinto_nombre']}</strong>, se ha tramitado la baja de tu pareja en el torneo:</p>
-                <p>🏆 <strong>{$pareja['torneo_nombre']}</strong><br>
-                📅 Fecha: $fecha_torneo</p>
-                <p>Agradecemos tu interés en participar y te invitamos a estar atento/a a futuros torneos y actividades en CanchaSport.</p>
-                <p>Si tienes alguna duda o quieres más información, no dudes en contactarnos directamente:</p>
-                <p>📧 {$pareja['recinto_nombre']} - admin@recinto.com</p>
-                <p>¡Esperamos verte pronto en la cancha!</p>
-                <hr>
-                <small style='color:#888;'>Este es un mensaje automático de CanchaSport.</small>
+                <p>Te informamos que, por decisión administrativa del recinto <strong>{$pareja['recinto_nombre']}</strong>, se ha tramitado la baja de tu pareja en:</p>
+                <p>🏆 <strong>{$pareja['torneo_nombre']}</strong><br>📅 Fecha: $fecha</p>
+                <p>Agradecemos tu interés y te invitamos a participar en futuros torneos.</p>
+                <p>Para dudas, contáctanos: {$pareja['recinto_nombre']} - admin@recinto.com</p>
+                <hr><small style='color:#888;'>Mensaje automático de CanchaSport.</small>
             ";
             
-            // Correo al Jugador 1
             if (!empty($pareja['email1'])) {
                 $mail->setTo($pareja['email1'], $pareja['nombre1'])
                      ->setSubject($asunto)
-                     ->setHtmlBody(str_replace('{NOMBRE}', $pareja['nombre1'], $cuerpoBase))
+                     ->setHtmlBody(str_replace('{NOMBRE}', $pareja['nombre1'], $cuerpo))
                      ->send();
             }
-            
-            // Correo al Jugador 2 (si existe)
             if (!empty($pareja['email2']) && !empty($pareja['nombre2'])) {
                 $mail->setTo($pareja['email2'], $pareja['nombre2'])
                      ->setSubject($asunto)
-                     ->setHtmlBody(str_replace('{NOMBRE}', $pareja['nombre2'], $cuerpoBase))
+                     ->setHtmlBody(str_replace('{NOMBRE}', $pareja['nombre2'], $cuerpo))
                      ->send();
             }
         }
     } catch (Exception $e_mail) {
-        error_log("Error envío correo baja pareja: " . $e_mail->getMessage());
-        // No interrumpimos el flujo si falla el correo
+        error_log("Error envío correo baja: " . $e_mail->getMessage());
     }
     
-    echo json_encode(['success' => true, 'message' => 'Pareja dada de baja correctamente']);
+    echo json_encode(['success' => true, 'message' => 'Baja registrada']);
     
 } catch (Exception $e) {
-    error_log("Error dar_baja_pareja_admin: " . $e->getMessage());
+    error_log("Error dar_baja_pareja: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

@@ -3386,77 +3386,80 @@ document.addEventListener('click', function(e) {
         cerrarSubmodal();
     }
 });
-// === 👁️ VER INSCRITOS Y BAJAR PAREJA ===
+// === 👁️ VER INSCRITOS Y BAJAR PAREJA (MERGE) ===
 async function abrirModalInscritos(idTorneo) {
-    const modal = document.getElementById('modalParejasTorneo');
-    const lista = document.getElementById('listaParejasTorneo');
+    const overlay = document.getElementById('submodalGenerico');
+    const contenido = document.getElementById('submodalContenido');
     
-    if (!modal || !lista) return;
+    if(!overlay || !contenido) return;
     
-    modal.style.display = 'flex';
-    lista.innerHTML = '<p style="text-align:center; padding:1rem; color:#888;">🔄 Cargando parejas...</p>';
+    overlay.style.display = 'flex';
+    void overlay.offsetWidth; // Forzar reflow para animación
+    overlay.classList.add('active');
+    
+    contenido.innerHTML = '<p style="text-align:center; padding:2rem;">🔄 Cargando parejas...</p>';
     
     try {
-        // Consulta a API que devuelve datos completos de parejas
-        const res = await fetch(`../api/get_parejas_torneo_admin.php?id_torneo=${idTorneo}`);
+        const res = await fetch(`../api/get_inscritos_torneos.php?id_torneo=${idTorneo}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        
         const data = await res.json();
         
-        if (data.error) {
-            lista.innerHTML = `<p style="text-align:center; color:#C62828;">❌ ${data.error}</p>`;
+        // Validación estricta
+        if (!Array.isArray(data)) {
+            console.error('La API no devolvió un array:', data);
+            throw new Error(data.error || 'Datos inválidos');
+        }
+
+        if(data.length === 0) {
+            contenido.innerHTML = '<p style="text-align:center; padding:2rem; color:#888;">No hay parejas inscritas aún.</p>';
             return;
         }
         
-        if (!Array.isArray(data) || data.length === 0) {
-            lista.innerHTML = '<p style="text-align:center; color:#888;">Sin parejas inscritas aún</p>';
-            return;
-        }
-        
-        // Generar tabla HTML con las 5 columnas solicitadas
-        let html = `
-        <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-            <thead>
-                <tr style="background:#f8f9fa; text-align:left;">
-                    <th style="padding:0.6rem; border-bottom:2px solid #eee;">Pareja</th>
-                    <th style="padding:0.6rem; border-bottom:2px solid #eee;">Jugador 1</th>
-                    <th style="padding:0.6rem; border-bottom:2px solid #eee;">Jugador 2</th>
-                    <th style="padding:0.6rem; border-bottom:2px solid #eee;">Contacto</th>
-                    <th style="padding:0.6rem; border-bottom:2px solid #eee;">Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-        `;
-        
-        data.forEach((pareja, index) => {
-            const numeroPareja = pareja.numero || index + 1;
-            const jugador1 = pareja.jugador1_nombre || '—';
-            const jugador2 = pareja.jugador2_nombre || '<em style="color:#888;">Pendiente</em>';
-            const contacto = pareja.jugador1_email || '—';
-            const idPareja = pareja.id_pareja;
+        // ✅ Tabla con 5 columnas: Pareja, J1, J2, Contacto, Acción
+        let html = `<h3 style="color:#071289; margin-bottom:1rem; text-align:center;">👥 Parejas Inscritas</h3>
+                    <div style="overflow-x:auto;">
+                    <table class="tabla-inscritos" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                    <thead>
+                        <tr style="background:#071289; color:white;">
+                            <th style="padding:0.6rem; text-align:left;">Pareja</th>
+                            <th style="padding:0.6rem; text-align:left;">Jugador 1</th>
+                            <th style="padding:0.6rem; text-align:left;">Jugador 2</th>
+                            <th style="padding:0.6rem; text-align:left;">Contacto</th>
+                            <th style="padding:0.6rem; text-align:left;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
             
-            html += `
-            <tr style="border-bottom:1px solid #f0f0f0;">
-                <td style="padding:0.6rem; font-weight:600;">#${numeroPareja}</td>
-                <td style="padding:0.6rem;">${jugador1}</td>
-                <td style="padding:0.6rem;">${jugador2}</td>
-                <td style="padding:0.6rem; font-size:0.8rem; color:#666;">${contacto}</td>
-                <td style="padding:0.6rem;">
-                    <button onclick="darDeBajaPareja(${idPareja}, '${jugador1}', '${jugador2}')" 
+        data.forEach(p => {
+            // Sanitizar nombres para evitar XSS en el onclick
+            const j1Safe = (p.jugador1 || '—').replace(/'/g, "\\'");
+            const j2Safe = (p.jugador2 || 'Pendiente').replace(/'/g, "\\'");
+            const idPareja = p.id_pareja || p.id || 0;
+            
+            html += `<tr style="border-bottom:1px solid #eee;">
+                <td style="padding:0.8rem; font-weight:600;">${p.nombre_pareja || p.numero || '#' + (p.id_pareja || '')}</td>
+                <td style="padding:0.8rem;">${p.jugador1 || '—'}</td>
+                <td style="padding:0.8rem;">${p.jugador2 || '<em style="color:#888;">Pendiente</em>'}</td>
+                <td style="padding:0.8rem; font-size:0.8rem; color:#666;">${p.contacto || '—'}</td>
+                <td style="padding:0.8rem;">
+                    ${idPareja ? `
+                    <button onclick="darDeBajaPareja(${idPareja}, '${j1Safe}', '${j2Safe}')" 
                             style="background:#FFE5E5; color:#C62828; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600;"
                             onmouseover="this.style.background='#FFCDD2'" onmouseout="this.style.background='#FFE5E5'">
-                        🗑️ Dar de baja
-                    </button>
+                        🗑️ Baja
+                    </button>` : '<span style="color:#888; font-size:0.75rem;">—</span>'}
                 </td>
-            </tr>
-            `;
+            </tr>`;
         });
         
         html += `</tbody></table></div>`;
-        lista.innerHTML = html;
+        html += `<div style="margin-top:1rem; text-align:right;"><button class="action-btn" style="background:#6c757d;" onclick="cerrarSubmodal()">Cerrar</button></div>`;
+        contenido.innerHTML = html;
         
-    } catch (err) {
-        console.error('❌ Error verParejasTorneo:', err);
-        lista.innerHTML = '<p style="text-align:center; color:#C62828;">Error de conexión</p>';
+    } catch(e) {
+        console.error('❌ Error abrirModalInscritos:', e);
+        contenido.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">⚠️ Error: ${e.message}<br><button class="action-btn" onclick="abrirModalInscritos(${idTorneo})">Reintentar</button></div>`;
     }
 }
 
@@ -4622,9 +4625,13 @@ document.addEventListener('DOMContentLoaded', () => {
         contenedor.style.display = 'none';
     }
 });
-// === DAR DE BAJA PAREJA (ADMIN) ===
+// === 🗑️ DAR DE BAJA PAREJA (ADMIN) ===
 async function darDeBajaPareja(idPareja, jugador1, jugador2) {
-    if (!confirm(`¿Seguro que deseas dar de baja a la pareja de ${jugador1} ${jugador2 !== 'Pendiente' ? 'y ' + jugador2 : ''}?\n\nSe enviará un correo a ambos jugadores.`)) return;
+    const mensaje = jugador2 && jugador2 !== 'Pendiente' 
+        ? `¿Seguro que deseas dar de baja a la pareja de ${jugador1} y ${jugador2}?\n\nSe enviará un correo a ambos jugadores.`
+        : `¿Seguro que deseas dar de baja a ${jugador1}?\n\nSe enviará un correo de notificación.`;
+    
+    if (!confirm(mensaje)) return;
     
     try {
         const res = await fetch('../api/dar_baja_pareja_admin.php', {
@@ -4636,17 +4643,17 @@ async function darDeBajaPareja(idPareja, jugador1, jugador2) {
         
         if (data.success) {
             showToast('✅ Pareja dada de baja. Correos enviados.', 'success');
-            // Recargar lista de parejas
-            const modal = document.getElementById('modalParejasTorneo');
-            if (modal) {
-                // Re-llamar a la función con el ID del torneo actual (guárdalo en una variable global si es necesario)
-                verParejasTorneo(window.torneoActualId);
+            // Recargar el modal con los datos actualizados
+            // Buscamos el ID del torneo desde el contexto del modal o una variable global
+            const idTorneo = window.torneoActualId || document.querySelector('[data-torneo-id]')?.dataset.torneoId;
+            if (idTorneo) {
+                abrirModalInscritos(idTorneo);
             }
         } else {
             showToast('❌ ' + (data.message || 'Error al dar de baja'), 'error');
         }
     } catch (err) {
-        console.error(err);
+        console.error('❌ Error darDeBajaPareja:', err);
         showToast('❌ Error de conexión', 'error');
     }
 }
