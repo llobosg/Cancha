@@ -4290,7 +4290,6 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
     bodyHtml += `</div>`; // cierre body
 
     cont.innerHTML = headerHtml + bodyHtml;
-    return renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo);
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
