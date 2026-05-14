@@ -4121,30 +4121,29 @@ async function verResultadosTV(idTorneo) {
     };
 }
 
-// === FUNCIÓN AUXILIAR: Renderizar Layout Corregido (FIX: const -> let) ===
+// === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Gigante (Fix + Layout Restaurado) ===
 function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
-    
+
     // === HEADER FIJO (60px) ===
     const headerHtml = `
-        <div style="width:100%; height:60px; padding:0 1.5rem; background:linear-gradient(90deg, #071289, #1a237e); 
-                    border-bottom:2px solid #FFD700; display:flex; justify-content:center; align-items:center; flex-shrink:0;">
-            <h1 style="margin:0; color:#FFD700; font-size:1.3rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        <div style="width:100%; height:60px; padding:0 2rem; background:linear-gradient(90deg, #071289, #1a237e);
+                    border-bottom:3px solid #FFD700; display:flex; justify-content:center; align-items:center; flex-shrink:0;">
+            <h1 style="margin:0; color:#FFD700; font-size:1.8rem; font-weight:900; text-shadow:0 3px 6px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                 ${nombreRecinto} - 🏆 Marcador en Vivo - ${nombreTorneo}
             </h1>
         </div>
     `;
-    
-    // === CUERPO (Flex horizontal: Fixture 75% + Posiciones 25%) ===
-    // ✅ CORRECCIÓN: Usar 'let' porque luego usamos += para agregar contenido
-    let bodyHtml = `<div style="display:flex; flex:1; overflow:hidden;">`;
-    
-    // COLUMNA IZQUIERDA: 5 SETS COMPACTOS (75%)
-    bodyHtml += `<div style="width:75%; height:100%; overflow:hidden; padding:0.5rem; border-right:1px solid #333; display:flex; flex-direction:column;">`;
-    bodyHtml += `<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:0.5rem; height:100%; overflow:hidden;">`;
-    
-    // Agrupar partidos
+
+    // === CUERPO: Layout 70% Fixture / 30% Posiciones ===
+    // ✅ FIX CRÍTICO: Usar 'let' para permitir concatenación con += sin romper JS
+    let bodyHtml = `<div style="display:flex; flex:1; overflow:hidden; background:#0a0a0a;">`;
+
+    // === COLUMNA IZQUIERDA: FIXTURE (70%) - 5 FICHAS GIGANTES ===
+    bodyHtml += `<div style="width:70%; height:100%; padding:1rem; border-right:2px solid #333; display:flex; flex-direction:column; gap:1rem; overflow:hidden;">`;
+
+    // Agrupar partidos por set/fecha
     const rondas = {};
     if (Array.isArray(dataResultados)) {
         dataResultados.forEach(p => {
@@ -4154,66 +4153,89 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
             rondas[key].push(p);
         });
     }
-    
+
+    // Renderizar hasta 5 sets como fichas independientes que ocupan toda la altura
     let setNum = 1;
     Object.values(rondas).slice(0, 5).forEach(partidos => {
-        bodyHtml += `<div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:0.4rem; display:flex; flex-direction:column; gap:0.3rem; overflow:hidden;">
-            <h4 style="margin:0 0 0.3rem 0; color:#4ECDC4; font-size:0.8rem; text-align:center; border-bottom:1px solid #4ECDC4; padding-bottom:0.2rem;">
-                SET ${setNum}
-            </h4>`;
-        
+        // Cada set es una ficha grande (flex:1 distribuye equitativamente sin scroll)
+        bodyHtml += `
+            <div style="flex:1; background:rgba(255,255,255,0.04); border-radius:16px; padding:1rem; display:flex; flex-direction:column; gap:0.6rem; border:1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin:0; color:#4ECDC4; font-size:1.6rem; text-align:center; border-bottom:2px solid #4ECDC4; padding-bottom:0.4rem; font-weight:900; text-shadow: 0 0 10px rgba(78, 205, 196, 0.4);">
+                    SET ${setNum}
+                </h3>
+        `;
+
         partidos.forEach(p => {
             const j1 = parseInt(p.juegos1) || 0;
             const j2 = parseInt(p.juegos2) || 0;
-            const g1 = j1 > j2 ? 'color:#4CAF50; font-weight:700;' : 'color:rgba(255,255,255,0.85);';
-            const g2 = j2 > j1 ? 'color:#4CAF50; font-weight:700;' : 'color:rgba(255,255,255,0.85);';
-            
-            // Nombres cortos
-            const p1 = extraerPrimerNombre(p.pareja1);
-            const p2 = extraerPrimerNombre(p.pareja2);
-            
+            const esGanador1 = j1 > j2;
+            const esGanador2 = j2 > j1;
+
+            const styleP1 = esGanador1 
+                ? 'color:#4CAF50; font-weight:900; text-shadow:0 0 12px rgba(76, 175, 80, 0.7);' 
+                : 'color:rgba(255,255,255,0.9); font-weight:700;';
+            const styleP2 = esGanador2 
+                ? 'color:#4CAF50; font-weight:900; text-shadow:0 0 12px rgba(76, 175, 80, 0.7);' 
+                : 'color:rgba(255,255,255,0.9); font-weight:700;';
+
+            // Nombres completos de dupla
+            const p1 = extraerNombresCortosPareja(p.pareja1);
+            const p2 = extraerNombresCortosPareja(p.pareja2);
+
             bodyHtml += `
-                <div style="display:flex; flex-direction:column; gap:0.1rem; font-size:0.7rem; background:rgba(255,255,255,0.06); padding:0.25rem 0.3rem; border-radius:4px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="${g1}; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p1}</span>
-                        <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.5); padding:0 0.2rem; border-radius:2px; font-size:0.75rem;">${j1}</span>
+                <div style="display:flex; flex-direction:column; justify-content:center; gap:0.4rem; background:rgba(255,255,255,0.06); padding:0.8rem; border-radius:12px; border:1px solid rgba(255,255,255,0.15);">
+                    <!-- Pareja 1 -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:2rem; ${styleP1}">
+                        <span style="flex:1; text-align:right; padding-right:1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p1}</span>
+                        <span style="font-size:2.2rem; font-weight:900; background:rgba(0,0,0,0.6); padding:0.5rem 1rem; border-radius:10px; min-width:70px; text-align:center; letter-spacing:2px;">${j1}</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="${g2}; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p2}</span>
-                        <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.5); padding:0 0.2rem; border-radius:2px; font-size:0.75rem;">${j2}</span>
+                    <!-- Separador -->
+                    <div style="text-align:center; color:rgba(255,255,255,0.3); font-weight:bold; font-size:1.2rem; margin:0.2rem 0;">VS</div>
+                    <!-- Pareja 2 -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:2rem; ${styleP2}">
+                        <span style="font-size:2.2rem; font-weight:900; background:rgba(0,0,0,0.6); padding:0.5rem 1rem; border-radius:10px; min-width:70px; text-align:center; letter-spacing:2px;">${j2}</span>
+                        <span style="flex:1; text-align:left; padding-left:1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p2}</span>
                     </div>
                 </div>
             `;
         });
-        bodyHtml += `</div>`;
+        bodyHtml += `</div>`; // Cierre ficha de set
         setNum++;
     });
-    
-    bodyHtml += `</div></div>`; // Cierre grid y columna izquierda
-    
-    // COLUMNA DERECHA: POSICIONES (25%)
-    bodyHtml += `<div style="width:25%; height:100%; overflow-y:auto; padding:0.6rem; background:rgba(0,0,0,0.2);">
-        <h3 style="text-align:center; color:#FFD700; margin:0 0 0.5rem 0; font-size:0.9rem; text-transform:uppercase;">Posiciones</h3>
-        <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">`;
-    
+    bodyHtml += `</div>`; // Cierre columna izquierda
+
+    // === COLUMNA DERECHA: POSICIONES (30%) - Letra GIGANTE para proyección ===
+    bodyHtml += `<div style="width:30%; height:100%; padding:1rem; background:rgba(0,0,0,0.25); display:flex; flex-direction:column;">`;
+    bodyHtml += `<h2 style="text-align:center; color:#FFD700; margin:0 0 1.5rem 0; font-size:2.2rem; text-transform:uppercase; font-weight:900; text-shadow:0 2px 8px rgba(0,0,0,0.6);">🏆 Posiciones</h2>`;
+
+    bodyHtml += `<div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:0.8rem; padding-right:0.5rem;">`;
+
     if (dataPosiciones?.posiciones?.length > 0) {
         dataPosiciones.posiciones.forEach((p, index) => {
-            const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index+1}.`));
-            const nombres = extraerNombresCortosPareja(p.nombre_pareja);
+            const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}.`));
+            const bgRow = index < 3 ? 'background:rgba(255,215,0,0.15); border-left:5px solid #FFD700; box-shadow:0 4px 12px rgba(0,0,0,0.3);' : 'background:rgba(255,255,255,0.05); border-left:3px solid #444;';
+            const nombresDupla = extraerNombresCortosPareja(p.nombre_pareja);
+
             bodyHtml += `
-                <tr style="border-bottom:1px solid #444;">
-                    <td style="padding:0.3rem 0.2rem; font-weight:bold; width:25px;">${medal}</td>
-                    <td style="padding:0.3rem 0.2rem; font-weight:500; line-height:1.1;">${nombres}</td>
-                    <td style="padding:0.3rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4;">${p.sets_ganados}</td>
-                </tr>`;
+                <div style="${bgRow} padding:1.5rem 1.2rem; border-radius:14px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:1.2rem;">
+                        <span style="font-size:3rem; font-weight:900; min-width:60px;">${medal}</span>
+                        <span style="font-size:2.4rem; font-weight:800; color:white; line-height:1.1; word-wrap:break-word; max-width:80%; text-shadow:0 2px 4px rgba(0,0,0,0.5);">${nombresDupla}</span>
+                    </div>
+                    <div style="font-size:3.2rem; font-weight:900; color:#4ECDC4; min-width:100px; text-align:right; text-shadow:0 0 15px rgba(78, 205, 196, 0.6);">
+                        ${p.sets_ganados}
+                    </div>
+                </div>
+            `;
         });
     } else {
-        bodyHtml += `<tr><td colspan="3" style="padding:0.5rem; text-align:center; color:#888; font-size:0.75rem;">Sin posiciones</td></tr>`;
+        bodyHtml += `<div style="text-align:center; color:#888; font-size:1.8rem; margin-top:3rem;">Sin posiciones aún</div>`;
     }
-    bodyHtml += `</table></div>`;
-    bodyHtml += `</div>`; // Cierre cuerpo
-    
-    // Unir todo
+    bodyHtml += `</div>`; // Cierre contenedor posiciones
+    bodyHtml += `</div>`; // Cierre columna derecha
+    bodyHtml += `</div>`; // Cierre cuerpo principal
+
+    // Inyectar en el DOM
     cont.innerHTML = headerHtml + bodyHtml;
 }
 
