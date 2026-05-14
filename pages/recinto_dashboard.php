@@ -4020,11 +4020,11 @@ document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
 
-// === 📺 TV MODE (5 Sets + Posiciones Mejoradas + Header Personalizado) ===
+// === 📺 TV MODE - LAYOUT CORREGIDO (Header + 5 Sets + Posiciones) ===
 let tvModeInterval = null;
 
 async function verResultadosTV(idTorneo) {
-    console.log('📺 Iniciando TV Mode para torneo:', idTorneo);
+    console.log('📺 TV Mode iniciado para torneo:', idTorneo);
     
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay?.querySelector('.submodal-card');
@@ -4032,29 +4032,31 @@ async function verResultadosTV(idTorneo) {
     
     if (!overlay || !card || !contenido) return;
     
-    // 1. Asegurar que el modal esté visible
+    // 1. Configurar modal en pantalla completa
     overlay.style.display = 'flex';
     void overlay.offsetWidth;
     overlay.classList.add('active');
     
-    // 2. Estilos TV Full Screen optimizados para 5 sets
+    // Estilos TV: layout vertical (header arriba, contenido abajo)
     overlay.style.zIndex = 5000;
-    card.style.maxWidth = '99%';
+    card.style.maxWidth = '99vw';
     card.style.height = '98vh';
     card.style.padding = '0';
     card.style.display = 'flex';
-    card.style.flexDirection = 'row';
-    card.style.background = '#0a0a0a'; // Fondo más oscuro para mejor contraste
+    card.style.flexDirection = 'column'; // ← Header arriba, cuerpo abajo
+    card.style.background = '#0a0a0a';
     card.style.color = 'white';
     card.style.overflow = 'hidden';
     
     contenido.style.display = 'flex';
+    contenido.style.flexDirection = 'column';
     contenido.style.width = '100%';
     contenido.style.height = '100%';
-    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
+    contenido.style.overflow = 'hidden';
+    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando...</p>';
     
-    // 3. Fetch paralelo: resultados + posiciones + datos del torneo
     try {
+        // 2. Fetch paralelo: resultados + posiciones + datos del torneo/recinto
         const [resResultados, resPosiciones, resTorneo] = await Promise.all([
             fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
             fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`),
@@ -4067,10 +4069,10 @@ async function verResultadosTV(idTorneo) {
             resTorneo.json()
         ]);
         
-        // 4. Renderizar con datos completos
-        renderizarTVModeMejorado(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
+        // 3. Renderizar con layout corregido
+        renderizarTVLayoutCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
         
-        // 5. Auto-refresh cada 10 segundos
+        // 4. Auto-refresh cada 10 segundos
         if (tvModeInterval) clearInterval(tvModeInterval);
         tvModeInterval = setInterval(async () => {
             try {
@@ -4079,13 +4081,13 @@ async function verResultadosTV(idTorneo) {
                     fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`).then(r => r.json()),
                     fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`).then(r => r.json())
                 ]);
-                renderizarTVModeMejorado(r1, r2, r3, contenido, idTorneo);
+                renderizarTVLayoutCorregido(r1, r2, r3, contenido, idTorneo);
             } catch (e) {
                 console.warn('⚠️ Error en auto-refresh TV:', e);
             }
         }, 10000);
         
-        // 6. Limpiar intervalo al cerrar
+        // 5. Limpiar intervalo al cerrar
         const originalClose = window.cerrarSubmodal;
         window.cerrarSubmodal = function() {
             if (tvModeInterval) {
@@ -4105,8 +4107,10 @@ async function verResultadosTV(idTorneo) {
             }
             if (contenido) {
                 contenido.style.display = '';
+                contenido.style.flexDirection = '';
                 contenido.style.width = '';
                 contenido.style.height = '';
+                contenido.style.overflow = '';
             }
             overlay.style.zIndex = 4000;
             if (typeof originalClose === 'function') originalClose();
@@ -4130,101 +4134,134 @@ function renderizarTVModeMejorado(dataResultados, dataPosiciones, dataTorneo, co
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
     
-    // --- HEADER PERSONALIZADO ---
+    // === HEADER SUPERIOR (fijo, 60px de altura) ===
     const headerHtml = `
-        <div style="width:100%; padding:1rem 2rem; background:linear-gradient(90deg, #071289, #1a237e); 
-                    border-bottom:2px solid #FFD700; display:flex; justify-content:center; align-items:center;">
-            <h1 style="margin:0; color:#FFD700; font-size:1.8rem; font-weight:800; text-shadow:0 2px 4px rgba(0,0,0,0.5);">
+        <div style="width:100%; height:60px; padding:0 2rem; 
+                    background:linear-gradient(90deg, #071289, #1a237e); 
+                    border-bottom:2px solid #FFD700; 
+                    display:flex; justify-content:center; align-items:center; flex-shrink:0;">
+            <h1 style="margin:0; color:#FFD700; font-size:1.4rem; font-weight:800; text-shadow:0 2px 4px rgba(0,0,0,0.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                 ${nombreRecinto} - 🏆 Marcador en Vivo - ${nombreTorneo}
             </h1>
         </div>
     `;
     
-    // --- COLUMNA IZQUIERDA: FIXTURE (75% para 5 sets) ---
-    let htmlFixture = `<div style="width: 75%; height: calc(100% - 60px); overflow-y: auto; padding: 1.5rem; border-right: 2px solid #333; scrollbar-width: thin;">`;
+    // === CUERPO: Dos columnas (Fixture + Posiciones) ===
+    const bodyHtml = `
+        <div style="display:flex; flex:1; overflow:hidden;">
+            
+            <!-- COLUMNA IZQUIERDA: FIXTURE (75%) - 5 SETS COMPACTOS -->
+            <div style="width:75%; height:100%; overflow-y:auto; padding:0.8rem; border-right:1px solid #333;">
+                <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:0.5rem; height:100%;">
+    `;
     
-    // Agrupar partidos por set/fecha
+    // Agrupar partidos por set/fecha (máximo 5 sets)
     const rondas = {};
     if (Array.isArray(dataResultados)) {
         dataResultados.forEach(p => {
             const fechaRaw = p.fecha_hora_programada || p.fecha || new Date().toISOString();
-            const key = fechaRaw.substring(0, 16); // Agrupar por fecha+hora
+            const key = fechaRaw.substring(0, 16);
             if(!rondas[key]) rondas[key] = [];
             rondas[key].push(p);
         });
     }
     
-    // Renderizar hasta 5 sets
+    // Renderizar hasta 5 sets en columnas compactas
     let setNum = 1;
     Object.values(rondas).slice(0, 5).forEach(partidos => {
-        htmlFixture += `<div style="margin-bottom: 2rem; background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px;">
-            <h3 style="color:#4ECDC4; margin:0 0 1rem 0; font-size: 1.6rem; border-bottom: 2px solid #4ECDC4; padding-bottom: 0.4rem;">
-                SET ${setNum}
-            </h3>`;
+        bodyHtml += `
+            <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:0.5rem; display:flex; flex-direction:column; gap:0.3rem;">
+                <h4 style="margin:0 0 0.4rem 0; color:#4ECDC4; font-size:0.9rem; text-align:center; border-bottom:1px solid #4ECDC4; padding-bottom:0.2rem;">
+                    SET ${setNum}
+                </h4>
+        `;
         
         partidos.forEach(p => {
             const j1 = parseInt(p.juegos1) || 0;
             const j2 = parseInt(p.juegos2) || 0;
-            const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 8px rgba(76, 175, 80, 0.6);' : 'color:rgba(255,255,255,0.85);';
-            const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:900; text-shadow: 0 0 8px rgba(76, 175, 80, 0.6);' : 'color:rgba(255,255,255,0.85);';
+            const styleG1 = (j1 > j2) ? 'color:#4CAF50; font-weight:700;' : 'color:rgba(255,255,255,0.85);';
+            const styleG2 = (j2 > j1) ? 'color:#4CAF50; font-weight:700;' : 'color:rgba(255,255,255,0.85);';
             
-            // Extraer solo primer nombre de cada jugador
-            const p1PrimerNombre = extraerPrimerNombre(p.pareja1);
-            const p2PrimerNombre = extraerPrimerNombre(p.pareja2);
+            // Nombres cortos para vista compacta
+            const p1Corto = extraerNombresCortosPareja(p.pareja1);
+            const p2Corto = extraerNombresCortosPareja(p.pareja2);
             
-            htmlFixture += `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin:0.8rem 0; 
-                            font-size: 1.4rem; background:rgba(255,255,255,0.06); padding:0.9rem 1.2rem; 
-                            border-radius:10px; border: 1px solid rgba(255,255,255,0.15);">
-                    <span style="flex:1; text-align:right; padding-right:1.2rem; ${styleG1}">${p1PrimerNombre}</span>
-                    <span style="padding:0 1.5rem; font-weight:bold; font-size: 1.9rem; color:white; 
-                                background:rgba(0,0,0,0.5); border-radius:10px; min-width:110px; text-align:center; letter-spacing: 2px;">
-                        ${j1} - ${j2}
-                    </span>
-                    <span style="flex:1; text-align:left; padding-left:1.2rem; ${styleG2}">${p2PrimerNombre}</span>
+            bodyHtml += `
+                <div style="display:flex; flex-direction:column; gap:0.1rem; font-size:0.75rem; background:rgba(255,255,255,0.06); padding:0.3rem 0.4rem; border-radius:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="${styleG1}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%;">${p1Corto}</span>
+                        <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.5); padding:0 0.3rem; border-radius:3px; font-size:0.8rem;">${j1}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="${styleG2}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%;">${p2Corto}</span>
+                        <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.5); padding:0 0.3rem; border-radius:3px; font-size:0.8rem;">${j2}</span>
+                    </div>
                 </div>
             `;
         });
-        htmlFixture += `</div>`;
+        bodyHtml += `</div>`;
         setNum++;
     });
-    htmlFixture += `</div>`;
     
-    // --- COLUMNA DERECHA: POSICIONES (25% con letra grande) ---
-    let htmlPosiciones = `<div style="width: 25%; height: calc(100% - 60px); overflow-y: auto; padding: 1.2rem; background: rgba(0,0,0,0.25);">`;
-    htmlPosiciones += `<h3 style="text-align:center; color:#FFD700; margin:0 0 1.2rem 0; font-size: 1.5rem; text-transform:uppercase; font-weight:700;">Posiciones</h3>`;
+    bodyHtml += `</div></div>`; // Cierra grid y columna fixture
+    
+    // === COLUMNA DERECHA: POSICIONES (25%) ===
+    bodyHtml += `
+        <!-- COLUMNA DERECHA: POSICIONES (25%) -->
+        <div style="width:25%; height:100%; overflow-y:auto; padding:0.8rem; background:rgba(0,0,0,0.2);">
+            <h3 style="text-align:center; color:#FFD700; margin:0 0 0.6rem 0; font-size:1rem; text-transform:uppercase;">Posiciones</h3>
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    `;
     
     if (dataPosiciones?.posiciones?.length > 0) {
-        // ✅ Letra aumentada y nombres cortos
-        htmlPosiciones += `<table style="width:100%; border-collapse:collapse; font-size: 1.5rem;">`; 
-        
         dataPosiciones.posiciones.forEach((p, index) => {
             const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}.`));
-            const bgRow = index < 3 ? 'background:rgba(255,215,0,0.12);' : '';
+            const bgRow = index < 3 ? 'background:rgba(255,215,0,0.1);' : '';
             
-            // ✅ Extraer solo primeros nombres de la pareja
-            const nombresCortos = extraerNombresCortosPareja(p.nombre_pareja);
+            // ✅ Mostrar ambos nombres de la pareja (formato "Nombre1 - Nombre2")
+            const nombresPareja = extraerNombresCortosPareja(p.nombre_pareja);
             
-            htmlPosiciones += `
+            bodyHtml += `
                 <tr style="border-bottom:1px solid #444; ${bgRow}">
-                    <td style="padding:0.9rem 0.3rem; font-weight:bold; width:40px;">${medal}</td>
-                    <td style="padding:0.9rem 0.3rem; font-weight:600; line-height:1.1; word-wrap: break-word;">
-                        ${nombresCortos}
+                    <td style="padding:0.4rem 0.2rem; font-weight:bold; width:30px;">${medal}</td>
+                    <td style="padding:0.4rem 0.2rem; font-weight:500; line-height:1.1; word-wrap:break-word;">
+                        ${nombresPareja}
                     </td>
-                    <td style="padding:0.9rem 0.3rem; text-align:right; font-weight:bold; color:#4ECDC4; min-width:30px;">
+                    <td style="padding:0.4rem 0.2rem; text-align:right; font-weight:bold; color:#4ECDC4; min-width:25px;">
                         ${p.sets_ganados}
                     </td>
                 </tr>
             `;
         });
-        htmlPosiciones += `</table>`;
     } else {
-        htmlPosiciones += `<p style="text-align:center; color:#888; font-size:1.1rem;">Sin posiciones aún</p>`;
+        bodyHtml += `<tr><td colspan="3" style="padding:0.5rem; text-align:center; color:#888; font-size:0.8rem;">Sin posiciones</td></tr>`;
     }
-    htmlPosiciones += `</div>`;
     
-    // Unir todo
-    cont.innerHTML = headerHtml + htmlFixture + htmlPosiciones;
+    bodyHtml += `</table></div></div>`; // Cierra columna posiciones y cuerpo
+    
+    // Unir todo: header + body
+    cont.innerHTML = headerHtml + bodyHtml;
+}
+
+// === HELPER: Extraer nombres cortos de pareja (ej: "Daniel - Sofía") ===
+function extraerNombresCortosPareja(nombrePareja) {
+    if (!nombrePareja || nombrePareja === 'TBD') return 'TBD';
+    
+    // Si ya viene con formato "Nombre1 - Nombre2", devolverlo tal cual
+    if (nombrePareja.includes(' - ')) {
+        const partes = nombrePareja.split(' - ');
+        const n1 = partes[0]?.trim().split(' ')[0] || '';
+        const n2 = partes[1]?.trim().split(' ')[0] || '';
+        return n1 && n2 ? `${n1} - ${n2}` : nombrePareja;
+    }
+    
+    // Si es un solo nombre, intentar separar por espacios
+    const palabras = nombrePareja.trim().split(/\s+/);
+    if (palabras.length >= 2) {
+        return `${palabras[0]} - ${palabras[1]}`;
+    }
+    
+    return palabras[0] || nombrePareja;
 }
 
 // === HELPER: Extraer primer nombre de un string "Nombre Apellido" ===
