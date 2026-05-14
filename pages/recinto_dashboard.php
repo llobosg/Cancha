@@ -4349,11 +4349,6 @@ function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, id
     cont.innerHTML = estilos + headerHtml + bodyHtml;
 }
 
-let cacheTV = {
-    resultados: null,
-    posiciones: null
-};
-
 function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
 
     async function actualizar() {
