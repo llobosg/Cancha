@@ -316,6 +316,7 @@ $js_vars = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <title>Home - CanchaSport</title>
     <style>
         :root {
@@ -1954,18 +1955,29 @@ function abrirModalInvitacion(codigoPareja, nombreTorneo) {
     document.getElementById('linkInvitacionInput').value = inviteUrl;
     document.getElementById('btnWhatsappInvitacion').href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     
-    // Generar QR
+    // Mostrar modal primero
+    const modal = document.getElementById('modalInvitacion');
+    modal.style.display = 'flex';
+    
+    // Generar QR con pequeño delay para asegurar renderizado del contenedor
     const qrContainer = document.getElementById('qrInvitacion');
     qrContainer.innerHTML = '';
-    if (typeof QRCode !== 'undefined') {
-        qrInvitacionInstance = new QRCode(qrContainer, {
-            text: inviteUrl, width: 160, height: 160,
-            colorDark: "#000000", colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    }
     
-    document.getElementById('modalInvitacion').style.display = 'flex';
+    setTimeout(() => {
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrContainer, {
+                text: inviteUrl,
+                width: 180,
+                height: 180,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } else {
+            console.warn('⚠️ Librería QRCode no cargada');
+            qrContainer.innerHTML = '<p style="color:#888; font-size:0.8rem;">QR no disponible</p>';
+        }
+    }, 100);
 }
 
 function cerrarModalInvitacion() {
