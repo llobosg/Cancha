@@ -1219,29 +1219,34 @@ $js_vars = [
                                             👁️ Ver Inscritos
                                         </button>
 
-                                    <?php else: ?>
-                                        <!-- === CASO: USUARIO NO INSCRITO === -->
-                                        
+                                                                    <?php else: ?>
+                                    <!-- === CASO: USUARIO NO INSCRITO === -->
+                                    <?php 
+                                        // ✅ LÓGICA: Solo habilitar inscripción el mismo día y después de las 09:00
+                                        $es_hoy = ($evento['fecha'] === date('Y-m-d'));
+                                        $hora_actual = (int)date('H');
+                                        $puede_inscribirse = $es_hoy && ($hora_actual >= 9);
+                                        ?>
+
                                         <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
                                             <!-- Cupos Llenos -->
                                             <button disabled style="width:100%; padding:0.6rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">
                                                 🔒 Cupos Completos
                                             </button>
-                                        <?php else: ?>
-                                            <!-- Hay Cupos -->
-                                            <button onclick="anotarseEvento(
-                                                <?= $evento['id'] ?>, 
-                                                'reserva', 
-                                                '<?= addslashes(strtolower(str_replace(' ', '', $evento['deporte']))) ?>', 
-                                                <?= $evento['cupos_total'] ?>, 
-                                                <?= $evento['monto'] ?? 0 ?>
-                                            )" style="width:100%; padding:0.6rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                        <?php elseif ($puede_inscribirse): ?>
+                                            <!-- ✅ HAY CUPOS + ES DÍA DEL PARTIDO + DESPUÉS DE LAS 09:00 -->
+                                            <button onclick="anotarseEvento(<?= $evento['id'] ?>, 'reserva', '<?= addslashes(strtolower(str_replace(' ', '', $evento['deporte']))) ?>', <?= $evento['cupos_total'] ?>, <?= $evento['monto'] ?? 0 ?>)" style="width:100%; padding:0.6rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                                                 ✅ Anotarse al Partido
                                             </button>
                                             
                                             <button onclick="pasoEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#fff; border:1px solid #ddd; color:#E53E3E; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.9rem;" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='#FFF'">
                                                 🚶 Paso esta semana
                                             </button>
+                                        <?php else: ?>
+                                            <!-- ⏰ AÚN NO ES EL DÍA O SON ANTES DE LAS 09:00 -->
+                                            <div style="text-align:center; padding:0.6rem; background:rgba(255,215,0,0.15); border-radius:8px; font-size:0.85rem; color:#666; margin-bottom:0.5rem;">
+                                                ⏰ La inscripción abre <strong>hoy a las 09:00 hrs</strong>
+                                            </div>
                                         <?php endif; ?>
                                         
                                         <!-- Botón Ver Detalle siempre disponible -->
