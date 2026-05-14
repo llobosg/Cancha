@@ -4123,7 +4123,7 @@ async function verResultadosTV(idTorneo) {
 
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Gigante (Fix + Layout Restaurado) ===
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Pantalla Grande (FIX DEFINITIVO) ===
-function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
+function renderizarTVcorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
