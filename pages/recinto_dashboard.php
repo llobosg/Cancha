@@ -4121,7 +4121,7 @@ async function verResultadosTV(idTorneo) {
     };
 }
 
-// === FUNCIÓN AUXILIAR: Renderizar Layout Corregido ===
+// === FUNCIÓN AUXILIAR: Renderizar Layout Corregido (CORREGIDA) ===
 function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
@@ -4137,7 +4137,8 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
     `;
     
     // === CUERPO (Flex horizontal: Fixture 75% + Posiciones 25%) ===
-    const bodyHtml = `<div style="display:flex; flex:1; overflow:hidden;">`;
+    // ✅ CORRECCIÓN: Usar 'let' para variables que se concatenan con +=
+    let bodyHtml = `<div style="display:flex; flex:1; overflow:hidden;">`;
     
     // COLUMNA IZQUIERDA: 5 SETS COMPACTOS (75%)
     bodyHtml += `<div style="width:75%; height:100%; overflow:hidden; padding:0.5rem; border-right:1px solid #333; display:flex; flex-direction:column;">`;
@@ -4212,6 +4213,7 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
     bodyHtml += `</table></div>`;
     bodyHtml += `</div>`; // Cierre cuerpo
     
+    // ✅ Unir header + body y asignar al contenido
     cont.innerHTML = headerHtml + bodyHtml;
 }
 
