@@ -4273,21 +4273,37 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, conte
         });
     }
 
-    const sets = Object.values(rondas).slice(0, 5);
+    // ===============================
+    // AGRUPAR POR SET (CORREGIDO)
+    // ===============================
+    // Agrupar usando set_num de la API o cálculo por índice
+    const sets = {};
+    if (Array.isArray(dataResultados)) {
+        dataResultados.forEach(p => {
+            const setKey = p.set_num ? `set_${p.set_num}` : `set_${Math.ceil((p.id_partido || 1) / 3)}`;
+            if (!sets[setKey]) sets[setKey] = [];
+            sets[setKey].push(p);
+        });
+    }
+    
+    // Obtener hasta 5 sets ordenados
+    const setsOrdenados = Object.keys(sets)
+        .sort((a, b) => parseInt(a.replace('set_', '')) - parseInt(b.replace('set_', '')))
+        .slice(0, 5)
+        .map(key => sets[key]);
+    
+    // Rellenar con arrays vacíos si hay menos de 5 sets (para mantener layout de 5 columnas)
+    while (setsOrdenados.length < 5) {
+        setsOrdenados.push([]);
+    }
 
     // ===============================
-    // BODY
-    // ===============================
-    let bodyHtml = `<div style="display:flex; height:calc(100vh - 70px);">`;
-
-    // ===============================
-    // IZQUIERDA (SETS)
+    // IZQUIERDA (SETS) - LAYOUT ORIGINAL MANTENIDO
     // ===============================
     bodyHtml += `<div style="width:75%; display:flex; padding:1rem; gap:1rem;">`;
 
     for (let i = 0; i < 5; i++) {
-
-        const partidos = sets[i] || [];
+        const partidos = setsOrdenados[i] || [];
 
         bodyHtml += `
         <div style="flex:1; background:#0a0a0a; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
@@ -4301,41 +4317,50 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, conte
             <div style="flex:1; display:flex; flex-direction:column;">
         `;
 
+        // Mostrar hasta 3 partidos por set
         partidos.slice(0, 3).forEach(p => {
-
             const j1 = parseInt(p.juegos1) || 0;
             const j2 = parseInt(p.juegos2) || 0;
-
             const gana1 = j1 > j2;
             const gana2 = j2 > j1;
-
             const claseCambio = flags.cambiosResultados ? "updated" : "";
-
             const p1 = extraerNombresCortosPareja(p.pareja1);
             const p2 = extraerNombresCortosPareja(p.pareja2);
+            const cancha = p.nombre_cancha || '';
 
             bodyHtml += `
             <div class="fadeIn ${claseCambio}" style="flex:1; padding:0.6rem; border-bottom:1px solid #111;">
-
                 <div style="text-align:center; font-size:0.7rem; color:#777;">
-                    ${p.nombre_cancha || 'Cancha'}
+                    ${cancha}
                 </div>
-
                 <div class="${gana1 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
                     <span>${p1}</span>
                     <span>${j1}</span>
                 </div>
-
                 <div style="text-align:center; color:#333;">VS</div>
-
                 <div class="${gana2 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
                     <span>${p2}</span>
                     <span>${j2}</span>
                 </div>
-
             </div>
             `;
         });
+
+        // Si el set tiene menos de 3 partidos, rellenar con placeholders para mantener layout
+        for (let j = partidos.length; j < 3; j++) {
+            bodyHtml += `
+            <div style="flex:1; padding:0.6rem; border-bottom:1px solid #111; opacity:0.3;">
+                <div style="text-align:center; font-size:0.7rem; color:#555;">Cancha -</div>
+                <div style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900; color:#555;">
+                    <span>-</span><span>-</span>
+                </div>
+                <div style="text-align:center; color:#555;">VS</div>
+                <div style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900; color:#555;">
+                    <span>-</span><span>-</span>
+                </div>
+            </div>
+            `;
+        }
 
         bodyHtml += `</div></div>`;
     }
