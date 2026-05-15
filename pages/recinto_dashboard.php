@@ -4061,27 +4061,28 @@ async function verResultadosTV(idTorneo) {
     // 2. Función de carga y renderizado
     const cargarYRenderizar = async () => {
         try {
-            // Fetch paralelo seguro
             const [resResultados, resPosiciones, resTorneo] = await Promise.all([
                 fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
                 fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`),
                 fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
             ]);
-            
+
             const [dataResultados, dataPosiciones, dataTorneo] = await Promise.all([
                 resResultados.json(),
                 resPosiciones.json(),
                 resTorneo.json()
             ]);
-            
-            renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, flags = {});
-            
+
+            const cont = document.getElementById('tv-container');
+
+            if (!cont) {
+                console.error('❌ No existe el contenedor #tv-container');
+            } else {
+                renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo);
+            }
+
         } catch (err) {
             console.error('❌ Error en TV Mode:', err);
-            contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;">
-                <h3>⚠️ Error al cargar</h3>
-                <p>${err.message}</p>
-            </div>`;
         }
     };
     
@@ -4163,19 +4164,10 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
     setInterval(actualizar, 5000);
 }
 
-const cont = document.getElementById('tv-container');
-
-if (!cont) {
-    console.error('❌ No existe el contenedor #tv-container');
-    return;
-}
-
-renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo);
-
 // ===============================
 // RENDER PRINCIPAL (TV PRO LED)
 // ===============================
-function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, flags = {}) {
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, {}) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
@@ -4891,23 +4883,20 @@ function debugEditarConvenio(btn, event) {
     console.log('🟡 [DEBUG-EDITAR] ✅ Modal FORZADO a visible. Display:', modal.style.display);
 }
 
-// === FUNCIÓN: TOGGLE ACCIONES (MENÚ LATERAL) ===
-function toggleAcciones() {
+window.toggleAcciones = function () {
     const contenedor = document.getElementById('contenedor-acciones');
     const icono = document.getElementById('icon-operaciones');
     
     if (contenedor && icono) {
         if (contenedor.style.display === 'none' || contenedor.style.display === '') {
-            // Mostrar menú
             contenedor.style.display = 'flex';
             icono.classList.add('rotated');
         } else {
-            // Ocultar menú
             contenedor.style.display = 'none';
             icono.classList.remove('rotated');
         }
     }
-}
+};
 // ✅ HACERLA GLOBAL PARA onclick inline
 window.toggleAcciones = toggleAcciones;
 
