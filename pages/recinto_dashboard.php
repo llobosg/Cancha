@@ -4024,29 +4024,45 @@ document.addEventListener('click', () => {
 let tvModeInterval = null;
 
 async function verResultadosTV(idTorneo) {
-    console.log('📺 TV Mode iniciado para torneo:', idTorneo);
+    console.log('📺 [DEBUG] verResultadosTV llamado con idTorneo:', idTorneo, typeof idTorneo);
     
+    // Verificar que idTorneo es un número válido
+    if (!idTorneo || isNaN(idTorneo)) {
+        console.error('❌ [DEBUG] idTorneo inválido:', idTorneo);
+        alert('Error: ID de torneo inválido');
+        return;
+    }
+    
+    // === VERIFICAR ELEMENTOS DEL DOM ===
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay?.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
+    console.log('🔍 [TV MODE] Elementos del modal:', {
+        overlay: !!overlay,
+        card: !!card,
+        contenido: !!contenido
+    });
+    
     if (!overlay || !card || !contenido) {
-        console.error('❌ Elementos del modal no encontrados');
+        console.error('❌ [TV MODE] Elementos del modal no encontrados');
+        alert('Error: Modal no encontrado. Verifica que #submodalGenerico esté en el HTML.');
         return;
     }
     
-    // 1. Configurar modal en pantalla completa
+    // === MOSTRAR MODAL ===
+    console.log('✨ [TV MODE] Mostrando modal...');
     overlay.style.display = 'flex';
     void overlay.offsetWidth; // Forzar reflow
     overlay.classList.add('active');
     
-    // Estilos TV: Header arriba, cuerpo en 2 columnas abajo
+    // Aplicar estilos TV
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '99vw';
     card.style.height = '98vh';
     card.style.padding = '0';
     card.style.display = 'flex';
-    card.style.flexDirection = 'column'; // Layout vertical: Header + Cuerpo
+    card.style.flexDirection = 'column';
     card.style.background = '#0a0a0a';
     card.style.color = 'white';
     card.style.overflow = 'hidden';
@@ -4056,57 +4072,70 @@ async function verResultadosTV(idTorneo) {
     contenido.style.width = '100%';
     contenido.style.height = '100%';
     contenido.style.overflow = 'hidden';
-    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando...</p>';
+    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
     
-    // 2. Función de carga y renderizado
+    // === FUNCIÓN DE CARGA ===
     const cargarYRenderizar = async () => {
+        console.log('🔄 [TV MODE] Fetching APIs...');
         try {
             const [resResultados, resPosiciones, resTorneo] = await Promise.all([
                 fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
                 fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`),
                 fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
             ]);
-
+            
+            console.log('📡 [TV MODE] Respuestas HTTP:', {
+                resultados: resResultados.status,
+                posiciones: resPosiciones.status,
+                torneo: resTorneo.status
+            });
+            
             const [dataResultados, dataPosiciones, dataTorneo] = await Promise.all([
                 resResultados.json(),
                 resPosiciones.json(),
                 resTorneo.json()
             ]);
-
-            // ✅ RENDER REAL
-            renderizarTVCorregido(
-                dataResultados,
-                dataPosiciones,
-                dataTorneo,
-                contenido,
-                idTorneo,
-                {}
-            );
-
+            
+            console.log('📦 [TV MODE] Datos parseados:', {
+                resultados: Array.isArray(dataResultados) ? dataResultados.length : 'no array',
+                posiciones: dataPosiciones?.posiciones?.length || 0,
+                torneo: dataTorneo?.nombre || 'sin nombre'
+            });
+            
+            // === RENDER ===
+            console.log('🎨 [TV MODE] Renderizando...');
+            renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
+            console.log('✅ [TV MODE] Render completado');
+            
         } catch (err) {
-            console.error('❌ Error en TV Mode:', err);
+            console.error('❌ [TV MODE] Error crítico:', err);
             contenido.innerHTML = `
                 <div style="text-align:center; color:#ff5252; padding:2rem;">
                     <h3>⚠️ Error al cargar</h3>
                     <p>${err.message}</p>
+                    <button onclick="location.reload()" style="margin-top:1rem; padding:0.5rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">
+                        Recargar
+                    </button>
                 </div>
             `;
         }
     };
     
-    // 3. Carga inicial
+    // === EJECUTAR ===
     await cargarYRenderizar();
     
-    // 4. Configurar auto-refresh
-    if (tvModeInterval) clearInterval(tvModeInterval);
-    tvModeInterval = setInterval(cargarYRenderizar, 10000);
+    // === AUTO-REFRESH ===
+    if (window.tvModeInterval) clearInterval(window.tvModeInterval);
+    window.tvModeInterval = setInterval(cargarYRenderizar, 10000);
+    console.log('🔄 [TV MODE] Auto-refresh configurado (10s)');
     
-    // 5. Restaurar estilos al cerrar
+    // === RESTAURAR ESTILOS AL CERRAR ===
     const originalClose = window.cerrarSubmodal;
     window.cerrarSubmodal = function() {
-        if (tvModeInterval) {
-            clearInterval(tvModeInterval);
-            tvModeInterval = null;
+        console.log('🔚 [TV MODE] Cerrando modal...');
+        if (window.tvModeInterval) {
+            clearInterval(window.tvModeInterval);
+            window.tvModeInterval = null;
         }
         if (card) {
             card.style.maxWidth = '';
@@ -4995,6 +5024,10 @@ async function generarFixture(idTorneo) {
         }
     }
 }
+// Al final de tu bloque <script>, después de definir todas las funciones:
+window.verResultadosTV = verResultadosTV;
+window.renderizarTVCorregido = renderizarTVCorregido;
+window.cerrarSubmodal = cerrarSubmodal;
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
