@@ -1458,7 +1458,7 @@ td.estado-cancelada {
     <!-- COLUMNA 1: ACCIONES (Izquierda - Ocultas por defecto) -->
     <div class="actions-column">
         <!-- Título Clickable -->
-        <div class="section-divider" id="btnToggleAcciones" style="cursor: pointer; user-select: none;">
+        <div class="section-divider" onclick="toggleAcciones()" style="cursor: pointer; user-select: none;">
             <span>🎾 Operaciones</span>
             <span id="icon-operaciones" style="font-size: 0.8rem; transition: transform 0.3s;">▼</span>
         </div>
@@ -4828,6 +4828,26 @@ function guardarConvenio(e) {
         alert('❌ Error de conexión. Revisa consola.');
     });
 }
+
+// === FUNCIÓN: TOGGLE ACCIONES (MENÚ LATERAL) ===
+function toggleAcciones() {
+    const contenedor = document.getElementById('contenedor-acciones');
+    const icono = document.getElementById('icon-operaciones');
+    
+    if (contenedor && icono) {
+        if (contenedor.style.display === 'none' || contenedor.style.display === '') {
+            // Mostrar menú
+            contenedor.style.display = 'flex';
+            icono.classList.add('rotated');
+        } else {
+            // Ocultar menú
+            contenedor.style.display = 'none';
+            icono.classList.remove('rotated');
+        }
+    }
+}
+// ✅ HACERLA GLOBAL PARA onclick inline
+window.toggleAcciones = toggleAcciones;
 
 // Listeners globales para cerrar con ESC o click fuera
 document.addEventListener('keydown', (e) => {
