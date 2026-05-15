@@ -4201,97 +4201,166 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
     setInterval(actualizar, 5000);
 }
 
-// ===============================
-// RENDER PRINCIPAL (TV PRO LED)
-// ===============================
-// === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Original + Fix de Datos ===
 function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
+
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
 
-    // === HEADER FIJO (60px) - Se mantiene igual ===
+    // ===============================
+    // 🎨 ESTILOS PRO TV
+    // ===============================
+    const estilos = `
+    <style>
+        body { margin:0; background:#000; font-family:Arial, sans-serif; }
+
+        @keyframes glowWin {
+            0% { text-shadow: 0 0 8px #39FF14; }
+            50% { text-shadow: 0 0 25px #39FF14; }
+            100% { text-shadow: 0 0 8px #39FF14; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity:0; transform: translateY(10px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+
+        .win {
+            color:#39FF14;
+            animation: glowWin 1.5s infinite;
+        }
+
+        .fadeIn {
+            animation: fadeIn 0.4s ease;
+        }
+    </style>
+    `;
+
+    // ===============================
+    // HEADER
+    // ===============================
     const headerHtml = `
-        <div style="width:100%; height:60px; padding:0 1.5rem; background:linear-gradient(90deg, #071289, #1a237e);
-                    border-bottom:2px solid #FFD700; display:flex; justify-content:center; align-items:center; flex-shrink:0;">
-            <h1 style="margin:0; color:#FFD700; font-size:1.3rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                ${nombreRecinto} - 🏆 Marcador en Vivo - ${nombreTorneo}
+        <div style="width:100%; height:60px; padding:0 1.5rem;
+            background:linear-gradient(90deg, #071289, #1a237e);
+            border-bottom:2px solid #FFD700;
+            display:flex; justify-content:center; align-items:center;">
+            
+            <h1 style="margin:0; color:#FFD700; font-size:1.4rem; font-weight:900;">
+                ${nombreRecinto} — 🏆 ${nombreTorneo}
             </h1>
         </div>
     `;
 
-    // === CUERPO (Flex horizontal: Fixture 75% + Posiciones 25%) ===
-    // ✅ CORRECCIÓN CRÍTICA: Declarar con 'let' para permitir concatenación con +=
-    let bodyHtml = `<div style="display:flex; flex:1; overflow:hidden;">`;
-
-    // COLUMNA IZQUIERDA: 5 SETS EN FILA HORIZONTAL (75%)
-    bodyHtml += `<div style="width:75%; display:flex; padding:1rem; gap:1rem;">`;
-
-    // ✅ AGRUPACIÓN CORREGIDA: Cada 3 partidos consecutivos = 1 SET (por orden de id_partido)
+    // ===============================
+    // AGRUPAR SETS
+    // ===============================
     const sets = {};
     if (Array.isArray(dataResultados)) {
         dataResultados.forEach((p, index) => {
-            // Calcular número de set: cada 3 partidos = 1 set
             const setNum = Math.floor(index / 3) + 1;
             if (!sets[setNum]) sets[setNum] = [];
             sets[setNum].push(p);
         });
     }
 
-    // Renderizar hasta 5 sets en fila horizontal
+    // ===============================
+    // BODY
+    // ===============================
+    let bodyHtml = `<div style="display:flex; height:calc(100vh - 60px);">`;
+
+    // ===============================
+    // IZQUIERDA (SETS)
+    // ===============================
+    bodyHtml += `<div style="width:75%; display:flex; gap:1rem; padding:1rem;">`;
+
     for (let setNum = 1; setNum <= 5; setNum++) {
+
         const partidos = sets[setNum] || [];
 
         bodyHtml += `
-        <div style="flex:1; background:#0a0a0a; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
-            <div style="text-align:center; padding:0.5rem;
-                        background:#111; color:#00FFC6;
-                        font-weight:900;">
+        <div style="
+            flex:1;
+            background:linear-gradient(180deg, #0a0a0a, #050505);
+            border-radius:14px;
+            display:flex;
+            flex-direction:column;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,0.08);
+        ">
+
+            <!-- HEADER SET -->
+            <div style="
+                text-align:center;
+                padding:0.7rem;
+                background:#111;
+                color:#00FFC6;
+                font-weight:900;
+                font-size:1.2rem;
+                letter-spacing:1px;
+                border-bottom:1px solid rgba(255,255,255,0.1);
+            ">
                 SET ${setNum}
             </div>
+
             <div style="flex:1; display:flex; flex-direction:column;">
         `;
 
-        // Mostrar hasta 3 partidos por set
         partidos.slice(0, 3).forEach(p => {
+
             const j1 = parseInt(p.juegos1) || 0;
             const j2 = parseInt(p.juegos2) || 0;
+
             const gana1 = j1 > j2;
             const gana2 = j2 > j1;
-            const claseCambio = ""; // flags no usados en esta versión
+
             const p1 = extraerNombresCortosPareja(p.pareja1);
             const p2 = extraerNombresCortosPareja(p.pareja2);
             const cancha = p.nombre_cancha || '';
 
             bodyHtml += `
-            <div class="fadeIn ${claseCambio}" style="flex:1; padding:0.6rem; border-bottom:1px solid #111;">
-                <div style="text-align:center; font-size:0.7rem; color:#777;">
+            <div class="fadeIn" style="
+                flex:1;
+                padding:0.7rem;
+                border-bottom:1px solid rgba(255,255,255,0.05);
+                display:flex;
+                flex-direction:column;
+                justify-content:center;
+            ">
+
+                <div style="text-align:center; font-size:0.75rem; color:#888; margin-bottom:0.3rem;">
                     ${cancha}
                 </div>
-                <div class="${gana1 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
+
+                <div class="${gana1 ? 'win' : ''}" style="
+                    display:flex;
+                    justify-content:space-between;
+                    font-size:1.6rem;
+                    font-weight:900;
+                ">
                     <span>${p1}</span>
                     <span>${j1}</span>
                 </div>
-                <div style="text-align:center; color:#333;">VS</div>
-                <div class="${gana2 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
+
+                <div style="text-align:center; color:#333; font-size:0.9rem;">VS</div>
+
+                <div class="${gana2 ? 'win' : ''}" style="
+                    display:flex;
+                    justify-content:space-between;
+                    font-size:1.6rem;
+                    font-weight:900;
+                ">
                     <span>${p2}</span>
                     <span>${j2}</span>
                 </div>
+
             </div>
             `;
         });
 
-        // Rellenar con placeholders si hay menos de 3 partidos
+        // placeholders
         for (let i = partidos.length; i < 3; i++) {
             bodyHtml += `
-            <div style="flex:1; padding:0.6rem; border-bottom:1px solid #111; opacity:0.3;">
-                <div style="text-align:center; font-size:0.7rem; color:#555;">Cancha -</div>
-                <div style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900; color:#555;">
-                    <span>-</span><span>-</span>
-                </div>
-                <div style="text-align:center; color:#555;">VS</div>
-                <div style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900; color:#555;">
-                    <span>-</span><span>-</span>
-                </div>
+            <div style="flex:1; opacity:0.2; padding:0.7rem;">
+                <div style="text-align:center;">-</div>
             </div>
             `;
         }
@@ -4299,39 +4368,68 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
         bodyHtml += `</div></div>`;
     }
 
-    bodyHtml += `</div>`; // Cierre columna izquierda
+    bodyHtml += `</div>`;
 
-    // === COLUMNA DERECHA: POSICIONES (25%) - Se mantiene igual ===
+    // ===============================
+    // DERECHA (POSICIONES)
+    // ===============================
     bodyHtml += `<div style="width:25%; padding:1rem; background:#050505;">`;
-    bodyHtml += `<div style="text-align:center; color:#FFD700; font-size:1.8rem; font-weight:900;">POSICIONES</div>`;
-    bodyHtml += `<div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem;">`;
+
+    bodyHtml += `
+        <div style="
+            text-align:center;
+            color:#FFD700;
+            font-size:2rem;
+            font-weight:900;
+            margin-bottom:1rem;
+        ">
+            🏆 POSICIONES
+        </div>
+    `;
+
+    bodyHtml += `<div style="display:flex; flex-direction:column; gap:0.7rem;">`;
 
     if (dataPosiciones?.posiciones?.length > 0) {
+
         dataPosiciones.posiciones.forEach((p, i) => {
+
             const nombres = extraerNombresCortosPareja(p.nombre_pareja);
-            const claseCambio = "";
             const esTop1 = i === 0;
+
             bodyHtml += `
-            <div class="fadeIn ${claseCambio}" style="
-                display:flex; justify-content:space-between;
-                padding:0.6rem; background:#111; border-radius:8px;
-                font-size:1.3rem; font-weight:900;
-                ${esTop1 ? 'color:#FFD700; animation: glowWin 1s infinite;' : 'color:#FFF;'}
+            <div class="fadeIn" style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:0.8rem;
+                border-radius:10px;
+                font-size:1.5rem;
+                font-weight:900;
+                background:${esTop1 ? 'rgba(255,215,0,0.1)' : '#111'};
+                color:${esTop1 ? '#FFD700' : '#FFF'};
             ">
-                <span>${i + 1}. ${nombres}</span>
-                <span style="color:#00FFC6;">${p.sets_ganados}</span>
+                <span>
+                    ${esTop1 ? '🏆' : (i+1)}
+                    ${nombres}
+                </span>
+                <span style="color:#00FFC6;">
+                    ${p.sets_ganados}
+                </span>
             </div>
             `;
         });
+
     } else {
         bodyHtml += `<div style="color:#777; text-align:center;">Sin posiciones</div>`;
     }
 
-    bodyHtml += `</div></div>`; // cierre derecha
-    bodyHtml += `</div>`; // cierre body
+    bodyHtml += `</div></div>`;
+    bodyHtml += `</div>`;
 
-    // === RENDER FINAL ===
-    cont.innerHTML = headerHtml + bodyHtml;
+    // ===============================
+    // RENDER FINAL
+    // ===============================
+    cont.innerHTML = estilos + headerHtml + bodyHtml;
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
