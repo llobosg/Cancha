@@ -4167,7 +4167,7 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
 // ===============================
 // RENDER PRINCIPAL (TV PRO LED)
 // ===============================
-function renderizarTVProLED(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, flags = {}) {
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, flags = {}) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
