@@ -4024,29 +4024,45 @@ document.addEventListener('click', () => {
 let tvModeInterval = null;
 
 async function verResultadosTV(idTorneo) {
-    console.log('📺 TV Mode iniciado para torneo:', idTorneo);
+    console.log('📺 [DEBUG] verResultadosTV llamado con idTorneo:', idTorneo, typeof idTorneo);
     
+    // Verificar que idTorneo es un número válido
+    if (!idTorneo || isNaN(idTorneo)) {
+        console.error('❌ [DEBUG] idTorneo inválido:', idTorneo);
+        alert('Error: ID de torneo inválido');
+        return;
+    }
+    
+    // === VERIFICAR ELEMENTOS DEL DOM ===
     const overlay = document.getElementById('submodalGenerico');
     const card = overlay?.querySelector('.submodal-card');
     const contenido = document.getElementById('submodalContenido');
     
+    console.log('🔍 [TV MODE] Elementos del modal:', {
+        overlay: !!overlay,
+        card: !!card,
+        contenido: !!contenido
+    });
+    
     if (!overlay || !card || !contenido) {
-        console.error('❌ Elementos del modal no encontrados');
+        console.error('❌ [TV MODE] Elementos del modal no encontrados');
+        alert('Error: Modal no encontrado. Verifica que #submodalGenerico esté en el HTML.');
         return;
     }
     
-    // 1. Configurar modal en pantalla completa
+    // === MOSTRAR MODAL ===
+    console.log('✨ [TV MODE] Mostrando modal...');
     overlay.style.display = 'flex';
     void overlay.offsetWidth; // Forzar reflow
     overlay.classList.add('active');
     
-    // Estilos TV: Header arriba, cuerpo en 2 columnas abajo
+    // Aplicar estilos TV
     overlay.style.zIndex = 5000;
     card.style.maxWidth = '99vw';
     card.style.height = '98vh';
     card.style.padding = '0';
     card.style.display = 'flex';
-    card.style.flexDirection = 'column'; // Layout vertical: Header + Cuerpo
+    card.style.flexDirection = 'column';
     card.style.background = '#0a0a0a';
     card.style.color = 'white';
     card.style.overflow = 'hidden';
@@ -4056,17 +4072,23 @@ async function verResultadosTV(idTorneo) {
     contenido.style.width = '100%';
     contenido.style.height = '100%';
     contenido.style.overflow = 'hidden';
-    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando...</p>';
+    contenido.innerHTML = '<p style="text-align:center; color:white; font-size:1.5rem; margin:auto;">🔄 Cargando marcador en vivo...</p>';
     
-    // 2. Función de carga y renderizado
+    // === FUNCIÓN DE CARGA ===
     const cargarYRenderizar = async () => {
+        console.log('🔄 [TV MODE] Fetching APIs...');
         try {
-            // Fetch paralelo seguro
             const [resResultados, resPosiciones, resTorneo] = await Promise.all([
                 fetch(`../api/get_resultados_torneo.php?id_torneo=${idTorneo}`),
                 fetch(`../api/get_posiciones_torneo.php?id_torneo=${idTorneo}`),
                 fetch(`../api/get_torneo_nombre.php?id_torneo=${idTorneo}`)
             ]);
+            
+            console.log('📡 [TV MODE] Respuestas HTTP:', {
+                resultados: resResultados.status,
+                posiciones: resPosiciones.status,
+                torneo: resTorneo.status
+            });
             
             const [dataResultados, dataPosiciones, dataTorneo] = await Promise.all([
                 resResultados.json(),
@@ -4074,30 +4096,46 @@ async function verResultadosTV(idTorneo) {
                 resTorneo.json()
             ]);
             
+            console.log('📦 [TV MODE] Datos parseados:', {
+                resultados: Array.isArray(dataResultados) ? dataResultados.length : 'no array',
+                posiciones: dataPosiciones?.posiciones?.length || 0,
+                torneo: dataTorneo?.nombre || 'sin nombre'
+            });
+            
+            // === RENDER ===
+            console.log('🎨 [TV MODE] Renderizando...');
             renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo);
+            console.log('✅ [TV MODE] Render completado');
             
         } catch (err) {
-            console.error('❌ Error en TV Mode:', err);
-            contenido.innerHTML = `<div style="text-align:center; color:#ff5252; padding:2rem;">
-                <h3>⚠️ Error al cargar</h3>
-                <p>${err.message}</p>
-            </div>`;
+            console.error('❌ [TV MODE] Error crítico:', err);
+            contenido.innerHTML = `
+                <div style="text-align:center; color:#ff5252; padding:2rem;">
+                    <h3>⚠️ Error al cargar</h3>
+                    <p>${err.message}</p>
+                    <button onclick="location.reload()" style="margin-top:1rem; padding:0.5rem 1rem; background:#071289; color:white; border:none; border-radius:6px; cursor:pointer;">
+                        Recargar
+                    </button>
+                </div>
+            `;
         }
     };
     
-    // 3. Carga inicial
+    // === EJECUTAR ===
     await cargarYRenderizar();
     
-    // 4. Configurar auto-refresh
-    if (tvModeInterval) clearInterval(tvModeInterval);
-    tvModeInterval = setInterval(cargarYRenderizar, 10000);
+    // === AUTO-REFRESH ===
+    if (window.tvModeInterval) clearInterval(window.tvModeInterval);
+    window.tvModeInterval = setInterval(cargarYRenderizar, 10000);
+    console.log('🔄 [TV MODE] Auto-refresh configurado (10s)');
     
-    // 5. Restaurar estilos al cerrar
+    // === RESTAURAR ESTILOS AL CERRAR ===
     const originalClose = window.cerrarSubmodal;
     window.cerrarSubmodal = function() {
-        if (tvModeInterval) {
-            clearInterval(tvModeInterval);
-            tvModeInterval = null;
+        console.log('🔚 [TV MODE] Cerrando modal...');
+        if (window.tvModeInterval) {
+            clearInterval(window.tvModeInterval);
+            window.tvModeInterval = null;
         }
         if (card) {
             card.style.maxWidth = '';
@@ -4122,25 +4160,110 @@ async function verResultadosTV(idTorneo) {
 }
 
 // === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Gigante (Fix + Layout Restaurado) ===
-// === FUNCIÓN AUXILIAR: Renderizar TV Mode - Layout Pantalla Grande (FIX DEFINITIVO) ===
-function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo) {
+// ===============================
+// CACHE GLOBAL (NO TOCAR)
+// ===============================
+let cacheTV = {
+    resultados: null,
+    posiciones: null
+};
+
+// ===============================
+// AUTO REFRESH (LLAMAR UNA VEZ)
+// ===============================
+function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
+
+    async function actualizar() {
+        try {
+            const { dataResultados, dataPosiciones, dataTorneo } = await fetchDataFn();
+
+            const cambiosResultados = JSON.stringify(dataResultados) !== JSON.stringify(cacheTV.resultados);
+            const cambiosPosiciones = JSON.stringify(dataPosiciones) !== JSON.stringify(cacheTV.posiciones);
+
+            renderizarTVProLED(
+                dataResultados,
+                dataPosiciones,
+                dataTorneo,
+                cont,
+                idTorneo,
+                { cambiosResultados, cambiosPosiciones }
+            );
+
+            cacheTV.resultados = dataResultados;
+            cacheTV.posiciones = dataPosiciones;
+
+        } catch (e) {
+            console.error("Error auto refresh:", e);
+        }
+    }
+
+    actualizar();
+    setInterval(actualizar, 5000);
+}
+
+// ===============================
+// RENDER PRINCIPAL (TV PRO LED)
+// ===============================
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo, flags = {}) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
 
-    // === HEADER ===
+    // ===============================
+    // ESTILOS / ANIMACIONES
+    // ===============================
+    const estilos = `
+    <style>
+        body { margin:0; background:#000; font-family:Arial, sans-serif; }
+
+        @keyframes glowWin {
+            0% { text-shadow: 0 0 5px #39FF14; }
+            50% { text-shadow: 0 0 25px #39FF14; }
+            100% { text-shadow: 0 0 5px #39FF14; }
+        }
+
+        @keyframes flashUpdate {
+            0% { background-color: rgba(0,255,198,0.8); }
+            100% { background-color: transparent; }
+        }
+
+        @keyframes fadeIn {
+            from { transform: translateY(15px); opacity:0; }
+            to { transform: translateY(0); opacity:1; }
+        }
+
+        .win {
+            color:#39FF14;
+            animation: glowWin 1.5s infinite;
+        }
+
+        .updated {
+            animation: flashUpdate 0.7s ease;
+        }
+
+        .fadeIn {
+            animation: fadeIn 0.4s ease;
+        }
+    </style>
+    `;
+
+    // ===============================
+    // HEADER
+    // ===============================
     const headerHtml = `
-        <div style="width:100%; height:70px; padding:0 2rem;
+        <div style="width:100%; height:70px;
                     background:linear-gradient(90deg,#000428,#004e92);
                     border-bottom:4px solid #00FFC6;
                     display:flex; justify-content:center; align-items:center;">
-            <h1 style="margin:0; color:#00FFC6; font-size:2rem; font-weight:900; letter-spacing:2px;">
+            <h1 style="color:#00FFC6; font-size:2rem; font-weight:900;">
                 ${nombreRecinto} — MARCADOR EN VIVO — ${nombreTorneo}
             </h1>
         </div>
     `;
 
-    // === AGRUPAR POR SET ===
+    // ===============================
+    // AGRUPAR POR SET
+    // ===============================
     const rondas = {};
     if (Array.isArray(dataResultados)) {
         dataResultados.forEach(p => {
@@ -4152,12 +4275,14 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
 
     const sets = Object.values(rondas).slice(0, 5);
 
-    // === BODY ===
-    let bodyHtml = `<div style="display:flex; width:100%; height:calc(100vh - 70px); background:#000;">`;
+    // ===============================
+    // BODY
+    // ===============================
+    let bodyHtml = `<div style="display:flex; height:calc(100vh - 70px);">`;
 
-    // =========================
+    // ===============================
     // IZQUIERDA (SETS)
-    // =========================
+    // ===============================
     bodyHtml += `<div style="width:75%; display:flex; padding:1rem; gap:1rem;">`;
 
     for (let i = 0; i < 5; i++) {
@@ -4165,20 +4290,15 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
         const partidos = sets[i] || [];
 
         bodyHtml += `
-            <div style="flex:1; background:#0a0a0a; border-radius:14px;
-                        display:flex; flex-direction:column; overflow:hidden;
-                        border:1px solid #111;">
-                
-                <!-- HEADER SET -->
-                <div style="text-align:center; padding:0.6rem;
-                            background:#111; color:#00FFC6;
-                            font-weight:900; font-size:1.4rem;
-                            border-bottom:2px solid #00FFC6;">
-                    SET ${i + 1}
-                </div>
+        <div style="flex:1; background:#0a0a0a; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
+            
+            <div style="text-align:center; padding:0.5rem;
+                        background:#111; color:#00FFC6;
+                        font-weight:900;">
+                SET ${i + 1}
+            </div>
 
-                <!-- PARTIDOS -->
-                <div style="flex:1; display:flex; flex-direction:column;">
+            <div style="flex:1; display:flex; flex-direction:column;">
         `;
 
         partidos.slice(0, 3).forEach(p => {
@@ -4189,107 +4309,81 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
             const gana1 = j1 > j2;
             const gana2 = j2 > j1;
 
+            const claseCambio = flags.cambiosResultados ? "updated" : "";
+
             const p1 = extraerNombresCortosPareja(p.pareja1);
             const p2 = extraerNombresCortosPareja(p.pareja2);
 
-            const cancha = p.nombre_cancha || 'Cancha';
-
-            const styleWin = "color:#39FF14; text-shadow:0 0 15px #39FF14;";
-            const styleLose = "color:#FFFFFF; opacity:0.85;";
-
             bodyHtml += `
-                <div style="flex:1; display:flex; flex-direction:column;
-                            justify-content:center; padding:0.8rem;
-                            border-bottom:1px solid #111;">
+            <div class="fadeIn ${claseCambio}" style="flex:1; padding:0.6rem; border-bottom:1px solid #111;">
 
-                    <!-- CANCHA -->
-                    <div style="text-align:center; font-size:0.8rem;
-                                color:#888; margin-bottom:0.3rem;">
-                        ${cancha}
-                    </div>
-
-                    <!-- PAREJA 1 -->
-                    <div style="display:flex; justify-content:space-between;
-                                align-items:center; font-size:1.6rem;
-                                font-weight:900;
-                                ${gana1 ? styleWin : styleLose}">
-                        <span>${p1}</span>
-                        <span style="font-size:2rem;">${j1}</span>
-                    </div>
-
-                    <!-- VS -->
-                    <div style="text-align:center; color:#444; font-size:0.8rem;">VS</div>
-
-                    <!-- PAREJA 2 -->
-                    <div style="display:flex; justify-content:space-between;
-                                align-items:center; font-size:1.6rem;
-                                font-weight:900;
-                                ${gana2 ? styleWin : styleLose}">
-                        <span>${p2}</span>
-                        <span style="font-size:2rem;">${j2}</span>
-                    </div>
-
+                <div style="text-align:center; font-size:0.7rem; color:#777;">
+                    ${p.nombre_cancha || 'Cancha'}
                 </div>
+
+                <div class="${gana1 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
+                    <span>${p1}</span>
+                    <span>${j1}</span>
+                </div>
+
+                <div style="text-align:center; color:#333;">VS</div>
+
+                <div class="${gana2 ? 'win' : ''}" style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:900;">
+                    <span>${p2}</span>
+                    <span>${j2}</span>
+                </div>
+
+            </div>
             `;
         });
 
         bodyHtml += `</div></div>`;
     }
 
-    bodyHtml += `</div>`; // cierre izquierda
+    bodyHtml += `</div>`;
 
-
-    // =========================
+    // ===============================
     // DERECHA (POSICIONES)
-    // =========================
-    bodyHtml += `
-        <div style="width:25%; background:#050505; padding:1rem;
-                    display:flex; flex-direction:column;">
-            
-            <div style="text-align:center; color:#FFD700;
-                        font-size:2rem; font-weight:900;
-                        margin-bottom:1rem;">
-                POSICIONES
-            </div>
+    // ===============================
+    bodyHtml += `<div style="width:25%; padding:1rem; background:#050505;">`;
 
-            <div style="flex:1; display:flex; flex-direction:column; gap:0.6rem;">
-    `;
+    bodyHtml += `<div style="text-align:center; color:#FFD700; font-size:1.8rem; font-weight:900;">POSICIONES</div>`;
+
+    bodyHtml += `<div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem;">`;
 
     if (dataPosiciones?.posiciones?.length > 0) {
 
         dataPosiciones.posiciones.forEach((p, i) => {
 
-            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-
             const nombres = extraerNombresCortosPareja(p.nombre_pareja);
+            const claseCambio = flags.cambiosPosiciones ? "updated" : "";
+
+            const esTop1 = i === 0 && flags.cambiosPosiciones;
 
             bodyHtml += `
-                <div style="display:flex; justify-content:space-between;
-                            align-items:center; padding:0.8rem;
-                            background:#111; border-radius:10px;
-                            font-size:1.5rem; font-weight:900;">
-
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <span>${medal}</span>
-                        <span style="color:#FFF;">${nombres}</span>
-                    </div>
-
-                    <div style="color:#00FFC6; font-size:2rem;">
-                        ${p.sets_ganados}
-                    </div>
-
-                </div>
+            <div class="fadeIn ${claseCambio}" style="
+                display:flex; justify-content:space-between;
+                padding:0.6rem; background:#111; border-radius:8px;
+                font-size:1.3rem; font-weight:900;
+                ${esTop1 ? 'color:#FFD700; animation: glowWin 1s infinite;' : 'color:#FFF;'}
+            ">
+                <span>${i + 1}. ${nombres}</span>
+                <span style="color:#00FFC6;">${p.sets_ganados}</span>
+            </div>
             `;
         });
 
     } else {
-        bodyHtml += `<div style="color:#777; text-align:center;">Sin datos</div>`;
+        bodyHtml += `<div style="color:#777; text-align:center;">Sin posiciones</div>`;
     }
 
     bodyHtml += `</div></div>`; // cierre derecha
     bodyHtml += `</div>`; // cierre body
 
-    cont.innerHTML = headerHtml + bodyHtml;
+    // ===============================
+    // RENDER FINAL
+    // ===============================
+    contenido.innerHTML = estilos + headerHtml + bodyHtml;
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
@@ -4735,6 +4829,26 @@ function guardarConvenio(e) {
     });
 }
 
+// === FUNCIÓN: TOGGLE ACCIONES (MENÚ LATERAL) ===
+function toggleAcciones() {
+    const contenedor = document.getElementById('contenedor-acciones');
+    const icono = document.getElementById('icon-operaciones');
+    
+    if (contenedor && icono) {
+        if (contenedor.style.display === 'none' || contenedor.style.display === '') {
+            // Mostrar menú
+            contenedor.style.display = 'flex';
+            icono.classList.add('rotated');
+        } else {
+            // Ocultar menú
+            contenedor.style.display = 'none';
+            icono.classList.remove('rotated');
+        }
+    }
+}
+// ✅ HACERLA GLOBAL PARA onclick inline
+window.toggleAcciones = toggleAcciones;
+
 // Listeners globales para cerrar con ESC o click fuera
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -4826,23 +4940,20 @@ function debugEditarConvenio(btn, event) {
     console.log('🟡 [DEBUG-EDITAR] ✅ Modal FORZADO a visible. Display:', modal.style.display);
 }
 
-// === FUNCIÓN: TOGGLE ACCIONES (MENÚ LATERAL) ===
-function toggleAcciones() {
+window.toggleAcciones = function () {
     const contenedor = document.getElementById('contenedor-acciones');
     const icono = document.getElementById('icon-operaciones');
     
     if (contenedor && icono) {
         if (contenedor.style.display === 'none' || contenedor.style.display === '') {
-            // Mostrar menú
             contenedor.style.display = 'flex';
             icono.classList.add('rotated');
         } else {
-            // Ocultar menú
             contenedor.style.display = 'none';
             icono.classList.remove('rotated');
         }
     }
-}
+};
 // ✅ HACERLA GLOBAL PARA onclick inline
 window.toggleAcciones = toggleAcciones;
 
@@ -4933,6 +5044,10 @@ async function generarFixture(idTorneo) {
         }
     }
 }
+// Al final de tu bloque <script>, después de definir todas las funciones:
+window.verResultadosTV = verResultadosTV;
+window.renderizarTVCorregido = renderizarTVCorregido;
+window.cerrarSubmodal = cerrarSubmodal;
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
