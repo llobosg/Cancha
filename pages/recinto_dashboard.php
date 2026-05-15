@@ -1458,7 +1458,7 @@ td.estado-cancelada {
     <!-- COLUMNA 1: ACCIONES (Izquierda - Ocultas por defecto) -->
     <div class="actions-column">
         <!-- Título Clickable -->
-        <div class="section-divider" onclick="toggleAcciones()" style="cursor: pointer; user-select: none;">
+        <div class="section-divider" id="btnToggleAcciones" style="cursor: pointer; user-select: none;">
             <span>🎾 Operaciones</span>
             <span id="icon-operaciones" style="font-size: 0.8rem; transition: transform 0.3s;">▼</span>
         </div>
@@ -4159,7 +4159,7 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
 // ===============================
 // RENDER PRINCIPAL (TV PRO LED)
 // ===============================
-renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo, {}); {
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo); {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
