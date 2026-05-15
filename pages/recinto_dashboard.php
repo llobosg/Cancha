@@ -4073,14 +4073,6 @@ async function verResultadosTV(idTorneo) {
                 resTorneo.json()
             ]);
 
-            const cont = document.getElementById('tv-container');
-
-            if (!cont) {
-                console.error('❌ No existe el contenedor #tv-container');
-            } else {
-                renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo);
-            }
-
         } catch (err) {
             console.error('❌ Error en TV Mode:', err);
         }
@@ -4167,7 +4159,7 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
 // ===============================
 // RENDER PRINCIPAL (TV PRO LED)
 // ===============================
-function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo, {}) {
+renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo, {}); {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
