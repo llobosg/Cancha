@@ -4073,6 +4073,15 @@ async function verResultadosTV(idTorneo) {
                 resTorneo.json()
             ]);
 
+            renderizarTVCorregido(
+                dataResultados,
+                dataPosiciones,
+                dataTorneo,
+                contenido,
+                idTorneo
+            );
+            console.log("🔥 datos:", dataResultados, dataPosiciones, dataTorneo);
+            
         } catch (err) {
             console.error('❌ Error en TV Mode:', err);
         }
@@ -4159,7 +4168,7 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
 // ===============================
 // RENDER PRINCIPAL (TV PRO LED)
 // ===============================
-function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo) {
+function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, contenido, idTorneo, flags = {}) {
 
     const nombreTorneo = dataTorneo?.nombre || 'Torneo';
     const nombreRecinto = dataTorneo?.recinto_nombre || 'Recinto Deportivo';
@@ -4338,7 +4347,7 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, conte
     // ===============================
     // RENDER FINAL
     // ===============================
-    cont.innerHTML = estilos + headerHtml + bodyHtml;
+    contenido.innerHTML = estilos + headerHtml + bodyHtml;
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
