@@ -4073,17 +4073,24 @@ async function verResultadosTV(idTorneo) {
                 resTorneo.json()
             ]);
 
+            // ✅ RENDER REAL
             renderizarTVCorregido(
                 dataResultados,
                 dataPosiciones,
                 dataTorneo,
                 contenido,
-                idTorneo
+                idTorneo,
+                {}
             );
-            console.log("🔥 datos:", dataResultados, dataPosiciones, dataTorneo);
-            
+
         } catch (err) {
             console.error('❌ Error en TV Mode:', err);
+            contenido.innerHTML = `
+                <div style="text-align:center; color:#ff5252; padding:2rem;">
+                    <h3>⚠️ Error al cargar</h3>
+                    <p>${err.message}</p>
+                </div>
+            `;
         }
     };
     
