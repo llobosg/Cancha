@@ -4163,6 +4163,14 @@ function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
     setInterval(actualizar, 5000);
 }
 
+const cont = document.getElementById('tv-container');
+
+if (!cont) {
+    console.error('❌ No existe el contenedor #tv-container');
+    return;
+}
+
+renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont, idTorneo);
 
 // ===============================
 // RENDER PRINCIPAL (TV PRO LED)
@@ -4347,40 +4355,6 @@ function renderizarTVCorregido(dataResultados, dataPosiciones, dataTorneo, cont,
     // RENDER FINAL
     // ===============================
     cont.innerHTML = estilos + headerHtml + bodyHtml;
-}
-
-function iniciarAutoRefresh(fetchDataFn, cont, idTorneo) {
-
-    async function actualizar() {
-        try {
-            const { dataResultados, dataPosiciones, dataTorneo } = await fetchDataFn();
-
-            // Detectar cambios
-            const cambiosResultados = JSON.stringify(dataResultados) !== JSON.stringify(cacheTV.resultados);
-            const cambiosPosiciones = JSON.stringify(dataPosiciones) !== JSON.stringify(cacheTV.posiciones);
-
-            renderizarTVProLED(
-                dataResultados,
-                dataPosiciones,
-                dataTorneo,
-                cont,
-                idTorneo,
-                {
-                    cambiosResultados,
-                    cambiosPosiciones
-                }
-            );
-
-            cacheTV.resultados = dataResultados;
-            cacheTV.posiciones = dataPosiciones;
-
-        } catch (e) {
-            console.error("Error auto refresh:", e);
-        }
-    }
-
-    actualizar();
-    setInterval(actualizar, 5000);
 }
 
 // === HELPER: Renderizar ficha grande de partido (reutilizable) ===
