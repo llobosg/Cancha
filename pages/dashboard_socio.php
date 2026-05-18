@@ -1226,7 +1226,8 @@ $js_vars = [
                                         // ✅ LÓGICA: Solo habilitar inscripción el mismo día y después de las 09:00
                                         $es_hoy = ($evento['fecha'] === date('Y-m-d'));
                                         $hora_actual = (int)date('H');
-                                        $puede_inscribirse = $es_hoy && ($hora_actual >= 9);
+                                        // $puede_inscribirse = $es_hoy && ($hora_actual >= 9);
+                                        $puede_inscribirse = true;
                                         ?>
 
                                         <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
