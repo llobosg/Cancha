@@ -1603,7 +1603,8 @@ td.estado-cancelada {
                 
                 <!-- Selector Rápido -->
                 <select id="filtroPeriodoKPI" onchange="actualizarFechasKPI(this.value)" style="padding: 0.4rem; border-radius: 6px; border: 1px solid #ddd; font-size: 0.9rem;">
-                    <option value="mes_actual">Mes Actual</option>
+                    <option value="mes_actual" selected>Mes Actual</option> <!-- Default -->
+                    <option value="anio_completo">Año Completo (<?= date('Y') ?>)</option>
                     <option value="mes_anterior">Mes Anterior</option>
                     <option value="hoy">Hoy</option>
                     <option value="personalizado">Personalizado...</option>
@@ -2856,18 +2857,28 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const elBase = document.getElementById('admin_monto_base');
     const elDMonto = document.getElementById('modalMontoDisplay');
 
+   // Dentro de abrirReservaAdmin, después de encontrar la cancha en canchasData
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
+        if (elNombre) elNombre.textContent = `??? ${nombre}`;
         
         const base = parseFloat(cancha.valor_arriendo) || 0;
         if (elBase) elBase.value = base;
         
-        const total = Math.round(base * 1);
+        // Calcular total según duración (por defecto 60 min = factor 1)
+        const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
+        let factor = 1;
+        if (duracion == 30) factor = 0.5;
+        else if (duracion == 90) factor = 1.5;
+        else if (duracion == 120) factor = 2;
+        
+        const total = Math.round(base * factor);
+        
         if (elMonto) elMonto.value = total;
         if (elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
-        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Total: $${total}`);
-    } else {
+        
+        console.log(`? Cancha cargada: ${nombre} | Base: $${base} | Total Calculado: $${total}`);
+    }else {
         console.warn(`⚠️ Cancha ID ${canchaId} NO está en canchasData`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
@@ -5138,6 +5149,8 @@ async function generarFixture(idTorneo) {
 
 // === LÓGICA FILTROS KPI FINANCIEROS ===
 
+// === LÓGICA FILTROS KPI FINANCIEROS ===
+
 // 1. Manejar cambio de selector rápido
 function actualizarFechasKPI(valor) {
     const contenedor = document.getElementById('contenedorFechasKPI');
@@ -5153,6 +5166,11 @@ function actualizarFechasKPI(valor) {
         end = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
         texto = 'Mes Actual';
         contenedor.style.display = 'none';
+    } else if (valor === 'anio_completo') {
+        start = new Date(hoy.getFullYear(), 0, 1);
+        end = new Date(hoy.getFullYear(), 11, 31);
+        texto = `Año ${hoy.getFullYear()}`;
+        contenedor.style.display = 'none';
     } else if (valor === 'mes_anterior') {
         start = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
         end = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
@@ -5167,7 +5185,7 @@ function actualizarFechasKPI(valor) {
         // Personalizado
         contenedor.style.display = 'flex';
         label.textContent = 'Personalizado';
-        return; // Esperamos a que el usuario ponga fechas y click Aplciar
+        return; 
     }
 
     // Formatear a YYYY-MM-DD
@@ -5188,13 +5206,14 @@ async function cargarKPIsFinancieros() {
 
     if (!fInicio || !fFin) return;
 
-    // Mostrar estado de carga visual (opcional, aquí simple)
+    // Feedback visual
     document.getElementById('valorIngresos').style.opacity = '0.5';
     document.getElementById('valorPendiente').style.opacity = '0.5';
     document.getElementById('valorReservaMonto').style.opacity = '0.5';
     document.getElementById('valorDeuda').style.opacity = '0.5';
 
     try {
+        // Pasamos las fechas exactas a la API
         const res = await fetch(`../api/get_kpis_financieros.php?fecha_inicio=${fInicio}&fecha_fin=${fFin}`, {
             credentials: 'include'
         });
@@ -5210,7 +5229,7 @@ async function cargarKPIsFinancieros() {
             document.getElementById('subtextoReserva').textContent = `${data.data.reserva_cant} próximas`;
             document.getElementById('valorDeuda').textContent = fmt(data.data.deuda);
 
-            // Actualizar etiqueta de periodo
+            // Actualizar etiqueta
             if (document.getElementById('filtroPeriodoKPI').value === 'personalizado') {
                 label.textContent = `${fInicio.split('-')[2]}/${fInicio.split('-')[1]} - ${fFin.split('-')[2]}/${fFin.split('-')[1]}`;
             }
@@ -5228,10 +5247,14 @@ async function cargarKPIsFinancieros() {
     }
 }
 
-// Inicializar al cargar página (opcional, si quieres que arranque en Mes Actual)
+// === INICIALIZACIÓN AL CARGAR PÁGINA ===
 document.addEventListener('DOMContentLoaded', () => {
-    // Por defecto ya está en Mes Actual por el HTML, pero forzamos carga si es necesario
-    // cargarKPIsFinancieros(); 
+    // Forzar selección de Mes Actual al inicio
+    const select = document.getElementById('filtroPeriodoKPI');
+    if(select) {
+        select.value = 'mes_actual';
+        actualizarFechasKPI('mes_actual');
+    }
 });
 // Al final de tu bloque <script>, después de definir todas las funciones:
 window.verResultadosTV = verResultadosTV;

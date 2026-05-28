@@ -11,18 +11,18 @@ if (!isset($_SESSION['id_recinto'])) {
 
 $id_recinto = $_SESSION['id_recinto'];
 
-// Recibir filtros desde el frontend
+// Recibir filtros
 $fecha_inicio = $_GET['fecha_inicio'] ?? null;
 $fecha_fin = $_GET['fecha_fin'] ?? null;
 
-// Si no hay filtros, usamos el mes actual por defecto (comportamiento original)
+// Default: Mes Actual si no vienen fechas
 if (!$fecha_inicio || !$fecha_fin) {
     $fecha_inicio = date('Y-m-01');
     $fecha_fin = date('Y-m-t');
 }
 
 try {
-    // === 1. INGRESOS DEL PERIODO (Pagados) ===
+    // === 1. INGRESOS DEL PERIODO (Pagados dentro del rango de fechas de la reserva) ===
     $stmt_ingresos = $pdo->prepare("
         SELECT COALESCE(SUM(r.monto_total), 0) as total
         FROM reservas r
@@ -35,11 +35,7 @@ try {
     $stmt_ingresos->execute([$id_recinto, $fecha_inicio, $fecha_fin]);
     $ingresos = $stmt_ingresos->fetchColumn();
 
-    // === 2. SALDO PENDIENTE (Pagos Parciales dentro del periodo o acumulados hasta la fecha fin) ===
-    // Nota: El saldo pendiente suele ser acumulado, pero si queremos ver lo generado en el periodo:
-    // Usaremos la lógica de "monto total - monto recaudado" para reservas creadas o jugadas en el periodo.
-    // Para simplificar y dar valor real al dueño, mostraremos el saldo pendiente de todas las reservas 
-    // cuya fecha esté dentro del rango seleccionado.
+    // === 2. SALDO PENDIENTE (Parciales dentro del rango) ===
     $stmt_pendiente = $pdo->prepare("
         SELECT COALESCE(SUM(r.monto_total - r.monto_recaudacion), 0) as total
         FROM reservas r
@@ -52,37 +48,37 @@ try {
     $stmt_pendiente->execute([$id_recinto, $fecha_inicio, $fecha_fin]);
     $pendiente = $stmt_pendiente->fetchColumn();
 
-    // === 3. EN RESERVA (Futuras no pagadas dentro del rango o futuras desde hoy hasta fecha_fin) ===
-    // Interpretación: Reservas futuras (desde hoy) que estén dentro del rango de visión o simplemente futuras.
-    // Ajustemos para que respete el filtro: Reservas con fecha entre inicio y fin, no pagadas totalmente.
+    // === 3. EN RESERVA (Futuras no pagadas) ===
+    // Lógica: Reservas cuya fecha esté entre Hoy y Fecha Fin del filtro.
+    // Si el filtro es pasado, no hay reservas "futuras" en ese rango.
     $hoy = date('Y-m-d');
-    // Si el filtro es hacia el futuro, usamos la fecha de inicio del filtro si es mayor a hoy, sino hoy.
-    $fecha_base_reserva = ($fecha_inicio > $hoy) ? $fecha_inicio : $hoy;
     
-    $stmt_reserva = $pdo->prepare("
-        SELECT COALESCE(SUM(r.monto_total), 0) as total, COUNT(*) as cant
-        FROM reservas r
-        JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE c.id_recinto = ?
-        AND r.fecha >= ? 
-        AND r.fecha <= ? -- Limitamos al final del filtro si existe
-        AND r.estado_pago IN ('pendiente', 'parcial')
-        AND r.estado != 'cancelada'
-    ");
-    // Si fecha_fin es pasada, no hay reservas "futuras" en ese rango, devolvemos 0
+    // Si la fecha fin del filtro es pasada, no hay reservas futuras en ese periodo
     if ($fecha_fin < $hoy) {
         $monto_reserva = 0;
         $cant_reserva = 0;
     } else {
-        $stmt_reserva->execute([$id_recinto, $fecha_base_reserva, $fecha_fin]);
+        // Usamos la mayor entre 'Hoy' y 'Fecha Inicio Filtro' para definir el inicio de la búsqueda
+        $inicio_busqueda = ($fecha_inicio > $hoy) ? $fecha_inicio : $hoy;
+
+        $stmt_reserva = $pdo->prepare("
+            SELECT COALESCE(SUM(r.monto_total), 0) as total, COUNT(*) as cant
+            FROM reservas r
+            JOIN canchas c ON r.id_cancha = c.id_cancha
+            WHERE c.id_recinto = ?
+            AND r.fecha >= ? 
+            AND r.fecha <= ? -- Respetamos el límite superior del filtro
+            AND r.estado_pago IN ('pendiente', 'parcial')
+            AND r.estado != 'cancelada'
+        ");
+        $stmt_reserva->execute([$id_recinto, $inicio_busqueda, $fecha_fin]);
         $row_reserva = $stmt_reserva->fetch(PDO::FETCH_ASSOC);
         $monto_reserva = $row_reserva['total'];
         $cant_reserva = $row_reserva['cant'];
     }
 
-    // === 4. DEUDA VENCIDA (Pasadas no pagadas dentro del rango o anteriores a fecha_inicio) ===
-    // Interpretación: Reservas con fecha anterior a la fecha de inicio del filtro que no están pagadas.
-    // O si el filtro es un día específico, deudas de días anteriores a ese día.
+    // === 4. DEUDA VENCIDA (Pasadas no pagadas antes del inicio del filtro) ===
+    // Lógica: Reservas con fecha anterior a la fecha de inicio del filtro que no están pagadas.
     $fecha_limite_deuda = date('Y-m-d', strtotime($fecha_inicio . ' -1 day'));
     
     $stmt_deuda = $pdo->prepare("
@@ -110,6 +106,6 @@ try {
 
 } catch (Exception $e) {
     error_log("Error KPIs Financieros: " . $e->getMessage());
-    echo json_encode(['error' => 'Error al calcular KPIs']);
+    echo json_encode(['error' => 'Error al calcular KPIs: ' . $e->getMessage()]);
 }
 ?>

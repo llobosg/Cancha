@@ -51,6 +51,53 @@ try {
     // ✅ UN SOLO CASE para crear reserva manual (maneja socio existente o nuevo)
     case 'crear_manual':
         echo json_encode(crearReservaManualUnificada($pdo, $_POST));
+        // 1. Insertar la reserva (tu código existente)
+        $stmt = $pdo->prepare("INSERT INTO reservas (...) VALUES (...)");
+        $stmt->execute([...]);
+        $id_reserva_nueva = $pdo->lastInsertId();
+
+        // 2. Obtener datos para el correo
+        $stmt_det = $pdo->prepare("
+            SELECT r.*, c.nombre_cancha, s.nombre as nombre_socio, s.email as email_socio
+            FROM reservas r
+            JOIN canchas c ON r.id_cancha = c.id_cancha
+            LEFT JOIN socios s ON r.id_socio = s.id_socio
+            WHERE r.id_reserva = ?
+        ");
+        $stmt_det->execute([$id_reserva_nueva]);
+        $detalles = $stmt_det->fetch();
+
+        // 3. Enviar Correo si hay email válido
+        if ($detalles && !empty($detalles['email_socio'])) {
+            require_once __DIR__ . '/../includes/reserva_mailer.php'; // Tu clase de mail
+            
+            try {
+                $mail = new BrevoMailer(); // O tu clase actual
+                
+                $fecha_fmt = date('d/m/Y', strtotime($detalles['fecha']));
+                $hora_fmt = substr($detalles['hora_inicio'], 0, 5) . ' - ' . substr($detalles['hora_fin'], 0, 5);
+                
+                $mail->setTo($detalles['email_socio'], $detalles['nombre_socio'])
+                    ->setSubject("✅ Confirmación de Reserva - CanchaSport")
+                    ->setHtmlBody("
+                        <h2>Hola {$detalles['nombre_socio']}</h2>
+                        <p>Tu reserva ha sido creada exitosamente.</p>
+                        <ul>
+                            <li><strong>Cancha:</strong> {$detalles['nombre_cancha']}</li>
+                            <li><strong>Fecha:</strong> {$fecha_fmt}</li>
+                            <li><strong>Hora:</strong> {$hora_fmt}</li>
+                            <li><strong>Monto Total:</strong> $" . number_format($detalles['monto_total'], 0, ',', '.') . "</li>
+                        </ul>
+                        <p>Te esperamos en el recinto.</p>
+                    ")->send();
+                    
+            } catch (Exception $e) {
+                error_log("Error enviando correo confirmación: " . $e->getMessage());
+                // No interrumpimos el flujo si falla el correo
+            }
+        }
+
+        echo json_encode(['success' => true, 'id_reserva' => $id_reserva_nueva]);
         break;
         
     default:
