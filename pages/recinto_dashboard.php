@@ -2866,6 +2866,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elBase) elBase.value = base;
         
         // Calcular total según duración (por defecto 60 min = factor 1)
+        // ✅ CALCULAR MONTO INICIAL BASADO EN LA DURACIÓN SELECCIONADA (Por defecto 60)
         const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
         let factor = 1;
         if (duracion == 30) factor = 0.5;
@@ -2878,6 +2879,13 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
         
         console.log(`? Cancha cargada: ${nombre} | Base: $${base} | Total Calculado: $${total}`);
+        const base = parseFloat(cancha.valor_arriendo) || 0;
+ 
+        // Llamamos a la función de cálculo
+        actualizarMontoDisplay(base, parseInt(duracion));
+        
+        console.log(`? Cancha cargada: ${nombre} | Base: $${base} | Duración: ${duracion}min`);
+
     }else {
         console.warn(`⚠️ Cancha ID ${canchaId} NO está en canchasData`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
@@ -2940,7 +2948,7 @@ function actualizarHoraFin(horaInicio, duracionMin) {
     }
 }
 
-// === CAMBIO DE DURACIÓN (60/90 min) ===
+// === CAMBIO DE DURACIÓN (60/90/120 min) ===
 function actualizarDuracionReserva(duracion) {
     const elHoraInicio = document.getElementById('admin_hora_inicio');
     if (!elHoraInicio || !elHoraInicio.value) return;
@@ -2951,20 +2959,48 @@ function actualizarDuracionReserva(duracion) {
     if (elDuracion) elDuracion.value = duracion;
 }
 
-// === ACTUALIZAR MONTO SEGÚN DURACIÓN (función global) ===
+// === ACTUALIZAR MONTO SEGÚN DURACIÓN (Lógica Proporcional) ===
 function actualizarMontoDisplay(montoBase, duracionMin) {
-    // Factor de precio: 90 min = 1.5x el valor de 60 min (ajusta según tu regla de negocio)
-    const factor = duracionMin === 90 ? 1.5 : 1;
+    if (!montoBase || montoBase <= 0) return;
+
+    // Calcular factor proporcional
+    let factor = 1;
+    if (duracionMin == 30) factor = 0.5;
+    else if (duracionMin == 90) factor = 1.5;
+    else if (duracionMin == 120) factor = 2.0;
+    // 60 min es factor 1 por defecto
+
     const total = Math.round(montoBase * factor);
     
+    // Elementos del DOM
     const elMontoDisplay = document.getElementById('modalMontoDisplay');
+    const elLabelMonto = document.querySelector('#modalMontoDisplay')?.previousElementSibling; // El span que dice "Total a pagar"
+
     if (elMontoDisplay) {
+        // Formato bonito: "Monto total reserva 120 min $80.000"
+        // Opcional: Si quieres ser más explícito, puedes cambiar el texto del label anterior
+        if (elLabelMonto && duracionMin != 60) {
+             elLabelMonto.textContent = `💰 Total (${duracionMin} min):`;
+        } else if (elLabelMonto) {
+             elLabelMonto.textContent = `💰 Total a pagar:`;
+        }
+
         elMontoDisplay.textContent = `$${total.toLocaleString('es-CL')}`;
+        
         // Efecto visual de actualización
-        elMontoDisplay.style.transition = 'transform 0.2s';
-        elMontoDisplay.style.transform = 'scale(1.05)';
-        setTimeout(() => elMontoDisplay.style.transform = 'scale(1)', 200);
+        elMontoDisplay.style.transition = 'transform 0.2s, color 0.2s';
+        elMontoDisplay.style.transform = 'scale(1.1)';
+        elMontoDisplay.style.color = '#2E7D32'; // Verde éxito
+        
+        setTimeout(() => {
+            elMontoDisplay.style.transform = 'scale(1)';
+            elMontoDisplay.style.color = '#2E7D32';
+        }, 200);
     }
+    
+    // Actualizar también el input hidden para que se envíe el valor correcto
+    const inputMonto = document.getElementById('admin_monto_total');
+    if (inputMonto) inputMonto.value = total;
 }
 
 // === TOGGLE SECCIÓN RECURRENTE (FIX: usar onchange en HTML + función global) ===
@@ -5316,7 +5352,6 @@ window.cerrarSubmodal = cerrarSubmodal;
                     </div>
                 </div>
 
-                <!-- ✅ Selector de duración (60/90 min) -->
                 <!-- ✅ Selector de duración (30/60/90/120 min) -->
                 <div style="margin-bottom:1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>

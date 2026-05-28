@@ -68,11 +68,11 @@ $deportes = [
     }
     .control-select {
         background: white; padding: 0.4rem 0.8rem; border-radius: 20px; color: #071289; border: none; font-weight: bold;
-        min-width: 120px; font-size: 0.85rem;
+        min-width: 120px; font-size: 0.85rem; cursor: pointer;
     }
     .date-nav-btn {
         background: white; border: 1px solid #ddd; border-radius: 50%; width: 32px; height: 32px;
-        color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;
     }
     .date-nav-btn:hover { background: #f0f0f0; }
     
@@ -109,13 +109,39 @@ $deportes = [
     td.estado-disponible:hover { background: #e8f5e9 !important; transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.15); z-index: 2; position: relative; }
     td.estado-ocupado { background: #FF5252 !important; color: white !important; font-size: 0.75rem; line-height: 1.2; }
     
+    /* Modal Styles */
     .modal-reserva-inteligente { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; }
-    .modal-reserva-inteligente-content { background-color: white; padding: 2rem; border-radius: 16px; width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-    .btn-primary { background: #071289; color: white; border: none; padding: 0.8rem; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 1rem; }
-    .btn-secondary { background: #eee; color: #333; border: none; padding: 0.8rem; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 0.5rem; }
+    .modal-reserva-inteligente-content { 
+        background-color: white; padding: 2rem; border-radius: 16px; width: 90%; max-width: 450px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333;
+    }
+    .btn-primary { 
+        background: #071289; color: white; border: none; padding: 0.8rem; border-radius: 8px; 
+        font-weight: bold; cursor: pointer; width: 100%; margin-top: 1rem; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #050d6b; }
+    .btn-secondary { 
+        background: #eee; color: #333; border: none; padding: 0.8rem; border-radius: 8px; 
+        font-weight: bold; cursor: pointer; width: 100%; margin-top: 0.5rem; transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: #ddd; }
+    
+    /* Duration Radios */
+    .duration-options {
+        display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;
+    }
+    .duration-label {
+        flex: 1; min-width: 60px; padding: 0.5rem; border: 2px solid #E2E8F0; border-radius: 10px; 
+        text-align: center; cursor: pointer; background: #F7FAFC; transition: all 0.2s; font-size: 0.9rem;
+        display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    }
+    .duration-label:hover { border-color: #071289; background: #E3F2FD; }
+    .duration-label input { margin-right: 0.2rem; }
+    
     .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; z-index: 3000; transform: translateX(120%); transition: transform 0.3s; }
     .toast.show { transform: translateX(0); }
     .toast.success { background: #4CAF50; }
+    .toast.error { background: #C62828; }
 </style>
 </head>
 <body>
@@ -128,8 +154,8 @@ $deportes = [
     <div class="controls-section">
         <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
         <input type="date" id="filtroFecha" class="control-select" style="width: 135px;">
-        <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
         <button class="date-nav-btn" onclick="irAHoy()" style="width:auto; padding:0 12px; border-radius:20px; font-size:0.8rem; height:32px;">Hoy</button>
+        <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
         
         <select class="control-select" id="filtroDeporte">
             <option value="">Deporte...</option>
@@ -158,28 +184,44 @@ $deportes = [
     </div>
 </div>
 
-<!-- Modal -->
+<!-- Modal Reserva Inteligente -->
 <div id="modalReservaInteligente" class="modal-reserva-inteligente">
     <div class="modal-reserva-inteligente-content">
-        <h3 style="margin-top:0; color:#071289;">Confirmar Reserva</h3>
-        <p id="modalInfo" style="margin-bottom:1rem; color:#555;"></p>
-        <div id="opcionesDuracion" class="form-group" style="background:#f8f9fa; padding:10px; border-radius:8px;">
-            <label style="font-weight:bold; color:#333;">⏱️ Duración:</label>
-            <div style="display:flex; gap:15px; margin-top:5px;">
-                <label style="color:#333; cursor:pointer;"><input type="radio" name="duracion" value="60" onchange="actualizarPrecioModal(60)"> 60 min</label>
-                <label style="color:#333; cursor:pointer;"><input type="radio" name="duracion" value="90" checked onchange="actualizarPrecioModal(90)"> 90 min</label>
+        <h3 style="margin-top:0; color:#071289; border-bottom: 1px solid #eee; padding-bottom: 10px;">Confirmar Reserva</h3>
+        
+        <div style="margin: 1rem 0; font-size: 0.95rem; line-height: 1.5;">
+            <p id="modalInfo"></p>
+        </div>
+
+        <div id="opcionesDuracion" class="form-group" style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom: 15px;">
+            <label style="font-weight:bold; color:#333; display:block; margin-bottom:8px;">⏱️ Duración:</label>
+            <div class="duration-options">
+                <label class="duration-label">
+                    <input type="radio" name="duracion" value="30" onchange="actualizarPrecioModal(30)"> 30m
+                </label>
+                <label class="duration-label">
+                    <input type="radio" name="duracion" value="60" checked onchange="actualizarPrecioModal(60)"> 60m
+                </label>
+                <label class="duration-label">
+                    <input type="radio" name="duracion" value="90" onchange="actualizarPrecioModal(90)"> 90m
+                </label>
+                <label class="duration-label">
+                    <input type="radio" name="duracion" value="120" onchange="actualizarPrecioModal(120)"> 120m
+                </label>
             </div>
         </div>
-        <div style="margin-top:10px;">
-            <strong style="color:#333;">Valor Estimado:</strong>
-            <div id="precioDisplay" style="font-size:1.4rem; font-weight:bold; color:#2E7D32;">$0</div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#E8F5E9; padding:10px 15px; border-radius:8px; border-left: 4px solid #4CAF50;">
+            <span style="font-weight:600; color:#2E7D32;">Total a Pagar:</span>
+            <div id="precioDisplay" style="font-size:1.5rem; font-weight:bold; color:#2E7D32;">$0</div>
         </div>
+
         <button onclick="confirmarReservaInteligente()" class="btn-primary">✅ Confirmar Reserva</button>
         <button onclick="cerrarModalReserva()" class="btn-secondary">Cancelar</button>
     </div>
 </div>
 
-<!-- === SISTEMA DE TOAST NOTIFICATIONS === -->
+<!-- Sistema de Toast Notifications -->
 <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
 
 <script>
@@ -295,31 +337,47 @@ $deportes = [
 
     function seleccionarSlot(id, hora, nro, recinto, deporte, valor) {
         reservaActual = { id_cancha: id, nro_cancha: nro, recinto_nombre: recinto, id_deporte: deporte, valor_arriendo: valor, fecha: fechaPlanillaActual, hora_inicio: hora };
-        document.getElementById('modalInfo').innerHTML = `<strong>Cancha:</strong> ${nro}<br><strong>Fecha:</strong> ${fechaPlanillaActual}<br><strong>Hora:</strong> ${hora}`;
-        document.getElementById('opcionesDuracion').style.display = (deporte === 'padel') ? 'block' : 'none';
-        actualizarPrecioModal((deporte === 'padel') ? 90 : 60);
+        
+        document.getElementById('modalInfo').innerHTML = `
+            <strong>📍 Cancha:</strong> ${nro} (${recinto})<br>
+            <strong>📅 Fecha:</strong> ${fechaPlanillaActual}<br>
+            <strong>⏰ Hora Inicio:</strong> ${hora}
+        `;
+        
+        // Por defecto seleccionamos 60 min, pero si es Pádel podríamos sugerir 90
+        const defaultDuracion = (deporte === 'padel') ? 90 : 60;
+        document.querySelector(`input[name="duracion"][value="${defaultDuracion}"]`).checked = true;
+        
+        actualizarPrecioModal(defaultDuracion);
         document.getElementById('modalReservaInteligente').style.display = 'flex';
     }
 
     function actualizarPrecioModal(min) { 
         if(!reservaActual) return; 
-        const factor = min/60; 
-        document.getElementById('precioDisplay').textContent = '$' + Math.round(parseFloat(reservaActual.valor_arriendo)*factor).toLocaleString(); 
+        
+        // Factores de precio: 30min=0.5, 60min=1, 90min=1.5, 120min=2
+        let factor = 1;
+        if (min == 30) factor = 0.5;
+        else if (min == 90) factor = 1.5;
+        else if (min == 120) factor = 2;
+        
+        const total = Math.round(parseFloat(reservaActual.valor_arriendo) * factor);
+        document.getElementById('precioDisplay').textContent = '$' + total.toLocaleString('es-CL'); 
     }
+    
     function cerrarModalReserva() { document.getElementById('modalReservaInteligente').style.display = 'none'; }
     
-    // ✅ FUNCIÓN CORREGIDA: async + sin código duplicado + orden lógico correcto
     async function confirmarReservaInteligente() {
         if (!reservaActual) {
             showToast('❌ No hay reserva seleccionada', 'error');
             return;
         }
 
-        // 1. Obtener duración PRIMERO (antes de usarla)
+        // 1. Obtener duración
         const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
 
-        // 2. Validación de horario de cierre (opcional, pero útil)
-        const horaCierre = "23:00"; // Idealmente venir de la API por cancha
+        // 2. Validación de horario de cierre (ejemplo: 23:00)
+        const horaCierre = "23:00"; 
         const [hInicio, mInicio] = reservaActual.hora_inicio.split(':').map(Number);
         const [hCierre, mCierre] = horaCierre.split(':').map(Number);
         const finMinutos = (hInicio * 60 + mInicio) + duracion;
@@ -331,7 +389,6 @@ $deportes = [
         }
 
         // 3. Calcular hora_fin
-        const [h,m] = reservaActual.hora_inicio.split(':').map(Number);
         const fin = new Date(`${reservaActual.fecha}T${reservaActual.hora_inicio}:00`);
         fin.setMinutes(fin.getMinutes() + duracion);
         const horaFinStr = fin.toTimeString().substring(0,8);
@@ -347,7 +404,7 @@ $deportes = [
             club_id: ''
         };
         
-        // 5. Enviar a API con manejo robusto de errores
+        // 5. Enviar a API
         try {
             const res = await fetch('../api/crear_reserva_recurrente.php', {
                 method: 'POST',
@@ -355,18 +412,17 @@ $deportes = [
                 body: new URLSearchParams(datos)
             });
             
-            // Verificar que la respuesta sea JSON válido
             const contentType = res.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await res.text();
                 console.error('❌ API devolvió HTML/Texto:', text.substring(0, 200));
-                throw new Error('Respuesta inválida del servidor (HTTP ' + res.status + ')');
+                throw new Error('Respuesta inválida del servidor');
             }
             
             const data = await res.json();
             
             if (data.success) {
-                showToast('✅ Reserva creada, recibirás un correo de confirmación', 'success');
+                showToast('✅ Reserva creada correctamente', 'success');
                 cerrarModalReserva();
                 aplicarFiltros(); // Recargar planilla
             } else {
@@ -374,25 +430,24 @@ $deportes = [
             }
         } catch (err) {
             console.error('❌ Error en confirmarReservaInteligente:', err);
-            const msg = err.message.includes('JSON') 
-                ? '❌ Error en el servidor. Intenta nuevamente.' 
-                : '❌ Error de conexión. Verifica tu internet.';
-            showToast(msg, 'error');
+            showToast('❌ Error de conexión. Intenta nuevamente.', 'error');
         }
     }
 
     function showToast(msg, type) {
         const container = document.getElementById('toast-container');
-        if (!container) {
-            console.warn('⚠️ toast-container no existe');
-            return alert(msg); // Fallback
-        }
+        if (!container) return alert(msg);
+        
         const t = document.createElement('div'); 
         t.className = `toast ${type}`; 
         t.textContent = msg; 
         container.appendChild(t);
+        
         setTimeout(() => t.classList.add('show'), 100); 
-        setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
+        setTimeout(() => { 
+            t.classList.remove('show'); 
+            setTimeout(()=>t.remove(), 300); 
+        }, 3000);
     }
 </script>
 </body>
