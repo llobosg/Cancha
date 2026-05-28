@@ -291,6 +291,26 @@ try {
     .kpi-reserva { border-left-color: #2196F3; background: #E3F2FD; } .kpi-reserva div:nth-child(2) { color: #0D47A1 !important; font-weight:bold; }
     .kpi-deuda { border-left-color: #EF5350; background: #FFEBEE; cursor: pointer; } .kpi-deuda div:nth-child(2) { color: #B71C1C !important; font-weight:bold; }
     
+    /* === AJUSTE FILTROS KPI PERSONALIZADO (VERTICAL) === */
+    #contenedorFechasKPI {
+        display: flex;
+        flex-direction: column; /* Apila verticalmente: Inicio arriba, Fin abajo */
+        gap: 0.5rem;            /* Espacio entre los dos inputs */
+        width: 100%;            /* Ocupa todo el ancho disponible */
+        margin-top: 0.5rem;     /* Separación del selector desplegable */
+    }
+
+    /* Asegurar que los inputs ocupen el 100% del ancho del contenedor */
+    #contenedorFechasKPI input[type="date"] {
+        width: 100%;
+        box-sizing: border-box; /* Para que el padding no desborde el ancho */
+    }
+
+    /* Botón Aplicar al 100% de ancho también para consistencia táctil */
+    #contenedorFechasKPI button {
+        width: 100%;
+        margin-top: 0.2rem;
+    }
     /* === 2. PANEL TORNEOS (Ancho completo + Posición corregida) === */
     .torneos-panel-container {
         /* Posicionamiento */
