@@ -2879,7 +2879,6 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
         
         console.log(`? Cancha cargada: ${nombre} | Base: $${base} | Total Calculado: $${total}`);
-        const base = parseFloat(cancha.valor_arriendo) || 0;
  
         // Llamamos a la función de cálculo
         actualizarMontoDisplay(base, parseInt(duracion));
@@ -2935,7 +2934,6 @@ function actualizarHoraFin(horaInicio, duracionMin) {
     
     // Recalcular monto
     if (elBase && elMonto && elDisplayMonto) {
-        const base = parseFloat(elBase.value) || 0;
         // Factor: 30min=0.5x, 60min=1x, 90min=1.5x, 120min=2x
         let factor = 1;
         if (duracionMin == 30) factor = 0.5;
