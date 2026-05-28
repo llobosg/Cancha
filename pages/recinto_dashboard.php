@@ -1577,38 +1577,63 @@ td.estado-cancelada {
     <!-- COLUMNA 3: KPIs (Derecha) -->
     <div class="kpi-column">
         <?php if ($rol_actual === 'admin'): ?>
-        <!-- KPI: Ingreso Mes -->
-        <div class="kpi-card-mini kpi-ingreso">
-            <div>Ingreso Mes</div>
-            <div style="color: #0e3b02; font-weight: bold;">$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
-            <div style="color: <?= $var_ing >= 0 ? '#2E7D32' : '#C62828' ?>; font-size: 0.8rem;">
-                <?= $var_ing >= 0 ? '▲' : '▼' ?> <?= abs($var_ing) ?>%
+            <!-- === FILTROS FINANCIEROS === -->
+            <div style="background: rgba(255,255,255,0.9); padding: 0.8rem; border-radius: 12px; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <span style="font-size: 0.9rem; font-weight: 600; color: #555;">📅 Filtrar por:</span>
+                
+                <!-- Selector Rápido -->
+                <select id="filtroPeriodoKPI" onchange="actualizarFechasKPI(this.value)" style="padding: 0.4rem; border-radius: 6px; border: 1px solid #ddd; font-size: 0.9rem;">
+                    <option value="mes_actual">Mes Actual</option>
+                    <option value="mes_anterior">Mes Anterior</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="personalizado">Personalizado...</option>
+                </select>
+
+                <!-- Inputs de Fecha (Ocultos por defecto) -->
+                <div id="contenedorFechasKPI" style="display: none; align-items: center; gap: 0.5rem;">
+                    <input type="date" id="fechaInicioKPI" class="control-input" style="height: 32px; padding: 0.2rem 0.5rem;">
+                    <span style="color: #999;">-</span>
+                    <input type="date" id="fechaFinKPI" class="control-input" style="height: 32px; padding: 0.2rem 0.5rem;">
+                    <button onclick="cargarKPIsFinancieros()" style="background: #071289; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Aplicar</button>
+                </div>
+                
+                <!-- Indicador de Periodo Activo -->
+                <span id="labelPeriodoKPI" style="margin-left: auto; font-size: 0.8rem; color: #071289; font-weight: bold; background: #E3F2FD; padding: 0.2rem 0.6rem; border-radius: 20px;">
+                    Mes Actual
+                </span>
             </div>
-        </div>
+            <!-- KPI: Ingreso Mes -->
+            <!-- KPI: Ingreso Mes -->
+            <div class="kpi-card-mini kpi-ingreso" id="cardIngresos">
+                <div>Ingreso Periodo</div> <!-- Cambié el texto ligeramente para ser genérico -->
+                <div style="color: #0e3b02; font-weight: bold;" id="valorIngresos">$<?= number_format($ingresos_act, 0, ',', '.') ?></div>
+                <div style="color: <?= $var_ing >= 0 ? '#2E7D32' : '#C62828' ?>; font-size: 0.8rem;" id="subtextoIngresos">
+                    <?= $var_ing >= 0 ? '↑' : '↓' ?> <?= abs($var_ing) ?>% vs mes ant.
+                </div>
+            </div>
+
+            <!-- KPI: En Reserva (futuras no pagadas) -->
+            <div class="kpi-card-mini kpi-reserva" id="cardReserva">
+                <div>En Reserva</div>
+                <div id="valorReservaMonto">$<?= number_format($monto_en_reserva, 0, ',', '.') ?></div>
+                <div style="color: #4A4A4A; font-size: 0.8rem;" id="subtextoReserva">
+                    <?= $cant_en_reserva ?> próximas
+                </div>
+            </div>
         <?php endif; ?>
 
+        <!-- INDICADORES PARA NO ADMIN, SECRETARIAS -->
         <!-- KPI: Saldo Pendiente (pagos parciales) -->
-        <div class="kpi-card-mini kpi-parcial" onclick="abrirListaKPI('parcial')">
+        <div class="kpi-card-mini kpi-parcial" id="cardPendiente" onclick="abrirListaKPI('parcial')">
             <div>Saldo Pendiente</div>
-            <div style="color: #e2b619; font-weight: bold;">$<?= number_format($monto_pendiente, 0, ',', '.') ?></div>
+            <div style="color: #e2b619; font-weight: bold;" id="valorPendiente">$<?= number_format($monto_pendiente, 0, ',', '.') ?></div>
             <div style="color: #4A4A4A; font-size: 0.8rem;">Por cobrar (parciales)</div>
         </div>
 
-        <?php if ($rol_actual === 'admin'): ?>
-        <!-- KPI: En Reserva (futuras no pagadas) -->
-        <div class="kpi-card-mini kpi-reserva">
-            <div>En Reserva</div>
-            <div>$<?= number_format($monto_en_reserva, 0, ',', '.') ?></div>
-            <div style="color: #4A4A4A; font-size: 0.8rem;">
-                <?= $cant_en_reserva ?> próximas
-            </div>
-        </div>
-        <?php endif; ?>
-
         <!-- KPI: Deuda Vencida -->
-        <div class="kpi-card-mini kpi-deuda" onclick="abrirListaKPI('deuda')">
+        <div class="kpi-card-mini kpi-deuda" id="cardDeuda" onclick="abrirListaKPI('deuda')">
             <div>Deuda Vencida</div>
-            <div>$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
+            <div id="valorDeuda">$<?= number_format($monto_deuda, 0, ',', '.') ?></div>
             <div style="color: #C62828; font-size: 0.8rem;">Por regularizar</div>
         </div>
     </div>
@@ -5090,6 +5115,104 @@ async function generarFixture(idTorneo) {
         }
     }
 }
+
+// === LÓGICA FILTROS KPI FINANCIEROS ===
+
+// 1. Manejar cambio de selector rápido
+function actualizarFechasKPI(valor) {
+    const contenedor = document.getElementById('contenedorFechasKPI');
+    const label = document.getElementById('labelPeriodoKPI');
+    const fInicio = document.getElementById('fechaInicioKPI');
+    const fFin = document.getElementById('fechaFinKPI');
+    
+    const hoy = new Date();
+    let start, end, texto;
+
+    if (valor === 'mes_actual') {
+        start = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        end = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        texto = 'Mes Actual';
+        contenedor.style.display = 'none';
+    } else if (valor === 'mes_anterior') {
+        start = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+        end = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+        texto = 'Mes Anterior';
+        contenedor.style.display = 'none';
+    } else if (valor === 'hoy') {
+        start = hoy;
+        end = hoy;
+        texto = 'Hoy';
+        contenedor.style.display = 'none';
+    } else {
+        // Personalizado
+        contenedor.style.display = 'flex';
+        label.textContent = 'Personalizado';
+        return; // Esperamos a que el usuario ponga fechas y click Aplciar
+    }
+
+    // Formatear a YYYY-MM-DD
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    fInicio.value = formatDate(start);
+    fFin.value = formatDate(end);
+    label.textContent = texto;
+
+    // Cargar datos automáticamente
+    cargarKPIsFinancieros();
+}
+
+// 2. Función principal de carga vía AJAX
+async function cargarKPIsFinancieros() {
+    const fInicio = document.getElementById('fechaInicioKPI').value;
+    const fFin = document.getElementById('fechaFinKPI').value;
+    const label = document.getElementById('labelPeriodoKPI');
+
+    if (!fInicio || !fFin) return;
+
+    // Mostrar estado de carga visual (opcional, aquí simple)
+    document.getElementById('valorIngresos').style.opacity = '0.5';
+    document.getElementById('valorPendiente').style.opacity = '0.5';
+    document.getElementById('valorReservaMonto').style.opacity = '0.5';
+    document.getElementById('valorDeuda').style.opacity = '0.5';
+
+    try {
+        const res = await fetch(`../api/get_kpis_financieros.php?fecha_inicio=${fInicio}&fecha_fin=${fFin}`, {
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const fmt = (n) => '$' + parseInt(n).toLocaleString('es-CL');
+            
+            // Actualizar DOM
+            document.getElementById('valorIngresos').textContent = fmt(data.data.ingresos);
+            document.getElementById('valorPendiente').textContent = fmt(data.data.pendiente);
+            document.getElementById('valorReservaMonto').textContent = fmt(data.data.reserva_monto);
+            document.getElementById('subtextoReserva').textContent = `${data.data.reserva_cant} próximas`;
+            document.getElementById('valorDeuda').textContent = fmt(data.data.deuda);
+
+            // Actualizar etiqueta de periodo
+            if (document.getElementById('filtroPeriodoKPI').value === 'personalizado') {
+                label.textContent = `${fInicio.split('-')[2]}/${fInicio.split('-')[1]} - ${fFin.split('-')[2]}/${fFin.split('-')[1]}`;
+            }
+        } else {
+            console.error('Error API KPIs:', data);
+        }
+    } catch (err) {
+        console.error('Error red KPIs:', err);
+    } finally {
+        // Restaurar opacidad
+        document.getElementById('valorIngresos').style.opacity = '1';
+        document.getElementById('valorPendiente').style.opacity = '1';
+        document.getElementById('valorReservaMonto').style.opacity = '1';
+        document.getElementById('valorDeuda').style.opacity = '1';
+    }
+}
+
+// Inicializar al cargar página (opcional, si quieres que arranque en Mes Actual)
+document.addEventListener('DOMContentLoaded', () => {
+    // Por defecto ya está en Mes Actual por el HTML, pero forzamos carga si es necesario
+    // cargarKPIsFinancieros(); 
+});
 // Al final de tu bloque <script>, después de definir todas las funciones:
 window.verResultadosTV = verResultadosTV;
 window.renderizarTVCorregido = renderizarTVCorregido;

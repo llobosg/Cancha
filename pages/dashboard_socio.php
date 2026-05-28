@@ -1220,7 +1220,7 @@ $js_vars = [
                                             👁️ Ver Inscritos
                                         </button>
 
-                                                                    <?php else: ?>
+                                    <?php else: ?>
                                     <!-- === CASO: USUARIO NO INSCRITO === -->
                                     <?php 
                                         // ✅ LÓGICA: Solo habilitar inscripción el mismo día y después de las 09:00
