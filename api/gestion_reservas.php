@@ -2,12 +2,12 @@
 // api/gestion_reservas.php
 header('Content-Type: application/json; charset=utf-8');
 
-// Limpieza de buffer para evitar JSON roto
-if (ob_get_level() > 0) { ob_clean(); }
+// Limpieza de buffer segura para evitar JSON roto por warnings/espacios
+while (ob_get_level()) { ob_end_clean(); }
 
 require_once __DIR__ . '/../includes/config.php';
-// Asegúrate de tener este archivo con la función registrarLogReserva
-// Si no existe, crea includes/bitacora.php con la función que te pasé antes
+
+// Cargar bitácora si existe
 if (file_exists(__DIR__ . '/../includes/bitacora.php')) {
     require_once __DIR__ . '/../includes/bitacora.php';
 }
@@ -21,15 +21,15 @@ try {
     // 2. Verificar Rol
     $rol_actual = $_SESSION['recinto_rol'] ?? '';
     $roles_permitidos = ['admin', 'asistente'];
+    
+    // Permitir también a admins globales si tu sistema lo usa
     if (!in_array($rol_actual, $roles_permitidos)) {
         error_log("[API GESTIÓN RESERVAS] Acceso denegado. Rol: '$rol_actual'");
         throw new Exception('Acceso no autorizado: Rol inválido', 401);
     }
 
     $action = $_POST['action'] ?? $_GET['action'] ?? '';
-    
-    // Debug log
-    error_log("?? [API] Acción recibida: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
+    error_log("📝 [API] Acción recibida: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
 
     switch ($action) {
         case 'procesar_pago':
@@ -69,7 +69,7 @@ function procesarPagoReserva($pdo, $data) {
         throw new Exception('Datos incompletos para procesar pago');
     }
 
-    // Verificar propiedad
+    // Verificar propiedad y estado actual
     $stmt_check = $pdo->prepare("
         SELECT r.id_reserva, r.estado_pago, r.monto_total, r.monto_recaudacion, r.notas, c.id_recinto
         FROM reservas r
@@ -86,7 +86,7 @@ function procesarPagoReserva($pdo, $data) {
         throw new Exception('Esta reserva ya está pagada');
     }
 
-    // Manejo de Extras en Notas
+    // Manejo de Extras en Notas (formato estructurado)
     $notas_finales = $reserva['notas'] ?? '';
     if ($extras > 0) {
         if (!preg_match('/\[EXTRAS:\d+(\.\d+)?\]/', $notas_finales)) {
@@ -110,11 +110,11 @@ function procesarPagoReserva($pdo, $data) {
         WHERE id_reserva = ?
     ");
     $stmt_update->execute([
-        $nuevo_estado_pago, 
-        $metodo_pago, 
-        $transaccion_id ?: null, 
-        $nuevo_monto_recaudado, 
-        $notas_finales, 
+        $nuevo_estado_pago,
+        $metodo_pago,
+        $transaccion_id ?: null,
+        $nuevo_monto_recaudado,
+        $notas_finales,
         $id_reserva
     ]);
 
@@ -170,10 +170,10 @@ function procesarPagoParcial($pdo, $data) {
     $nuevo_estado_pago = 'parcial';
     if ($nuevo_monto_recaudado >= $monto_total_original) {
         $nuevo_estado_pago = 'pagado';
-        $nuevo_monto_recaudado = $monto_total_original; // Ajuste exacto
+        $nuevo_monto_recaudado = $monto_total_original; // Ajuste exacto para no pasarse
     }
 
-    // Construir nota
+    // Construir nota con fecha
     $fecha_hoy = date('d/m/Y H:i');
     $nota_nueva = "\n[PAGO $fecha_hoy]: $" . number_format($monto_pagado, 0, ',', '.') . " vía $metodo_pago";
     if (!empty($notas_pago)) {
@@ -227,9 +227,12 @@ function crearReservaManualUnificada($pdo, $data) {
     $fecha = isset($data['fecha']) ? $data['fecha'] : '';
     $hora_inicio = isset($data['hora_inicio']) ? $data['hora_inicio'] : '';
     $hora_fin = isset($data['hora_fin']) ? $data['hora_fin'] : '';
-    $monto_total = isset($data['monto_total']) ? (float)$data['monto_total'] : 0;
-    $id_socio_input = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
     
+    // ✅ CORRECCIÓN: Asegurar que monto_total sea float, si viene 0 o vacío, usar 0.0
+    $monto_total = isset($data['monto_total']) ? (float)$data['monto_total'] : 0.0;
+    
+    $id_socio_input = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
+
     // Datos nuevo socio
     $nombre_nuevo = trim($data['nombreNuevoSocio'] ?? '');
     $email_nuevo = trim($data['emailNuevoSocio'] ?? '');
@@ -278,7 +281,7 @@ function crearReservaManualUnificada($pdo, $data) {
         
         if ($existente) {
             $id_socio_final = $existente['id_socio'];
-            $nombre_cliente = $nombre_nuevo; // Actualizamos nombre por si cambió
+            $nombre_cliente = $nombre_nuevo;
             $email_cliente = $email_nuevo;
             $telefono_cliente = $tel_nuevo;
         } else {
