@@ -1603,8 +1603,8 @@ td.estado-cancelada {
                 
                 <!-- Selector Rápido -->
                 <select id="filtroPeriodoKPI" onchange="actualizarFechasKPI(this.value)" style="padding: 0.4rem; border-radius: 6px; border: 1px solid #ddd; font-size: 0.9rem;">
+                    <option value="anio_completo">Año (<?= date('Y') ?>)</option>    
                     <option value="mes_actual" selected>Mes Actual</option> <!-- Default -->
-                    <option value="anio_completo">Año Completo (<?= date('Y') ?>)</option>
                     <option value="mes_anterior">Mes Anterior</option>
                     <option value="hoy">Hoy</option>
                     <option value="personalizado">Personalizado...</option>
