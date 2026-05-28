@@ -93,14 +93,26 @@ try {
     $stmt_deuda->execute([$id_recinto, $fecha_limite_deuda]);
     $deuda = $stmt_deuda->fetchColumn();
 
+    // Consultas adicionales para contar cantidades (opcional pero recomendado para performance)
+    // Cantidad Deuda Vencida
+    $stmt_count_deuda = $pdo->prepare("
+        SELECT COUNT(*) FROM reservas r
+        JOIN canchas c ON r.id_cancha = c.id_cancha
+        WHERE c.id_recinto = ? AND r.fecha <= ? 
+        AND r.estado_pago IN ('pendiente', 'parcial') AND r.estado != 'cancelada'
+    ");
+    $stmt_count_deuda->execute([$id_recinto, $fecha_limite_deuda]);
+    $cant_deuda = $stmt_count_deuda->fetchColumn();
+
     echo json_encode([
         'success' => true,
         'data' => [
             'ingresos' => floatval($ingresos),
             'pendiente' => floatval($pendiente),
             'reserva_monto' => floatval($monto_reserva),
-            'reserva_cant' => intval($cant_reserva),
-            'deuda' => floatval($deuda)
+            'reserva_cant' => intval($cant_en_reserva), // Ya existía
+            'deuda' => floatval($deuda),
+            'deuda_cant' => intval($cant_deuda) // NUEVO: Cantidad de deudas
         ]
     ]);
 

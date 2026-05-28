@@ -5229,6 +5229,20 @@ async function cargarKPIsFinancieros() {
             document.getElementById('subtextoReserva').textContent = `${data.data.reserva_cant} próximas`;
             document.getElementById('valorDeuda').textContent = fmt(data.data.deuda);
 
+            // Actualizar Deuda con Monto y Cantidad
+            document.getElementById('valorDeuda').textContent = fmt(data.data.deuda);
+            const subtextoDeuda = document.querySelector('#cardDeuda div:last-child'); // El div que dice "Por regularizar"
+            if (subtextoDeuda) {
+                const cant = data.data.deuda_cant || 0;
+                subtextoDeuda.textContent = `${cant} reserva${cant !== 1 ? 's' : ''} por regularizar`;
+            }
+
+            // Actualizar En Reserva con Cantidad (ya tenías la lógica, solo verifica que use data.data.reserva_cant)
+            const subtextoReserva = document.getElementById('subtextoReserva');
+            if (subtextoReserva) {
+                subtextoReserva.textContent = `${data.data.reserva_cant} próxima${data.data.reserva_cant !== 1 ? 's' : ''}`;
+            }
+
             // Actualizar etiqueta
             if (document.getElementById('filtroPeriodoKPI').value === 'personalizado') {
                 label.textContent = `${fInicio.split('-')[2]}/${fInicio.split('-')[1]} - ${fFin.split('-')[2]}/${fFin.split('-')[1]}`;

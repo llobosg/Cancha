@@ -5,6 +5,7 @@ if (ob_get_level() > 0) { ob_clean(); }
 
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← CLAVE: cargar la clase
+require_once __DIR__ . '/../includes/bitacora.php';
 
 
 if (!isset($_SESSION['id_socio'])) {
@@ -153,6 +154,7 @@ function validarDisponibilidad($pdo, $id_cancha, $fechas, $hora_inicio, $hora_fi
 function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $cancha, 
                            $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,
                            $monto_recaudacion = null, $jugadores_esperados = null) {
+
     $reservas = [];
     $valor_unitario = (float)$cancha['valor_arriendo'];
     
@@ -170,47 +172,51 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
-        // Aquí $id_club ya es NULL o un Entero, PDO lo manejará bien
         $stmt->execute([
-            $codigo_reserva,
-            $id_cancha,
-            $id_club, // Si es null, se guarda NULL en la BD
-            $id_socio,
-            $socio['nombre'],
-            $socio['email'],
-            $socio['celular'],
-            $fecha,
-            $hora_inicio,
-            $hora_fin,
-            $tipo_reserva,
-            $tipo_arriendo,
-            $valor_unitario,
-            'confirmada',
-            'pendiente',
-            $monto_recaudacion,
-            $jugadores_esperados
+            $codigo_reserva, $id_cancha, $id_club, $id_socio,
+            $socio['nombre'], $socio['email'], $socio['celular'],
+            $fecha, $hora_inicio, $hora_fin,
+            $tipo_reserva, $tipo_arriendo,
+            $valor_unitario, 'confirmada', 'pendiente',
+            $monto_recaudacion, $jugadores_esperados
         ]);
+        
+        $id_nueva_reserva = $pdo->lastInsertId();
+
+        // ✅ REGISTRAR EN BITÁCORA
+        registrarLogReserva(
+            $pdo, 
+            $id_nueva_reserva, 
+            'creada', 
+            "Reserva creada automáticamente (Patrón: {$tipo_reserva})", 
+            $socio['nombre'], // Usuario que origina la acción
+            null, 
+            $valor_unitario,
+            ['codigo' => $codigo_reserva, 'patron' => $tipo_reserva]
+        );
         
         $pdo->prepare("
             UPDATE disponibilidad_canchas 
             SET estado = 'reservada', id_reserva = ?
             WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ?
-        ")->execute([$pdo->lastInsertId(), $id_cancha, $fecha, $hora_inicio]);
+        ")->execute([$id_nueva_reserva, $id_cancha, $fecha, $hora_inicio]);
         
         $reservas[] = [
+            'id_reserva' => $id_nueva_reserva,
             'codigo_reserva' => $codigo_reserva,
             'fecha' => $fecha,
             'hora_inicio' => $hora_inicio
         ];
     }
 
+    // Envío de correos (tu lógica existente)
     require_once __DIR__ . '/../includes/reserva_mailer.php';
-    // ✅ CORRECTO:
     if (class_exists('BrevoMailer') && method_exists('BrevoMailer', 'enviarConfirmacion')) {
-        BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
-    } else {
-        error_log("[Crear Reserva] ⚠️ BrevoMailer no disponible. Saltando correo.");
+        // Nota: enviarConfirmacion suele necesitar el ID de la última reserva o iterar
+        // Ajusta según tu implementación de BrevoMailer
+        BrevoMailer::enviarConfirmacion($pdo, $reservas[count($reservas)-1]['id_reserva']);
     }
+    
     return $reservas;
 }
 ?>

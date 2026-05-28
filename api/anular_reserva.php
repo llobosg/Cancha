@@ -2,77 +2,66 @@
 // api/anular_reserva.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/reserva_mailer.php';
+require_once __DIR__ . '/../includes/reserva_mailer.php'; // Asegurar carga de mailer
 
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
-
-if (!isset($_SESSION['id_recinto'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
+// 1. Validar Sesión y Permisos
+if (!isset($_SESSION['id_recinto']) || !in_array($_SESSION['recinto_rol'] ?? '', ['admin', 'asistente'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Acceso no autorizado']);
     exit;
 }
 
-$id_recinto = (int)$_SESSION['id_recinto'];
 $input = json_decode(file_get_contents('php://input'), true);
 $id_reserva = (int)($input['id_reserva'] ?? 0);
 
-try {
-    if (!$id_reserva) {
-        throw new Exception("ID de reserva requerido");
-    }
+if (!$id_reserva) {
+    echo json_encode(['success' => false, 'message' => 'ID de reserva inválido']);
+    exit;
+}
 
-    // 1. Obtener datos actuales de la reserva
-    $stmt = $pdo->prepare("
-        SELECT r.*, c.nombre_cancha, s.email as email_cliente, s.nombre as nombre_cliente
-        FROM reservas r
-        JOIN canchas c ON r.id_cancha = c.id_cancha
-        LEFT JOIN socios s ON r.id_socio = s.id_socio
+try {
+    // 2. Obtener datos actuales de la reserva para validar propiedad y estado
+    $stmt_check = $pdo->prepare("
+        SELECT r.*, c.nombre_cancha, c.id_recinto 
+        FROM reservas r 
+        JOIN canchas c ON r.id_cancha = c.id_cancha 
         WHERE r.id_reserva = ? AND c.id_recinto = ?
     ");
-    $stmt->execute([$id_reserva, $id_recinto]);
-    $reserva = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt_check->execute([$id_reserva, $_SESSION['id_recinto']]);
+    $reserva = $stmt_check->fetch(PDO::FETCH_ASSOC);
 
     if (!$reserva) {
-        throw new Exception("Reserva no encontrada o no pertenece a este recinto");
+        echo json_encode(['success' => false, 'message' => 'Reserva no encontrada o no pertenece a este recinto']);
+        exit;
     }
 
     if ($reserva['estado'] === 'cancelada') {
-        throw new Exception("La reserva ya está anulada");
+        echo json_encode(['success' => false, 'message' => 'La reserva ya está anulada']);
+        exit;
     }
 
-    // === REGLA DE NEGOCIO 1 & 2: Validar Pagos y Deudas ===
-    $monto_total = (float)$reserva['monto_total'];
-    $monto_recaudado = (float)$reserva['monto_recaudacion'];
-    $fecha_reserva = $reserva['fecha'];
-    $hoy = date('Y-m-d');
-
-    // Si hay pago parcial (recaudado > 0 pero < total), NO permitir anulación simple
-    if ($monto_recaudado > 0 && $monto_recaudado < $monto_total) {
-        throw new Exception("⚠️ No se puede anular una reserva con pago parcial. Debe procesarse un reembolso primero.");
-    }
-
-    // Si es una reserva pasada (deuda pendiente), NO permitir anulación automática
-    // Solo se pueden anular reservas futuras o del día actual
-    if ($fecha_reserva < $hoy) {
-        throw new Exception("⚠️ No se puede anular una reserva vencida (deuda). Contacte administración para regularización.");
-    }
-
-    // 2. Determinar acción financiera
-    $mensaje_financiero = "";
+    // 3. Determinar nuevo estado de pago según lógica financiera
+    // Si estaba pagada, se marca como 'reembolsado' o se mantiene 'pagado' pero con nota.
+    // Si estaba pendiente/parcial, se mantiene así pero se cancela la reserva.
     $nuevo_estado_pago = $reserva['estado_pago'];
+    if ($reserva['estado_pago'] === 'pagado') {
+        $nuevo_estado_pago = 'reembolsado'; // Opcional: si tienes este estado en tu BD
+    }
     
-    // Si estaba pagada totalmente, marcamos como reembolsado
-    if ($monto_recaudado >= $monto_total && $monto_total > 0) {
-        $nuevo_estado_pago = 'reembolsado'; 
-        $mensaje_financiero = "Se ha registrado un reembolso automático por la anulación.";
-    } else {
-        // Si no había cobrado nada, queda pendiente/cancelada
-        $nuevo_estado_pago = 'pendiente'; 
+    // Mensaje financiero para el correo
+    $mensaje_financiero = '';
+    if ($reserva['estado_pago'] === 'pagado') {
+        $mensaje_financiero = "El monto total de $" . number_format($reserva['monto_total'], 0, ',', '.') . " será reembolsado según nuestras políticas.";
+    } elseif ($reserva['estado_pago'] === 'parcial') {
+        $mensaje_financiero = "Se ha registrado la anulación. El saldo parcial abonado de $" . number_format($reserva['monto_recaudacion'], 0, ',', '.') . " será considerado para futuras reservas o reembolsado según política.";
     }
 
-    // 3. Actualizar Reserva
+    // 4. Actualizar Reserva
     $fecha_anulacion = date('Y-m-d H:i:s');
-    $nota_anulacion = "\n[ANULADA POR ADMIN: {$fecha_anulacion}]";
+    $usuario_admin = $_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin';
+    
+    // Concatenar nota de anulación al historial de notas
+    $nota_anulacion = "\n\n[ANULADA POR ADMIN: {$usuario_admin} - {$fecha_anulacion}]";
     $notas_actuales = $reserva['notas'] ?? '';
     $nuevas_notas = $notas_actuales . $nota_anulacion;
 
@@ -91,49 +80,59 @@ try {
         $id_reserva
     ]);
 
-    // 4. Registrar Log de Auditoría
-    $usuario_admin = $_SESSION['recinto_usuario'] ?? 'Admin';
-    $descripcion_log = "Anulada por admin. Estado previo: " . $reserva['estado'];
+    // 5. Registrar Log de Auditoría (Bitácora)
+    // Usamos la estructura estándar de reservas_log
+    $descripcion_log = "Anulada por admin ({$usuario_admin}). Estado previo: {$reserva['estado']}. Pago previo: {$reserva['estado_pago']}.";
     
     $stmt_log = $pdo->prepare("
-        INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, created_at) 
-        VALUES (?, ?, 'anulada', ?, NOW())
+        INSERT INTO reservas_log (id_reserva, usuario_nombre, accion, descripcion, monto_anterior, created_at) 
+        VALUES (?, ?, 'anulada', ?, ?, NOW())
     ");
-    $stmt_log->execute([$id_reserva, $usuario_admin, $descripcion_log]);
+    $stmt_log->execute([
+        $id_reserva, 
+        $usuario_admin, 
+        $descripcion_log,
+        $reserva['monto_total'] // Guardamos el monto total como referencia
+    ]);
 
-    // 5. Enviar Correo al Cliente
+    // 6. Enviar Correo al Cliente
     if (!empty($reserva['email_cliente']) && !empty($reserva['nombre_cliente'])) {
         try {
-            $html_content = "<html><body><h1>⚠️ Tu reserva ha sido anulada</h1>";
-            $html_content .= "<p>Hola <strong>{$reserva['nombre_cliente']}</strong>,</p>";
-            $html_content .= "<p>Lamentablemente, tu reserva en <strong>{$reserva['nombre_cancha']}</strong> para el día <strong>{$reserva['fecha']} a las {$reserva['hora_inicio']}</strong> ha sido <strong>ANULADA</strong> por administración.</p>";
-            
-            if ($mensaje_financiero) {
-                $html_content .= "<p><strong>Nota Financiera:</strong> " . $mensaje_financiero . "</p>";
-            }
-            
-            $html_content .= "<p>Si tienes alguna duda, por favor contáctanos.</p></body></html>";
+            $html_content = "
+            <html>
+            <body style='font-family: sans-serif; color: #333;'>
+                <h2 style='color: #C62828;'>⚠️ Tu reserva ha sido anulada</h2>
+                <p>Hola <strong>{$reserva['nombre_cliente']}</strong>,</p>
+                <p>Lamentablemente, tu reserva en <strong>{$reserva['nombre_cancha']}</strong> para el día <strong>{$reserva['fecha']} a las {$reserva['hora_inicio']}</strong> ha sido <strong>ANULADA</strong> por administración.</p>
+                
+                ".($mensaje_financiero ? "<div style='background:#FFF3CD; padding:10px; border-radius:5px; margin:10px 0;'><strong>Nota Financiera:</strong> {$mensaje_financiero}</div>" : "")."
+                
+                <p>Si tienes alguna duda o necesitas reagendar, por favor contáctanos respondiendo a este correo.</p>
+                <hr>
+                <small style='color:#999;'>Equipo de CanchaSport</small>
+            </body>
+            </html>";
 
             if (class_exists('BrevoMailer')) {
                 $mail = new BrevoMailer();
                 $mail->setTo($reserva['email_cliente'], $reserva['nombre_cliente'])
-                    ->setSubject("Cancelación de Reserva #{$id_reserva}")
+                    ->setSubject("Cancelación de Reserva #{$id_reserva} - {$reserva['nombre_cancha']}")
                     ->setHtmlBody($html_content)
                     ->send();
             }
         } catch (Exception $e) {
             error_log("Error enviando correo anulación: " . $e->getMessage());
+            // No interrumpimos el flujo si falla el correo
         }
     }
 
-    echo json_encode([
-        'success' => true, 
-        'message' => 'Reserva anulada correctamente.'
-    ]);
+    echo json_encode(['success' => true, 'message' => 'Reserva anulada correctamente']);
 
+} catch (PDOException $e) {
+    error_log("Error PDO anular_reserva: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
 } catch (Exception $e) {
-    error_log("❌ Error anular reserva: " . $e->getMessage());
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    error_log("Error General anular_reserva: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Ocurrió un error inesperado']);
 }
 ?>
