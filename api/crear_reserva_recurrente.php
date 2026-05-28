@@ -72,8 +72,25 @@ try {
     }
     
     // Crear todas las reservas
-    $reservas_creadas = crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $cancha, 
-        $fechas_reservar, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,$monto_recaudacion, $jugadores_esperados);
+    // ✅ PASAMOS EL MONTO ENVIADO DESDE EL FRONTEND COMO ÚLTIMO PARÁMETRO
+    $monto_enviado_frontend = isset($_POST['monto_total']) ? (float)$_POST['monto_total'] : 0;
+
+    $reservas_creadas = crearReservasReales(
+        $pdo, 
+        $id_socio, 
+        $id_club, 
+        $id_cancha, 
+        $socio, 
+        $cancha, 
+        $fechas_reservar, 
+        $hora_inicio, 
+        $hora_fin, 
+        $tipo_reserva, 
+        $tipo_arriendo,
+        $monto_recaudacion, 
+        $jugadores_esperados,
+        $monto_enviado_frontend // <--- NUEVO PARÁMETRO
+    );
     
     echo json_encode([
         'success' => true,
@@ -153,11 +170,14 @@ function validarDisponibilidad($pdo, $id_cancha, $fechas, $hora_inicio, $hora_fi
 
 function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $cancha, 
                            $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,
-                           $monto_recaudacion = null, $jugadores_esperados = null) {
-
-    $reservas = [];
-    $valor_unitario = (float)$cancha['valor_arriendo'];
+                           $monto_recaudacion = null, $jugadores_esperados = null, $monto_enviado = 0) {
     
+    $reservas = [];
+    
+    // ✅ CORRECCIÓN: Usar el monto enviado por el frontend si existe, sino usar el de la BD
+    // El frontend ya calculó 60min=$40k, 90min=$60k, 120min=$80k. Debemos respetarlo.
+    $valor_final = ($monto_enviado > 0) ? (float)$monto_enviado : (float)$cancha['valor_arriendo'];
+
     foreach ($fechas as $fecha) {
         $codigo_reserva = strtoupper(substr(uniqid(), -8));
         
@@ -172,27 +192,38 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
+        // Guardamos $valor_final en monto_total
         $stmt->execute([
-            $codigo_reserva, $id_cancha, $id_club, $id_socio,
-            $socio['nombre'], $socio['email'], $socio['celular'],
-            $fecha, $hora_inicio, $hora_fin,
-            $tipo_reserva, $tipo_arriendo,
-            $valor_unitario, 'confirmada', 'pendiente',
-            $monto_recaudacion, $jugadores_esperados
+            $codigo_reserva,
+            $id_cancha,
+            $id_club,
+            $id_socio,
+            $socio['nombre'],
+            $socio['email'],
+            $socio['celular'],
+            $fecha,
+            $hora_inicio,
+            $hora_fin,
+            $tipo_reserva,
+            $tipo_arriendo,
+            $valor_final, // <--- AQUÍ ESTABA EL ERROR: Antes era $valor_unitario fijo
+            'confirmada',
+            'pendiente',
+            $monto_recaudacion,
+            $jugadores_esperados
         ]);
         
         $id_nueva_reserva = $pdo->lastInsertId();
 
-        // ✅ REGISTRAR EN BITÁCORA
+        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO ===
         registrarLogReserva(
-            $pdo, 
-            $id_nueva_reserva, 
-            'creada', 
-            "Reserva creada automáticamente (Patrón: {$tipo_reserva})", 
-            $socio['nombre'], // Usuario que origina la acción
-            null, 
-            $valor_unitario,
-            ['codigo' => $codigo_reserva, 'patron' => $tipo_reserva]
+            $pdo,
+            $id_nueva_reserva,
+            'creada',
+            "Reserva creada automáticamente (Patrón: {$tipo_reserva})",
+            $socio['nombre'],
+            null,
+            $valor_final // Logueamos el monto real guardado
         );
         
         $pdo->prepare("
@@ -212,8 +243,6 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
     // Envío de correos (tu lógica existente)
     require_once __DIR__ . '/../includes/reserva_mailer.php';
     if (class_exists('BrevoMailer') && method_exists('BrevoMailer', 'enviarConfirmacion')) {
-        // Nota: enviarConfirmacion suele necesitar el ID de la última reserva o iterar
-        // Ajusta según tu implementación de BrevoMailer
         BrevoMailer::enviarConfirmacion($pdo, $reservas[count($reservas)-1]['id_reserva']);
     }
     
