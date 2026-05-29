@@ -171,7 +171,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
                            $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,
                            $monto_recaudacion = null, $jugadores_esperados = null, $monto_enviado = 0) {
     
-    require_once __DIR__ . '/../includes/bitacora.php';
+    require_once __DIR__ . '/../includes/bitacora.php'; // Asegurar log
     
     $reservas = [];
     
@@ -216,7 +216,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
         
         $id_nueva_reserva = $pdo->lastInsertId();
 
-        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO ===
+        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO Y HORA CHILE ===
         if (function_exists('registrarLogReserva')) {
             registrarLogReserva(
                 $pdo,

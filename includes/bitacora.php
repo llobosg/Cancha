@@ -1,9 +1,6 @@
 <?php
 // includes/bitacora.php
 
-/**
- * Registra una acción en la bitácora de reservas
- */
 function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_nombre = null, $monto_ant = null, $monto_nue = null, $metadata = null) {
     try {
         // ✅ FORZAR ZONA HORARIA CHILE (Santiago) PARA EL LOG
