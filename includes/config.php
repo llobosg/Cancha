@@ -1,7 +1,32 @@
 <?php
 // includes/config.php
 
-$pdo->exec("SET time_zone = '-03:00'");
+session_start();
+
+// 1. Configuración de la BD
+$host = 'tu_host';
+$db   = 'tu_db';
+$user = 'tu_user';
+$pass = 'tu_pass';
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+try {
+    // 2. Aquí es donde SE CREA $pdo
+    $pdo = new PDO($dsn, $user, $pass, $options);
+
+    // ✅ 3. PEGA LA LÍNEA AQUÍ, justo después de crear la conexión
+    $pdo->exec("SET time_zone = '-03:00'");
+
+} catch (\PDOException $e) {
+    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+}
 // 1. Manejo de sesión CENTRALIZADO Y SEGURO
 // Solo iniciar sesión si NO está activa. Esto evita warnings y conflictos.
 if (session_status() === PHP_SESSION_NONE) {
