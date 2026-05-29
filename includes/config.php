@@ -1,6 +1,7 @@
 <?php
 // includes/config.php
 
+$pdo->exec("SET time_zone = '-03:00'");
 // 1. Manejo de sesión CENTRALIZADO Y SEGURO
 // Solo iniciar sesión si NO está activa. Esto evita warnings y conflictos.
 if (session_status() === PHP_SESSION_NONE) {

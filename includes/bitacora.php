@@ -6,7 +6,7 @@
  */
 function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_nombre = null, $monto_ant = null, $monto_nue = null, $metadata = null) {
     try {
-        // ✅ FORZAR ZONA HORARIA CHILE (Santiago)
+        // ✅ FORZAR ZONA HORARIA CHILE (Santiago) PARA EL LOG
         date_default_timezone_set('America/Santiago');
         
         if (!$usuario_nombre) {
@@ -22,7 +22,7 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
                 monto_anterior, 
                 monto_nuevo, 
                 metadata,
-                created_at -- Asegúrate que tu tabla tenga este campo
+                created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         

@@ -171,12 +171,12 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
                            $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,
                            $monto_recaudacion = null, $jugadores_esperados = null, $monto_enviado = 0) {
     
-    require_once __DIR__ . '/../includes/bitacora.php'; // Asegurar log
+    require_once __DIR__ . '/../includes/bitacora.php';
     
     $reservas = [];
     
-    // ✅ CORRECCIÓN CRÍTICA: Usar el monto enviado por el frontend si existe.
-    // Si viene 0 o vacío, usamos el valor base de la cancha como fallback.
+    // ✅ CORRECCIÓN CRÍTICA: Usar el monto enviado desde el frontend si existe
+    // Si viene 0 o vacío, usamos el valor base de la cancha como fallback seguro
     $valor_final = ($monto_enviado > 0) ? (float)$monto_enviado : (float)$cancha['valor_arriendo'];
 
     foreach ($fechas as $fecha) {
@@ -207,7 +207,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             $hora_fin,
             $tipo_reserva,
             $tipo_arriendo,
-            $valor_final, // <--- AQUÍ ESTABA EL ERROR ANTES
+            $valor_final, // <--- AQUÍ SE GUARDA EL MONTO CORRECTO
             'confirmada',
             'pendiente',
             $monto_recaudacion,
@@ -216,7 +216,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
         
         $id_nueva_reserva = $pdo->lastInsertId();
 
-        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO Y HORA CHILE ===
+        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO ===
         if (function_exists('registrarLogReserva')) {
             registrarLogReserva(
                 $pdo,
