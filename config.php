@@ -69,11 +69,14 @@ $options = [
     PDO::ATTR_PERSISTENT => false, // Importante en serverless
 ];
 
-// 7. Conexión con manejo de errores
+// 7. Conexión con manejo de errores y Zona Horaria
 try {
     $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
+    
+    // ✅ Establecer zona horaria Chile inmediatamente después de conectar
     $pdo->exec("SET time_zone = '-03:00'");
-    error_log("[CONFIG] ✅ Conexión BD exitosa");
+    
+    error_log("[CONFIG] ✅ Conexión BD exitosa y Zona Horaria configurada (-03:00)");
 } catch (PDOException $e) {
     error_log("[CONFIG] ❌ Error BD: " . $e->getMessage());
     error_log("[CONFIG] DSN: $dsn");
@@ -85,17 +88,6 @@ try {
     } else {
         die('Error de conexión a BD: ' . htmlspecialchars($e->getMessage()));
     }
-}
-
-try {
-    // 2. Aquí es donde SE CREA $pdo
-    $pdo = new PDO($dsn, $user, $pass, $options);
-
-    // ✅ 3. PEGA LA LÍNEA AQUÍ, justo después de crear la conexión
-    $pdo->exec("SET time_zone = '-03:00'");
-
-} catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
 }
 
 // 8. Definir constantes de API
