@@ -71,7 +71,6 @@ try {
         throw new Exception('Algunas fechas no están disponibles: ' . implode(', ', $conflictos));
     }
     
-    // Crear todas las reservas
     // ✅ PASAMOS EL MONTO ENVIADO DESDE EL FRONTEND COMO ÚLTIMO PARÁMETRO
     $monto_enviado_frontend = isset($_POST['monto_total']) ? (float)$_POST['monto_total'] : 0;
 
@@ -172,10 +171,12 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
                            $fechas, $hora_inicio, $hora_fin, $tipo_reserva, $tipo_arriendo,
                            $monto_recaudacion = null, $jugadores_esperados = null, $monto_enviado = 0) {
     
+    require_once __DIR__ . '/../includes/bitacora.php'; // Asegurar log
+    
     $reservas = [];
     
-    // ✅ CORRECCIÓN: Usar el monto enviado por el frontend si existe, sino usar el de la BD
-    // El frontend ya calculó 60min=$40k, 90min=$60k, 120min=$80k. Debemos respetarlo.
+    // ✅ CORRECCIÓN CRÍTICA: Usar el monto enviado por el frontend si existe.
+    // Si viene 0 o vacío, usamos el valor base de la cancha como fallback.
     $valor_final = ($monto_enviado > 0) ? (float)$monto_enviado : (float)$cancha['valor_arriendo'];
 
     foreach ($fechas as $fecha) {
@@ -192,7 +193,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
-        // Guardamos $valor_final en monto_total
+        // Guardamos $valor_final (ej: $80.000) en monto_total
         $stmt->execute([
             $codigo_reserva,
             $id_cancha,
@@ -206,7 +207,7 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
             $hora_fin,
             $tipo_reserva,
             $tipo_arriendo,
-            $valor_final, // <--- AQUÍ ESTABA EL ERROR: Antes era $valor_unitario fijo
+            $valor_final, // <--- AQUÍ ESTABA EL ERROR ANTES
             'confirmada',
             'pendiente',
             $monto_recaudacion,
@@ -215,16 +216,18 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
         
         $id_nueva_reserva = $pdo->lastInsertId();
 
-        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO ===
-        registrarLogReserva(
-            $pdo,
-            $id_nueva_reserva,
-            'creada',
-            "Reserva creada automáticamente (Patrón: {$tipo_reserva})",
-            $socio['nombre'],
-            null,
-            $valor_final // Logueamos el monto real guardado
-        );
+        // === REGISTRAR EN BITÁCORA CON EL MONTO CORRECTO Y HORA CHILE ===
+        if (function_exists('registrarLogReserva')) {
+            registrarLogReserva(
+                $pdo,
+                $id_nueva_reserva,
+                'creada',
+                "Reserva creada automáticamente (Patrón: {$tipo_reserva})",
+                $socio['nombre'],
+                null,
+                $valor_final // Logueamos el monto real guardado ($80.000)
+            );
+        }
         
         $pdo->prepare("
             UPDATE disponibilidad_canchas 

@@ -4702,22 +4702,24 @@ async function abrirLogReserva(idReserva) {
         }
         if (Array.isArray(data.logs) && data.logs.length > 0) {
             tbody.innerHTML = data.logs.map(log => {
-                // ✅ Parsear fecha MySQL (created_at) con timezone Chile
                 const fechaRaw = log.created_at || '';
                 let fechaFormateada = '-';
-                
+
                 if (fechaRaw) {
                     try {
+                        // Reemplazar espacio por T para formato ISO
                         const fechaISO = fechaRaw.replace(' ', 'T');
                         const fechaObj = new Date(fechaISO);
+                        
                         if (!isNaN(fechaObj.getTime())) {
+                            // ✅ FORZAR ZONA HORARIA SANTIAGO AL MOSTRAR
                             fechaFormateada = fechaObj.toLocaleString('es-CL', {
                                 day: '2-digit',
                                 month: '2-digit', 
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit',
-                                timeZone: 'America/Santiago'
+                                timeZone: 'America/Santiago' // Clave para corregir visualización
                             });
                         }
                     } catch (e) {

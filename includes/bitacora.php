@@ -6,7 +6,9 @@
  */
 function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_nombre = null, $monto_ant = null, $monto_nue = null, $metadata = null) {
     try {
-        // Si no se pasa usuario, intentar tomarlo de la sesión o poner 'Sistema'
+        // ✅ FORZAR ZONA HORARIA CHILE (Santiago)
+        date_default_timezone_set('America/Santiago');
+        
         if (!$usuario_nombre) {
             $usuario_nombre = $_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin/Sistema';
         }
@@ -19,8 +21,9 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
                 descripcion, 
                 monto_anterior, 
                 monto_nuevo, 
-                metadata
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                metadata,
+                created_at -- Asegúrate que tu tabla tenga este campo
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         
         $stmt->execute([
@@ -33,7 +36,6 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
             $metadata ? json_encode($metadata) : null
         ]);
     } catch (Exception $e) {
-        // No interrumpimos el flujo principal si falla el log, solo registramos error
         error_log("[Bitácora] Error al registrar log para reserva {$id_reserva}: " . $e->getMessage());
     }
 }
