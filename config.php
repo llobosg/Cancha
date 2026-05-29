@@ -1,8 +1,6 @@
 <?php
-// includes/config.php
+// config.php
 // Configuración centralizada - Compatible con Railway (MYSQL*) + Local
-// === CONFIGURACIÓN DE ZONA HORARIA (Chile) ===
-date_default_timezone_set('America/Santiago');
 
 // 1. Manejo de sesión CENTRALIZADO (UNA SOLA VEZ)
 if (session_status() === PHP_SESSION_NONE) {
@@ -74,6 +72,7 @@ $options = [
 // 7. Conexión con manejo de errores
 try {
     $pdo = new PDO($dsn, $db['user'], $db['pass'], $options);
+    $pdo->exec("SET time_zone = '-03:00'");
     error_log("[CONFIG] ✅ Conexión BD exitosa");
 } catch (PDOException $e) {
     error_log("[CONFIG] ❌ Error BD: " . $e->getMessage());
@@ -86,6 +85,17 @@ try {
     } else {
         die('Error de conexión a BD: ' . htmlspecialchars($e->getMessage()));
     }
+}
+
+try {
+    // 2. Aquí es donde SE CREA $pdo
+    $pdo = new PDO($dsn, $user, $pass, $options);
+
+    // ✅ 3. PEGA LA LÍNEA AQUÍ, justo después de crear la conexión
+    $pdo->exec("SET time_zone = '-03:00'");
+
+} catch (\PDOException $e) {
+    throw new \PDOException($e->getMessage(), (int)$e->getCode());
 }
 
 // 8. Definir constantes de API
