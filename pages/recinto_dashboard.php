@@ -1763,11 +1763,7 @@ td.bloqueado {
         flex-direction:column;
         animation:fadeInUp 0.25s ease;
     ">
-        <!-- HEADER -->
-        <div style="padding:1.2rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
-            <h3 style="margin:0;">📜 Bitácora de Reserva</h3>
-            <button onclick="cerrarBitacora()" style="border:none; background:none; font-size:1.5rem; cursor:pointer;">×</button>
-        </div>
+
         <!-- CONTENIDO -->
         <div id="contenidoDetalle" style="
             padding:1.5rem;
