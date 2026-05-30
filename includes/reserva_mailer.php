@@ -170,5 +170,70 @@
                 return false;
             }
         }
+        public static function enviarConfirmacion($pdo, $id_reserva) {
+            try {
+
+                $stmt = $pdo->prepare("
+                    SELECT r.*, c.nombre_cancha, d.nombre as recinto_nombre
+                    FROM reservas r
+                    LEFT JOIN canchas c ON r.id_cancha = c.id_cancha
+                    LEFT JOIN recintos_deportivos d ON c.id_recinto = d.id_recinto
+                    WHERE r.id_reserva = ?
+                ");
+                $stmt->execute([$id_reserva]);
+                $reserva = $stmt->fetch();
+
+                if (!$reserva) return false;
+
+                $to_email = $reserva['email_cliente'];
+                $to_name  = $reserva['nombre_cliente'];
+
+                if (!$to_email) return false;
+
+                // 🧠 FORMATEO
+                $fecha = date('d/m/Y', strtotime($reserva['fecha']));
+                $hora  = substr($reserva['hora_inicio'],0,5) . ' - ' . substr($reserva['hora_fin'],0,5);
+                $monto = number_format($reserva['monto_total'], 0, ',', '.');
+
+                // 🎨 HTML
+                $html = "
+                <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#f9f9f9;padding:20px;border-radius:12px;'>
+                    <div style='text-align:center;background:#071289;color:white;padding:15px;border-radius:8px;'>
+                        <h2 style='margin:0;'>✅ Reserva Confirmada</h2>
+                    </div>
+
+                    <p>Hola <strong>{$to_name}</strong>,</p>
+                    <p>Tu reserva ha sido confirmada con éxito:</p>
+
+                    <div style='background:white;padding:15px;border-radius:8px;margin:15px 0;border-left:4px solid #4CAF50;'>
+                        <p>📍 <strong>Recinto:</strong> {$reserva['recinto_nombre']}</p>
+                        <p>🏟️ <strong>Cancha:</strong> {$reserva['nombre_cancha']}</p>
+                        <p>📅 <strong>Fecha:</strong> {$fecha}</p>
+                        <p>⏰ <strong>Hora:</strong> {$hora}</p>
+                        <p>💰 <strong>Total:</strong> \${$monto}</p>
+                        <hr>
+                        <p style='font-size:0.85rem;color:#888;'>ID Reserva: #{$id_reserva}</p>
+                    </div>
+
+                    <p style='text-align:center;'>
+                        <a href='https://canchasport.com' 
+                        style='background:#071289;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;'>
+                        Ver mis reservas
+                        </a>
+                    </p>
+                </div>";
+
+                $mail = new BrevoMailer();
+                return $mail->setTo($to_email, $to_name)
+                    ->setSubject("✅ Confirmación de Reserva - CanchaSport")
+                    ->setReplyTo('reservas@canchasport.com', 'CanchaSport')
+                    ->setHtmlBody($html)
+                    ->send();
+
+            } catch (Exception $e) {
+                error_log("[MAIL CONFIRMACION ERROR] " . $e->getMessage());
+                return false;
+            }
+        }
     }
 ?>
