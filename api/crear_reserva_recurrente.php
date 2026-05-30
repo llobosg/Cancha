@@ -242,6 +242,8 @@ function crearReservasReales(
         $id_reserva = $pdo->lastInsertId();
 
         // 🔥 BITÁCORA CORRECTA
+        $duracion_min = (strtotime($hora_fin) - strtotime($hora_inicio)) / 60;
+
         registrarLogReserva(
             $pdo,
             $id_reserva,
@@ -249,7 +251,10 @@ function crearReservasReales(
             "Reserva creada automáticamente (Patrón: {$tipo_reserva})",
             $socio['nombre'],
             null,
-            $valor_final
+            $valor_final,
+            [
+                'duracion_min' => $duracion_min
+            ]
         );
 
         // Actualizar disponibilidad

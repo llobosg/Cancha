@@ -10,7 +10,10 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
             $usuario_nombre = $_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin/Sistema';
         }
 
-       $stmt = $pdo->prepare("
+       $fecha_chile = (new DateTime('now', new DateTimeZone('America/Santiago')))
+        ->format('Y-m-d H:i:s');
+
+        $stmt = $pdo->prepare("
             INSERT INTO reservas_log (
                 id_reserva, 
                 usuario_nombre, 
@@ -20,9 +23,9 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
                 monto_nuevo, 
                 metadata,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-03:00'))
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        
+
         $stmt->execute([
             $id_reserva,
             $usuario_nombre,
@@ -30,7 +33,8 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
             $descripcion,
             $monto_ant,
             $monto_nue,
-            $metadata ? json_encode($metadata) : null
+            $metadata ? json_encode($metadata) : null,
+            $fecha_chile // 🔥 AQUÍ VA LA HORA CORRECTA
         ]);
     } catch (Exception $e) {
         error_log("[Bitácora] Error al registrar log para reserva {$id_reserva}: " . $e->getMessage());
