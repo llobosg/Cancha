@@ -72,7 +72,13 @@ try {
     }
     
     // ✅ PASAMOS EL MONTO ENVIADO DESDE EL FRONTEND COMO ÚLTIMO PARÁMETRO
-    $monto_enviado_frontend = isset($_POST['monto_total']) ? (float)$_POST['monto_total'] : 0;
+    // Normalizar monto (evitar "80.000" => 80)
+    $monto_enviado_frontend = 0;
+
+    if (isset($_POST['monto_total'])) {
+        $monto_limpio = str_replace(['.', ','], ['', '.'], $_POST['monto_total']);
+        $monto_enviado_frontend = (float)$monto_limpio;
+    }
 
     $reservas_creadas = crearReservasReales(
         $pdo, 
@@ -80,7 +86,7 @@ try {
         $id_club, 
         $id_cancha, 
         $socio, 
-        $cancha, 
+        $cancha,
         $fechas_reservar, 
         $hora_inicio, 
         $hora_fin, 
@@ -97,6 +103,7 @@ try {
         'total_reservas' => count($reservas_creadas),
         'reservas' => $reservas_creadas
     ]);
+    error_log("[RESERVA DEBUG] Monto recibido frontend: " . $_POST['monto_total'] . " | Normalizado: " . $monto_enviado_frontend);
     
 } catch (Exception $e) {
     http_response_code(400);
@@ -177,7 +184,14 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
     
     // ✅ CORRECCIÓN CRÍTICA: Usar el monto enviado desde el frontend si existe
     // Si viene 0 o vacío, usamos el valor base de la cancha como fallback seguro
-    $valor_final = ($monto_enviado > 0) ? (float)$monto_enviado : (float)$cancha['valor_arriendo'];
+    // Validación fuerte: recalcular si viene inconsistente
+    $duracion_minutos = (strtotime($hora_fin) - strtotime($hora_inicio)) / 60;
+    $bloques = $duracion_minutos / 60;
+
+    $valor_base = (float)$cancha['valor_arriendo'];
+    $valor_calculado = $valor_base * $bloques;
+
+    $valor_final = ($monto_enviado > 0) ? $monto_enviado : $valor_calculado;
 
     foreach ($fechas as $fecha) {
         $codigo_reserva = strtoupper(substr(uniqid(), -8));
@@ -246,7 +260,14 @@ function crearReservasReales($pdo, $id_socio, $id_club, $id_cancha, $socio, $can
     // Envío de correos (tu lógica existente)
     require_once __DIR__ . '/../includes/reserva_mailer.php';
     if (class_exists('BrevoMailer') && method_exists('BrevoMailer', 'enviarConfirmacion')) {
-        BrevoMailer::enviarConfirmacion($pdo, $reservas[count($reservas)-1]['id_reserva']);
+        foreach ($reservas as $reserva) {
+            try {
+                $ok = BrevoMailer::enviarConfirmacion($pdo, $reserva['id_reserva']);
+                error_log("[MAIL] Envío reserva {$reserva['id_reserva']} => " . ($ok ? "OK" : "FAIL"));
+            } catch (Exception $e) {
+                error_log("[MAIL ERROR] Reserva {$reserva['id_reserva']}: " . $e->getMessage());
+            }
+        }
     }
     
     return $reservas;

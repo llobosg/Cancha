@@ -10,7 +10,7 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
             $usuario_nombre = $_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin/Sistema';
         }
 
-        $stmt = $pdo->prepare("
+       $stmt = $pdo->prepare("
             INSERT INTO reservas_log (
                 id_reserva, 
                 usuario_nombre, 
@@ -20,7 +20,7 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
                 monto_nuevo, 
                 metadata,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-03:00'))
         ");
         
         $stmt->execute([
