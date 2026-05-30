@@ -1741,20 +1741,33 @@ td.bloqueado {
 </div>
 
 <!-- MODAL DETALLE RESERVA (Timeline Style Airbnb) -->
-<div id="modalDetalleReserva" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index:3000; justify-content:center; align-items:center;">
-    
+<div id="modalDetalleReserva" style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,0.65);
+        backdrop-filter: blur(4px);
+        z-index:4000; /* 🔥 MAYOR QUE EL DETALLE */
+        justify-content:center;
+        align-items:center;
+    ">
+
     <div style="
         background:white;
-        padding:0;
         border-radius:16px;
-        max-width:700px;
         width:95%;
-        position:relative;
-        max-height:90vh;
+        max-width:650px;
+        max-height:85vh;
         overflow:hidden;
         display:flex;
         flex-direction:column;
+        animation:fadeInUp 0.25s ease;
     ">
+        <!-- HEADER -->
+        <div style="padding:1.2rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
+            <h3 style="margin:0;">📜 Bitácora de Reserva</h3>
+            <button onclick="cerrarBitacora()" style="border:none; background:none; font-size:1.5rem; cursor:pointer;">×</button>
+        </div>
         <!-- CONTENIDO -->
         <div id="contenidoDetalle" style="
             padding:1.5rem;
