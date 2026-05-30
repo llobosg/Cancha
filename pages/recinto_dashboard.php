@@ -5505,7 +5505,6 @@ function cerrarModalDetalle() {
 window.verResultadosTV = verResultadosTV;
 window.renderizarTVCorregido = renderizarTVCorregido;
 window.cerrarSubmodal = cerrarSubmodal;
-<script src="../assets/js/drag_drop_reservas.js"></script>
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">
