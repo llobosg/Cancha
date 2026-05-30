@@ -235,6 +235,7 @@ try {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="../assets/css/timeline.css">
 <title>Dashboard - <?= htmlspecialchars($recinto_nombre) ?></title>
 <style>
    :root { --bg-primary: #071289; --accent: #4ECDC4; --font-main: 'Segoe UI', sans-serif; }
@@ -1448,6 +1449,71 @@ td.estado-cancelada {
     opacity: 0.6;                   /* Semitransparente */
     border: 1px dashed #EF5350 !important;
 }
+.timeline {
+    position: relative;
+    margin-top: 1rem;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #E0E0E0;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    background: #071289;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+}
+
+.timeline-time {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 3px;
+}
+
+.timeline-user {
+    font-weight: bold;
+    color: #071289;
+}
+.badge-bloqueado {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+td.bloqueado {
+    background: repeating-linear-gradient(
+        45deg,
+        #eee,
+        #eee 5px,
+        #ddd 5px,
+        #ddd 10px
+    );
+}
 </style>
 </head>
 <body>
@@ -1674,10 +1740,50 @@ td.estado-cancelada {
 
 </div>
 
-<!-- MODALES (Detalle, Pago, Lista KPI) -->
-<div id="modalDetalleReserva">
-    <div style="background:white; padding:2rem; border-radius:16px; max-width:600px; width:90%; position:relative; max-height:90vh; overflow-y:auto;">
-        <div id="contenidoDetalle"><p style="text-align:center;">Cargando...</p></div>
+<!-- MODAL DETALLE RESERVA (Timeline Style Airbnb) -->
+<div id="modalDetalleReserva" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index:3000; justify-content:center; align-items:center;">
+    
+    <div style="
+        background:white;
+        padding:0;
+        border-radius:16px;
+        max-width:700px;
+        width:95%;
+        position:relative;
+        max-height:90vh;
+        overflow:hidden;
+        display:flex;
+        flex-direction:column;
+    ">
+
+        <!-- HEADER -->
+        <div style="padding:1.5rem; border-bottom:1px solid #eee;">
+            <h2 style="margin:0; color:#071289;">📋 Detalle de Reserva</h2>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div id="contenidoDetalle" style="
+            padding:1.5rem;
+            overflow-y:auto;
+            flex:1;
+        ">
+            <p style="text-align:center;">Cargando...</p>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="padding:1rem; border-top:1px solid #eee; text-align:right;">
+            <button onclick="cerrarModalDetalle()" style="
+                background:#eee;
+                border:none;
+                padding:0.6rem 1.2rem;
+                border-radius:8px;
+                cursor:pointer;
+                font-weight:bold;
+            ">
+                Cerrar
+            </button>
+        </div>
+
     </div>
 </div>
 
@@ -1940,7 +2046,7 @@ function renderizarPlanilla(data, filtroEstado) {
                 html += `<td class="${bgClass} cell-reserva"
                     rowspan="${rowspan}"
                     draggable="true"
-                    ondragstart="dragStart(event, ${parseInt(res.id_reserva)})"
+                    ondragstart="dragStart(event, ${parseInt(res.id_reserva)}, ${res.id_deporte})"
                     ondragend="dragEnd(event)"
                     style="height:${rowspan * 40}px; vertical-align:middle; cursor:grab; max-width:140px; overflow:hidden;"
                     onclick="abrirDetalleDesdePlanilla(${parseInt(res.id_reserva)})">
@@ -1958,11 +2064,26 @@ function renderizarPlanilla(data, filtroEstado) {
                 if (esPasado) {
                     html += `<td class="estado-disponible" data-cancha-id="${cancha.id_cancha}" style="opacity:0.3; cursor:not-allowed;"></td>`;
                 } else {
-                    html += `<td class="estado-disponible drop-zone"
-                        data-cancha-id="${cancha.id_cancha}"
-                        ondragover="dragOver(event)"
-                        ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                        onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                    const esCompatible = !window.draggedDeporte || cancha.id_deporte == window.draggedDeporte;
+
+                    if (!esCompatible) {
+                        html += `<td class="estado-disponible bloqueado"
+                            data-cancha-id="${cancha.id_cancha}"
+                            title="No disponible para este deporte"
+                            style="background:#f5f5f5; cursor:not-allowed; position:relative;">
+                            <div class="badge-bloqueado">🚫</div>
+                        </td>`;
+                    } else if (esPasado) {
+                        html += `<td class="estado-disponible"
+                            data-cancha-id="${cancha.id_cancha}"
+                            style="opacity:0.3; cursor:not-allowed;"></td>`;
+                    } else {
+                        html += `<td class="estado-disponible drop-zone"
+                            data-cancha-id="${cancha.id_cancha}"
+                            ondragover="dragOver(event)"
+                            ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                            onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                    }
                 }
             }
         });
@@ -1984,21 +2105,15 @@ function renderizarPlanilla(data, filtroEstado) {
 let draggedReservaId = null;
 let draggedElement = null;
 
-function dragStart(e, id) {
+function dragStart(e, id, idDeporte) {
     draggedReservaId = id;
     draggedElement = e.target;
-    
-    // Configurar dataTransfer ANTES de cualquier otra cosa
+    window.draggedDeporte = idDeporte; // 🔥 NUEVO
+
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id.toString());
-    
-    // Aplicar clase visual
+
     e.target.classList.add('dragging');
-    
-    // Forzar reflow para aplicar estilos inmediatamente
-    void e.target.offsetWidth;
-    
-    console.log(`🎯 Drag START: ID=${id}`);
 }
 
 function dragEnd(e) {
@@ -5306,10 +5421,72 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarFechasKPI('mes_actual');
     }
 });
+
+function renderTimeline(bitacora) {
+    if (!bitacora || bitacora.length === 0) {
+        return `<p style="color:#999;">Sin movimientos registrados</p>`;
+    }
+
+    let html = `<div class="timeline">`;
+
+    bitacora.forEach(item => {
+
+        html += `
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-time">
+                        ${item.fecha_formateada || item.created_at}
+                    </div>
+
+                    <div class="timeline-user">
+                        ${item.usuario_nombre}
+                    </div>
+
+                    <div>
+                        ${item.descripcion}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+
+    return html;
+}
+
+function renderDetalleReserva(data) {
+
+    const reserva = data.reserva;
+    const bitacora = data.bitacora || [];
+
+    const html = `
+        <div style="margin-bottom:1rem;">
+            <p><strong>📍 Cancha:</strong> ${reserva.nombre_cancha}</p>
+            <p><strong>📅 Fecha:</strong> ${reserva.fecha}</p>
+            <p><strong>⏰ Hora:</strong> ${reserva.hora_inicio} - ${reserva.hora_fin}</p>
+            <p><strong>👤 Cliente:</strong> ${reserva.nombre_cliente}</p>
+        </div>
+
+        <hr style="margin:1rem 0;">
+
+        <h3 style="margin-bottom:0.5rem;">🕓 Historial</h3>
+
+        ${renderTimeline(bitacora)}
+    `;
+
+    document.getElementById('contenidoDetalle').innerHTML = html;
+}
+
+function cerrarModalDetalle() {
+    document.getElementById('modalDetalleReserva').style.display = 'none';
+}
 // Al final de tu bloque <script>, después de definir todas las funciones:
 window.verResultadosTV = verResultadosTV;
 window.renderizarTVCorregido = renderizarTVCorregido;
 window.cerrarSubmodal = cerrarSubmodal;
+<script src="../assets/js/drag_drop_reservas.js"></script>
 </script>
     <!-- === MODAL RESERVA MANUAL ADMIN (VERSIÓN COMPLETA) === -->
     <div id="modalReservaAdmin" class="modal-overlay" style="display:none;" onclick="cerrarModalReservaAdmin(event)">

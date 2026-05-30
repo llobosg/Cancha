@@ -3,6 +3,8 @@
 // Configuración centralizada - Compatible con Railway (MYSQL*) + Local
 // 🔥 ZONA HORARIA GLOBAL (OBLIGATORIO)
 date_default_timezone_set('America/Santiago');
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
 
 // 🔥 FORZAR MYSQL TAMBIÉN
 try {

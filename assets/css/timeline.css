@@ -1,0 +1,68 @@
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ddd;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.timeline-content {
+    background: white;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-left: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    width: 100%;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.timeline-body {
+    font-size: 0.95rem;
+}
+
+/* Colores por acción */
+.timeline-item.success .timeline-icon {
+    border-color: #4CAF50;
+}
+
+.timeline-item.move .timeline-icon {
+    border-color: #2196F3;
+}
+
+.timeline-item.cancel .timeline-icon {
+    border-color: #F44336;
+}
