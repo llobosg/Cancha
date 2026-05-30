@@ -371,25 +371,22 @@ $deportes = [
         try {
             console.log("🚀 Iniciando confirmación de reserva...");
 
-            // 🔍 Obtener datos del modal
-            const fecha = document.getElementById('filtroFecha').value;
-            const horaInicio = window.horaSeleccionada;
-            const idCancha = window.canchaSeleccionada;
+            if (!reservaActual) {
+                throw new Error("No hay una reserva seleccionada");
+            }
+
+            const fecha = reservaActual.fecha;
+            const horaInicio = reservaActual.hora_inicio;
+            const idCancha = reservaActual.id_cancha;
 
             const duracionSeleccionada = document.querySelector('input[name="duracion"]:checked');
             const duracion = duracionSeleccionada ? parseInt(duracionSeleccionada.value) : 60;
 
-            if (!fecha || !horaInicio || !idCancha) {
-                throw new Error("Datos incompletos para la reserva");
-            }
-
-            // 🧠 Calcular hora fin
             const horaFin = calcularHoraFin(horaInicio, duracion);
 
-            // 💰 Obtener monto desde UI (ASEGÚRATE que este ID exista)
-            let montoTexto = document.getElementById('precioTotal')?.innerText || '0';
+            // 💰 MONTO CORRECTO
+            let montoTexto = document.getElementById('precioDisplay')?.innerText || '0';
 
-            // 🔥 LIMPIAR MONTO (CLAVE)
             let montoLimpio = montoTexto
                 .replace(/\$/g, '')
                 .replace(/\./g, '')
@@ -399,14 +396,12 @@ $deportes = [
             let montoTotal = parseFloat(montoLimpio);
 
             if (isNaN(montoTotal) || montoTotal <= 0) {
-                console.warn("⚠️ Monto inválido, se recalculará backend");
+                console.warn("⚠️ Monto inválido, backend lo calculará");
                 montoTotal = 0;
             }
 
-            console.log("💰 Monto original:", montoTexto);
-            console.log("💰 Monto limpio:", montoTotal);
+            console.log("💰 Monto:", montoTotal);
 
-            // 📦 FormData
             const formData = new FormData();
             formData.append('id_cancha', idCancha);
             formData.append('fecha_base', fecha);
@@ -415,64 +410,33 @@ $deportes = [
             formData.append('tipo_patron', 'simple');
             formData.append('monto_total', montoTotal);
 
-            // 🔍 DEBUG
-            console.log("📤 Enviando datos:");
-            for (let [key, value] of formData.entries()) {
-                console.log(`   ${key}:`, value);
-            }
-
-            // ⏱️ Timeout manual
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 10000);
-
             const response = await fetch('../api/crear_reserva_recurrente.php', {
                 method: 'POST',
-                body: formData,
-                signal: controller.signal
+                body: formData
             });
 
-            clearTimeout(timeout);
-
-            // 🔴 PRIMERO LEER COMO TEXTO (clave para debug)
             const rawText = await response.text();
-
-            console.log("📥 RESPUESTA CRUDA:");
-            console.log(rawText);
+            console.log("📥 RAW:", rawText);
 
             let data;
-
             try {
                 data = JSON.parse(rawText);
-            } catch (parseError) {
-                console.error("❌ JSON inválido:", parseError);
+            } catch {
                 throw new Error("Respuesta inválida del servidor");
             }
 
-            if (!response.ok || !data.success) {
+            if (!data.success) {
                 throw new Error(data.message || "Error al crear la reserva");
             }
 
-            console.log("✅ Reserva creada:", data);
+            showToast("✅ Reserva creada correctamente", "success");
 
-            mostrarToast("✅ Reserva creada correctamente", "success");
-
-            // 🔄 Recargar disponibilidad
             await aplicarFiltros(true);
-
-            // ❌ Cerrar modal
             cerrarModalReserva();
 
         } catch (error) {
-
-            if (error.name === 'AbortError') {
-                console.error("⏱️ Timeout de la petición");
-                mostrarToast("⏱️ Tiempo de espera agotado", "error");
-                return;
-            }
-
-            console.error("❌ Error en confirmarReservaInteligente:", error);
-
-            mostrarToast("❌ " + error.message, "error");
+            console.error("❌ Error:", error);
+            showToast("❌ " + error.message, "error");
         }
     }
 
