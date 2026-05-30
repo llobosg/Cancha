@@ -50,6 +50,12 @@ class ReservaService {
 
                 $codigo = strtoupper(substr(uniqid(), -8));
 
+                $tipos_validos = ['spot','semanal','mensual','campeonato','evento'];
+
+                $tipo_reserva_db = ($data['tipo_patron'] === 'simple') 
+                    ? 'spot' 
+                    : (in_array($data['tipo_patron'], $tipos_validos) ? $data['tipo_patron'] : 'spot');
+
                 $stmt->execute([
                     $codigo,
                     $data['id_cancha'],
@@ -60,8 +66,8 @@ class ReservaService {
                     $fecha,
                     $data['hora_inicio'],
                     $hora_fin,
-                    $data['tipo_patron'],
-                    $data['tipo_patron'],
+                    $tipo_reserva_db, // ✅ FIX
+                    $tipo_reserva_db, // ✅ FIX
                     $monto
                 ]);
 
