@@ -246,14 +246,15 @@ function crearReservasReales(
 
         registrarLogReserva(
             $pdo,
-            $id_reserva,
+            $id_nueva_reserva,
             'creada',
             "Reserva creada automáticamente (Patrón: {$tipo_reserva})",
             $socio['nombre'],
             null,
             $valor_final,
             [
-                'duracion_min' => $duracion_min
+                'duracion_min' => $duracion_min,
+                'precio_formateado' => number_format($valor_final, 0, ',', '.')
             ]
         );
 
