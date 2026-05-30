@@ -5752,6 +5752,7 @@ window.cerrarSubmodal = cerrarSubmodal;
             <h3 style="margin:0; color:#AB47BC; font-size:1.1rem;">📋 Bitácora de Reserva #<span id="logReservaId"></span></h3>
             <button onclick="if(event.target.id==='modalBitacora') cerrarBitacora()" 
                     style="background:none; border:none; font-size:1.3rem; color:#999; cursor:pointer; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;">
+                &times;
             </button>
             </div>
             
