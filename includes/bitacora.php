@@ -17,7 +17,23 @@ function registrarLogReserva(
                 ?? 'Sistema';
         }
 
-        // 🔥 IMPORTANTE: usar hora PHP (Chile), NO NOW()
+        // 🔥 SANITIZAR TODO (CLAVE)
+        $descripcion = is_array($descripcion) 
+            ? json_encode($descripcion, JSON_UNESCAPED_UNICODE) 
+            : (string)$descripcion;
+
+        $usuario_nombre = is_array($usuario_nombre)
+            ? json_encode($usuario_nombre)
+            : (string)$usuario_nombre;
+
+        $monto_ant = is_array($monto_ant) ? null : $monto_ant;
+        $monto_nue = is_array($monto_nue) ? null : $monto_nue;
+
+        $metadata_json = is_array($metadata)
+            ? json_encode($metadata, JSON_UNESCAPED_UNICODE)
+            : $metadata;
+
+        // 🔥 Hora Chile REAL
         $fechaChile = date('Y-m-d H:i:s');
 
         $stmt = $pdo->prepare("
@@ -40,7 +56,7 @@ function registrarLogReserva(
             $descripcion,
             $monto_ant,
             $monto_nue,
-            $metadata ? json_encode($metadata) : null,
+            $metadata_json,
             $fechaChile
         ]);
 
