@@ -87,8 +87,6 @@ class ReservaService {
                     'creada',
                     "⏱️ {$data['duracion']} min | 💰 $" . number_format($monto, 0, ',', '.'),
                     $socio['nombre'],
-                    null,
-                    $monto,
                     [
                         'fecha' => $fecha,
                         'hora_inicio' => $data['hora_inicio'],

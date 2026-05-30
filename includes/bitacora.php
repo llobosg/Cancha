@@ -1,40 +1,37 @@
 <?php
-// includes/bitacora.php
-
-function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_nombre = null, $monto_ant = null, $monto_nue = null, $metadata = null) {
+function registrarLogReserva(
+    $pdo,
+    $id_reserva,
+    $accion,
+    $descripcion,
+    $usuario_nombre = null,
+    $monto_ant = null,
+    $monto_nue = null,
+    $metadata = null
+) {
     try {
-        // ✅ FORZAR ZONA HORARIA CHILE (Santiago) PARA EL LOG
-        date_default_timezone_set('America/Santiago');
-        
+
         if (!$usuario_nombre) {
-            $usuario_nombre = $_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin/Sistema';
+            $usuario_nombre = $_SESSION['nombre_completo']
+                ?? $_SESSION['recinto_usuario']
+                ?? 'Sistema';
         }
 
-       $fecha_chile = (new DateTime('now', new DateTimeZone('America/Santiago')))
-        ->format('Y-m-d H:i:s');
+        // 🔥 IMPORTANTE: usar hora PHP (Chile), NO NOW()
+        $fechaChile = date('Y-m-d H:i:s');
 
         $stmt = $pdo->prepare("
             INSERT INTO reservas_log (
-                id_reserva, 
-                usuario_nombre, 
-                accion, 
-                descripcion, 
-                monto_anterior, 
-                monto_nuevo, 
+                id_reserva,
+                usuario_nombre,
+                accion,
+                descripcion,
+                monto_anterior,
+                monto_nuevo,
                 metadata,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
-
-        // 🧠 LIMPIEZA PRO
-        if ($monto_ant === null) {
-            $monto_ant = null;
-        }
-
-        if ($monto_ant === null && $monto_nue !== null) {
-            // NO mostrar transición si es creación
-            $monto_ant = null;
-        }
 
         $stmt->execute([
             $id_reserva,
@@ -44,10 +41,12 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
             $monto_ant,
             $monto_nue,
             $metadata ? json_encode($metadata) : null,
-            $fecha_chile // 🔥 AQUÍ VA LA HORA CORRECTA
+            $fechaChile
         ]);
+
+        error_log("✅ Bitácora OK reserva {$id_reserva}");
+
     } catch (Exception $e) {
-        error_log("[Bitácora] Error al registrar log para reserva {$id_reserva}: " . $e->getMessage());
+        error_log("❌ Bitácora ERROR: " . $e->getMessage());
     }
 }
-?>

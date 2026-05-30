@@ -1,7 +1,15 @@
 <?php
 // config.php
 // Configuración centralizada - Compatible con Railway (MYSQL*) + Local
+// 🔥 ZONA HORARIA GLOBAL (OBLIGATORIO)
 date_default_timezone_set('America/Santiago');
+
+// 🔥 FORZAR MYSQL TAMBIÉN
+try {
+    $pdo->exec("SET time_zone = '-03:00'");
+} catch (Exception $e) {
+    error_log("Error seteando timezone MySQL: " . $e->getMessage());
+}
 
 // 1. Manejo de sesión CENTRALIZADO (UNA SOLA VEZ)
 if (session_status() === PHP_SESSION_NONE) {

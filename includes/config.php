@@ -1,6 +1,14 @@
 <?php
 // includes/config.php
+// 🔥 ZONA HORARIA GLOBAL (OBLIGATORIO)
+date_default_timezone_set('America/Santiago');
 
+// 🔥 FORZAR MYSQL TAMBIÉN
+try {
+    $pdo->exec("SET time_zone = '-03:00'");
+} catch (Exception $e) {
+    error_log("Error seteando timezone MySQL: " . $e->getMessage());
+}
 // 1. Manejo de sesión CENTRALIZADO Y SEGURO
 // Solo iniciar sesión si NO está activa. Esto evita warnings y conflictos.
 if (session_status() === PHP_SESSION_NONE) {
