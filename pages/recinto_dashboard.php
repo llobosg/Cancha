@@ -2078,11 +2078,30 @@ function renderizarPlanilla(data, filtroEstado) {
                             data-cancha-id="${cancha.id_cancha}"
                             style="opacity:0.3; cursor:not-allowed;"></td>`;
                     } else {
-                        html += `<td class="estado-disponible drop-zone"
-                            data-cancha-id="${cancha.id_cancha}"
-                            ondragover="dragOver(event)"
-                            ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                            onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                        let celdaHtml = '';
+
+                        const esCompatible = !window.draggedDeporte || cancha.id_deporte == window.draggedDeporte;
+
+                        if (!esCompatible) {
+                            celdaHtml = `<td class="estado-disponible bloqueado"
+                                data-cancha-id="${cancha.id_cancha}"
+                                title="No disponible para este deporte"
+                                style="background:#f5f5f5; cursor:not-allowed; position:relative;">
+                                <div class="badge-bloqueado">🚫</div>
+                            </td>`;
+                        } else if (esPasado) {
+                            celdaHtml = `<td class="estado-disponible"
+                                data-cancha-id="${cancha.id_cancha}"
+                                style="opacity:0.3; cursor:not-allowed;"></td>`;
+                        } else {
+                            celdaHtml = `<td class="estado-disponible drop-zone"
+                                data-cancha-id="${cancha.id_cancha}"
+                                ondragover="dragOver(event)"
+                                ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                                onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                        }
+
+                        html += celdaHtml;
                     }
                 }
             }
