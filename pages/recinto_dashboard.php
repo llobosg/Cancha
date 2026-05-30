@@ -2457,66 +2457,109 @@ function cerrarBitacora() {
     document.getElementById('modalBitacora').style.display = 'none';
 }
 
-function renderTimelineBitacora(logs, container) {
-    if (!logs || logs.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#888;">Sin registros</p>';
+function renderTimelineBitacora(data, container) {
+    if (!data.success || !data.logs.length) {
+        container.innerHTML = `
+            <p style="text-align:center; color:#888;">
+                Sin registros de auditoría
+            </p>`;
         return;
     }
 
-    const getColor = (accion) => {
-        switch (accion) {
-            case 'creada': return '#4CAF50';
-            case 'movida': return '#2196F3';
-            case 'pago': return '#9C27B0';
-            case 'cancelada': return '#F44336';
-            default: return '#607D8B';
-        }
-    };
+    const html = data.logs.map(log => {
 
-    container.innerHTML = logs.map(log => {
-        const fecha = new Date(log.created_at.replace(' ', 'T'));
+        // 🎯 FORMATEO FECHA
+        let fechaFormateada = '-';
+        if (log.created_at) {
+            const fecha = new Date(log.created_at.replace(' ', 'T'));
+            fechaFormateada = fecha.toLocaleString('es-CL', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Santiago'
+            });
+        }
+
+        const color = getAccionColor(log.accion);
+        const accion = formatAccion(log.accion);
+        const usuario = log.usuario || 'Sistema';
 
         return `
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
             
+            <!-- BULLET -->
             <div style="
                 width:10px;
                 height:10px;
-                border-radius:50%;
                 margin-top:6px;
-                background:${getColor(log.accion)};
+                border-radius:50%;
+                background:${color};
+                flex-shrink:0;
             "></div>
 
+            <!-- CONTENIDO -->
             <div style="flex:1;">
-                <div style="font-size:0.8rem; color:#666;">
-                    ${fecha.toLocaleString('es-CL', {
-                        day:'2-digit',
-                        month:'short',
-                        hour:'2-digit',
-                        minute:'2-digit'
-                    })}
+                
+                <!-- LÍNEA PRINCIPAL -->
+                <div style="
+                    font-size:0.85rem;
+                    color:#666;
+                    display:flex;
+                    align-items:center;
+                    gap:6px;
+                    flex-wrap:wrap;
+                ">
+                    <span>${fechaFormateada}</span>
+                    <span style="color:#ccc;">•</span>
+                    <span style="
+                        background:${color};
+                        color:white;
+                        padding:2px 6px;
+                        border-radius:6px;
+                        font-size:0.7rem;
+                        font-weight:bold;
+                    ">
+                        ${accion}
+                    </span>
+                    <span style="color:#ccc;">•</span>
+
+                    <!-- 👤 USUARIO (NUEVO) -->
+                    <span style="font-weight:500; color:#333;">
+                        👤 ${usuario}
+                    </span>
                 </div>
 
-                <div style="font-weight:bold;">
-                    ${log.usuario || 'Sistema'}
-                </div>
-
-                <div style="font-size:0.9rem; color:#333;">
+                <!-- DESCRIPCIÓN -->
+                <div style="
+                    font-size:0.9rem;
+                    color:#333;
+                    margin-top:4px;
+                ">
                     ${log.descripcion || '-'}
                 </div>
 
+                <!-- MONTOS (solo si existen) -->
                 ${
-                    (log.monto_anterior || log.monto_nuevo)
-                    ? `<div style="font-size:0.8rem; color:#999;">
-                        💰 ${log.monto_anterior ?? '-'} → ${log.monto_nuevo ?? '-'}
-                       </div>`
+                    (log.monto_anterior !== null || log.monto_nuevo !== null)
+                    ? `
+                    <div style="
+                        font-size:0.75rem;
+                        color:#888;
+                        margin-top:2px;
+                    ">
+                        💰 $${log.monto_anterior ?? '?'} → $${log.monto_nuevo ?? '?'}
+                    </div>
+                    `
                     : ''
                 }
-            </div>
 
+            </div>
         </div>
         `;
     }).join('');
+
+    container.innerHTML = html;
 }
 
 // === FUNCIÓN AUXILIAR: Toggle menú 3 puntos (agregar junto a tus otras funciones) ===
