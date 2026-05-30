@@ -110,9 +110,9 @@ try {
             'ingresos' => floatval($ingresos),
             'pendiente' => floatval($pendiente),
             'reserva_monto' => floatval($monto_reserva),
-            'reserva_cant' => intval($cant_en_reserva), // Ya existía
+            'reserva_cant' => intval($cant_reserva), // ✅ FIX
             'deuda' => floatval($deuda),
-            'deuda_cant' => intval($cant_deuda) // NUEVO: Cantidad de deudas
+            'deuda_cant' => intval($cant_deuda)
         ]
     ]);
 
