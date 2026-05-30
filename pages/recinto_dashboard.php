@@ -1514,6 +1514,9 @@ td.bloqueado {
         #ddd 10px
     );
 }
+.modal-overlay {
+    display:flex;
+}
 </style>
 </head>
 <body>
@@ -2410,6 +2413,30 @@ async function abrirDetalleDesdePlanilla(idReserva) {
         console.error(err);
         if (container) container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
     }
+}
+
+function abrirLogReserva(idReserva) {
+    const modal = document.getElementById('modalBitacora');
+    const container = document.getElementById('contenidoBitacora');
+
+    // 🔥 ASEGURAR QUE QUEDE ARRIBA DE TODO
+    modal.style.zIndex = 9999;
+    modal.style.display = 'flex';
+
+    container.innerHTML = 'Cargando...';
+
+    fetch(`../api/bitacora_reserva.php?id_reserva=${idReserva}`)
+        .then(res => res.json())
+        .then(data => {
+            renderTimelineBitacora(data, container);
+        })
+        .catch(err => {
+            container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+        });
+}
+
+function cerrarBitacora() {
+    document.getElementById('modalBitacora').style.display = 'none';
 }
 
 // === FUNCIÓN AUXILIAR: Toggle menú 3 puntos (agregar junto a tus otras funciones) ===
@@ -4809,90 +4836,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// === ABRIR MODAL DE BITÁCORA (CON VALIDACIÓN DE RESPUESTA) ===
-async function abrirLogReserva(idReserva) {
-    const modal = document.getElementById('modalLogReserva');
-    const tbody = document.getElementById('logReservaBody');
-    const titleId = document.getElementById('logReservaId');
-    
-    if (!modal || !tbody) return;
-    
-    titleId.textContent = idReserva;
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">🔄 Cargando...</td></tr>';
-    modal.style.display = 'flex';
-    
-    try {
-        const res = await fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`);
-        
-        // ✅ VALIDAR QUE LA RESPUESTA ES JSON
-        const contentType = res.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await res.text();
-            console.error('❌ Respuesta no es JSON:', text.substring(0, 300));
-            throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs de PHP.');
-        }
-        
-        const data = await res.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Error al cargar bitácora');
-        }
-        if (Array.isArray(data.logs) && data.logs.length > 0) {
-            tbody.innerHTML = data.logs.map(log => {
-                const fechaRaw = log.created_at || '';
-                let fechaFormateada = '-';
-
-                if (fechaRaw) {
-                    try {
-                        // Reemplazar espacio por T para formato ISO
-                        const fechaISO = fechaRaw.replace(' ', 'T');
-                        const fechaObj = new Date(fechaISO);
-                        
-                        if (!isNaN(fechaObj.getTime())) {
-                            // ✅ FORZAR ZONA HORARIA SANTIAGO AL MOSTRAR
-                            fechaFormateada = fechaObj.toLocaleString('es-CL', {
-                                day: '2-digit',
-                                month: '2-digit', 
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                timeZone: 'America/Santiago' // Clave para corregir visualización
-                            });
-                        }
-                    } catch (e) {
-                        console.warn('⚠️ Error parseando fecha:', fechaRaw, e);
-                        fechaFormateada = fechaRaw;
-                    }
-                }
-                
-                return `
-                <tr style="border-bottom:1px solid #F1F5F9;">
-                    <td style="padding:10px; color:#4A5568; font-weight:500; white-space:nowrap;">
-                        ${fechaFormateada}
-                    </td>
-                    <td style="padding:10px; color:#2D3748;">${log.usuario || '-'}</td>
-                    <td style="padding:10px;">
-                        <span style="padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:500; background:${getAccionColor(log.accion)}; color:white;">
-                            ${formatAccion(log.accion)}
-                        </span>
-                    </td>
-                    <td style="padding:10px; color:#4A5568; font-size:0.9rem;">
-                        ${log.descripcion || '-'}
-                        ${log.monto_anterior !== undefined || log.monto_nuevo !== undefined ? 
-                            `<br><small style="color:#666;">$${log.monto_anterior !== undefined ? log.monto_anterior : '?'} → $${log.monto_nuevo !== undefined ? log.monto_nuevo : '?'}</small>` : ''}
-                    </td>
-                </tr>
-                `;
-            }).join('');
-        } else {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Sin registros de auditoría</td></tr>';
-        }
-    } catch (err) {
-        console.error('Error cargando log:', err);
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#C62828;">❌ Error al cargar historial</td></tr>';
-    }
-}
-
 // Helpers para formato visual
 function formatAccion(accion) {
     const map = {
@@ -4918,13 +4861,6 @@ function getAccionColor(accion) {
         'reembolso': '#607D8B'
     };
     return colors[accion] || '#9E9E9E';
-}
-
-// === CERRAR MODAL ===
-function cerrarModalLog(e) {
-    if (e.target.id === 'modalLogReserva' || e.target.closest('.modal-content button')) {
-        document.getElementById('modalLogReserva').style.display = 'none';
-    }
 }
 
 // === REGISTRAR LOG DESDE JS (para acciones futuras) ===
@@ -5719,13 +5655,22 @@ window.cerrarSubmodal = cerrarSubmodal;
     </div>
 
     <!-- === MODAL BITÁCORA DE RESERVA === -->
-    <div id="modalLogReserva" class="modal-overlay" style="display:none;" onclick="cerrarModalLog(event)">
+    <div id="modalBitacora" class="modal-overlay" style="
+            display:none;
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,0.65);
+            backdrop-filter: blur(4px);
+            z-index:9999;
+            justify-content:center;
+            align-items:center;
+        " onclick="cerrarBitacora(event)">
         <div class="modal-content" style="max-width:580px; padding:1.5rem; border-radius:16px;">
             
             <!-- Header -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
             <h3 style="margin:0; color:#AB47BC; font-size:1.1rem;">📋 Bitácora de Reserva #<span id="logReservaId"></span></h3>
-            <button onclick="cerrarModalLog(event)" 
+            <button onclick="if(event.target.id==='modalBitacora') cerrarBitacora()" 
                     style="background:none; border:none; font-size:1.3rem; color:#999; cursor:pointer; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;">
                 &times;
             </button>
@@ -5742,9 +5687,9 @@ window.cerrarSubmodal = cerrarSubmodal;
                     <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Detalle</th>
                 </tr>
                 </thead>
-                <tbody id="logReservaBody">
-                <tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Cargando historial...</td></tr>
-                </tbody>
+                <div id="contenidoBitacora" style="padding:10px;">
+                    <p style="text-align:center; color:#888;">Cargando historial...</p>
+                </div>
             </table>
             </div>
             
