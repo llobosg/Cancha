@@ -3,6 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/bitacora.php';
+require_once __DIR__ . '/../includes/reserva_mailer.php';
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
@@ -26,82 +27,66 @@ try {
         throw new Exception("Faltan datos obligatorios");
     }
 
-    // 🧠 TRANSACCIÓN (CRÍTICO)
     $pdo->beginTransaction();
 
-    // 1. Obtener reserva actual + deporte
-    $stmt_actual = $pdo->prepare("
-        SELECT r.*, c.id_deporte
+    // 🔎 RESERVA ORIGINAL COMPLETA
+    $stmt = $pdo->prepare("
+        SELECT r.*, c.id_deporte, c.nombre_cancha, d.nombre as recinto_nombre
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
+        JOIN recintos_deportivos d ON c.id_recinto = d.id_recinto
         WHERE r.id_reserva = ?
     ");
-    $stmt_actual->execute([$id_reserva]);
-    $reserva_actual = $stmt_actual->fetch();
+    $stmt->execute([$id_reserva]);
+    $original = $stmt->fetch();
 
-    if (!$reserva_actual) {
-        throw new Exception("Reserva no encontrada");
-    }
+    if (!$original) throw new Exception("Reserva no encontrada");
 
-    // 2. Obtener deporte destino
-    $stmt_destino = $pdo->prepare("SELECT id_deporte FROM canchas WHERE id_cancha = ?");
-    $stmt_destino->execute([$nueva_cancha_id]);
-    $deporte_destino = $stmt_destino->fetchColumn();
+    // 🔎 CANCHA DESTINO
+    $stmt = $pdo->prepare("
+        SELECT id_deporte, nombre_cancha 
+        FROM canchas 
+        WHERE id_cancha = ?
+    ");
+    $stmt->execute([$nueva_cancha_id]);
+    $cancha_destino = $stmt->fetch();
 
-    // 🚫 VALIDACIÓN PRO DE DEPORTE
-    if ($reserva_actual['id_deporte'] != $deporte_destino) {
+    if (!$cancha_destino) throw new Exception("Cancha destino no válida");
+
+    // 🚫 VALIDAR DEPORTE
+    if ($original['id_deporte'] != $cancha_destino['id_deporte']) {
         throw new Exception("❌ No puedes mover a una cancha de otro deporte");
     }
 
-    // 3. Calcular duración
-    $h_ini_actual = strtotime($reserva_actual['hora_inicio']);
-    $h_fin_actual = strtotime($reserva_actual['hora_fin']);
-    $duracion_minutos = ($h_fin_actual - $h_ini_actual) / 60;
+    // ⏱️ DURACIÓN
+    $duracion = (strtotime($original['hora_fin']) - strtotime($original['hora_inicio'])) / 60;
 
-    // 4. Calcular nuevo horario
     $nuevo_inicio = date('H:i:s', strtotime($nueva_fecha . ' ' . $nueva_hora_inicio));
-    $nuevo_fin = date('H:i:s', strtotime($nuevo_inicio . " +{$duracion_minutos} minutes"));
+    $nuevo_fin = date('H:i:s', strtotime($nuevo_inicio . " +{$duracion} minutes"));
 
-    // 5. Validar colisiones
-    $stmt_colision = $pdo->prepare("
+    // 🚫 COLISIÓN
+    $stmt = $pdo->prepare("
         SELECT COUNT(*) 
         FROM reservas 
         WHERE id_cancha = ? 
-        AND fecha = ? 
+        AND fecha = ?
         AND estado != 'cancelada'
         AND id_reserva != ?
         AND hora_inicio < ?
         AND hora_fin > ?
     ");
+    $stmt->execute([$nueva_cancha_id, $nueva_fecha, $id_reserva, $nuevo_fin, $nuevo_inicio]);
 
-    $stmt_colision->execute([
-        $nueva_cancha_id,
-        $nueva_fecha,
-        $id_reserva,
-        $nuevo_fin,
-        $nuevo_inicio
-    ]);
-
-    if ($stmt_colision->fetchColumn() > 0) {
-        throw new Exception("⚠️ Hay conflicto con otra reserva");
+    if ($stmt->fetchColumn() > 0) {
+        throw new Exception("⚠️ Conflicto con otra reserva");
     }
 
-    // 6. Guardar estado original (para bitácora)
-    $original = [
-        'fecha' => $reserva_actual['fecha'],
-        'hora_inicio' => $reserva_actual['hora_inicio'],
-        'hora_fin' => $reserva_actual['hora_fin'],
-        'id_cancha' => $reserva_actual['id_cancha']
-    ];
-
-    // 7. UPDATE
-    $stmt_update = $pdo->prepare("
+    // 📝 UPDATE
+    $pdo->prepare("
         UPDATE reservas 
         SET id_cancha = ?, fecha = ?, hora_inicio = ?, hora_fin = ?, updated_at = NOW()
         WHERE id_reserva = ?
-    ");
-
-    $stmt_update->execute([
+    ")->execute([
         $nueva_cancha_id,
         $nueva_fecha,
         $nuevo_inicio,
@@ -109,27 +94,39 @@ try {
         $id_reserva
     ]);
 
-    // 8. BITÁCORA (ANTES DEL COMMIT)
+    // 🧾 BITÁCORA (PRO)
     registrarLogReserva(
         $pdo,
         $id_reserva,
         'movida',
-        "📅 {$original['fecha']} {$original['hora_inicio']} → {$nueva_fecha} {$nuevo_inicio}",
-        $_SESSION['nombre_completo'] ?? 'Admin',
-        null,
-        null,
-        [
-            'antes' => $original,
-            'despues' => [
+        "🏟️ {$original['nombre_cancha']} → {$cancha_destino['nombre_cancha']} | 📅 {$original['fecha']} {$original['hora_inicio']} → {$nueva_fecha} {$nuevo_inicio}",
+        $_SESSION['nombre_completo'] ?? 'Admin'
+    );
+
+    // 📧 CORREO (CLAVE)
+    if (class_exists('BrevoMailer')) {
+        BrevoMailer::enviarActualizacionConDatos(
+            $pdo,
+            [
+                'id_reserva' => $id_reserva,
                 'fecha' => $nueva_fecha,
                 'hora_inicio' => $nuevo_inicio,
                 'hora_fin' => $nuevo_fin,
-                'id_cancha' => $nueva_cancha_id
+                'nombre_cancha' => $cancha_destino['nombre_cancha'],
+                'recinto_nombre' => $original['recinto_nombre'],
+                'email_cliente' => $original['email_cliente'],
+                'nombre_cliente' => $original['nombre_cliente'],
+                'id_deporte' => $original['id_deporte']
+            ],
+            [
+                'fecha' => $original['fecha'],
+                'hora_inicio' => $original['hora_inicio'],
+                'hora_fin' => $original['hora_fin'],
+                'nombre_cancha' => $original['nombre_cancha']
             ]
-        ]
-    );
+        );
+    }
 
-    // ✅ COMMIT FINAL
     $pdo->commit();
 
     echo json_encode([
