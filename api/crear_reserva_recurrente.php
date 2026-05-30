@@ -24,13 +24,24 @@ try {
     $id_cancha = !empty($_POST['id_cancha']) ? (int)$_POST['id_cancha'] : 0;
     $fecha_base = $_POST['fecha_base'] ?? '';
     $hora_inicio = $_POST['hora_inicio'] ?? '';
-    $hora_fin = $_POST['hora_fin'] ?? '';
+    $duracion_minutos = !empty($_POST['duracion_minutos']) ? (int)$_POST['duracion_minutos'] : 60;
+    
+    $hora_inicio_obj = DateTime::createFromFormat('H:i', $hora_inicio);
+    if (!$hora_inicio_obj) {
+        throw new Exception('Hora inicio inválida');
+    }
+    $hora_fin_obj = clone $hora_inicio_obj;
+    $hora_fin_obj->modify("+{$duracion_minutos} minutes");
+
+    $hora_fin = $hora_fin_obj->format('H:i');
     $tipo_patron = $_POST['tipo_patron'] ?? 'simple';
     $fecha_desde = $_POST['fecha_desde'] ?? $fecha_base;
     $fecha_hasta = $_POST['fecha_hasta'] ?? $fecha_base;
 
     $monto_recaudacion = !empty($_POST['monto_recaudacion']) ? (float)$_POST['monto_recaudacion'] : null;
     $jugadores_esperados = !empty($_POST['jugadores_esperados']) ? (int)$_POST['jugadores_esperados'] : null;
+
+    error_log("[DEBUG HORAS] Inicio: $hora_inicio | Duración: $duracion_minutos | Fin: $hora_fin");
 
     if (!$id_cancha || !$fecha_base || !$hora_inicio || !$hora_fin) {
         throw new Exception('Datos incompletos');

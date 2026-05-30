@@ -382,8 +382,6 @@ $deportes = [
             const duracionSeleccionada = document.querySelector('input[name="duracion"]:checked');
             const duracion = duracionSeleccionada ? parseInt(duracionSeleccionada.value) : 60;
 
-            const horaFin = calcularHoraFin(horaInicio, duracion);
-
             // 💰 MONTO CORRECTO
             let montoTexto = document.getElementById('precioDisplay')?.innerText || '0';
 
@@ -406,7 +404,7 @@ $deportes = [
             formData.append('id_cancha', idCancha);
             formData.append('fecha_base', fecha);
             formData.append('hora_inicio', horaInicio);
-            formData.append('hora_fin', horaFin);
+            formData.append('duracion_minutos', duracion); // 🔥 NUEVO
             formData.append('tipo_patron', 'simple');
             formData.append('monto_total', montoTotal);
 
@@ -455,6 +453,7 @@ $deportes = [
             setTimeout(()=>t.remove(), 300); 
         }, 3000);
     }
+
 </script>
 </body>
 </html>
