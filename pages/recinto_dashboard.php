@@ -1755,12 +1755,6 @@ td.bloqueado {
         display:flex;
         flex-direction:column;
     ">
-
-        <!-- HEADER -->
-        <div style="padding:1.5rem; border-bottom:1px solid #eee;">
-            <h2 style="margin:0; color:#071289;">📋 Detalle de Reserva</h2>
-        </div>
-
         <!-- CONTENIDO -->
         <div id="contenidoDetalle" style="
             padding:1.5rem;
@@ -5817,6 +5811,5 @@ window.cerrarSubmodal = cerrarSubmodal;
             </div>
         </div>
     </div>
-    
 </body>
 </html>
