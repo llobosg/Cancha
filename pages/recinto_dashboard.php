@@ -2418,25 +2418,105 @@ async function abrirDetalleDesdePlanilla(idReserva) {
 function abrirLogReserva(idReserva) {
     const modal = document.getElementById('modalBitacora');
     const container = document.getElementById('contenidoBitacora');
+    const titleId = document.getElementById('logReservaId');
 
-    // 🔥 ASEGURAR QUE QUEDE ARRIBA DE TODO
+    if (!modal || !container) return;
+
+    titleId.textContent = idReserva;
+
     modal.style.zIndex = 9999;
     modal.style.display = 'flex';
 
-    container.innerHTML = 'Cargando...';
+    container.innerHTML = '<p style="text-align:center;">Cargando historial...</p>';
 
-    fetch(`../api/bitacora_reserva.php?id_reserva=${idReserva}`)
-        .then(res => res.json())
+    fetch(`../api/get_log_reserva.php?id_reserva=${idReserva}`)
+        .then(async res => {
+            const text = await res.text();
+
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("❌ Respuesta NO es JSON:", text);
+                throw new Error("Respuesta inválida del servidor");
+            }
+        })
         .then(data => {
-            renderTimelineBitacora(data, container);
+            if (!data.success) {
+                throw new Error(data.error || 'Error al cargar bitácora');
+            }
+
+            renderTimelineBitacora(data.logs, container);
         })
         .catch(err => {
-            container.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            console.error("❌ Error bitácora:", err);
+            container.innerHTML = `<p style="color:red;">${err.message}</p>`;
         });
 }
 
 function cerrarBitacora() {
     document.getElementById('modalBitacora').style.display = 'none';
+}
+
+function renderTimelineBitacora(logs, container) {
+    if (!logs || logs.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#888;">Sin registros</p>';
+        return;
+    }
+
+    const getColor = (accion) => {
+        switch (accion) {
+            case 'creada': return '#4CAF50';
+            case 'movida': return '#2196F3';
+            case 'pago': return '#9C27B0';
+            case 'cancelada': return '#F44336';
+            default: return '#607D8B';
+        }
+    };
+
+    container.innerHTML = logs.map(log => {
+        const fecha = new Date(log.created_at.replace(' ', 'T'));
+
+        return `
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            
+            <div style="
+                width:10px;
+                height:10px;
+                border-radius:50%;
+                margin-top:6px;
+                background:${getColor(log.accion)};
+            "></div>
+
+            <div style="flex:1;">
+                <div style="font-size:0.8rem; color:#666;">
+                    ${fecha.toLocaleString('es-CL', {
+                        day:'2-digit',
+                        month:'short',
+                        hour:'2-digit',
+                        minute:'2-digit'
+                    })}
+                </div>
+
+                <div style="font-weight:bold;">
+                    ${log.usuario || 'Sistema'}
+                </div>
+
+                <div style="font-size:0.9rem; color:#333;">
+                    ${log.descripcion || '-'}
+                </div>
+
+                ${
+                    (log.monto_anterior || log.monto_nuevo)
+                    ? `<div style="font-size:0.8rem; color:#999;">
+                        💰 ${log.monto_anterior ?? '-'} → ${log.monto_nuevo ?? '-'}
+                       </div>`
+                    : ''
+                }
+            </div>
+
+        </div>
+        `;
+    }).join('');
 }
 
 // === FUNCIÓN AUXILIAR: Toggle menú 3 puntos (agregar junto a tus otras funciones) ===
@@ -5676,20 +5756,12 @@ window.cerrarSubmodal = cerrarSubmodal;
             </div>
             
             <!-- Tabla de logs -->
-            <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                <thead style="position:sticky; top:0; background:#F7FAFC; z-index:1;">
-                <tr>
-                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Fecha</th>
-                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Usuario</th>
-                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Acción</th>
-                    <th style="padding:10px; text-align:left; font-weight:600; color:#4A5568; border-bottom:2px solid #E2E8F0;">Detalle</th>
-                </tr>
-                </thead>
-                <div id="contenidoBitacora" style="padding:10px;">
+            <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px; padding:10px;">
+    
+                <div id="contenidoBitacora">
                     <p style="text-align:center; color:#888;">Cargando historial...</p>
                 </div>
-            </table>
+
             </div>
             
             <!-- Footer -->
