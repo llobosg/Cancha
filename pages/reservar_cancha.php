@@ -368,69 +368,111 @@ $deportes = [
     function cerrarModalReserva() { document.getElementById('modalReservaInteligente').style.display = 'none'; }
     
     async function confirmarReservaInteligente() {
-        if (!reservaActual) {
-            showToast('❌ No hay reserva seleccionada', 'error');
-            return;
-        }
-
-        // 1. Obtener duración
-        const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
-
-        // 2. Validación de horario de cierre (ejemplo: 23:00)
-        const horaCierre = "23:00"; 
-        const [hInicio, mInicio] = reservaActual.hora_inicio.split(':').map(Number);
-        const [hCierre, mCierre] = horaCierre.split(':').map(Number);
-        const finMinutos = (hInicio * 60 + mInicio) + duracion;
-        const cierreMinutos = hCierre * 60 + mCierre;
-
-        if (finMinutos > cierreMinutos) {
-            showToast('❌ Esta reserva termina después del horario de cierre', 'error');
-            return;
-        }
-
-        // 3. Calcular hora_fin
-        const fin = new Date(`${reservaActual.fecha}T${reservaActual.hora_inicio}:00`);
-        fin.setMinutes(fin.getMinutes() + duracion);
-        const horaFinStr = fin.toTimeString().substring(0,8);
-        
-        // 4. Preparar datos
-        const datos = {
-            id_cancha: reservaActual.id_cancha,
-            fecha_base: reservaActual.fecha,
-            hora_inicio: reservaActual.hora_inicio,
-            hora_fin: horaFinStr,
-            duracion_minutos: duracion,
-            tipo_patron: 'simple',
-            club_id: ''
-        };
-        
-        // 5. Enviar a API
         try {
-            const res = await fetch('../api/crear_reserva_recurrente.php', {
+            console.log("🚀 Iniciando confirmación de reserva...");
+
+            // 🔍 Obtener datos del modal
+            const fecha = document.getElementById('filtroFecha').value;
+            const horaInicio = window.horaSeleccionada;
+            const idCancha = window.canchaSeleccionada;
+
+            const duracionSeleccionada = document.querySelector('input[name="duracion"]:checked');
+            const duracion = duracionSeleccionada ? parseInt(duracionSeleccionada.value) : 60;
+
+            if (!fecha || !horaInicio || !idCancha) {
+                throw new Error("Datos incompletos para la reserva");
+            }
+
+            // 🧠 Calcular hora fin
+            const horaFin = calcularHoraFin(horaInicio, duracion);
+
+            // 💰 Obtener monto desde UI (ASEGÚRATE que este ID exista)
+            let montoTexto = document.getElementById('precioTotal')?.innerText || '0';
+
+            // 🔥 LIMPIAR MONTO (CLAVE)
+            let montoLimpio = montoTexto
+                .replace(/\$/g, '')
+                .replace(/\./g, '')
+                .replace(',', '.')
+                .trim();
+
+            let montoTotal = parseFloat(montoLimpio);
+
+            if (isNaN(montoTotal) || montoTotal <= 0) {
+                console.warn("⚠️ Monto inválido, se recalculará backend");
+                montoTotal = 0;
+            }
+
+            console.log("💰 Monto original:", montoTexto);
+            console.log("💰 Monto limpio:", montoTotal);
+
+            // 📦 FormData
+            const formData = new FormData();
+            formData.append('id_cancha', idCancha);
+            formData.append('fecha_base', fecha);
+            formData.append('hora_inicio', horaInicio);
+            formData.append('hora_fin', horaFin);
+            formData.append('tipo_patron', 'simple');
+            formData.append('monto_total', montoTotal);
+
+            // 🔍 DEBUG
+            console.log("📤 Enviando datos:");
+            for (let [key, value] of formData.entries()) {
+                console.log(`   ${key}:`, value);
+            }
+
+            // ⏱️ Timeout manual
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+
+            const response = await fetch('../api/crear_reserva_recurrente.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams(datos)
+                body: formData,
+                signal: controller.signal
             });
-            
-            const contentType = res.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await res.text();
-                console.error('❌ API devolvió HTML/Texto:', text.substring(0, 200));
-                throw new Error('Respuesta inválida del servidor');
+
+            clearTimeout(timeout);
+
+            // 🔴 PRIMERO LEER COMO TEXTO (clave para debug)
+            const rawText = await response.text();
+
+            console.log("📥 RESPUESTA CRUDA:");
+            console.log(rawText);
+
+            let data;
+
+            try {
+                data = JSON.parse(rawText);
+            } catch (parseError) {
+                console.error("❌ JSON inválido:", parseError);
+                throw new Error("Respuesta inválida del servidor");
             }
-            
-            const data = await res.json();
-            
-            if (data.success) {
-                showToast('✅ Reserva creada correctamente', 'success');
-                cerrarModalReserva();
-                aplicarFiltros(); // Recargar planilla
-            } else {
-                showToast('❌ ' + (data.message || 'Error al crear reserva'), 'error');
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Error al crear la reserva");
             }
-        } catch (err) {
-            console.error('❌ Error en confirmarReservaInteligente:', err);
-            showToast('❌ Error de conexión. Intenta nuevamente.', 'error');
+
+            console.log("✅ Reserva creada:", data);
+
+            mostrarToast("✅ Reserva creada correctamente", "success");
+
+            // 🔄 Recargar disponibilidad
+            await aplicarFiltros(true);
+
+            // ❌ Cerrar modal
+            cerrarModalReserva();
+
+        } catch (error) {
+
+            if (error.name === 'AbortError') {
+                console.error("⏱️ Timeout de la petición");
+                mostrarToast("⏱️ Tiempo de espera agotado", "error");
+                return;
+            }
+
+            console.error("❌ Error en confirmarReservaInteligente:", error);
+
+            mostrarToast("❌ " + error.message, "error");
         }
     }
 
