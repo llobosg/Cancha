@@ -23,8 +23,18 @@ function registrarLogReserva($pdo, $id_reserva, $accion, $descripcion, $usuario_
                 monto_nuevo, 
                 metadata,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
+
+        // 🧠 LIMPIEZA PRO
+        if ($monto_ant === null) {
+            $monto_ant = null;
+        }
+
+        if ($monto_ant === null && $monto_nue !== null) {
+            // NO mostrar transición si es creación
+            $monto_ant = null;
+        }
 
         $stmt->execute([
             $id_reserva,
