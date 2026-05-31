@@ -1517,6 +1517,27 @@ td.bloqueado {
 .modal-overlay {
     display:flex;
 }
+.slot-pasado {
+    background: repeating-linear-gradient(
+        45deg,
+        #f5f5f5,
+        #f5f5f5 6px,
+        #eeeeee 6px,
+        #eeeeee 12px
+    );
+    opacity: 0.7;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.slot-pasado::after {
+    content: "⏱️";
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 0.7rem;
+    opacity: 0.6;
+}
 </style>
 </head>
 <body>
@@ -2065,11 +2086,15 @@ function renderizarPlanilla(data, filtroEstado) {
             } else {
                 // === CELDA DISPONIBLE ===
                 const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
-                const esPasado = slotFecha <= ahora;
+                const esPasado = esSlotPasado(slot.label, fechaPlanillaActual);
                 
                 if (esPasado) {
-                    html += `<td class="estado-disponible" data-cancha-id="${cancha.id_cancha}" style="opacity:0.3; cursor:not-allowed;"></td>`;
-                } else {
+                        html += `<td 
+                            class="estado-disponible slot-pasado"
+                            data-cancha-id="${cancha.id_cancha}"
+                            title="Horario no disponible (ya pasó)"
+                        ></td>`;
+                    } else {
                     const esCompatible = !window.draggedDeporte || cancha.id_deporte == window.draggedDeporte;
 
                     if (!esCompatible) {
@@ -2104,7 +2129,13 @@ function renderizarPlanilla(data, filtroEstado) {
                                 data-cancha-id="${cancha.id_cancha}"
                                 ondragover="dragOver(event)"
                                 ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                                onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                                html += `<td class="estado-disponible drop-zone"
+                                    data-cancha-id="${cancha.id_cancha}"
+                                    data-hora="${slot.label}"   // 👈 ESTA LÍNEA ES CLAVE
+                                    ondragover="dragOver(event)"
+                                    ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                                    onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')">
+                                </td>`;
                         }
 
                         html += celdaHtml;
@@ -2125,6 +2156,18 @@ function renderizarPlanilla(data, filtroEstado) {
     
     console.log(`📈 [DEBUG] Resumen: ${celdasPintadas} reservas pintadas`);
 }
+
+// ⏱️ ACTUALIZACIÓN DINÁMICA DE SLOTS PASADOS
+setInterval(() => {
+    document.querySelectorAll('td.estado-disponible').forEach(td => {
+        const hora = td.getAttribute('data-hora');
+        if (!hora) return;
+
+        if (esSlotPasado(hora, fechaPlanillaActual)) {
+            td.classList.add('slot-pasado');
+        }
+    });
+}, 60000);
 
 // === 🎯 DRAG & DROP - VERSIÓN ROBUSTA ==
 let draggedReservaId = null;
@@ -2198,6 +2241,7 @@ function dragOver(e) {
         td.classList.add('drop-target');
         highlightCoordinates(td);
     }
+    if (td.classList.contains('slot-pasado')) return;
 }
 
 async function dropReserva(e, canchaId, hora) {
@@ -2211,6 +2255,10 @@ async function dropReserva(e, canchaId, hora) {
     if (targetCell) {
         targetCell.classList.add('drop-anim');
         setTimeout(() => targetCell.classList.remove('drop-anim'), 300);
+    }
+    if (e.target.closest('.slot-pasado')) {
+        showToast('⏱️ No puedes mover a un horario pasado', 'warning');
+        return;
     }
     limpiarHighlights();
 
@@ -5523,6 +5571,20 @@ function renderDetalleReserva(data) {
 
 function cerrarModalDetalle() {
     document.getElementById('modalDetalleReserva').style.display = 'none';
+}
+function esSlotPasado(slotHora, fechaPlanilla) {
+    const ahora = new Date();
+
+    const [h, m] = slotHora.split(':').map(Number);
+
+    const slotDate = new Date(`${fechaPlanilla}T${slotHora}:00`);
+
+    // Redondear la hora actual al bloque anterior
+    const ahoraRedondeado = new Date(ahora);
+    ahoraRedondeado.setMinutes(ahora.getMinutes() < 30 ? 0 : 30);
+    ahoraRedondeado.setSeconds(0);
+
+    return slotDate < ahoraRedondeado;
 }
 // Al final de tu bloque <script>, después de definir todas las funciones:
 window.verResultadosTV = verResultadosTV;
