@@ -21,8 +21,10 @@ if (!$fecha_inicio || !$fecha_fin) {
     $fecha_fin = date('Y-m-t');
 }
 
+$hoy = date('Y-m-d');
+
 try {
-    // === 1. INGRESOS DEL PERIODO (Pagados dentro del rango de fechas de la reserva) ===
+    // === 1. INGRESOS DEL PERIODO (Pagados dentro del rango) ===
     $stmt_ingresos = $pdo->prepare("
         SELECT COALESCE(SUM(r.monto_total), 0) as total
         FROM reservas r
@@ -36,6 +38,7 @@ try {
     $ingresos = $stmt_ingresos->fetchColumn();
 
     // === 2. SALDO PENDIENTE (Parciales dentro del rango) ===
+    // Mostramos lo que falta pagar de reservas que caen en este periodo y están parciales
     $stmt_pendiente = $pdo->prepare("
         SELECT COALESCE(SUM(r.monto_total - r.monto_recaudacion), 0) as total
         FROM reservas r
@@ -48,26 +51,23 @@ try {
     $stmt_pendiente->execute([$id_recinto, $fecha_inicio, $fecha_fin]);
     $pendiente = $stmt_pendiente->fetchColumn();
 
-    // === 3. EN RESERVA (Futuras no pagadas) ===
-    // Lógica: Reservas cuya fecha esté entre Hoy y Fecha Fin del filtro.
-    // Si el filtro es pasado, no hay reservas "futuras" en ese rango.
-    $hoy = date('Y-m-d');
-    
-    // Si la fecha fin del filtro es pasada, no hay reservas futuras en ese periodo
+    // === 3. EN RESERVA (Futuras no pagadas dentro del rango o futuras desde hoy) ===
+    // Si el filtro es pasado, no hay reservas futuras.
     if ($fecha_fin < $hoy) {
         $monto_reserva = 0;
         $cant_reserva = 0;
     } else {
-        // Usamos la mayor entre 'Hoy' y 'Fecha Inicio Filtro' para definir el inicio de la búsqueda
+        // Reservas futuras no pagadas que caen dentro del rango de visualización
+        // O desde hoy hasta el fin del filtro
         $inicio_busqueda = ($fecha_inicio > $hoy) ? $fecha_inicio : $hoy;
-
+        
         $stmt_reserva = $pdo->prepare("
             SELECT COALESCE(SUM(r.monto_total), 0) as total, COUNT(*) as cant
             FROM reservas r
             JOIN canchas c ON r.id_cancha = c.id_cancha
             WHERE c.id_recinto = ?
             AND r.fecha >= ? 
-            AND r.fecha <= ? -- Respetamos el límite superior del filtro
+            AND r.fecha <= ? 
             AND r.estado_pago IN ('pendiente', 'parcial')
             AND r.estado != 'cancelada'
         ");
@@ -77,31 +77,33 @@ try {
         $cant_reserva = $row_reserva['cant'];
     }
 
-    // === 4. DEUDA VENCIDA (Pasadas no pagadas antes del inicio del filtro) ===
-    // Lógica: Reservas con fecha anterior a la fecha de inicio del filtro que no están pagadas.
-    $fecha_limite_deuda = date('Y-m-d', strtotime($fecha_inicio . ' -1 day'));
+    // === 4. DEUDA VENCIDA (Corregida) ===
+    // Lógica: Todas las reservas con fecha ANTERIOR A HOY que no estén pagadas totalmente.
+    // Esto asegura que veas la deuda real acumulada, independientemente del filtro de ingresos.
+    // Si quisieras deuda "del periodo", cambiarías la fecha límite por $fecha_inicio, pero eso oculta deuda antigua.
     
     $stmt_deuda = $pdo->prepare("
         SELECT COALESCE(SUM(r.monto_total), 0) as total
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
         WHERE c.id_recinto = ?
-        AND r.fecha <= ?
+        AND r.fecha < ?  -- Fecha anterior a hoy
         AND r.estado_pago IN ('pendiente', 'parcial')
         AND r.estado != 'cancelada'
     ");
-    $stmt_deuda->execute([$id_recinto, $fecha_limite_deuda]);
+    $stmt_deuda->execute([$id_recinto, $hoy]);
     $deuda = $stmt_deuda->fetchColumn();
 
-    // Consultas adicionales para contar cantidades (opcional pero recomendado para performance)
-    // Cantidad Deuda Vencida
+    // Cantidad de deudas (opcional, para el footer)
     $stmt_count_deuda = $pdo->prepare("
         SELECT COUNT(*) FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE c.id_recinto = ? AND r.fecha <= ? 
-        AND r.estado_pago IN ('pendiente', 'parcial') AND r.estado != 'cancelada'
+        WHERE c.id_recinto = ? 
+        AND r.fecha < ?
+        AND r.estado_pago IN ('pendiente', 'parcial') 
+        AND r.estado != 'cancelada'
     ");
-    $stmt_count_deuda->execute([$id_recinto, $fecha_limite_deuda]);
+    $stmt_count_deuda->execute([$id_recinto, $hoy]);
     $cant_deuda = $stmt_count_deuda->fetchColumn();
 
     echo json_encode([
@@ -110,7 +112,7 @@ try {
             'ingresos' => floatval($ingresos),
             'pendiente' => floatval($pendiente),
             'reserva_monto' => floatval($monto_reserva),
-            'reserva_cant' => intval($cant_reserva), // ✅ FIX
+            'reserva_cant' => intval($cant_reserva),
             'deuda' => floatval($deuda),
             'deuda_cant' => intval($cant_deuda)
         ]
