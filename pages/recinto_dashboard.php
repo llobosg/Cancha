@@ -5802,9 +5802,13 @@ window.cerrarSubmodal = cerrarSubmodal;
             <!-- Tabla de logs -->
             <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px; padding:10px;">
     
-                <div id="contenidoBitacora">
-                    <p style="text-align:center; color:#888;">Cargando historial...</p>
-                </div>
+                 <tbody id="contenidoBitacora">
+                    <tr>
+                        <td colspan="4" style="padding:20px; text-align:center; color:#888;">
+                            Cargando historial...
+                        </td>
+                    </tr>
+                </tbody>
 
             </div>
             
