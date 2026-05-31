@@ -2497,8 +2497,8 @@ function renderTimelineBitacora(logs, container) {
                     })}
                 </div>
 
-                <div style="font-weight:bold;">
-                    ${log.usuario || 'Sistema'}
+                <div style="color: #374151; font-weight:600;">
+                    ${log.usuario}
                 </div>
 
                 <div style="font-size:0.9rem; color:#333;">
