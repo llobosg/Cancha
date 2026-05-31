@@ -1997,6 +1997,26 @@ function copiarLinkInvitacion() {
 document.addEventListener('click', e => {
     if (e.target.id === 'modalInvitacion') cerrarModalInvitacion();
 });
+
+function esSlotPasadoSocio(slotHora, fechaSeleccionada) {
+    const ahora = new Date();
+
+    const hoyStr = ahora.toISOString().split('T')[0];
+
+    // Si no es hoy → todo permitido
+    if (fechaSeleccionada !== hoyStr) return false;
+
+    const [h, m] = slotHora.split(':').map(Number);
+
+    const slotDate = new Date(ahora);
+    slotDate.setHours(h, m, 0, 0);
+
+    const ahoraRedondeado = new Date(ahora);
+    ahoraRedondeado.setMinutes(ahora.getMinutes() < 30 ? 0 : 30);
+    ahoraRedondeado.setSeconds(0);
+
+    return slotDate < ahoraRedondeado;
+}
 </script>
 <!-- === MODAL COMPARTIR INVITACIÓN === -->
 <div id="modalInvitacion" class="modal-overlay" style="display:none;">

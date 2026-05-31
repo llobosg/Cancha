@@ -142,6 +142,17 @@ $deportes = [
     .toast.show { transform: translateX(0); }
     .toast.success { background: #4CAF50; }
     .toast.error { background: #C62828; }
+    .slot-pasado {
+    background: repeating-linear-gradient(
+        45deg,
+        #eeeeee,
+        #eeeeee 6px,
+        #dddddd 6px,
+        #dddddd 12px
+    ) !important;
+    opacity: 0.6;
+    pointer-events: none;
+}
 </style>
 </head>
 <body>
@@ -319,7 +330,20 @@ $deportes = [
                     if (rowspan > 1) skipCells[idx] = rowspan - 1;
                     htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan*40}px;"><div style="font-weight:bold;">${res.hora_inicio.substring(0,5)} - ${res.hora_fin.substring(0,5)}</div><div style="font-size:0.65rem; opacity:0.9;">Ocupado</div></td>`;
                 } else {
-                    htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")'></td>`;
+                    const esPasado = esSlotPasado(timeLabel, fechaPlanillaActual);
+
+                    if (esPasado) {
+                        htmlBody += `<td 
+                            class="estado-disponible slot-pasado"
+                            title="Horario no disponible (ya pasó)"
+                            style="opacity:0.35; cursor:not-allowed;">
+                        </td>`;
+                    } else {
+                        htmlBody += `<td 
+                            class="estado-disponible"
+                            onclick='seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")'>
+                        </td>`;
+                    }
                 }
             });
             htmlBody += `</tr>`; horaActual += 30;
@@ -454,6 +478,22 @@ $deportes = [
         }, 3000);
     }
 
+function esSlotPasado(slotHora, fechaPlanilla) {
+    const ahora = new Date();
+
+    const slotDate = new Date(`${fechaPlanilla}T${slotHora}:00`);
+
+    // Solo bloquear si es HOY
+    const hoy = new Date().toISOString().split('T')[0];
+    if (fechaPlanilla !== hoy) return false;
+
+    // Redondeo al bloque anterior (00 o 30)
+    const ahoraRedondeado = new Date(ahora);
+    ahoraRedondeado.setMinutes(ahora.getMinutes() < 30 ? 0 : 30);
+    ahoraRedondeado.setSeconds(0);
+
+    return slotDate <= ahora;
+}
 </script>
 </body>
 </html>
