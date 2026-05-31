@@ -2084,43 +2084,56 @@ function renderizarPlanilla(data, filtroEstado) {
                 </td>`;
                 celdasPintadas++;
             } else {
-                    // === CELDA DISPONIBLE ===
-                    const esPasado = esSlotPasado(slot.label, fechaPlanillaActual);
-                    const esCompatible = !window.draggedDeporte || cancha.id_deporte == window.draggedDeporte;
-
-                    let celdaHtml = '';
-
-                    if (esPasado) {
-                        celdaHtml = `<td 
+                // === CELDA DISPONIBLE ===
+                const slotFecha = new Date(`${fechaPlanillaActual}T${slot.label}:00`);
+                const esPasado = esSlotPasado(slot.label, fechaPlanillaActual);
+                
+                if (esPasado) {
+                        html += `<td 
                             class="estado-disponible slot-pasado"
                             data-cancha-id="${cancha.id_cancha}"
-                            data-hora="${slot.label}"
-                            title="Horario no disponible (ya pasó)">
-                        </td>`;
+                            title="Horario no disponible (ya pasó)"
+                        ></td>`;
+                    } else {
+                    const esCompatible = !window.draggedDeporte || cancha.id_deporte == window.draggedDeporte;
 
-                    } else if (!esCompatible) {
-                        celdaHtml = `<td 
-                            class="estado-disponible bloqueado"
+                    if (!esCompatible) {
+                        html += `<td class="estado-disponible bloqueado"
                             data-cancha-id="${cancha.id_cancha}"
-                            data-hora="${slot.label}"
                             title="No disponible para este deporte"
                             style="background:#f5f5f5; cursor:not-allowed; position:relative;">
                             <div class="badge-bloqueado">🚫</div>
                         </td>`;
-
-                    } else {
-                        celdaHtml = `<td 
-                            class="estado-disponible drop-zone"
+                    } else if (esPasado) {
+                        html += `<td class="estado-disponible"
                             data-cancha-id="${cancha.id_cancha}"
-                            data-hora="${slot.label}"
-                            ondragover="dragOver(event)"
-                            ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
-                            onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')">
-                        </td>`;
-                    }
+                            style="opacity:0.3; cursor:not-allowed;"></td>`;
+                    } else {
+                        let celdaHtml = '';
 
-                    html += celdaHtml;
-                }
+                        const esCompatible = !window.draggedDeporte || cancha.id_deporte == window.draggedDeporte;
+
+                        if (!esCompatible) {
+                            celdaHtml = `<td class="estado-disponible bloqueado"
+                                data-cancha-id="${cancha.id_cancha}"
+                                title="No disponible para este deporte"
+                                style="background:#f5f5f5; cursor:not-allowed; position:relative;">
+                                <div class="badge-bloqueado">🚫</div>
+                            </td>`;
+                        } else if (esPasado) {
+                            celdaHtml = `<td class="estado-disponible"
+                                data-cancha-id="${cancha.id_cancha}"
+                                style="opacity:0.3; cursor:not-allowed;"></td>`;
+                        } else {
+                            celdaHtml = `<td class="estado-disponible drop-zone"
+                                data-cancha-id="${cancha.id_cancha}"
+                                ondragover="dragOver(event)"
+                                ondrop="dropReserva(event, '${cancha.id_cancha}', '${slot.label}')"
+                                onclick="abrirReservaAdmin('${cancha.id_cancha}', '${fechaPlanillaActual}', '${slot.label}')"></td>`;
+                        }
+
+                        html += celdaHtml;
+                    }
                 }
             }
         });
