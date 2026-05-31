@@ -2306,10 +2306,10 @@ async function abrirDetalleDesdePlanilla(idReserva) {
 
             // Menú 3 puntos (siempre visible para admin/asistente con permisos)
             const menuDotsHtml = `
-            <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
+            <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="event.stopPropagation(); toggleLogMenu(event, ${idReserva})">
                 <span style="font-size:1.4rem; color:#666;">⋮</span>
                 <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
-                    <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})"
+                    <div onclick="event.stopPropagation(); abrirLogReserva(${idReserva});"
                         style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;"
                         onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
                         📋 Ver bitácora
@@ -2416,6 +2416,7 @@ async function abrirDetalleDesdePlanilla(idReserva) {
 }
 
 function abrirLogReserva(idReserva) {
+    console.log("📋 abrirLogReserva ejecutado con ID:", idReserva);
     const modal = document.getElementById('modalBitacora');
     const container = document.getElementById('contenidoBitacora');
     const titleId = document.getElementById('logReservaId');
