@@ -2474,7 +2474,11 @@ function renderTimelineBitacora(logs, container) {
     };
 
     container.innerHTML = logs.map(log => {
-        const fecha = new Date(log.created_at.replace(' ', 'T'));
+        const [fechaStr, horaStr] = log.created_at.split(' ');
+        const [year, month, day] = fechaStr.split('-');
+        const [hh, mm] = horaStr.split(':');
+
+        const fecha = new Date(year, month - 1, day, hh, mm);
 
         return `
         <div style="display:flex; gap:10px; margin-bottom:15px;">
