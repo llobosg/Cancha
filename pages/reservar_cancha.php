@@ -196,6 +196,7 @@ $deportes = [
 </div>
 
 <!-- Modal Reserva Inteligente -->
+<!-- Modal -->
 <div id="modalReservaInteligente" class="modal-reserva-inteligente">
     <div class="modal-reserva-inteligente-content">
         <h3 style="margin-top:0; color:#071289; border-bottom: 1px solid #eee; padding-bottom: 10px;">Confirmar Reserva</h3>
@@ -204,6 +205,7 @@ $deportes = [
             <p id="modalInfo"></p>
         </div>
 
+        <!-- Selector de Duración -->
         <div id="opcionesDuracion" class="form-group" style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom: 15px;">
             <label style="font-weight:bold; color:#333; display:block; margin-bottom:8px;">⏱️ Duración:</label>
             <div class="duration-options">
@@ -222,8 +224,51 @@ $deportes = [
             </div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#E8F5E9; padding:10px 15px; border-radius:8px; border-left: 4px solid #4CAF50;">
-            <span style="font-weight:600; color:#2E7D32;">Total a Pagar:</span>
+        <!-- === SECCIÓN RESERVA RECURRENTE (COPIADA Y ADAPTADA DEL ADMIN) === -->
+        <div style="margin:1rem 0; padding-top:1rem; border-top:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
+                <input type="checkbox" id="isRecurrentSocio" style="width:18px; height:18px;" onchange="toggleRecurrentFieldsSocio(this.checked)">
+                <label for="isRecurrentSocio" style="font-weight:600; color:#333; cursor:pointer;">🔄 Crear reserva recurrente</label>
+            </div>
+            
+            <div id="recurrentFieldsSocio" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
+                <div class="form-group">
+                    <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
+                    <select id="repeatDaySocio" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                        <option value="1">Lunes</option>
+                        <option value="2">Martes</option>
+                        <option value="3">Miércoles</option>
+                        <option value="4">Jueves</option>
+                        <option value="5">Viernes</option>
+                        <option value="6">Sábado</option>
+                        <option value="0">Domingo</option>
+                    </select>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+                    <div class="form-group">
+                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
+                        <input type="date" id="startDateSocio" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
+                        <input type="date" id="endDateSocio" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                    </div>
+                </div>
+                
+                <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
+                    <span id="previewDatesSocio">Selecciona fechas para ver las reservas generadas</span>
+                </div>
+            </div>
+        </div>
+        <!-- === FIN SECCIÓN RECURRENTE === -->
+
+        <!-- Resumen de Precio Total (Se actualizará con JS si es recurrente) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#E8F5E9; padding:10px 15px; border-radius:8px; border-left: 4px solid #4CAF50; margin-bottom: 15px;">
+            <div>
+                <span style="font-weight:600; color:#2E7D32; display:block; font-size:0.9rem;">Total Estimado:</span>
+                <small id="detalleCantidadReservas" style="color:#555; font-size:0.8rem;">1 reserva de 60 min</small>
+            </div>
             <div id="precioDisplay" style="font-size:1.5rem; font-weight:bold; color:#2E7D32;">$0</div>
         </div>
 
@@ -494,6 +539,198 @@ function esSlotPasado(slotHora, fechaPlanilla) {
 
     return slotDate <= ahora;
 }
+// === LÓGICA RESERVAS RECURRENTES SOCIO ===
+
+// 1. Mostrar/Ocultar campos recurrentes
+function toggleRecurrentFieldsSocio(mostrar) {
+    const fields = document.getElementById('recurrentFieldsSocio');
+    if (fields) {
+        fields.style.display = mostrar ? 'block' : 'none';
+        if (mostrar) updatePreviewDatesSocio();
+    }
+}
+
+// 2. Generar fechas y actualizar preview
+function updatePreviewDatesSocio() {
+    const day = parseInt(document.getElementById('repeatDaySocio')?.value);
+    const start = document.getElementById('startDateSocio')?.value;
+    const end = document.getElementById('endDateSocio')?.value;
+    const preview = document.getElementById('previewDatesSocio');
+    
+    // Usar la fecha base seleccionada inicialmente si no hay start date explícito
+    const fechaBase = reservaActual ? reservaActual.fecha : null;
+
+    if (!day || !start || !end || isNaN(day)) {
+        if (preview) preview.textContent = 'Selecciona rango de fechas';
+        return;
+    }
+
+    const dates = generateRecurringDates(start, end, day);
+    const count = dates.length;
+    
+    if (!preview) return;
+
+    if (count === 0) {
+        preview.textContent = '❌ No hay fechas válidas en este rango';
+        preview.style.color = '#C62828';
+    } else {
+        preview.textContent = `✅ Se generarán ${count} reservas`;
+        preview.style.color = '#2E7D32';
+    }
+    
+    // Actualizar el precio total en tiempo real
+    actualizarPrecioTotalRecurrencia(count);
+}
+
+// 3. Calcular precio total basado en cantidad de reservas
+function actualizarPrecioTotalRecurrencia(cantidad) {
+    if (!reservaActual) return;
+    
+    const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2;
+    
+    const precioUnitario = Math.round(parseFloat(reservaActual.valor_arriendo) * factor);
+    const total = precioUnitario * cantidad;
+    
+    document.getElementById('precioDisplay').textContent = '$' + total.toLocaleString('es-CL');
+    document.getElementById('detalleCantidadReservas').textContent = `${cantidad} reserva${cantidad > 1 ? 's' : ''} de ${duracion} min`;
+}
+
+// 4. Generador de fechas (Copiado del Admin)
+function generateRecurringDates(startDate, endDate, dayOfWeek) {
+    const dates = [];
+    let current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    
+    while (current <= end) {
+        if (current.getDay() === dayOfWeek) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+// 5. Modificar confirmarReservaInteligente para soportar recurrencia
+async function confirmarReservaInteligente() {
+    try {
+        console.log("🚀 Iniciando confirmación...");
+        if (!reservaActual) throw new Error("No hay reserva seleccionada");
+
+        const isRecurrent = document.getElementById('isRecurrentSocio')?.checked;
+        const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
+        
+        // Calcular monto unitario correcto
+        let factor = 1;
+        if (duracion == 30) factor = 0.5;
+        else if (duracion == 90) factor = 1.5;
+        else if (duracion == 120) factor = 2;
+        const montoUnitario = Math.round(parseFloat(reservaActual.valor_arriendo) * factor);
+
+        if (isRecurrent) {
+            // === FLUJO RECURRENTE ===
+            const day = parseInt(document.getElementById('repeatDaySocio')?.value);
+            const sDate = document.getElementById('startDateSocio')?.value;
+            const eDate = document.getElementById('endDateSocio')?.value;
+
+            if (!day || !sDate || !eDate) {
+                showToast('❌ Complete día de repetición y fechas', 'error');
+                return;
+            }
+
+            const payload = {
+                action: 'create_recurrent', // Asegúrate que tu API soporte esta acción o usa la lógica de loop
+                id_cancha: reservaActual.id_cancha,
+                hora_inicio: reservaActual.hora_inicio,
+                // Calcular hora fin basada en duración
+                hora_fin: calcularHoraFin(reservaActual.hora_inicio, duracion),
+                id_socio: <?= $id_socio ?>, // ID del socio logueado
+                repeat_day: day,
+                start_date: sDate,
+                end_date: eDate,
+                monto_total: montoUnitario, // Enviamos el valor unitario calculado
+                duracion_bloque: duracion
+            };
+
+            // Nota: Si tu API actual no tiene 'create_recurrent', puedes usar un loop en JS llamando a la API simple,
+            // pero lo ideal es que la API backend lo haga. Asumiremos que usas la misma API que el admin.
+            // Si la API del admin es 'reserva_recurrente.php', úsala aquí.
+            
+            const res = await fetch('../api/reserva_recurrente.php', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                showToast(`✅ ${data.created} reservas creadas exitosamente`, 'success');
+                cerrarModalReserva();
+                aplicarFiltros(true); // Recargar planilla
+            } else {
+                showToast('❌ ' + (data.message || 'Error al crear reservas'), 'error');
+            }
+
+        } else {
+            // === FLUJO SIMPLE (EXISTENTE) ===
+            const [h,m] = reservaActual.hora_inicio.split(':').map(Number);
+            const fin = new Date(`${reservaActual.fecha}T${reservaActual.hora_inicio}:00`);
+            fin.setMinutes(fin.getMinutes() + duracion);
+            const horaFinStr = fin.toTimeString().substring(0,8);
+            
+            const datos = {
+                id_cancha: reservaActual.id_cancha,
+                fecha_base: reservaActual.fecha,
+                hora_inicio: reservaActual.hora_inicio,
+                hora_fin: horaFinStr,
+                duracion_minutos: duracion,
+                tipo_patron: 'simple',
+                club_id: '',
+                monto_total: montoUnitario // Importante enviar el monto calculado
+            };
+            
+            const res = await fetch('../api/crear_reserva_recurrente.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(datos)
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                showToast('✅ Reserva creada correctamente', 'success');
+                cerrarModalReserva();
+                aplicarFiltros(true);
+            } else {
+                showToast('❌ ' + (data.message || 'Error al crear reserva'), 'error');
+            }
+        }
+    } catch (error) {
+        console.error(error);
+        showToast('❌ ' + error.message, 'error');
+    }
+}
+
+// Helper para calcular hora fin
+function calcularHoraFin(horaInicio, minutos) {
+    const [h, m] = horaInicio.split(':').map(Number);
+    const fin = new Date();
+    fin.setHours(h, m + minutos, 0, 0);
+    return `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+}
+
+// Listener para actualizar precio cuando cambia duración en modo recurrente
+document.querySelectorAll('input[name="duracion"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        if (document.getElementById('isRecurrentSocio')?.checked) {
+            updatePreviewDatesSocio(); // Recalcula total basado en nueva duración
+        } else {
+            actualizarPrecioModal(parseInt(radio.value));
+        }
+    });
+});
 </script>
 </body>
 </html>

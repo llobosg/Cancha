@@ -108,16 +108,52 @@ try {
             
             // === 2. INSERTAR RESERVA CON $id_socio_final YA DEFINIDO ===
             $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
-            $stmt->execute([$id_cancha, $id_socio_final, $fecha, $hora_inicio, $hora_fin, $monto_total, $jugadores]);
-            
+            $stmt->execute([
+                $id_cancha,
+                $id_socio_final,
+                $fecha,
+                $hora_inicio,
+                $hora_fin,
+                $monto_total,
+                $jugadores
+            ]);
+
+            $id_reserva_creada = $pdo->lastInsertId();
+
+            // === LOG BITÁCORA: RESERVA RECURRENTE ===
+            if (function_exists('registrarLogReserva')) {
+
+                $descripcion = "🔁 Reserva recurrente creada\n";
+                $descripcion .= "📅 Desde: " . date('d-m-Y', strtotime($start_date)) . "\n";
+                $descripcion .= "📅 Hasta: " . date('d-m-Y', strtotime($end_date)) . "\n";
+                $descripcion .= "📊 Total eventos: " . count($fechas_disponibles) . "\n";
+                $descripcion .= "💰 Monto por reserva: $" . number_format($monto_total, 0, ',', '.');
+
+                registrarLogReserva(
+                    $pdo,
+                    $id_reserva_creada,
+                    'creada_recurrente',
+                    $descripcion,
+                    $_SESSION['recinto_usuario'] ?? 'Sistema',
+                    null,
+                    $monto_total,
+                    json_encode([
+                        'tipo' => 'recurrente',
+                        'fecha_desde' => $start_date,
+                        'fecha_hasta' => $end_date,
+                        'total_eventos' => count($fechas_disponibles)
+                    ])
+                );
+            }
+
             $reservas_creadas[] = [
                 'fecha' => $fecha,
                 'dia_nombre' => $item['dia_nombre'],
                 'dia_num' => $item['dia_num'],
                 'hora' => substr($hora_inicio,0,5) . '-' . substr($hora_fin,0,5),
-                'id_reserva' => $pdo->lastInsertId()
+                'id_reserva' => $id_reserva_creada
             ];
-            $created++;
+
         } catch (Exception $e) {
             $skipped++;
             error_log("[Recurrente] Error en $fecha: " . $e->getMessage());
