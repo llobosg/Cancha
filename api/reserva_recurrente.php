@@ -4,11 +4,6 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/reserva_mailer.php'; // ← BrevoMailer
 
-if (!isset($_SESSION['id_recinto'])) {
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
-    exit;
-}
-
 $input = json_decode(file_get_contents('php://input'), true);
 $id_recinto = (int)$_SESSION['id_recinto'];
 
