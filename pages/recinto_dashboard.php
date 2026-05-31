@@ -2306,10 +2306,10 @@ async function abrirDetalleDesdePlanilla(idReserva) {
 
             // Menú 3 puntos (siempre visible para admin/asistente con permisos)
             const menuDotsHtml = `
-            <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="event.stopPropagation(); toggleLogMenu(event, ${idReserva})">
+            <div style="position:relative; cursor:pointer; padding:4px; margin-right:8px; display:flex; align-items:center;" onclick="toggleLogMenu(event, ${idReserva})">
                 <span style="font-size:1.4rem; color:#666;">⋮</span>
                 <div id="logMenu_${idReserva}" style="display:none; position:absolute; top:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:20; min-width:160px; border:1px solid #eee; overflow:hidden; margin-top:4px;">
-                    <div onclick="event.stopPropagation(); abrirLogReserva(${idReserva});"
+                    <div onclick="abrirLogReserva(${idReserva}); toggleLogMenu(event, ${idReserva})"
                         style="padding:10px 14px; cursor:pointer; font-size:0.9rem; color:#333; display:flex; align-items:center; gap:8px; transition:background 0.2s;"
                         onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
                         📋 Ver bitácora
@@ -2416,7 +2416,6 @@ async function abrirDetalleDesdePlanilla(idReserva) {
 }
 
 function abrirLogReserva(idReserva) {
-    console.log("📋 abrirLogReserva ejecutado con ID:", idReserva);
     const modal = document.getElementById('modalBitacora');
     const container = document.getElementById('contenidoBitacora');
     const titleId = document.getElementById('logReservaId');
@@ -2458,109 +2457,66 @@ function cerrarBitacora() {
     document.getElementById('modalBitacora').style.display = 'none';
 }
 
-function renderTimelineBitacora(data, container) {
-    if (!data.success || !data.logs.length) {
-        container.innerHTML = `
-            <p style="text-align:center; color:#888;">
-                Sin registros de auditoría
-            </p>`;
+function renderTimelineBitacora(logs, container) {
+    if (!logs || logs.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#888;">Sin registros</p>';
         return;
     }
 
-    const html = data.logs.map(log => {
-
-        // 🎯 FORMATEO FECHA
-        let fechaFormateada = '-';
-        if (log.created_at) {
-            const fecha = new Date(log.created_at.replace(' ', 'T'));
-            fechaFormateada = fecha.toLocaleString('es-CL', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/Santiago'
-            });
+    const getColor = (accion) => {
+        switch (accion) {
+            case 'creada': return '#4CAF50';
+            case 'movida': return '#2196F3';
+            case 'pago': return '#9C27B0';
+            case 'cancelada': return '#F44336';
+            default: return '#607D8B';
         }
+    };
 
-        const color = getAccionColor(log.accion);
-        const accion = formatAccion(log.accion);
-        const usuario = log.usuario || 'Sistema';
+    container.innerHTML = logs.map(log => {
+        const fecha = new Date(log.created_at.replace(' ', 'T'));
 
         return `
-        <div style="display:flex; gap:12px; margin-bottom:16px;">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
             
-            <!-- BULLET -->
             <div style="
                 width:10px;
                 height:10px;
-                margin-top:6px;
                 border-radius:50%;
-                background:${color};
-                flex-shrink:0;
+                margin-top:6px;
+                background:${getColor(log.accion)};
             "></div>
 
-            <!-- CONTENIDO -->
             <div style="flex:1;">
-                
-                <!-- LÍNEA PRINCIPAL -->
-                <div style="
-                    font-size:0.85rem;
-                    color:#666;
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    flex-wrap:wrap;
-                ">
-                    <span>${fechaFormateada}</span>
-                    <span style="color:#ccc;">•</span>
-                    <span style="
-                        background:${color};
-                        color:white;
-                        padding:2px 6px;
-                        border-radius:6px;
-                        font-size:0.7rem;
-                        font-weight:bold;
-                    ">
-                        ${accion}
-                    </span>
-                    <span style="color:#ccc;">•</span>
-
-                    <!-- 👤 USUARIO (NUEVO) -->
-                    <span style="font-weight:500; color:#333;">
-                        👤 ${usuario}
-                    </span>
+                <div style="font-size:0.8rem; color:#666;">
+                    ${fecha.toLocaleString('es-CL', {
+                        day:'2-digit',
+                        month:'short',
+                        hour:'2-digit',
+                        minute:'2-digit'
+                    })}
                 </div>
 
-                <!-- DESCRIPCIÓN -->
-                <div style="
-                    font-size:0.9rem;
-                    color:#333;
-                    margin-top:4px;
-                ">
+                <div style="font-weight:bold;">
+                    ${log.usuario || 'Sistema'}
+                </div>
+
+                <div style="font-size:0.9rem; color:#333;">
                     ${log.descripcion || '-'}
                 </div>
 
-                <!-- MONTOS (solo si existen) -->
                 ${
-                    (log.monto_anterior !== null || log.monto_nuevo !== null)
-                    ? `
-                    <div style="
-                        font-size:0.75rem;
-                        color:#888;
-                        margin-top:2px;
-                    ">
-                        💰 $${log.monto_anterior ?? '?'} → $${log.monto_nuevo ?? '?'}
-                    </div>
-                    `
+                    (log.monto_anterior || log.monto_nuevo)
+                    ? `<div style="font-size:0.8rem; color:#999;">
+                        💰 ${log.monto_anterior ?? '-'} → ${log.monto_nuevo ?? '-'}
+                       </div>`
                     : ''
                 }
-
             </div>
+
         </div>
         `;
     }).join('');
-
-    container.innerHTML = html;
 }
 
 // === FUNCIÓN AUXILIAR: Toggle menú 3 puntos (agregar junto a tus otras funciones) ===
@@ -5803,13 +5759,9 @@ window.cerrarSubmodal = cerrarSubmodal;
             <!-- Tabla de logs -->
             <div style="max-height:400px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:10px; padding:10px;">
     
-                 <tbody id="contenidoBitacora">
-                    <tr>
-                        <td colspan="4" style="padding:20px; text-align:center; color:#888;">
-                            Cargando historial...
-                        </td>
-                    </tr>
-                </tbody>
+                <div id="contenidoBitacora">
+                    <p style="text-align:center; color:#888;">Cargando historial...</p>
+                </div>
 
             </div>
             
