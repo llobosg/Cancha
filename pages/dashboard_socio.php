@@ -937,7 +937,7 @@ $js_vars = [
         </div>
     </div>
 
-    <?php
+<?php
 // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (FILTRADO FUTURO) ===
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
@@ -965,54 +965,57 @@ if (isset($_SESSION['id_socio'])) {
     // Condiciones comunes
     $where_reservas[] = "r.estado != 'cancelada'";
 
+    // === CONSULTA UNIFICADA: Reservas del Socio O de su Club ===
     $sql_reservas = "
-        SELECT r.id_reserva, r.id_socio, r.fecha, r.hora_inicio, r.hora_fin, r.monto_total, r.estado_pago, r.jugadores_esperados, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
+        SELECT r.id_reserva, r.id_socio, r.id_club, r.fecha, r.hora_inicio, r.hora_fin, 
+               r.monto_total, r.estado_pago, r.jugadores_esperados, r.nombre_cliente,
+               c.nombre_cancha, c.id_deporte, 'reserva' as tipo
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE r.id_socio = ? 
+        WHERE r.estado != 'cancelada'
         AND r.fecha >= CURDATE()
-        AND r.estado != 'cancelada'
+        AND (
+            r.id_socio = :id_socio 
+            OR (r.id_club IS NOT NULL AND r.id_club = :id_club)
+        )
         ORDER BY r.fecha ASC, r.hora_inicio ASC
     ";
 
     $stmt_reservas = $pdo->prepare($sql_reservas);
-    $stmt_reservas->execute($params_reservas);
+    $stmt_reservas->execute([
+        ':id_socio' => $id_socio,
+        ':id_club' => $club_del_socio ?: 0 // Si no tiene club, pasa 0 (no afectará el OR)
+    ]);
     $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
-    
-    foreach ($reservas as $r) {
-        // Para reservas, los "cupos" suelen ser fijos o definidos por jugadores_esperados
-        // Si no existe la tabla 'inscritos' para reservas simples, asumimos que el socio YA está inscrito por ser el creador.
-        
-        if (empty($todos_eventos)) {
-            $deporte_lower = strtolower($r['id_deporte']);
-            if ($deporte_lower === 'futbol' || $deporte_lower === 'futbolito') {
-                $primer_evento_es_futbol = true;
-            }
-        }
 
-        // Calcular cupos ocupados (si usas tabla inscritos) o asumir 1 si es reserva directa
+    // Debug temporal
+    error_log("[DEBUG SOCIO] Reservas encontradas para ID $id_socio (Club: $club_del_socio): " . count($reservas_db));
+    
+    foreach ($reservas_db as $r) {
+        // Calcular cupos ocupados (si usas tabla inscritos) o asumir 1
         $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
         $stmt_inscritos->execute([$r['id_reserva']]);
         $inscritos_count = $stmt_inscritos->fetchColumn();
         
-        // Si no usa sistema de inscritos, usamos jugadores_esperados o default
-        $cupos_total = $r['jugadores_esperados'] ?? 4; 
-        $cupos_ocupados = $inscritos_count > 0 ? $inscritos_count : 1; // Al menos 1 (el dueño)
+        // Si no hay inscritos en tabla auxiliar, asumimos que el dueño cuenta como 1
+        $cupos_ocupados = $inscritos_count > 0 ? $inscritos_count : 1;
+        $cupos_total = intval($r['jugadores_esperados'] ?? 4); // Default 4 si es null
 
-       $todos_eventos[] = [
+        $todos_eventos[] = [
             'tipo' => 'reserva',
             'id' => $r['id_reserva'],
-            'id_socio_reserva' => $r['id_socio'],
+            'id_socio_reserva' => $r['id_socio'], // Clave para saber si es dueño
             'fecha' => $r['fecha'],
-            'hora_inicio' => $r['hora_inicio'],
-            'hora_fin' => $r['hora_fin'],
+            'hora_inicio' => $r['hora_inicio'],   // Clave para la hora
+            'hora_fin' => $r['hora_fin'],         // Clave para la hora
             'monto' => $r['monto_total'],
             'estado_pago' => $r['estado_pago'],
-            'cupos_total' => $r['jugadores_esperados'] ?? 4,
-            'cupos_ocupados' => 1,
-            'titulo' => htmlspecialchars($r['nombre_cancha']),
-            'deporte' => strtoupper($r['id_deporte']),
-            'icono' => '🏟️'
+            'cupos_total' => $cupos_total,
+            'cupos_ocupados' => $cupos_ocupados,
+            'titulo' => htmlspecialchars($r['nombre_cancha'] ?? 'Cancha'),
+            'deporte' => strtoupper($r['id_deporte'] ?? 'DEPORTE'),
+            'icono' => '🏟️',
+            'subtitulo' => '' // Lo calcularemos en el HTML para evitar errores aquí
         ];
     }
 
