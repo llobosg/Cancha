@@ -998,8 +998,11 @@ if (isset($_SESSION['id_socio'])) {
         ':id_club' => $club_del_socio ?: 0 // Si no tiene club, pasa 0
     ]);
 
+    // ✅ FIX: obtener resultados correctamente
+    $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
+
     // Debug temporal
-    error_log("[DEBUG SOCIO] Reservas encontradas para ID $id_socio (Club: $club_del_socio): " . count($reservas_db));
+    error_log("[DEBUG SOCIO] Reservas encontradas para ID $id_socio (Club: $club_del_socio): " . count($reservas);
     
     foreach ($reservas as $r) {
         // Calcular cupos ocupados (si usas tabla inscritos) o asumir 1
