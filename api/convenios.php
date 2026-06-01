@@ -7,45 +7,24 @@ try {
     
     // 🔍 RESOLUCIÓN INTELIGENTE DE RUTAS (Compatible Railway/Nixpacks)
     $docRoot    = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
-    $projectRoot = dirname($docRoot);
-    
-    // Buscar autoload.php
-    $autoload = file_exists("$projectRoot/vendor/autoload.php") 
-              ? "$projectRoot/vendor/autoload.php" 
-              : "$docRoot/vendor/autoload.php";
-              
-    // Buscar config.php
-    $config   = file_exists("$projectRoot/config.php") 
-              ? "$projectRoot/config.php" 
-              : "$docRoot/config.php";
-              
-    // Log de diagnóstico
-    error_log("🔍 [API Convenios] Project Root: $projectRoot | Doc Root: $docRoot");
-    error_log("📦 [API Convenios] Autoload: " . (file_exists($autoload) ? "✅" : "❌ Falta"));
-    error_log("⚙️ [API Convenios] Config: " . (file_exists($config) ? "✅" : "❌ Falta"));
-    
-    if (!file_exists($autoload)) throw new Exception("vendor/autoload.php no encontrado. Verifica composer install.");
-    if (!file_exists($config))   throw new Exception("config.php no encontrado. Verifica que esté en /app/ o /app/public/");
-    
-    require_once $autoload;
-    require_once $config;
+    $projectRoot = dirname($docRoot);<?php
+// api/convenios.php
+header('Content-Type: application/json; charset=utf-8');
+while (ob_get_level()) ob_end_clean();
 
-    // ✅ VERIFICACIÓN CRÍTICA: Asegurar que $pdo existe
+try {
+    // ✅ FORZAR USO DE includes/config.php PARA CONSISTENCIA
+    require_once __DIR__ . '/../includes/config.php';
+
+    // Verificar que $pdo exista
     if (!isset($pdo) || !$pdo instanceof PDO) {
-        // Si config.php usa una clase o función para conectar, llámala aquí.
-        // Ejemplo común: $pdo = getPDOConnection(); o $pdo = Database::connect();
-        // Si no sabes cómo se conecta tu config.php, revisa ese archivo.
-        
-        // Intento de fallback común si config.php falla silenciosamente:
-        throw new Exception("La conexión PDO (\$pdo) no se inicializó desde config.php. Revisa includes/config.php");
+        throw new Exception('Error de conexión a BD: $pdo no está definido.');
     }
 
     if (session_status() === PHP_SESSION_NONE) session_start();
     
-    // Validación de sesión (Ajustada a tu estructura de sesiones de Admin/Recinto)
-    // Nota: En recinto_dashboard usas $_SESSION['id_recinto'] y $_SESSION['recinto_rol']
     if (!isset($_SESSION['id_recinto'])) {
-        throw new Exception('No autorizado. Sesión de recinto inválida.', 401);
+        throw new Exception('No autorizado. Sesión inválida.', 401);
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
