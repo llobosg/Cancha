@@ -1150,113 +1150,111 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                 } elseif ($evento['tipo'] === 'torneo') {
                     $es_dueno_o_inscrito = true; // Si aparece en la lista de torneos, ya es parte de la pareja
                 }
-            ?>
-                
-                <?php if ($evento['tipo'] === 'reserva'): ?>
-                    <!-- FICHA DE RESERVA -->
-                    <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column;">
-                        
-                        <!-- MENÚ 3 PUNTOS (SOLO SI APLICA - Primera ficha de Fútbol) -->
-                        <?php if ($mostrar_menu_3_puntos): ?>
-                            <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $evento['id'] ?>)" style="position:absolute; top:10px; right:10px; z-index:10; background:none; border:none; font-size:1.2rem; cursor:pointer; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.3);">⋮</button>
-
-                            <div id="heroMenu_<?= $evento['id'] ?>" class="menu-dropdown hero-menu" 
-                                style="display:none; position:absolute; top:40px; right:10px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); border:1px solid #eee;">
-                                
-                                <div class="menu-item" onclick="pasoEvento(<?= $evento['id'] ?>)">Paso</div>
-                                
-                                <?php if (!empty($deuda_mas_vigente) && $evento['id'] == $primer_id_reserva): ?>
-                                <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
-                                <?php endif; ?>
-                                
-                                <?php if ($es_responsable && $evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
-                                <div class="menu-item" onclick="armarEquiposIA(<?= $evento['id'] ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-
-                        <!-- Header de la Ficha -->
-                        <div style="background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <span style="font-size:1.5rem;"><?= $evento['icono'] ?></span>
-                                <span style="font-weight:bold; color:#071289; margin-left:0.5rem; font-size:1.1rem;"><?= $evento['titulo'] ?></span>
-                            </div>
-                            <span style="background:#E3F2FD; color:#1565C0; padding:4px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold;"><?= $evento['deporte'] ?></span>
-                        </div>
-                        
-                        <!-- Cuerpo de la Ficha -->
-                        <div style="padding:1rem;">
-                            <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
-                                📅 <?= $evento['subtitulo'] ?>
-                            </div>
+            ?>    
+            <?php if ($evento['tipo'] === 'reserva'): ?>
+                        <!-- FICHA DE RESERVA -->
+                        <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column;">
                             
-                            <!-- Info Cupos y Pago -->
-                            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:0.75rem; border-radius:10px; margin-bottom:1rem;">
-                                <div style="text-align:left;">
-                                    <div style="font-size:0.8rem; color:#888;">Cupos</div>
-                                    <div style="font-weight:bold; color:#333;"><?= $evento['cupos_ocupados'] ?>/<?= $evento['cupos_total'] ?></div>
-                                </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:0.8rem; color:#888;">Estado</div>
-                                    <div style="font-weight:bold; color:<?= $evento['estado_pago'] == 'pagado' ? '#2E7D32' : '#F57F17' ?>;">
-                                        <?= ucfirst($evento['estado_pago']) ?>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- MENÚ 3 PUNTOS (SOLO SI APLICA - Primera ficha de Fútbol) -->
+                            <?php if ($mostrar_menu_3_puntos): ?>
+                                <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $evento['id'] ?>)" style="position:absolute; top:10px; right:10px; z-index:10; background:none; border:none; font-size:1.2rem; cursor:pointer; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.3);">⋮</button>
 
-                            <!-- Botones de Acción Dinámicos según inscripción -->
-                            <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                                
-                                <?php if ($es_dueno_o_inscrito): ?>
-                                    <!-- === CASO: USUARIO INSCRITO/DUEÑO === -->
+                                <div id="heroMenu_<?= $evento['id'] ?>" class="menu-dropdown hero-menu" 
+                                    style="display:none; position:absolute; top:40px; right:10px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); border:1px solid #eee;">
                                     
-                                    <!-- Botón Bajarme (Opcional, cuidado con borrar reservas propias) -->
-                                    <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828; transition:all 0.2s;" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='#FFF'">
-                                        ❌ Bajarme del partido
-                                    </button>
+                                    <div class="menu-item" onclick="pasoEvento(<?= $evento['id'] ?>)">Paso</div>
                                     
-                                    <!-- Botón Ver Inscritos -->
-                                    <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                                        👁️ Ver Inscritos
-                                    </button>
-
-                                <?php else: ?>
-                                    <!-- === CASO: USUARIO NO INSCRITO === -->
-                                    <?php 
-                                        $es_hoy = ($evento['fecha'] === date('Y-m-d'));
-                                        $hora_actual = (int)date('H');
-                                        $puede_inscribirse = true; // Ajusta si quieres restringir horarios
-                                        ?>
-
-                                        <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
-                                            <!-- Cupos Llenos -->
-                                            <button disabled style="width:100%; padding:0.6rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">
-                                                🔒 Cupos Completos
-                                            </button>
-                                        <?php elseif ($puede_inscribirse): ?>
-                                            <!-- ✅ HAY CUPOS -->
-                                            <button onclick="anotarseEvento(<?= $evento['id'] ?>, 'reserva', '<?= addslashes(strtolower(str_replace(' ', '', $evento['deporte']))) ?>', <?= $evento['cupos_total'] ?>, <?= $evento['monto'] ?? 0 ?>)" style="width:100%; padding:0.6rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                                                ✅ Anotarse al Partido
-                                            </button>
-                                            
-                                            <button onclick="pasoEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#fff; border:1px solid #ddd; color:#E53E3E; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.9rem;" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='#FFF'">
-                                                🚶 Paso esta semana
-                                            </button>
-                                        <?php else: ?>
-                                            <!-- ⏰ AÚN NO ES EL DÍA -->
-                                            <div style="text-align:center; padding:0.6rem; background:rgba(255,215,0,0.15); border-radius:8px; font-size:0.85rem; color:#666; margin-bottom:0.5rem;">
-                                                ⏰ La inscripción abre <strong>el día del partido a las 09:00 hrs</strong>
-                                            </div>
-                                        <?php endif; ?>
-                                        
-                                        <!-- Botón Ver Detalle siempre disponible -->
-                                        <button onclick="abrirDetalleReservaSocio(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#f8f9fa; border:1px solid #eee; border-radius:8px; cursor:pointer; font-weight:500; color:#555; font-size:0.9rem;">
-                                            ℹ️ Ver Detalles
-                                        </button>
+                                    <?php if (!empty($deuda_mas_vigente) && $evento['id'] == $primer_id_reserva): ?>
+                                    <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota</div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($es_responsable && $evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
+                                    <div class="menu-item" onclick="armarEquiposIA(<?= $evento['id'] ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
                                     <?php endif; ?>
                                 </div>
+                            <?php endif; ?>
+
+                            <!-- Header de la Ficha -->
+                            <div style="background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <span style="font-size:1.5rem;"><?= $evento['icono'] ?></span>
+                                    <span style="font-weight:bold; color:#071289; margin-left:0.5rem; font-size:1.1rem;"><?= $evento['titulo'] ?></span>
+                                </div>
+                                <span style="background:#E3F2FD; color:#1565C0; padding:4px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold;"><?= $evento['deporte'] ?></span>
                             </div>
-                        </div>
+                            
+                            <!-- Cuerpo de la Ficha -->
+                            <div style="padding:1rem;">
+                                <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
+                                    📅 <?= $evento['subtitulo'] ?>
+                                </div>
+                                
+                                <!-- Info Cupos y Pago -->
+                                <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:0.75rem; border-radius:10px; margin-bottom:1rem;">
+                                    <div style="text-align:left;">
+                                        <div style="font-size:0.8rem; color:#888;">Cupos</div>
+                                        <div style="font-weight:bold; color:#333;"><?= $evento['cupos_ocupados'] ?>/<?= $evento['cupos_total'] ?></div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.8rem; color:#888;">Estado</div>
+                                        <div style="font-weight:bold; color:<?= $evento['estado_pago'] == 'pagado' ? '#2E7D32' : '#F57F17' ?>;">
+                                            <?= ucfirst($evento['estado_pago']) ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Botones de Acción Dinámicos según inscripción -->
+                                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                                    
+                                    <?php if ($es_dueno_o_inscrito): ?>
+                                        <!-- === CASO: USUARIO INSCRITO/DUEÑO === -->
+                                        
+                                        <!-- Botón Bajarme -->
+                                        <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828; transition:all 0.2s;" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='#FFF'">
+                                            ❌ Bajarme del partido
+                                        </button>
+                                        
+                                        <!-- Botón Ver Inscritos -->
+                                        <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                            👁️ Ver Inscritos
+                                        </button>
+
+                                    <?php else: ?>
+                                        <!-- === CASO: USUARIO NO INSCRITO === -->
+                                        <?php 
+                                            // Lógica para habilitar inscripción (ajusta según tus reglas de negocio)
+                                            $puede_inscribirse = true; 
+                                            ?>
+
+                                            <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
+                                                <!-- Cupos Llenos -->
+                                                <button disabled style="width:100%; padding:0.6rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">
+                                                    🔒 Cupos Completos
+                                                </button>
+                                            <?php elseif ($puede_inscribirse): ?>
+                                                <!-- ✅ HAY CUPOS: Botón Anotarse -->
+                                                <button onclick="anotarseEvento(<?= $evento['id'] ?>, 'reserva', '<?= addslashes(strtolower(str_replace(' ', '', $evento['deporte']))) ?>', <?= $evento['cupos_total'] ?>, <?= $evento['monto'] ?? 0 ?>)" style="width:100%; padding:0.6rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                                    ✅ Anotarse al Partido
+                                                </button>
+                                                
+                                                <button onclick="pasoEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#fff; border:1px solid #ddd; color:#E53E3E; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.9rem;" onmouseover="this.style.background='#FFEBEE'" onmouseout="this.style.background='#FFF'">
+                                                    🚶 Paso esta semana
+                                                </button>
+                                            <?php else: ?>
+                                                <!-- ⏰ AÚN NO ES EL DÍA (Si aplicara) -->
+                                                <div style="text-align:center; padding:0.6rem; background:rgba(255,215,0,0.15); border-radius:8px; font-size:0.85rem; color:#666; margin-bottom:0.5rem;">
+                                                    ⏰ La inscripción abre <strong>el día del partido a las 09:00 hrs</strong>
+                                                </div>
+                                            <?php endif; ?>
+                                            
+                                            <!-- Botón Ver Detalle siempre disponible -->
+                                            <button onclick="abrirDetalleReservaSocio(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#f8f9fa; border:1px solid #eee; border-radius:8px; cursor:pointer; font-weight:500; color:#555; font-size:0.9rem;">
+                                                ℹ️ Ver Detalles
+                                            </button>
+                                        <?php endif; ?>
+                                    </div> <!-- Cierre div botones -->
+                                </div> <!-- Cierre div cuerpo ficha -->
+                            </div> <!-- Cierre div ficha reserva -->
 
                     <?php elseif ($evento['tipo'] === 'torneo'): ?>
                         <!-- FICHA DE TORNEO -->
@@ -1309,8 +1307,7 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                     <?php endif; ?>
                         
                     <?php $index++; ?>
-                <?php endforeach; ?>
-                
+                <?php endforeach; ?>              
             </div>
         <?php endif; ?>
     </div>

@@ -37,70 +37,104 @@ class ReservaService {
             $reservas = [];
 
             foreach ($fechas as $fecha) {
+            
+                // Obtener capacidad de la cancha
+                $stmt_cancha_cap = $pdo->prepare("SELECT capacidad_jugadores FROM canchas WHERE id_cancha = ?");
+                $stmt_cancha_cap->execute([$data['id_cancha']]);
+                $cancha_cap_data = $stmt_cancha_cap->fetch(PDO::FETCH_ASSOC);
+                $jugadores_esperados = intval($cancha_cap_data['capacidad_jugadores'] ?? 4);
 
-                $hora_fin = self::calcularHoraFin($data['hora_inicio'], $data['duracion']);
+                try {
 
-                // ✅ CORRECCIÓN 2: Agregar id_club al INSERT
-                $stmt = $pdo->prepare("
-                    INSERT INTO reservas (
-                        codigo_reserva, id_cancha, id_club, id_socio,
-                        nombre_cliente, email_cliente, telefono_cliente,
-                        fecha, hora_inicio, hora_fin,
-                        tipo_reserva, tipo_arriendo,
-                        monto_total, estado, estado_pago
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada','pendiente')
-                ");
+                    // === INSERTAR CON JUGADORES_ESPERADOS ===
+                    $stmt = $pdo->prepare("
+                        INSERT INTO reservas (
+                            codigo_reserva, id_cancha, id_club, id_socio,
+                            nombre_cliente, email_cliente, telefono_cliente,
+                            fecha, hora_inicio, hora_fin,
+                            tipo_reserva, tipo_arriendo,
+                            monto_total, estado, estado_pago, jugadores_esperados
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada','pendiente', ?)
+                    ");
 
-                $codigo = strtoupper(substr(uniqid(), -8));
+                    // ... obtener id_club del socio ...
+                    $id_club = null;
+                    if ($data['id_socio']) {
+                        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+                        $stmt_club->execute([$data['id_socio']]);
+                        $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+                        if ($socio_club) $id_club = $socio_club['id_club'];
+                    }
 
-                $tipos_validos = ['spot','semanal','mensual','campeonato','evento'];
+                    $hora_fin = self::calcularHoraFin($data['hora_inicio'], $data['duracion']);
 
-                $tipo_reserva_db = ($data['tipo_patron'] === 'simple') 
-                    ? 'spot' 
-                    : (in_array($data['tipo_patron'], $tipos_validos) ? $data['tipo_patron'] : 'spot');
+                    $stmt->execute([
+                        $codigo,
+                        $data['id_cancha'],
+                        $id_club, // <--- ID CLUB
+                        $data['id_socio'],
+                        $socio['nombre'],
+                        $socio['email'],
+                        $socio['celular'],
+                        $fecha,
+                        $data['hora_inicio'],
+                        $hora_fin,
+                        $tipo_reserva_db,
+                        $tipo_reserva_db,
+                        $monto,
+                        $jugadores_esperados // <--- CAPACIDAD REAL
+                    ]);
 
-                // ✅ CORRECCIÓN 3: Pasar $socio['id_club'] al execute
-                $stmt->execute([
-                    $codigo,
-                    $data['id_cancha'],
-                    $socio['id_club'], // <--- AQUÍ SE GUARDA EL CLUB
-                    $data['id_socio'],
-                    $socio['nombre'],
-                    $socio['email'],
-                    $socio['celular'],
-                    $fecha,
-                    $data['hora_inicio'],
-                    $hora_fin,
-                    $tipo_reserva_db,
-                    $tipo_reserva_db,
-                    $monto
-                ]);
+                    $codigo = strtoupper(substr(uniqid(), -8));
 
-                $id_reserva = $pdo->lastInsertId();
+                    $tipos_validos = ['spot','semanal','mensual','campeonato','evento'];
 
-                // actualizar disponibilidad
-                $pdo->prepare("
-                    UPDATE disponibilidad_canchas 
-                    SET estado='reservada', id_reserva=?
-                    WHERE id_cancha=? AND fecha=? AND hora_inicio=?
-                ")->execute([$id_reserva, $data['id_cancha'], $fecha, $data['hora_inicio']]);
+                    $tipo_reserva_db = ($data['tipo_patron'] === 'simple') 
+                        ? 'spot' 
+                        : (in_array($data['tipo_patron'], $tipos_validos) ? $data['tipo_patron'] : 'spot');
 
-                // BITÁCORA 🔥
-                registrarLogReserva(
-                    $pdo,
-                    $id_reserva,
-                    'creada',
-                    "⏱️ {$data['duracion']} min | 💰 $" . number_format($monto, 0, ',', '.'),
-                    $socio['nombre'],
-                    [
-                        'fecha' => $fecha,
-                        'hora_inicio' => $data['hora_inicio'],
-                        'hora_fin' => $hora_fin
-                    ]
-                );
+                    // ✅ CORRECCIÓN 3: Pasar $socio['id_club'] al execute
+                    $stmt->execute([
+                        $codigo,
+                        $data['id_cancha'],
+                        $socio['id_club'], // <--- AQUÍ SE GUARDA EL CLUB
+                        $data['id_socio'],
+                        $socio['nombre'],
+                        $socio['email'],
+                        $socio['celular'],
+                        $fecha,
+                        $data['hora_inicio'],
+                        $hora_fin,
+                        $tipo_reserva_db,
+                        $tipo_reserva_db,
+                        $monto
+                    ]);
 
-                $reservas[] = $id_reserva;
-            }
+                    $id_reserva = $pdo->lastInsertId();
+
+                    // actualizar disponibilidad
+                    $pdo->prepare("
+                        UPDATE disponibilidad_canchas 
+                        SET estado='reservada', id_reserva=?
+                        WHERE id_cancha=? AND fecha=? AND hora_inicio=?
+                    ")->execute([$id_reserva, $data['id_cancha'], $fecha, $data['hora_inicio']]);
+
+                    // BITÁCORA 🔥
+                    registrarLogReserva(
+                        $pdo,
+                        $id_reserva,
+                        'creada',
+                        "⏱️ {$data['duracion']} min | 💰 $" . number_format($monto, 0, ',', '.'),
+                        $socio['nombre'],
+                        [
+                            'fecha' => $fecha,
+                            'hora_inicio' => $data['hora_inicio'],
+                            'hora_fin' => $hora_fin
+                        ]
+                    );
+
+                    $reservas[] = $id_reserva;
+                }
 
             // correo SOLO última reserva
             try {

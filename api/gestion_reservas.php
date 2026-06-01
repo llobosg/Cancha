@@ -256,6 +256,18 @@ function crearReservaManualUnificada($pdo, $data) {
         throw new Exception('Horario ocupado');
     }
 
+    // === OBTENER DATOS DE LA CANCHA (Incluyendo Capacidad) ===
+    $stmt_cancha = $pdo->prepare("SELECT id_recinto, capacidad_jugadores FROM canchas WHERE id_cancha = ?");
+    $stmt_cancha->execute([$id_cancha]);
+    $cancha_data = $stmt_cancha->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$cancha_data || $cancha_data['id_recinto'] != $_SESSION['id_recinto']) {
+        throw new Exception('Cancha no válida para este recinto');
+    }
+    
+    // Usar capacidad de la BD, o default 4 si es null
+    $jugadores_esperados = intval($cancha_data['capacidad_jugadores'] ?? 4);
+
     // === DETERMINAR ID_SOCIO Y DATOS DEL CLIENTE ===
     $id_socio_final = null;
     $nombre_cliente = '';
@@ -316,17 +328,26 @@ function crearReservaManualUnificada($pdo, $data) {
         }
     }
 
-    // === INSERTAR RESERVA CON ID_CLUB ===
+    // === INSERTAR RESERVA CON JUGADORES_ESPERADOS CORRECTO ===
     $stmt = $pdo->prepare("
         INSERT INTO reservas (
             id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente,
-            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, jugadores_esperados, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', ?, NOW())
     ");
     
+    // Obtener id_club del socio si existe
+    $id_club_reserva = null;
+    if ($id_socio_final) {
+        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+        $stmt_club->execute([$id_socio_final]);
+        $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+        if ($socio_club) $id_club_reserva = $socio_club['id_club'];
+    }
+
     $stmt->execute([
         $id_cancha, 
-        $id_club_reserva,
+        $id_club_reserva, 
         $id_socio_final, 
         $nombre_cliente, 
         $email_cliente, 
@@ -334,7 +355,8 @@ function crearReservaManualUnificada($pdo, $data) {
         $fecha, 
         $hora_inicio, 
         $hora_fin, 
-        $monto_total
+        $monto_total,
+        $jugadores_esperados // <--- AQUÍ SE GUARDA LA CAPACIDAD REAL (20)
     ]);
     
     $id_reserva = $pdo->lastInsertId();
