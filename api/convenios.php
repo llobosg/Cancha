@@ -52,6 +52,23 @@ try {
                 WHERE id_convenio=? AND id_recinto=?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$nombre, $contacto, $email, $telefono, $dscto, $desde, $hasta, $estado, $id_convenio, $id_recinto]);
+
+    } elseif ($action === 'delete') {
+        $id_convenio = $_POST['id_convenio'] ?? null;
+        if (!$id_convenio) throw new Exception('ID de convenio requerido.');
+        
+        // Verificar que pertenece al recinto
+        $stmt_check = $pdo->prepare("SELECT id_recinto FROM convenios WHERE id_convenio = ?");
+        $stmt_check->execute([$id_convenio]);
+        if ($stmt_check->fetchColumn() != $id_recinto) {
+            throw new Exception('No autorizado para eliminar este convenio.');
+        }
+
+        $sql = "DELETE FROM convenios WHERE id_convenio = ? AND id_recinto = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$id_convenio, $id_recinto]);
+        
+        echo json_encode(['success' => true, 'message' => 'Convenio eliminado correctamente.']);
         
     } else {
         throw new Exception('Acción no válida.');

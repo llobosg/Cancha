@@ -298,6 +298,12 @@ function crearReservaManualUnificada($pdo, $data) {
         throw new Exception('Debe seleccionar un socio existente o ingresar datos para uno nuevo');
     }
 
+    $id_convenio = isset($data['id_convenio']) ? (int)$data['id_convenio'] : null;
+    $descuento_aplicado = isset($data['monto_total']) && isset($data['admin_monto_base']) ? 0 : 0; 
+    // Nota: Es más seguro recalculcar el descuento en el backend si recibes el ID del convenio.
+
+    $monto_final = isset($data['monto_total']) ? (float)$data['monto_total'] : 0;
+
     // === INSERTAR RESERVA ===
     $stmt = $pdo->prepare("
         INSERT INTO reservas (
@@ -310,6 +316,38 @@ function crearReservaManualUnificada($pdo, $data) {
         $fecha, $hora_inicio, $hora_fin, $monto_total
     ]);
     $id_reserva = $pdo->lastInsertId();
+
+    // === REGISTRAR LOG DE BITÁCORA CON DETALLE DE CONVENIO ===
+    if (function_exists('registrarLogReserva')) {
+        $descripcion = "Reserva manual creada por Admin/Asistente";
+        
+        if ($id_convenio) {
+            // Obtener nombre del convenio para el log
+            $stmt_conv = $pdo->prepare("SELECT nombre_empresa, porc_dscto FROM convenios WHERE id_convenio = ?");
+            $stmt_conv->execute([$id_convenio]);
+            $conv_data = $stmt_conv->fetch();
+            
+            if ($conv_data) {
+                $descripcion .= " | 🤝 CONVENIO: {$conv_data['nombre_empresa']} ({$conv_data['porc_dscto']}% OFF)";
+                
+                // Opcional: Si no hay socio asociado, usar el email del contacto del convenio para enviar correo
+                if (empty($email_cliente) && !empty($conv_data['contacto_email'])) {
+                    // Aquí podrías actualizar el email de la reserva o enviar el correo al contacto
+                    // Por ahora, asumimos que el email ya está en $email_cliente si se seleccionó un socio
+                }
+            }
+        }
+
+        registrarLogReserva(
+            $pdo,
+            $id_reserva,
+            'creada',
+            $descripcion,
+            $_SESSION['recinto_usuario'] ?? 'Admin',
+            null,
+            $monto_final
+        );
+    }
 
     // === REGISTRAR LOG DE BITÁCORA ===
     if (function_exists('registrarLogReserva')) {

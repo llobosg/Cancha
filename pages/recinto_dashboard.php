@@ -1674,14 +1674,21 @@ td.bloqueado {
                                 <td style="padding:0.8rem; text-align:center; font-weight:500;"><?= $c['socios_vinculados'] ?></td>
                                 <td style="padding:0.8rem; text-align:center; font-size:0.85rem;"><?= $c['vigente_desde'] ? date('d/m', strtotime($c['vigente_desde'])) : '-' ?> <?= $c['vigente_hasta'] ? '→ ' . date('d/m', strtotime($c['vigente_hasta'])) : '<small>(∞)</small>' ?></td>
                                 <td style="padding:0.8rem; text-align:center;"><span style="background:<?= $c['estado']=='activo' ? '#C6F6D5' : '#FED7D7' ?>; color:<?= $c['estado']=='activo' ? '#22543D' : '#742A2A' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-size:0.8rem;"><?= ucfirst($c['estado']) ?></span></td>
-                                <td style="padding:0.8rem; text-align:center;">
-                                    <button class="btn-editar-convenio" 
-                                            data-convenio="<?= htmlspecialchars(json_encode($c), ENT_QUOTES, 'UTF-8') ?>"
-                                            onclick="debugEditarConvenio(this, event)"
-                                            style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
-                                        ✏️ Editar
-                                    </button>
-                                </td>
+                                <td style="padding:0.8rem; text-align:center; display:flex; gap:0.5rem; justify-content:center;">
+                                <!-- Botón Editar (Existente) -->
+                                <button class="btn-editar-convenio" 
+                                        data-convenio="<?= htmlspecialchars(json_encode($c), ENT_QUOTES, 'UTF-8') ?>"
+                                        onclick="debugEditarConvenio(this, event)"
+                                        style="background:#4299E1; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
+                                    ✏️ Editar
+                                </button>
+                                
+                                <!-- Botón Eliminar (Nuevo) -->
+                                <button onclick="eliminarConvenio(<?= $c['id_convenio'] ?>, '<?= addslashes($c['nombre_empresa']) ?>')"
+                                        style="background:#EF5350; color:white; border:none; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
+                                    🗑️ Eliminar
+                                </button>
+                            </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -5607,7 +5614,194 @@ function esSlotPasadoSocio(slotHora, fechaSeleccionada) {
 
     return slotDate < ahoraRedondeado;
 }
-// Al final de tu bloque <script>, después de definir todas las funciones:
+// === ELIMINAR CONVENIO ===
+async function eliminarConvenio(id, nombre) {
+    if (!confirm(`¿Estás seguro de eliminar el convenio con "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('id_convenio', id);
+        
+        const res = await fetch('/api/convenios.php', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ Convenio eliminado', 'success');
+            cerrarSubmodalConvenios();
+            abrirSubmodalConvenios(); // Recargar lista
+        } else {
+            alert('❌ ' + (data.error || 'Error al eliminar'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('❌ Error de conexión');
+    }
+}
+// === BUSCADOR DE CONVENIOS ===
+let debounceTimerConvenio;
+
+function debounceBuscarConvenio(val) {
+    clearTimeout(debounceTimerConvenio);
+    debounceTimerConvenio = setTimeout(() => buscarConvenioAdmin(val), 300);
+}
+
+async function buscarConvenioAdmin(query) {
+    const container = document.getElementById('searchResultsConvenio');
+    if (!container) return;
+
+    if (query.length < 2) {
+        container.style.display = 'none';
+        return;
+    }
+
+    try {
+        const res = await fetch(`../api/search_convenios.php?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        
+        container.innerHTML = '';
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<div style="padding:8px; color:#856404;">Sin convenios coincidentes.</div>';
+            container.style.display = 'block';
+            return;
+        }
+
+        container.innerHTML = data.map(c => `
+            <div onclick="seleccionarConvenioAdmin(${c.id_convenio}, '${c.nombre_empresa.replace(/'/g, "\\'")}', ${c.porc_dscto}, '${c.contacto_email.replace(/'/g, "\\'")}')"
+                style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; font-size:0.9rem;">
+                <strong>${c.nombre_empresa}</strong> 
+                <span style="color:#666; font-size:0.8rem;">| ${c.porc_dscto}% OFF | ${c.contacto_nombre || ''}</span>
+            </div>
+        `).join('');
+        container.style.display = 'block';
+    } catch (err) {
+        console.error('Error en buscarConvenioAdmin:', err);
+    }
+}
+
+function seleccionarConvenioAdmin(id, nombre, dscto, emailContacto) {
+    // Guardar datos en inputs ocultos o variables globales
+    document.getElementById('admin_convenio_id').value = id;
+    document.getElementById('searchConvenio').value = nombre;
+    document.getElementById('searchResultsConvenio').style.display = 'none';
+
+    // Guardar email de contacto para uso potencial (si no hay socio asociado)
+    window.convenioEmailContacto = emailContacto;
+
+    window.convenioDsctoActual = dscto;
+
+    // Mostrar label de descuento
+    const labelDesc = document.getElementById('labelDescuentoConvenio');
+    const nombreDisplay = document.getElementById('nombreConvenioDisplay');
+    const porcDisplay = document.getElementById('porcDsctoDisplay');
+    
+    if (labelDesc && nombreDisplay && porcDisplay) {
+        labelDesc.style.display = 'block';
+        nombreDisplay.textContent = nombre;
+        porcDisplay.textContent = dscto;
+    }
+
+    // Recalcular monto total con descuento
+    recalcularMontoConDescuento(dscto);
+}
+
+function recalcularMontoConDescuento(porcDscto) {
+    // Obtener monto base actual (sin descuento)
+    // Nota: Necesitamos almacenar el monto base original antes de aplicar descuentos.
+    // Usaremos el valor de la cancha * duración.
+    
+    const elBase = document.getElementById('admin_monto_base');
+    const elDuracion = document.getElementById('admin_duracion_bloque');
+    
+    if (!elBase || !elDuracion) return;
+
+    const base = parseFloat(elBase.value) || 0;
+    const duracion = parseInt(elDuracion.value) || 60;
+    
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2;
+
+    const montoBruto = Math.round(base * factor);
+    
+    // Calcular descuento
+    const montoDescuento = Math.round(montoBruto * (porcDscto / 100));
+    const montoFinal = montoBruto - montoDescuento;
+
+    // Actualizar input hidden que se envía al backend
+    const elMontoTotal = document.getElementById('admin_monto_total');
+    if (elMontoTotal) elMontoTotal.value = montoFinal;
+
+    // Actualizar display visual
+    const elDisplay = document.getElementById('modalMontoDisplay');
+    if (elDisplay) elDisplay.textContent = `$${montoFinal.toLocaleString('es-CL')}`;
+    
+    // Guardar el porcentaje en un atributo data para enviarlo al backend si es necesario
+    elMontoTotal.dataset.descuento_aplicado = porcDscto;
+}
+
+// Modificar la función actualizarHoraFin o actualizarDuracionReserva para que llame a recalcularMontoConDescuento
+// si hay un convenio activo. Ejemplo simplificado:
+function actualizarDuracionReserva(duracion) {
+    const elHoraInicio = document.getElementById('admin_hora_inicio');
+    if (!elHoraInicio || !elHoraInicio.value) return;
+    actualizarHoraFin(elHoraInicio.value, parseInt(duracion));
+    
+    const elDuracion = document.getElementById('admin_duracion_bloque');
+    if (elDuracion) elDuracion.value = duracion;
+
+    // Si hay convenio seleccionado, recalcular con ese descuento
+    const convenioId = document.getElementById('admin_convenio_id').value;
+    if (convenioId) {
+        // Necesitamos recuperar el % del convenio. Podríamos guardarlo en una variable global al seleccionarlo.
+        // O simplemente leerlo del label display si lo parseamos.
+        // Para simplificar, guardemos el % en una variable global al seleccionar:
+        if (window.convenioDsctoActual) {
+            recalcularMontoConDescuento(window.convenioDsctoActual);
+        }
+    } else {
+        // Si no hay convenio, calcular normal
+        actualizarPrecioDisplayNormal();
+    }
+}
+
+// Helper para calcular precio normal (sin descuento)
+function actualizarPrecioDisplayNormal() {
+    const elBase = document.getElementById('admin_monto_base');
+    const elDuracion = document.getElementById('admin_duracion_bloque');
+    const elMontoTotal = document.getElementById('admin_monto_total');
+    const elDisplay = document.getElementById('modalMontoDisplay');
+    const labelDesc = document.getElementById('labelDescuentoConvenio');
+
+    if (!elBase || !elDuracion || !elMontoTotal || !elDisplay) return;
+
+    // Ocultar label de descuento
+    if (labelDesc) labelDesc.style.display = 'none';
+    window.convenioDsctoActual = null; // Resetear variable global
+
+    const base = parseFloat(elBase.value) || 0;
+    const duracion = parseInt(elDuracion.value) || 60;
+    
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2;
+
+    const total = Math.round(base * factor);
+    
+    elMontoTotal.value = total;
+    elMontoTotal.removeAttribute('data-descuento_aplicado');
+    elDisplay.textContent = `$${total.toLocaleString('es-CL')}`;
+}
+
+// Modificar seleccionarConvenioAdmin para guardar el % en variable global
+// Agrega esta línea dentro de seleccionarConvenioAdmin:
+// window.convenioDsctoActual = dscto;
 window.verResultadosTV = verResultadosTV;
 window.renderizarTVCorregido = renderizarTVCorregido;
 window.cerrarSubmodal = cerrarSubmodal;
@@ -5699,6 +5893,33 @@ window.cerrarSubmodal = cerrarSubmodal;
                         style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
                     <input type="tel" id="telNuevoSocio" placeholder="Teléfono (opcional)" 
                         style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
+                </div>
+
+                <!-- === BUSCADOR DE CONVENIOS (Opcional) === -->
+                <div style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                    <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">🤝 Aplicar Convenio (Opcional)</label>
+                    <div style="position:relative;">
+                        <input type="text" id="searchConvenio" placeholder="Buscar empresa o contacto..."
+                            oninput="debounceBuscarConvenio(this.value)"
+                            style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+                        <div id="searchResultsConvenio" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+                    </div>
+                    <!-- Input oculto para guardar ID del convenio seleccionado -->
+                    <input type="hidden" id="admin_convenio_id" name="id_convenio" value="">
+                </div>
+
+                <!-- Resumen de monto ACTUALIZADO -->
+                <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; flex-direction:column; gap:0.5rem; border-left:4px solid #4CAF50;">
+                    
+                    <!-- Label de Descuento (Oculto por defecto) -->
+                    <div id="labelDescuentoConvenio" style="display:none; font-size:0.9rem; color:#2E7D32; font-weight:600; text-align:right;">
+                        🤝 Convenio: <span id="nombreConvenioDisplay">Empresa X</span> (<span id="porcDsctoDisplay">10</span>% OFF)
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:600; color:#2E7D32;">💰 Total a pagar:</span>
+                        <span style="font-size:1.2rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
+                    </div>
                 </div>
 
                 <!-- Resumen de monto -->
