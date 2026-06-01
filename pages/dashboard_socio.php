@@ -944,25 +944,7 @@ if (isset($_SESSION['id_socio'])) {
     $todos_eventos = [];
     $primer_evento_es_futbol = false; 
 
-    // 1. Obtener Reservas Futuras (Sin límite de mes, solo fecha >= hoy)
-    $where_reservas = [];
-    $params_reservas = [];
-
-    // Filtro por fecha futura (hoy en adelante)
-    $where_reservas[] = "r.fecha >= CURDATE()";
-    
-    if (!$modo_individual && $club_id) {
-        // MODO CLUB
-        $where_reservas[] = "r.id_club = ?";
-        $params_reservas[] = $club_id;
-    } else {
-        // MODO INDIVIDUAL: Buscar reservas donde el socio es el titular O está asociado
-        // Nota: Asumimos que id_socio en reservas es el titular. 
-        $where_reservas[] = "r.id_socio = ?";
-        $params_reservas[] = $id_socio;
-    }
-
-    // === 2. OBTENER CLUB DEL SOCIO (Inicializado para evitar warnings) ===
+    // === 1. OBTENER CLUB DEL SOCIO (Para filtro OR) ===
     $club_del_socio = null;
     try {
         $stmt_club_socio = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
@@ -971,12 +953,8 @@ if (isset($_SESSION['id_socio'])) {
     } catch (Exception $e) {
         error_log("Error obteniendo club del socio: " . $e->getMessage());
     }
-    
-    // Condiciones comunes
-    $where_reservas[] = "r.estado != 'cancelada'";
 
     // === 2. CONSULTA UNIFICADA: Reservas del Socio O de su Club ===
-    // Usamos 'r' como alias para mantener consistencia con tu código original
     $sql_reservas = "
         SELECT r.id_reserva, r.id_socio, r.id_club, r.fecha, r.hora_inicio, r.hora_fin, 
                r.monto_total, r.estado_pago, r.jugadores_esperados, r.nombre_cliente,
@@ -995,14 +973,14 @@ if (isset($_SESSION['id_socio'])) {
     $stmt_reservas = $pdo->prepare($sql_reservas);
     $stmt_reservas->execute([
         ':id_socio' => $id_socio,
-        ':id_club' => $club_del_socio ?: 0 // Si no tiene club, pasa 0
+        ':id_club' => $club_del_socio ?: 0 // Si no tiene club, pasa 0 para que no matchee nada
     ]);
 
-    // ✅ FIX: obtener resultados correctamente
+    // ✅ CORRECCIÓN: Asignar el resultado a $reservas
     $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
 
-    // Debug temporal
-    error_log("[DEBUG SOCIO] Reservas encontradas para ID $id_socio (Club: $club_del_socio): " . count($reservas);
+    // Debug temporal (usando la variable correcta)
+    error_log("[DEBUG SOCIO] Reservas encontradas para ID $id_socio (Club: $club_del_socio): " . count($reservas));
     
     foreach ($reservas as $r) {
         // Calcular cupos ocupados (si usas tabla inscritos) o asumir 1
@@ -1032,15 +1010,14 @@ if (isset($_SESSION['id_socio'])) {
         ];
     }
 
-    // 2. Obtener Torneos Futuros (Solo del mes actual o futuros cercanos si prefieres)
-    // Mantenemos el filtro de mes para torneos si así lo deseas, o quitamos DATE_FORMAT para ver todos los futuros
+    // === 3. Obtener Torneos Futuros ===
     $sql_torneos = "
         SELECT t.*, pt.codigo_pareja, 'torneo' as tipo
         FROM parejas_torneo pt
         JOIN torneos t ON pt.id_torneo = t.id_torneo
         WHERE (pt.id_socio_1 = ? OR pt.id_socio_2 = ?)
         AND t.fecha_inicio >= CURDATE()
-        AND t.estado IN ('abierto', 'en_progreso', 'cerrado') -- Agregamos cerrado por si quiere ver fixture
+        AND t.estado IN ('abierto', 'en_progreso', 'cerrado')
         ORDER BY t.fecha_inicio ASC
     ";
     
@@ -1102,7 +1079,7 @@ if (isset($_SESSION['id_socio'])) {
         ];
     }
 
-    // 3. Ordenar TODOS los eventos cronológicamente
+    // === 4. Ordenar TODOS los eventos cronológicamente ===
     usort($todos_eventos, function($a, $b) {
         $dateStrA = $a['fecha'] . ' ' . $a['hora'];
         $dateStrB = $b['fecha'] . ' ' . $b['hora'];
