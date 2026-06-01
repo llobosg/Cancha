@@ -1000,6 +1000,7 @@ if (isset($_SESSION['id_socio'])) {
         $todos_eventos[] = [
             'tipo' => 'reserva',
             'id' => $r['id_reserva'],
+            'id_socio_reserva' => $r['id_socio'],
             'fecha' => $r['fecha'],
             'hora' => substr($r['hora_inicio'], 0, 5), 
             'titulo' => htmlspecialchars($r['nombre_cancha']),
@@ -1135,20 +1136,22 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                 // Determinar si mostramos los 3 puntitos (Solo primera ficha Y si es fútbol)
                 $mostrar_menu_3_puntos = ($index === 0 && $primer_evento_es_futbol);
                 
-                // Lógica de Inscripción/Pertenencia
+                // === LÓGICA DE PERTENENCIA CORREGIDA ===
                 $es_dueno_o_inscrito = false;
+                
                 if ($evento['tipo'] === 'reserva') {
-                    // Si tiene el flag 'es_dueno' (seteado arriba) o está en tabla inscritos
-                    $es_dueno_o_inscrito = isset($evento['es_dueno']) && $evento['es_dueno'];
-                    
-                    // Doble check con tabla inscritos por seguridad
-                    if (!$es_dueno_o_inscrito) {
-                        $stmt_check_evento = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
-                        $stmt_check_evento->execute([$evento['id'], $id_socio]);
-                        $es_dueno_o_inscrito = (bool)$stmt_check_evento->fetch();
+                    // 1. Verificar si el ID del socio logueado coincide con el ID de socio de la reserva
+                    if (isset($evento['id_socio_reserva']) && intval($evento['id_socio_reserva']) == intval($id_socio)) {
+                        $es_dueno_o_inscrito = true;
+                    }
+                    // 2. Fallback: Verificar tabla inscritos si no es dueño directo
+                    elseif (!$es_dueno_o_inscrito) {
+                        $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
+                        $stmt_check->execute([$evento['id'], $id_socio]);
+                        $es_dueno_o_inscrito = (bool)$stmt_check->fetch();
                     }
                 } elseif ($evento['tipo'] === 'torneo') {
-                    $es_dueno_o_inscrito = true; // Si aparece en la lista de torneos, ya es parte de la pareja
+                    $es_dueno_o_inscrito = true; // Si aparece en torneos, ya es parte
                 }
             ?>    
             <?php if ($evento['tipo'] === 'reserva'): ?>
@@ -1185,8 +1188,10 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                             
                             <!-- Cuerpo de la Ficha -->
                             <div style="padding:1rem;">
+                                <!-- ✅ CORRECCIÓN HORA: Usar hora_inicio en lugar de hora_fin o subtitulo genérico -->
                                 <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
-                                    📅 <?= $evento['subtitulo'] ?>
+                                    📅 <?= date('d/m/Y', strtotime($evento['fecha'])) ?> &nbsp;|&nbsp; 
+                                    ⏰ <?= substr($evento['hora_inicio'], 0, 5) ?> - <?= substr($evento['hora_fin'], 0, 5) ?> hrs
                                 </div>
                                 
                                 <!-- Info Cupos y Pago -->
@@ -1222,7 +1227,6 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                                     <?php else: ?>
                                         <!-- === CASO: USUARIO NO INSCRITO === -->
                                         <?php 
-                                            // Lógica para habilitar inscripción (ajusta según tus reglas de negocio)
                                             $puede_inscribirse = true; 
                                             ?>
 
@@ -1241,7 +1245,6 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                                                     🚶 Paso esta semana
                                                 </button>
                                             <?php else: ?>
-                                                <!-- ⏰ AÚN NO ES EL DÍA (Si aplicara) -->
                                                 <div style="text-align:center; padding:0.6rem; background:rgba(255,215,0,0.15); border-radius:8px; font-size:0.85rem; color:#666; margin-bottom:0.5rem;">
                                                     ⏰ La inscripción abre <strong>el día del partido a las 09:00 hrs</strong>
                                                 </div>
@@ -1306,11 +1309,11 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                         </div>
                     <?php endif; ?>
                         
-                    <?php $index++; ?>
-                <?php endforeach; ?>              
-            </div>
-        <?php endif; ?>
-    </div>
+                <?php $index++; ?>
+            <?php endforeach; ?>              
+        </div>
+    <?php endif; ?>
+</div>
 
     <!-- === DEUDA PENDIENTE (si existe) === -->
     <?php if ($deuda_mas_vigente): ?>
