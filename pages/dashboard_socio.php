@@ -1698,7 +1698,7 @@ function htmlspecialchars_js(str) {
     return div.innerHTML;
 }
 
-// === BAJAR INSCRITO (para responsable o uno mismo) ===
+// === BAJAR INSCRITO (Corregido) ===
 async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
     const confirmMsg = esMiInscripcion 
         ? `¿Seguro que deseas bajarte de este partido?`
@@ -1707,22 +1707,15 @@ async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
     if (!confirm(confirmMsg)) return;
     
     try {
-        // Construir body manualmente para evitar problemas de codificación
-        const formData = new URLSearchParams();
+        // Enviamos id_inscrito directamente para mayor precisión
+        const formData = new FormData();
         formData.append('action', 'bajarse');
         formData.append('id_actividad', idReserva);
-        formData.append('tipo_actividad', 'reserva'); // Asegurar tipo
-        
-        // Si soy yo, no envío id_socio_objetivo (la API usará mi sesión)
-        // Si soy responsable, envío el ID del otro
-        if (!esMiInscripcion) {
-            formData.append('id_socio_objetivo', idInscrito);
-        }
+        formData.append('id_inscrito', idInscrito); // Usamos el ID directo de la tabla inscritos
 
         const res = await fetch('../api/gestion_eventos.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString(),
+            body: formData,
             credentials: 'include'
         });
         
@@ -1730,9 +1723,9 @@ async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
         
         if (data.success) {
             showToast('✅ Baja registrada', 'success');
-            verInscritos(idReserva); // Recargar lista
+            verInscritos(idReserva); // Recargar lista inmediatamente
         } else {
-            showToast('❌ ' + (data.message || 'Error'), 'error');
+            showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
         }
     } catch (e) {
         console.error(e);

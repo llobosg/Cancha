@@ -87,48 +87,75 @@ try {
     $stmt_check->execute([$id_actividad, $id_socio, $tipo_actividad]);
     $ya_inscrito = $stmt_check->fetch();
 
-    if ($action === 'bajarse') {
+        if ($action === 'bajarse') {
         $id_actividad = (int)($_POST['id_actividad'] ?? 0);
+        $id_inscrito = (int)($_POST['id_inscrito'] ?? 0);
         $tipo_actividad = $_POST['tipo_actividad'] ?? 'reserva';
         
-        // Determinar qué socio bajar
-        $id_socio_a_bajar = isset($_POST['id_socio_objetivo']) && !empty($_POST['id_socio_objetivo']) 
-            ? (int)$_POST['id_socio_objetivo'] 
-            : $id_socio_actual;
+        if (!$id_actividad || !$id_inscrito) {
+            throw new Exception('Datos inválidos para la baja');
+        }
 
-        // Verificar permisos si es un responsable bajando a otro
-        if ($id_socio_a_bajar !== $id_socio_actual && $id_club) {
-            // ✅ Validar permiso usando tabla socio_club
-            $stmt_check = $pdo->prepare("
-                SELECT s.es_responsable 
-                FROM socios s
-                JOIN socio_club sc ON s.id_socio = sc.id_socio
-                WHERE s.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo'
-            ");
-            $stmt_check->execute([$id_socio_actual, $id_club]);
-            $es_resp = $stmt_check->fetchColumn();
+        // 1. Obtener detalles de la inscripción a borrar
+        $stmt_get = $pdo->prepare("SELECT id_socio, id_evento FROM inscritos WHERE id_inscrito = ? AND tipo_actividad = ?");
+        $stmt_get->execute([$id_inscrito, $tipo_actividad]);
+        $inscripcion = $stmt_get->fetch(PDO::FETCH_ASSOC);
 
-            if (!$es_resp) {
-                throw new Exception('No tienes permisos para bajar a otros jugadores');
+        if (!$inscripcion) {
+            throw new Exception('Inscripción no encontrada');
+        }
+
+        $id_socio_a_bajar = (int)$inscripcion['id_socio'];
+        
+        // 2. Validar Permisos
+        $puede_bajar = false;
+
+        // Caso A: Es su propia inscripción
+        if ($id_socio_a_bajar == $id_socio_actual) {
+            $puede_bajar = true;
+        } 
+        // Caso B: Es responsable del club de la reserva
+        else {
+            // Obtener el club de la reserva (asumiendo que la reserva tiene id_club)
+            $stmt_res = $pdo->prepare("SELECT r.id_club FROM reservas r WHERE r.id_reserva = ?");
+            $stmt_res->execute([$id_actividad]);
+            $id_club_reserva = $stmt_res->fetchColumn();
+
+            if ($id_club_reserva) {
+                // Verificar si el socio actual es responsable de ESE club
+                $stmt_check_resp = $pdo->prepare("
+                    SELECT 1 FROM socio_club sc 
+                    JOIN socios s ON sc.id_socio = s.id_socio
+                    WHERE sc.id_socio = ? AND sc.id_club = ? AND sc.estado = 'activo' AND s.es_responsable = 1
+                ");
+                $stmt_check_resp->execute([$id_socio_actual, $id_club_reserva]);
+                if ($stmt_check_resp->fetchColumn()) {
+                    $puede_bajar = true;
+                }
             }
         }
 
-        // Ejecutar baja en inscritos (sin id_club)
-        $stmt_delete = $pdo->prepare("
-            DELETE FROM inscritos 
-            WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?
-        ");
-        $stmt_delete->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
-        
-        // Borrar cuota asociada si existe
-        $stmt_cuota = $pdo->prepare("
-            DELETE FROM cuotas 
-            WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?
-        ");
-        $stmt_cuota->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
-        
-        // ✅ Salir inmediatamente después del JSON
-        echo json_encode(['success' => true, 'message' => 'Baja registrada']);
+        if (!$puede_bajar) {
+            throw new Exception('No tienes permisos para realizar esta acción');
+        }
+
+        // 3. Ejecutar Baja
+        $pdo->beginTransaction();
+        try {
+            // Borrar de inscritos
+            $stmt_delete = $pdo->prepare("DELETE FROM inscritos WHERE id_inscrito = ?");
+            $stmt_delete->execute([$id_inscrito]);
+            
+            // Borrar cuota asociada si existe (opcional, según tu lógica de negocio)
+            $stmt_cuota = $pdo->prepare("DELETE FROM cuotas WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = ?");
+            $stmt_cuota->execute([$id_actividad, $id_socio_a_bajar, $tipo_actividad]);
+            
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Baja registrada']);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
         exit;
     } else {
         // === VALIDAR CUPO ===
