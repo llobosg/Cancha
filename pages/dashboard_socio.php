@@ -966,10 +966,12 @@ if (isset($_SESSION['id_socio'])) {
     $where_reservas[] = "r.estado != 'cancelada'";
 
     $sql_reservas = "
-        SELECT r.*, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
+        SELECT r.id_reserva, r.id_socio, r.fecha, r.hora_inicio, r.hora_fin, r.monto_total, r.estado_pago, r.jugadores_esperados, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE " . implode(" AND ", $where_reservas) . "
+        WHERE r.id_socio = ? 
+        AND r.fecha >= CURDATE()
+        AND r.estado != 'cancelada'
         ORDER BY r.fecha ASC, r.hora_inicio ASC
     ";
 
@@ -997,21 +999,20 @@ if (isset($_SESSION['id_socio'])) {
         $cupos_total = $r['jugadores_esperados'] ?? 4; 
         $cupos_ocupados = $inscritos_count > 0 ? $inscritos_count : 1; // Al menos 1 (el dueño)
 
-        $todos_eventos[] = [
+       $todos_eventos[] = [
             'tipo' => 'reserva',
             'id' => $r['id_reserva'],
             'id_socio_reserva' => $r['id_socio'],
             'fecha' => $r['fecha'],
-            'hora' => substr($r['hora_inicio'], 0, 5), 
-            'titulo' => htmlspecialchars($r['nombre_cancha']),
-            'deporte' => strtoupper($r['id_deporte']),
-            'subtitulo' => date('d/m/Y', strtotime($r['fecha'])) . ' • ' . substr($r['hora_fin'], 0, 5) . ' hrs',
-            'cupos_total' => $cupos_total,
-            'cupos_ocupados' => $cupos_ocupados,
+            'hora_inicio' => $r['hora_inicio'],
+            'hora_fin' => $r['hora_fin'],
             'monto' => $r['monto_total'],
             'estado_pago' => $r['estado_pago'],
-            'icono' => '🏟️',
-            'es_dueno' => true // Flag clave: El socio logueado ES el dueño de esta reserva
+            'cupos_total' => $r['jugadores_esperados'] ?? 4,
+            'cupos_ocupados' => 1,
+            'titulo' => htmlspecialchars($r['nombre_cancha']),
+            'deporte' => strtoupper($r['id_deporte']),
+            'icono' => '🏟️'
         ];
     }
 
@@ -1191,7 +1192,7 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
                                 <!-- ✅ CORRECCIÓN HORA: Usar hora_inicio en lugar de hora_fin o subtitulo genérico -->
                                 <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
                                     📅 <?= date('d/m/Y', strtotime($evento['fecha'])) ?> &nbsp;|&nbsp; 
-                                    ⏰ <?= substr($evento['hora_inicio'], 0, 5) ?> - <?= substr($evento['hora_fin'], 0, 5) ?> hrs
+                                    ⏰ <?= substr($evento['hora_inicio'] ?? '00:00', 0, 5) ?> - <?= substr($evento['hora_fin'] ?? '00:00', 0, 5) ?> hrs
                                 </div>
                                 
                                 <!-- Info Cupos y Pago -->
