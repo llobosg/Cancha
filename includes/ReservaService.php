@@ -7,6 +7,7 @@ class ReservaService {
     public static function crearRecurrente($pdo, $data) {
         try {
             date_default_timezone_set('America/Santiago');
+            // Nota: Si config.php ya setea la zona horaria, esta línea es redundante pero segura
             $pdo->exec("SET time_zone = '-03:00'");
 
             $pdo->beginTransaction();
@@ -25,6 +26,7 @@ class ReservaService {
                 $data['hora_inicio']
             );
 
+            // ✅ CORRECCIÓN 1: Obtener socio con su id_club
             $socio = self::getSocio($pdo, $data['id_socio']);
             $cancha = self::getCancha($pdo, $data['id_cancha']);
 
@@ -38,14 +40,15 @@ class ReservaService {
 
                 $hora_fin = self::calcularHoraFin($data['hora_inicio'], $data['duracion']);
 
+                // ✅ CORRECCIÓN 2: Agregar id_club al INSERT
                 $stmt = $pdo->prepare("
                     INSERT INTO reservas (
-                        codigo_reserva, id_cancha, id_socio,
+                        codigo_reserva, id_cancha, id_club, id_socio,
                         nombre_cliente, email_cliente, telefono_cliente,
                         fecha, hora_inicio, hora_fin,
                         tipo_reserva, tipo_arriendo,
                         monto_total, estado, estado_pago
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada','pendiente')
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada','pendiente')
                 ");
 
                 $codigo = strtoupper(substr(uniqid(), -8));
@@ -56,9 +59,11 @@ class ReservaService {
                     ? 'spot' 
                     : (in_array($data['tipo_patron'], $tipos_validos) ? $data['tipo_patron'] : 'spot');
 
+                // ✅ CORRECCIÓN 3: Pasar $socio['id_club'] al execute
                 $stmt->execute([
                     $codigo,
                     $data['id_cancha'],
+                    $socio['id_club'], // <--- AQUÍ SE GUARDA EL CLUB
                     $data['id_socio'],
                     $socio['nombre'],
                     $socio['email'],
@@ -66,8 +71,8 @@ class ReservaService {
                     $fecha,
                     $data['hora_inicio'],
                     $hora_fin,
-                    $tipo_reserva_db, // ✅ FIX
-                    $tipo_reserva_db, // ✅ FIX
+                    $tipo_reserva_db,
+                    $tipo_reserva_db,
                     $monto
                 ]);
 
@@ -155,10 +160,16 @@ class ReservaService {
         }
     }
 
+    // ✅ CORRECCIÓN 4: Modificar getSocio para traer id_club
     private static function getSocio($pdo, $id) {
-        $s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio=?");
+        $s = $pdo->prepare("SELECT nombre, email, celular, id_club FROM socios WHERE id_socio=?");
         $s->execute([$id]);
-        return $s->fetch();
+        $data = $s->fetch();
+        // Asegurar que id_club sea null si está vacío para evitar errores de tipo
+        if ($data) {
+            $data['id_club'] = !empty($data['id_club']) ? $data['id_club'] : null;
+        }
+        return $data;
     }
 
     private static function getCancha($pdo, $id) {

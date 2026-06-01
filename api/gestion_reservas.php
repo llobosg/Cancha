@@ -305,16 +305,38 @@ function crearReservaManualUnificada($pdo, $data) {
     $monto_final = isset($data['monto_total']) ? (float)$data['monto_total'] : 0;
 
     // === INSERTAR RESERVA ===
+    // === OBTENER ID_CLUB DEL SOCIO (Si existe) ===
+    $id_club_reserva = null;
+    if ($id_socio_final) {
+        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+        $stmt_club->execute([$id_socio_final]);
+        $socio_club_data = $stmt_club->fetch(PDO::FETCH_ASSOC);
+        if ($socio_club_data && !empty($socio_club_data['id_club'])) {
+            $id_club_reserva = $socio_club_data['id_club'];
+        }
+    }
+
+    // === INSERTAR RESERVA CON ID_CLUB ===
     $stmt = $pdo->prepare("
         INSERT INTO reservas (
-            id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente,
+            id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente,
             fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
     ");
+    
     $stmt->execute([
-        $id_cancha, $id_socio_final, $nombre_cliente, $email_cliente, $telefono_cliente,
-        $fecha, $hora_inicio, $hora_fin, $monto_total
+        $id_cancha, 
+        $id_club_reserva,
+        $id_socio_final, 
+        $nombre_cliente, 
+        $email_cliente, 
+        $telefono_cliente,
+        $fecha, 
+        $hora_inicio, 
+        $hora_fin, 
+        $monto_total
     ]);
+    
     $id_reserva = $pdo->lastInsertId();
 
     // === REGISTRAR LOG DE BITÁCORA CON DETALLE DE CONVENIO ===
