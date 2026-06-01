@@ -945,9 +945,17 @@ if (isset($_SESSION['id_socio'])) {
     $primer_evento_es_futbol = false; 
 
     // 1. Obtener el ID del club del socio logueado (si tiene)
-    $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
-    $stmt_club->execute([$id_socio]);
-    $id_club_socio = $stmt_club->fetchColumn();
+    $id_club_socio = null;
+    try {
+        // Verificamos si la columna existe antes de consultar, o usamos un try-catch robusto
+        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+        $stmt_club->execute([$id_socio]);
+        $id_club_socio = $stmt_club->fetchColumn();
+    } catch (PDOException $e) {
+        // Si falla (ej. columna no existe), asumimos null
+        error_log("[DEBUG SOCIO] Error obteniendo club: " . $e->getMessage());
+        $id_club_socio = null;
+    }
 
     // 2. Construir la consulta SQL
     // Queremos reservas futuras, no canceladas, que sean mías O de mi club
