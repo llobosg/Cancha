@@ -1124,29 +1124,27 @@ if ($primer_evento_es_futbol && $primer_id_reserva > 0) {
         <div style="display:flex; flex-direction:column; gap:1rem;">
             
             <?php 
-            $index = 0; 
-            foreach ($todos_eventos as $evento): 
-                
-                // Determinar si mostramos los 3 puntitos (Solo primera ficha Y si es fútbol)
-                $mostrar_menu_3_puntos = ($index === 0 && $primer_evento_es_futbol);
-                
-                // === LÓGICA DE PERTENENCIA CORREGIDA ===
-                $es_dueno_o_inscrito = false;
-                
-                if ($evento['tipo'] === 'reserva') {
-                    // 1. Verificar si el ID del socio logueado coincide con el ID de socio de la reserva
-                    if (isset($evento['id_socio_reserva']) && intval($evento['id_socio_reserva']) == intval($id_socio)) {
-                        $es_dueno_o_inscrito = true;
-                    }
-                    // 2. Fallback: Verificar tabla inscritos si no es dueño directo
-                    elseif (!$es_dueno_o_inscrito) {
+                $index = 0; 
+                foreach ($todos_eventos as $evento): 
+                    
+                    // Determinar si mostramos los 3 puntitos (Solo primera ficha Y si es fútbol)
+                    $mostrar_menu_3_puntos = ($index === 0 && $primer_evento_es_futbol);
+                    
+                    // === LÓGICA DE PERTENENCIA CORREGIDA ===
+                    $es_dueno_o_inscrito = false;
+                    $esta_inscrito_en_tabla = false;
+        
+                    if ($evento['tipo'] === 'reserva') {
                         $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
                         $stmt_check->execute([$evento['id'], $id_socio]);
-                        $es_dueno_o_inscrito = (bool)$stmt_check->fetch();
+                        $esta_inscrito_en_tabla = (bool)$stmt_check->fetch();
+                    } elseif ($evento['tipo'] === 'torneo') {
+                        // En torneos, si aparece en la lista, ya es parte de la pareja
+                        $esta_inscrito_en_tabla = true; 
                     }
-                } elseif ($evento['tipo'] === 'torneo') {
-                    $es_dueno_o_inscrito = true; // Si aparece en torneos, ya es parte
-                }
+
+                    // Usamos esta variable para decidir qué botones mostrar
+                    $es_dueno_o_inscrito = $esta_inscrito_en_tabla;
             ?>    
             <?php if ($evento['tipo'] === 'reserva'): ?>
                         <!-- FICHA DE RESERVA -->
