@@ -938,7 +938,7 @@ $js_vars = [
     </div>
 
 <?php
-// === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (CORREGIDA PARA EVITAR MIXED PARAMETERS) ===
+// === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (FILTRADO POR CLUB ACTIVO) ===
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     error_log("[DEBUG SOCIO] Iniciando carga para ID: $id_socio");
@@ -946,35 +946,52 @@ if (isset($_SESSION['id_socio'])) {
     $todos_eventos = [];
     $primer_evento_es_futbol = false; 
 
-    // 1. Obtener IDs de Clubes del Socio desde tabla intermedia socio_club
-    $ids_clubs_socio = [];
-    try {
-        $stmt_clubs = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo'");
-        $stmt_clubs->execute([$id_socio]);
-        $ids_clubs_socio = $stmt_clubs->fetchAll(PDO::FETCH_COLUMN);
-        error_log("[DEBUG SOCIO] Clubs asociados: " . implode(',', $ids_clubs_socio));
-    } catch (Exception $e) {
-        error_log("[DEBUG SOCIO] Error obteniendo clubs: " . $e->getMessage());
+    // 1. Determinar el Club Activo desde la URL
+    $club_slug_from_url = $_GET['id_club'] ?? null;
+    $club_id_activo = null;
+
+    if (!empty($club_slug_from_url)) {
+        // Validar el slug y obtener el ID real del club
+        try {
+            $stmt_club = $pdo->prepare("SELECT id_club, email_responsable FROM clubs WHERE email_verified = 1");
+            $stmt_club->execute();
+            $clubs = $stmt_club->fetchAll();
+            
+            foreach ($clubs as $c) {
+                $generated_slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+                if ($generated_slug === $club_slug_from_url) {
+                    $club_id_activo = (int)$c['id_club'];
+                    break;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error validando club URL: " . $e->getMessage());
+        }
     }
 
+    error_log("[DEBUG SOCIO] Club Activo detectado: " . ($club_id_activo ?: 'NINGUNO (Modo Individual)'));
+
     // 2. Construir la Consulta SQL Dinámicamente
-    // Base de la consulta
     $sql_base = "
         SELECT r.*, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
         WHERE r.estado != 'cancelada'
         AND r.fecha >= CURDATE()
-        AND (r.id_socio = ?"; // Primer placeholder para id_socio
+        AND (";
     
-    $params_reservas = [$id_socio]; // Primer parámetro
+    $params_reservas = [];
 
-    // Si tiene clubes, agregamos la condición OR IN (?)
-    if (!empty($ids_clubs_socio)) {
-        $placeholders = implode(',', array_fill(0, count($ids_clubs_socio), '?'));
-        $sql_base .= " OR r.id_club IN ($placeholders)";
-        // Agregamos los IDs de club al array de parámetros
-        $params_reservas = array_merge($params_reservas, $ids_clubs_socio);
+    if ($club_id_activo) {
+        // MODO CLUB: Solo reservas de ESTE club específico
+        $sql_base .= "r.id_club = ?";
+        $params_reservas[] = $club_id_activo;
+        error_log("[DEBUG SOCIO] Filtrando por Club ID: $club_id_activo");
+    } else {
+        // MODO INDIVIDUAL: Solo reservas personales del socio
+        $sql_base .= "r.id_socio = ? AND (r.id_club IS NULL OR r.id_club = 0)";
+        $params_reservas[] = $id_socio;
+        error_log("[DEBUG SOCIO] Filtrando por Socio ID: $id_socio (Individual)");
     }
     
     $sql_base .= ") ORDER BY r.fecha ASC, r.hora_inicio ASC";
@@ -1021,7 +1038,7 @@ if (isset($_SESSION['id_socio'])) {
         ];
     }
 
-    // 4. Torneos (Sin cambios mayores)
+    // 4. Torneos (Sin cambios mayores, ya están vinculados al socio directamente)
     $sql_torneos = "
         SELECT t.*, pt.codigo_pareja, 'torneo' as tipo
         FROM parejas_torneo pt
@@ -1056,17 +1073,31 @@ if (isset($_SESSION['id_socio'])) {
 
     error_log("[DEBUG SOCIO] Total eventos finales: " . count($todos_eventos));
 
-    // 5. Cargar Deudas Pendientes
+    // 5. Cargar Deudas Pendientes (Filtradas por Club Activo si existe)
     $deuda_mas_vigente = null;
     $cuotas_pendientes = 0;
     
     try {
-        $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
-        $stmt_deuda->execute([$id_socio]);
+        if ($club_id_activo) {
+            // Deudas del club activo
+            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
+            $stmt_deuda->execute([$id_socio, $club_id_activo]);
+        } else {
+            // Deudas individuales (sin club)
+            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
+            $stmt_deuda->execute([$id_socio]);
+        }
+        
         $deuda_mas_vigente = $stmt_deuda->fetch(PDO::FETCH_ASSOC);
         
-        $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND estado = 'pendiente'");
-        $stmt_count->execute([$id_socio]);
+        // Contar total de deudas
+        if ($club_id_activo) {
+            $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente'");
+            $stmt_count->execute([$id_socio, $club_id_activo]);
+        } else {
+            $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente'");
+            $stmt_count->execute([$id_socio]);
+        }
         $cuotas_pendientes = (int)$stmt_count->fetchColumn();
         
     } catch (PDOException $e) {
