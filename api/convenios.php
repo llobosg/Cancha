@@ -1,13 +1,4 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-while (ob_get_level()) ob_end_clean();
-
-try {
-    define('APP_ENTRY_POINT', true);
-    
-    // 🔍 RESOLUCIÓN INTELIGENTE DE RUTAS (Compatible Railway/Nixpacks)
-    $docRoot    = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
-    $projectRoot = dirname($docRoot);<?php
 // api/convenios.php
 header('Content-Type: application/json; charset=utf-8');
 while (ob_get_level()) ob_end_clean();
