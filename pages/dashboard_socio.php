@@ -961,11 +961,22 @@ if (isset($_SESSION['id_socio'])) {
         $where_reservas[] = "r.id_socio = ?";
         $params_reservas[] = $id_socio;
     }
+
+    // === 2. OBTENER CLUB DEL SOCIO (Inicializado para evitar warnings) ===
+    $club_del_socio = null;
+    try {
+        $stmt_club_socio = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+        $stmt_club_socio->execute([$id_socio]);
+        $club_del_socio = $stmt_club_socio->fetchColumn();
+    } catch (Exception $e) {
+        error_log("Error obteniendo club del socio: " . $e->getMessage());
+    }
     
     // Condiciones comunes
     $where_reservas[] = "r.estado != 'cancelada'";
 
-    // === CONSULTA UNIFICADA: Reservas del Socio O de su Club ===
+    // === 2. CONSULTA UNIFICADA: Reservas del Socio O de su Club ===
+    // Usamos 'r' como alias para mantener consistencia con tu código original
     $sql_reservas = "
         SELECT r.id_reserva, r.id_socio, r.id_club, r.fecha, r.hora_inicio, r.hora_fin, 
                r.monto_total, r.estado_pago, r.jugadores_esperados, r.nombre_cliente,
@@ -984,14 +995,13 @@ if (isset($_SESSION['id_socio'])) {
     $stmt_reservas = $pdo->prepare($sql_reservas);
     $stmt_reservas->execute([
         ':id_socio' => $id_socio,
-        ':id_club' => $club_del_socio ?: 0 // Si no tiene club, pasa 0 (no afectará el OR)
+        ':id_club' => $club_del_socio ?: 0 // Si no tiene club, pasa 0
     ]);
-    $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
 
     // Debug temporal
     error_log("[DEBUG SOCIO] Reservas encontradas para ID $id_socio (Club: $club_del_socio): " . count($reservas_db));
     
-    foreach ($reservas_db as $r) {
+    foreach ($reservas as $r) {
         // Calcular cupos ocupados (si usas tabla inscritos) o asumir 1
         $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
         $stmt_inscritos->execute([$r['id_reserva']]);
