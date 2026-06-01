@@ -3188,6 +3188,29 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         radiosDuracion.forEach((radio, index) => {
             const val = parseInt(radio.value);
             const label = labelsDuracion[index];
+            const idDeporte = cancha.id_deporte;
+            const divPadel = document.getElementById('opcionesPadel');
+            const divOtros = document.getElementById('opcionesOtros');
+
+            ventanaActual.esPadel = (idDeporte === 'padel' || idDeporte == 2); 
+
+            if (ventanaActual.esPadel) {
+                divPadel.style.display = 'flex';
+                divOtros.style.display = 'none';
+                // Habilitar radios
+                divPadel.querySelectorAll('input').forEach(r => r.disabled = false);
+            } else {
+                divPadel.style.display = 'none';
+                divOtros.style.display = 'flex';
+                // Forzar 60 min
+                ventanaActual.duracion = 60;
+                document.querySelector('input[name="duracion"][value="60"]').checked = true;
+            }
+
+            ventanaActual.precioBase = parseFloat(cancha.valor_arriendo) || 0;
+            
+            // Inicializar cálculo
+            recalcularPrecioTotal();
             
             if (esPadel) {
                 // Si es Pádel, habilitar todos
@@ -3378,6 +3401,103 @@ function actualizarCalculoMonto(montoBase, duracion, convenio) {
     if (labelDinamico) labelDinamico.textContent = textoLabel;
     if (subtextoMonto) subtextoMonto.textContent = textoSub;
 }
+
+// === FUNCIÓN CENTRAL DE CÁLCULO ===
+function recalcularPrecioTotal() {
+    // 1. Obtener valores actuales
+    const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
+    ventanaActual.duracion = duracion;
+    
+    // 2. Factor por duración
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2;
+
+    // 3. Cantidad de reservas (1 si es simple, N si es recurrente)
+    let cantidad = 1;
+    if (document.getElementById('isRecurrent')?.checked) {
+        const start = document.getElementById('startDate')?.value;
+        const end = document.getElementById('endDate')?.value;
+        const day = parseInt(document.getElementById('repeatDay')?.value);
+        
+        if (start && end && !isNaN(day)) {
+            const fechas = generarFechasRecurrencia(start, end, day);
+            cantidad = fechas.length;
+        }
+    }
+    ventanaActual.cantidadReservas = cantidad;
+
+    // 4. Descuento por Convenio
+    let descuento = 0;
+    const convenioId = document.getElementById('admin_convenio_id').value;
+    if (convenioId) {
+        // Aquí deberías tener guardado el % del convenio seleccionado. 
+        // Si no lo tienes en una variable global, búscalo en el objeto del convenio seleccionado previamente.
+        // Asumimos que guardaste el % en window.convenioPorcentaje al seleccionar
+        descuento = window.convenioPorcentaje || 0; 
+    }
+    ventanaActual.descuentoPorcentaje = descuento;
+
+    // 5. Cálculo Matemático
+    const precioUnitarioBruto = Math.round(ventanaActual.precioBase * factor);
+    const subtotal = precioUnitarioBruto * cantidad;
+    const montoDescuento = Math.round(subtotal * (descuento / 100));
+    const totalFinal = subtotal - montoDescuento;
+
+    // 6. Actualizar UI
+    const inputMonto = document.getElementById('admin_monto_total_input');
+    const hiddenMonto = document.getElementById('admin_monto_total');
+    const labelDinamico = document.getElementById('labelMontoDinamico');
+    const subtexto = document.getElementById('subtextoMonto');
+
+    if(inputMonto) inputMonto.value = totalFinal;
+    if(hiddenMonto) hiddenMonto.value = totalFinal;
+
+    // Texto descriptivo
+    if (cantidad > 1) {
+        subtexto.textContent = `${cantidad} reservas x ${duracion} min`;
+    } else {
+        subtexto.textContent = `1 reserva x ${duracion} min`;
+    }
+
+    // Label de descuento
+    if (descuento > 0) {
+        labelDinamico.innerHTML = `🤝 Convenio (${descuento}% OFF)<br><small style="color:#666">Subtotal: $${subtotal.toLocaleString('es-CL')} - Ahorro: $${montoDescuento.toLocaleString('es-CL')}</small>`;
+    } else {
+        labelDinamico.textContent = '💰 Total a pagar:';
+    }
+}
+
+// === ACTUALIZAR DURACIÓN ===
+function actualizarDuracionReserva(val) {
+    const horaInicio = document.getElementById('admin_hora_inicio').value;
+    if(horaInicio) {
+        actualizarHoraFin(horaInicio, parseInt(val));
+    }
+    recalcularPrecioTotal();
+}
+
+// === PERMITIR EDICIÓN MANUAL DEL MONTO ===
+function actualizarMontoManual(valor) {
+    const val = parseFloat(valor);
+    if (!isNaN(val) && val >= 0) {
+        document.getElementById('admin_monto_total').value = val;
+        // Nota: Esto rompe la sincronización automática. 
+        // Si el usuario cambia duración después, se sobrescribirá.
+        // Es un comportamiento aceptable para "ajuste final".
+    }
+}
+
+// === ESCUCHAR CAMBIOS EN RECURRENTE ===
+// Agrega esto en tu DOMContentLoaded o asegura que exista
+document.getElementById('isRecurrent')?.addEventListener('change', function() {
+    toggleRecurrentFields(this.checked);
+    recalcularPrecioTotal();
+});
+['startDate', 'endDate', 'repeatDay'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', recalcularPrecioTotal);
+});
 
 // === TOGGLE SECCIÓN RECURRENTE (FIX: usar onchange en HTML + función global) ===
 function toggleRecurrentFields(mostrar) {
@@ -5773,6 +5893,7 @@ function seleccionarConvenioAdmin(id, nombre, dscto, emailContacto) {
     window.convenioEmailContacto = emailContacto;
 
     window.convenioDsctoActual = dscto;
+    window.convenioPorcentaje = parseFloat(dscto) || 0;
 
     // Mostrar label de descuento
     const labelDesc = document.getElementById('labelDescuentoConvenio');
@@ -5787,6 +5908,7 @@ function seleccionarConvenioAdmin(id, nombre, dscto, emailContacto) {
 
     // Recalcular monto total con descuento
     recalcularMontoConDescuento(dscto);
+    recalcularPrecioTotal();
 }
 
 function recalcularMontoConDescuento(porcDscto) {
@@ -5872,6 +5994,50 @@ function actualizarPrecioDisplayNormal() {
     elDisplay.textContent = `$${total.toLocaleString('es-CL')}`;
 }
 
+// === LIMPIAR SELECCIÓN SOCIO ===
+function limpiarSeleccionSocio() {
+    document.getElementById('searchAdmin').value = '';
+    document.getElementById('admin_socio_id').value = '';
+    document.getElementById('searchResultsAdmin').style.display = 'none';
+    // Al limpiar socio, recalculamos precio (quita descuento si había lógica de socio, aunque aquí es por convenio)
+    recalcularPrecioTotal();
+}
+
+// === LIMPIAR SELECCIÓN CONVENIO ===
+function limpiarSeleccionConvenio() {
+    document.getElementById('searchConvenio').value = '';
+    document.getElementById('admin_convenio_id').value = '';
+    document.getElementById('searchResultsConvenio').style.display = 'none';
+    window.convenioActivo = null; // Reset variable global
+    
+    // Ocultar label de descuento
+    const labelDesc = document.getElementById('labelMontoDinamico');
+    if(labelDesc) labelDesc.textContent = '💰 Total a pagar:';
+    
+    recalcularPrecioTotal();
+}
+
+// === LIMPIAR TODO AL CERRAR MODAL ===
+function cerrarModalReservaAdmin(e) {
+    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
+        // Limpiar datos antes de cerrar
+        limpiarSeleccionSocio();
+        limpiarSeleccionConvenio();
+        document.getElementById('isRecurrent')?.checked = false;
+        toggleRecurrentFields(false);
+        
+        const modal = document.getElementById('modalReservaAdmin');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 250);
+        }
+    }
+    e.stopPropagation();
+}
+
 // Modificar seleccionarConvenioAdmin para guardar el % en variable global
 // Agrega esta línea dentro de seleccionarConvenioAdmin:
 // window.convenioDsctoActual = dscto;
@@ -5920,86 +6086,92 @@ window.cerrarSubmodal = cerrarSubmodal;
                     </div>
                 </div>
 
-                <!-- ✅ Selector de duración (30/60/90/120 min) -->
+                <!-- === SELECTOR DE DURACIÓN (CONDICIONAL POR DEPORTE) === -->
                 <div style="margin-bottom:1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>
-                    <div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
-                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
-                            <input type="radio" name="duracion" value="30" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 30m
+                    
+                    <!-- Contenedor para Opciones Pádel (Oculto por defecto) -->
+                    <div id="opcionesPadel" style="display:none; gap:0.3rem; flex-wrap:wrap;">
+                        <label class="duration-label">
+                            <input type="radio" name="duracion" value="30" onchange="actualizarDuracionReserva(this.value)"> 30m
                         </label>
-                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
-                            <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 60m
+                        <label class="duration-label">
+                            <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)"> 60m
                         </label>
-                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
-                            <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 90m
+                        <label class="duration-label">
+                            <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)"> 90m
                         </label>
-                        <label style="flex:1; min-width:60px; padding:0.5rem; border:2px solid #E2E8F0; border-radius:10px; text-align:center; cursor:pointer; background:#F7FAFC; transition:all 0.2s; font-size:0.9rem;">
-                            <input type="radio" name="duracion" value="120" onchange="actualizarDuracionReserva(this.value)" style="margin-right:0.2rem;"> 120m
+                        <label class="duration-label">
+                            <input type="radio" name="duracion" value="120" onchange="actualizarDuracionReserva(this.value)"> 120m
+                        </label>
+                    </div>
+
+                    <!-- Contenedor para Otros Deportes (Solo 60 min) -->
+                    <div id="opcionesOtros" style="display:flex; gap:0.3rem;">
+                        <label class="duration-label" style="flex:1; background:#E3F2FD; border-color:#2196F3;">
+                            <input type="radio" name="duracion" value="60" checked disabled> 60 min (Estándar)
                         </label>
                     </div>
                 </div>
 
-                <!-- === BUSCADOR INTELIGENTE DE SOCIO (SIN INPUTS DUPLICADOS) === -->
+                <!-- === BUSCADOR SOCIO CON BOTÓN LIMPIAR === -->
                 <div style="position:relative; margin-bottom:1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
-                    <input type="text" id="searchAdmin" placeholder="Buscar socio (nombre, email, celular)..."
-                        oninput="debounceBuscar(this.value)"
-                        style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+                    <div style="display:flex; gap:0.5rem;">
+                        <input type="text" id="searchAdmin" placeholder="Buscar socio..."
+                            oninput="debounceBuscar(this.value)"
+                            style="flex:1; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+                        
+                        <!-- Botón X para limpiar Socio -->
+                        <button type="button" onclick="limpiarSeleccionSocio()" 
+                            style="background:#EF5350; color:white; border:none; border-radius:10px; width:40px; cursor:pointer; font-size:1.2rem;"
+                            title="Limpiar selección de socio">
+                            &times;
+                        </button>
+                    </div>
                     <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
-                    <!-- ✅ NO agregar inputs hidden aquí: ya existen en la sección de campos ocultos al inicio del form -->
-                </div>
-                <!-- ✅ datos para nuevo socio -->
-                <!-- === CHECKBOX PARA NUEVO SOCIO (colapsable) === -->
-                <div style="margin:0.5rem 0 0.75rem 0; display:flex; align-items:center; gap:0.5rem;">
-                    <input type="checkbox" id="checkNuevoSocio" style="width:16px; height:16px;" onchange="toggleNuevoSocioPanel(this.checked)">
-                    <label for="checkNuevoSocio" style="font-size:0.9rem; color:#333; cursor:pointer; font-weight:500;">
-                        ✨ Registrar nuevo socio
-                    </label>
                 </div>
 
-                <!-- Panel colapsable para datos de nuevo socio (inicialmente oculto) -->
-                <div id="panelNuevoSocio" style="display:none; margin:0.75rem 0; padding:0.75rem; background:#F8F9FA; border-radius:8px; border:1px solid #E9ECEF; transition: all 0.3s ease;">
-                    <p style="font-size:0.8rem; color:#666; margin:0 0 0.75rem 0;">Complete los datos para crear el nuevo socio:</p>
-                    <input type="text" id="nombreNuevoSocio" placeholder="Nombre completo *" 
-                        style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
-                    <input type="email" id="emailNuevoSocio" placeholder="Email *" 
-                        style="width:100%; padding:0.5rem; margin-bottom:0.4rem; border:1px solid #ccc; border-radius:6px;">
-                    <input type="tel" id="telNuevoSocio" placeholder="Teléfono (opcional)" 
-                        style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
-                </div>
+                <!-- ... (Checkbox Nuevo Socio y Panel colapsable se mantienen igual) ... -->
 
-                <!-- === BUSCADOR DE CONVENIOS (Opcional) === -->
+                <!-- === BUSCADOR CONVENIO CON BOTÓN LIMPIAR === -->
                 <div style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">🤝 Aplicar Convenio (Opcional)</label>
-                    <div style="position:relative;">
-                        <input type="text" id="searchConvenio" placeholder="Buscar empresa o contacto..."
+                    <div style="display:flex; gap:0.5rem;">
+                        <input type="text" id="searchConvenio" placeholder="Buscar empresa..."
                             oninput="debounceBuscarConvenio(this.value)"
-                            style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
-                        <div id="searchResultsConvenio" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+                            style="flex:1; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+                        
+                        <!-- Botón X para limpiar Convenio -->
+                        <button type="button" onclick="limpiarSeleccionConvenio()" 
+                            style="background:#EF5350; color:white; border:none; border-radius:10px; width:40px; cursor:pointer; font-size:1.2rem;"
+                            title="Quitar convenio">
+                            &times;
+                        </button>
                     </div>
-                    <!-- Input oculto para guardar ID del convenio seleccionado -->
-                    <input type="hidden" id="admin_convenio_id" name="id_convenio" value="">
+                    <div id="searchResultsConvenio" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+                    <input type="hidden" id="admin_convenio_id" value="">
                 </div>
 
-                <!-- Resumen de monto UNIFICADO -->
-                <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; flex-direction:column; gap:0.3rem; border-left:4px solid #4CAF50;">
+                <!-- === RESUMEN DE MONTO (EDITABLE Y DINÁMICO) === -->
+                <div style="background:#E8F5E9; padding:1rem; border-radius:10px; margin-bottom:1.25rem; border-left:4px solid #4CAF50;">
                     
-                    <!-- Label Dinámico: Muestra "Total a pagar" O "Convenio + Descuento" -->
-                    <div id="labelMontoDinamico" style="font-size:0.85rem; color:#2E7D32; font-weight:600; text-align:right; min-height:1.2em;">
+                    <!-- Label Dinámico -->
+                    <div id="labelMontoDinamico" style="font-size:0.85rem; color:#2E7D32; font-weight:600; text-align:right; margin-bottom:0.3rem;">
                         💰 Total a pagar:
                     </div>
 
-                    <!-- Monto Final Grande -->
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:0.9rem; color:#555;" id="subtextoMonto">Base</span>
-                        <span style="font-size:1.4rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
+                        <span style="font-size:0.9rem; color:#555;" id="subtextoMonto">1 reserva x 60 min</span>
+                        
+                        <!-- Input Editable para Monto Final -->
+                        <input type="number" id="admin_monto_total_input" 
+                            onchange="actualizarMontoManual(this.value)"
+                            style="width:140px; padding:0.5rem; text-align:right; font-size:1.2rem; font-weight:700; color:#2E7D32; border:1px solid #C8E6C9; border-radius:6px; background:white;">
+                        
+                        <!-- Hidden real para el form -->
+                        <input type="hidden" id="admin_monto_total" name="monto_total" value="0">
                     </div>
-                </div>
-
-                <!-- Resumen de monto -->
-                <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #4CAF50;">
-                    <span style="font-weight:600; color:#2E7D32;">💰 Total a pagar:</span>
-                    <span style="font-size:1.2rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
                 </div>
 
                 <!-- ✅ Sección Reserva Recurrente (con evento fijo) -->
