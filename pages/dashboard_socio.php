@@ -1203,7 +1203,7 @@ if (isset($_SESSION['id_socio'])) {
                                         </div>
                                     </div>
                                     <div style="text-align:right;">
-                                        <div style="font-size:0.8rem; color:#888;">Estado</div>
+                                        <div style="font-size:0.8rem; color:#888;">Pago de cancha por app</div>
                                         <div style="font-weight:bold; color:<?= $evento['estado_pago'] == 'pagado' ? '#2E7D32' : '#F57F17' ?>;">
                                             <?= ucfirst($evento['estado_pago']) ?>
                                         </div>
