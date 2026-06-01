@@ -91,101 +91,127 @@ try {
     }
 
     // === CREAR RESERVAS + RECOPILAR DATOS PARA EMAIL ===
+    // ... código anterior de generación de fechas ...
+
     $reservas_creadas = [];
-    $created = 0;
+    $created = 0; // Contador de reservas exitosas
     $skipped = 0;
-    
+    $total_a_generar = count($fechas_disponibles);
+
     $pdo->beginTransaction();
-    
-    foreach ($fechas_disponibles as $item) {
+
+    foreach ($fechas_disponibles as $index => $item) {
         $fecha = $item['fecha'];
+        $dia_nombre = $item['dia_nombre'];
+        $dia_num = $item['dia_num'];
         
-        // === MANEJAR CREACIÓN DE SOCIO NUEVO (SI VIENE DESDE ADMIN) ===
-        $id_socio_final = $id_socio_reserva; 
-        
+        // === 1. MANEJAR CREACIÓN DE SOCIO NUEVO (Solo una vez al inicio si es necesario) ===
+        // Si no hay ID de socio y hay email nuevo, creamos el socio antes del loop o aquí si es dinámico.
+        // Asumimos que $id_socio ya está resuelto o se crea aquí si es nuevo.
+        $id_socio_final = $id_socio; 
         if (!$id_socio_final && !empty($input['emailNuevoSocio'])) {
-             // Lógica de creación de socio nuevo (igual que tenías)
-             $email_nuevo = trim($input['emailNuevoSocio']);
-             $nombre_nuevo = trim($input['nombreNuevoSocio'] ?? 'Nuevo Socio');
-             $tel_nuevo = trim($input['telNuevoSocio'] ?? '');
-             
-             if ($email_nuevo) {
-                 $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
-                 $stmt->execute([$email_nuevo]);
-                 $existente = $stmt->fetch();
-                 
-                 if ($existente) {
-                     $id_socio_final = $existente['id_socio'];
-                 } else {
-                     $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
-                     $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
-                     $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
-                     $id_socio_final = $pdo->lastInsertId();
-                 }
-             }
+            // Lógica de creación de socio (igual a la que ya tienes)
+            $email_nuevo = trim($input['emailNuevoSocio']);
+            $nombre_nuevo = trim($input['nombreNuevoSocio'] ?? 'Nuevo Socio');
+            $tel_nuevo = trim($input['telNuevoSocio'] ?? '');
+            
+            if ($email_nuevo) {
+                $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+                $stmt->execute([$email_nuevo]);
+                $existente = $stmt->fetch();
+                
+                if ($existente) {
+                    $id_socio_final = $existente['id_socio'];
+                } else {
+                    $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
+                    $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
+                    $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
+                    $id_socio_final = $pdo->lastInsertId();
+                }
+            }
         }
 
         try {
-            // Doble-check de disponibilidad
+            // Doble-check de disponibilidad inmediata antes de insertar
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
             $stmt->execute([$id_cancha, $fecha, $hora_inicio]);
-            if ($stmt->fetchColumn() > 0) { $skipped++; continue; }
+            if ($stmt->fetchColumn() > 0) { 
+                $skipped++; 
+                continue; 
+            }
 
-            // === INSERTAR RESERVA ===
+            // Calcular hora fin basada en duración si no viene explícita o para asegurar consistencia
+            // Asumimos que $hora_fin ya viene calculada desde el frontend o la calculamos aquí
+            $duracion_minutos = intval($input['duracion_bloque'] ?? 60);
+            $h_ini_parts = explode(':', $hora_inicio);
+            $minutos_ini = ($h_ini_parts[0] * 60) + $h_ini_parts[1];
+            $minutos_fin = $minutos_ini + $duracion_minutos;
+            $h_fin = floor($minutos_fin / 60);
+            $m_fin = $minutos_fin % 60;
+            $hora_fin_calc = sprintf("%02d:%02d", $h_fin, $m_fin);
+
+            // === 2. INSERTAR RESERVA INDIVIDUAL ===
             $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
             $stmt->execute([
                 $id_cancha,
                 $id_socio_final,
                 $fecha,
                 $hora_inicio,
-                $hora_fin,
+                $hora_fin_calc, // Usamos la calculada para precisión
                 $monto_total,
                 $jugadores
             ]);
             
             $id_reserva_creada = $pdo->lastInsertId();
-            
-            // === LOG BITÁCORA ===
+            $created++; // Incrementamos contador ÉXITOSO
+
+            // === 3. REGISTRAR LOG INDIVIDUAL EN BITÁCORA ===
             if (function_exists('registrarLogReserva')) {
-                $descripcion = "🔄 Reserva recurrente creada\n";
-                $descripcion .= "📅 Desde: " . date('d-m-Y', strtotime($start_date)) . "\n";
-                $descripcion .= "📅 Hasta: " . date('d-m-Y', strtotime($end_date)) . "\n";
-                $descripcion .= "🔢 Total eventos: " . count($fechas_disponibles) . "\n";
-                $descripcion .= "💰 Monto por reserva: $" . number_format($monto_total, 0, ',', '.');
+                $usuario_log = $_SESSION['recinto_usuario'] ?? ($_SESSION['nombre_completo'] ?? 'Sistema');
                 
+                // Descripción detallada para este ítem específico
+                $descripcion = "🔄 Reserva Recurrente (Ítem $created/$total_a_generar)\n";
+                $descripcion .= "📅 Fecha: $fecha ($dia_nombre $dia_num)\n";
+                $descripcion .= "⏰ Hora: $hora_inicio - $hora_fin_calc\n";
+                $descripcion .= "💰 Monto: $" . number_format($monto_total, 0, ',', '.');
+                
+                // Metadata útil para filtrado futuro
+                $metadata = json_encode([
+                    'tipo' => 'recurrente_item',
+                    'serie_total' => $total_a_generar,
+                    'indice_serie' => $created,
+                    'patron_dia' => $repeat_day,
+                    'rango_desde' => $start_date,
+                    'rango_hasta' => $end_date
+                ]);
+
                 registrarLogReserva(
                     $pdo,
                     $id_reserva_creada,
-                    'creada_recurrente',
+                    'creada_recurrente', // Acción específica
                     $descripcion,
-                    $_SESSION['recinto_usuario'] ?? ($_SESSION['nombre'] ?? 'Socio'), // Usuario que crea
-                    null,
-                    $monto_total,
-                    json_encode([
-                        'tipo' => 'recurrente',
-                        'fecha_desde' => $start_date,
-                        'fecha_hasta' => $end_date,
-                        'total_eventos' => count($fechas_disponibles)
-                    ])
+                    $usuario_log,
+                    null, // monto_anterior
+                    $monto_total, // monto_nuevo
+                    $metadata
                 );
             }
 
             $reservas_creadas[] = [
                 'fecha' => $fecha,
-                'dia_nombre' => $item['dia_nombre'],
-                'dia_num' => $item['dia_num'],
-                'hora' => substr($hora_inicio,0,5) . '-' . substr($hora_fin,0,5),
+                'dia_nombre' => $dia_nombre,
+                'dia_num' => $dia_num,
+                'hora' => substr($hora_inicio,0,5) . '-' . substr($hora_fin_calc,0,5),
                 'id_reserva' => $id_reserva_creada
             ];
-            
-            $created++;
 
         } catch (Exception $e) {
             $skipped++;
             error_log("[Recurrente] Error en $fecha: " . $e->getMessage());
+            // Opcional: Rollback parcial si falla uno, pero usualmente continuamos con los demás
         }
     }
-    
+
     $pdo->commit();
 
     // === ENVIAR EMAIL RESUMEN (SOLO SI HAY SOCIO Y SE CREÓ AL MENOS 1) ===
