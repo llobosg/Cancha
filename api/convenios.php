@@ -19,7 +19,7 @@ try {
               ? "$projectRoot/config.php" 
               : "$docRoot/config.php";
               
-    // Log de diagnóstico (aparecerá en Railway logs)
+    // Log de diagnóstico
     error_log("🔍 [API Convenios] Project Root: $projectRoot | Doc Root: $docRoot");
     error_log("📦 [API Convenios] Autoload: " . (file_exists($autoload) ? "✅" : "❌ Falta"));
     error_log("⚙️ [API Convenios] Config: " . (file_exists($config) ? "✅" : "❌ Falta"));
@@ -30,10 +30,22 @@ try {
     require_once $autoload;
     require_once $config;
 
+    // ✅ VERIFICACIÓN CRÍTICA: Asegurar que $pdo existe
+    if (!isset($pdo) || !$pdo instanceof PDO) {
+        // Si config.php usa una clase o función para conectar, llámala aquí.
+        // Ejemplo común: $pdo = getPDOConnection(); o $pdo = Database::connect();
+        // Si no sabes cómo se conecta tu config.php, revisa ese archivo.
+        
+        // Intento de fallback común si config.php falla silenciosamente:
+        throw new Exception("La conexión PDO (\$pdo) no se inicializó desde config.php. Revisa includes/config.php");
+    }
+
     if (session_status() === PHP_SESSION_NONE) session_start();
     
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['id_recinto'])) {
-        throw new Exception('No autorizado. Sesión inválida.', 401);
+    // Validación de sesión (Ajustada a tu estructura de sesiones de Admin/Recinto)
+    // Nota: En recinto_dashboard usas $_SESSION['id_recinto'] y $_SESSION['recinto_rol']
+    if (!isset($_SESSION['id_recinto'])) {
+        throw new Exception('No autorizado. Sesión de recinto inválida.', 401);
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -84,3 +96,4 @@ try {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
 }
+?>
