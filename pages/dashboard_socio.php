@@ -938,7 +938,7 @@ $js_vars = [
     </div>
 
 <?php
-// === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (USANDO TABLA socio_club) ===
+// === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (CORREGIDA PARA EVITAR MIXED PARAMETERS) ===
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     error_log("[DEBUG SOCIO] Iniciando carga para ID: $id_socio");
@@ -957,36 +957,36 @@ if (isset($_SESSION['id_socio'])) {
         error_log("[DEBUG SOCIO] Error obteniendo clubs: " . $e->getMessage());
     }
 
-    // 2. Consulta de Reservas (Mías O De Mis Clubs)
-    // Construimos la condición OR dinámicamente
-    $where_reservas = "r.estado != 'cancelada' AND r.fecha >= CURDATE() AND (r.id_socio = :id_socio";
-    
-    if (!empty($ids_clubs_socio)) {
-        // Crear placeholders para IN (?, ?, ...)
-        $club_placeholders = implode(',', array_fill(0, count($ids_clubs_socio), '?'));
-        $where_reservas .= " OR r.id_club IN ($club_placeholders)";
-    }
-    $where_reservas .= ")";
-
-    $sql_reservas = "
+    // 2. Construir la Consulta SQL Dinámicamente
+    // Base de la consulta
+    $sql_base = "
         SELECT r.*, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE $where_reservas
-        ORDER BY r.fecha ASC, r.hora_inicio ASC
-    ";
-
-    $stmt_reservas = $pdo->prepare($sql_reservas);
+        WHERE r.estado != 'cancelada'
+        AND r.fecha >= CURDATE()
+        AND (r.id_socio = ?"; // Primer placeholder para id_socio
     
-    // Preparar parámetros: primero id_socio, luego los ids de clubs
-    $params_reservas = [$id_socio];
+    $params_reservas = [$id_socio]; // Primer parámetro
+
+    // Si tiene clubes, agregamos la condición OR IN (?)
     if (!empty($ids_clubs_socio)) {
+        $placeholders = implode(',', array_fill(0, count($ids_clubs_socio), '?'));
+        $sql_base .= " OR r.id_club IN ($placeholders)";
+        // Agregamos los IDs de club al array de parámetros
         $params_reservas = array_merge($params_reservas, $ids_clubs_socio);
     }
     
+    $sql_base .= ") ORDER BY r.fecha ASC, r.hora_inicio ASC";
+
+    error_log("[DEBUG SOCIO] SQL Final: $sql_base");
+    error_log("[DEBUG SOCIO] Params: " . json_encode($params_reservas));
+
+    // 3. Ejecutar Consulta
+    $stmt_reservas = $pdo->prepare($sql_base);
     $stmt_reservas->execute($params_reservas);
-    $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
     
+    $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
     error_log("[DEBUG SOCIO] Reservas encontradas en BD: " . count($reservas));
 
     foreach ($reservas as $r) {
@@ -1021,7 +1021,7 @@ if (isset($_SESSION['id_socio'])) {
         ];
     }
 
-    // 3. Torneos (Sin cambios mayores)
+    // 4. Torneos (Sin cambios mayores)
     $sql_torneos = "
         SELECT t.*, pt.codigo_pareja, 'torneo' as tipo
         FROM parejas_torneo pt
@@ -1056,7 +1056,7 @@ if (isset($_SESSION['id_socio'])) {
 
     error_log("[DEBUG SOCIO] Total eventos finales: " . count($todos_eventos));
 
-    // 4. Cargar Deudas Pendientes
+    // 5. Cargar Deudas Pendientes
     $deuda_mas_vigente = null;
     $cuotas_pendientes = 0;
     
