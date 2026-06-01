@@ -1640,7 +1640,7 @@ td.bloqueado {
                 <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#2D3748;">🤝 Mantenedor de Convenios</h3>
                 <button onclick="cerrarSubmodalConvenios()" style="width:32px; height:32px; border-radius:50%; background:#E2E8F0; border:none; color:#4A5568; font-size:1.1rem; cursor:pointer;">&times;</button>
             </div>
-            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem;">
+            <div style="flex:1; overflow-y:auto; padding:1rem 1.5rem; color: #333;"> <!-- ✅ Agregado color base aquí -->
                 <?php
                 $stmt_conv = $pdo->prepare("SELECT c.id_convenio, c.nombre_empresa, c.contacto_nombre, c.contacto_email, c.contacto_telefono, c.porc_dscto, c.vigente_desde, c.vigente_hasta, c.estado, COUNT(s.id_socio) as socios_vinculados FROM convenios c LEFT JOIN socios s ON c.id_convenio = s.id_convenio AND s.activo = 'Si' WHERE c.id_recinto = ? GROUP BY c.id_convenio ORDER BY c.nombre_empresa ASC");
                 $stmt_conv->execute([$_SESSION['id_recinto']]);
@@ -1653,21 +1653,21 @@ td.bloqueado {
                         <button onclick="cerrarSubmodalConvenios(); abrirModalConvenios()" style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:0.6rem 1.5rem; border-radius:12px; cursor:pointer; margin-top:0.5rem;">+ Crear mi primer convenio</button>
                     </div>
                 <?php else: ?>
-                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem; color: #333;"> <!-- ✅ Color explícito en tabla -->
                         <thead>
                             <tr style="background:#F7FAFC; position:sticky; top:0;">
-                                <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0;">Empresa</th>
-                                <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0;">Contacto</th>
-                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Descuento</th>
-                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Socios</th>
-                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Vigencia</th>
-                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Estado</th>
-                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0;">Acciones</th>
+                                <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; color: #4A5568;">Empresa</th> <!-- ✅ Color header -->
+                                <th style="padding:0.8rem; text-align:left; border-bottom:2px solid #E2E8F0; color: #4A5568;">Contacto</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; color: #4A5568;">Descuento</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; color: #4A5568;">Socios</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; color: #4A5568;">Vigencia</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; color: #4A5568;">Estado</th>
+                                <th style="padding:0.8rem; text-align:center; border-bottom:2px solid #E2E8F0; color: #4A5568;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach($convenios_list as $c): ?>
-                            <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
+                            <tr style="border-bottom:1px solid #EDF2F7; transition:background 0.2s; color: #333;" onmouseover="this.style.background='#F7FAFC'" onmouseout="this.style.background='white'">
                                 <td style="padding:0.8rem; font-weight:500;"><?= htmlspecialchars($c['nombre_empresa']) ?></td>
                                 <td style="padding:0.8rem;"><?= htmlspecialchars($c['contacto_nombre'] ?: '-') ?><br><small style="color:#718096;"><?= htmlspecialchars($c['contacto_email'] ?: $c['contacto_telefono'] ?: '') ?></small></td>
                                 <td style="padding:0.8rem; text-align:center;"><span style="background:<?= $c['porc_dscto'] >= 20 ? '#C6F6D5' : '#FEFCBF' ?>; color:<?= $c['porc_dscto'] >= 20 ? '#22543D' : '#744210' ?>; padding:0.25rem 0.6rem; border-radius:20px; font-weight:600; font-size:0.85rem;"><?= $c['porc_dscto'] ?>%</span></td>
