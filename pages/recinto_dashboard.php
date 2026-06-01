@@ -3160,60 +3160,63 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const elMonto = document.getElementById('admin_monto_total');
     const elBase = document.getElementById('admin_monto_base');
     const elDMonto = document.getElementById('modalMontoDisplay');
+    
+    // Elementos de UI a controlar
+    const labelDinamico = document.getElementById('labelMontoDinamico');
+    const subtextoMonto = document.getElementById('subtextoMonto');
+    const radiosDuracion = document.querySelectorAll('input[name="duracion"]');
+    const labelsDuracion = document.querySelectorAll('.duration-label');
 
-   // Dentro de abrirReservaAdmin, después de encontrar la cancha en canchasData
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        if (elNombre) elNombre.textContent = `??? ${nombre}`;
+        const idDeporte = cancha.id_deporte; // Asumiendo que viene en el JSON
+        
+        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
         const base = parseFloat(cancha.valor_arriendo) || 0;
         if (elBase) elBase.value = base;
-        
-        // Calcular total según duración (por defecto 60 min = factor 1)
-        // ✅ CALCULAR MONTO INICIAL BASADO EN LA DURACIÓN SELECCIONADA (Por defecto 60)
-        const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
-        let factor = 1;
-        if (duracion == 30) factor = 0.5;
-        else if (duracion == 90) factor = 1.5;
-        else if (duracion == 120) factor = 2;
-        
-        const total = Math.round(base * factor);
-        
-        if (elMonto) elMonto.value = total;
-        if (elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
-        
-        console.log(`? Cancha cargada: ${nombre} | Base: $${base} | Total Calculado: $${total}`);
- 
-        // Llamamos a la función de cálculo
-        actualizarMontoDisplay(base, parseInt(duracion));
-        
-        console.log(`? Cancha cargada: ${nombre} | Base: $${base} | Duración: ${duracion}min`);
 
-    }else {
-        console.warn(`⚠️ Cancha ID ${canchaId} NO está en canchasData`);
-        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
-    }
+        // ✅ REGLA DE NEGOCIO: Solo Pádel (asumiendo id_deporte == 'padel' o el ID correspondiente)
+        // Ajusta 'padel' según cómo venga en tu BD (puede ser 'padel', 'tenis', etc.)
+        const esPadel = (idDeporte === 'padel' || idDeporte === 2); // Ajusta el ID según tu tabla
 
-    // 4. Limpiar UI (CON VERIFICACIONES)
-    const elSearch = document.getElementById('searchAdmin');
-    if (elSearch) elSearch.value = '';
+        radiosDuracion.forEach((radio, index) => {
+            const val = parseInt(radio.value);
+            const label = labelsDuracion[index];
+            
+            if (esPadel) {
+                // Si es Pádel, habilitar todos
+                radio.disabled = false;
+                if(label) {
+                    label.style.opacity = '1';
+                    label.style.pointerEvents = 'auto';
+                    label.style.filter = 'none';
+                }
+            } else {
+                // Si NO es Pádel, solo permitir 60 min
+                if (val === 60) {
+                    radio.checked = true; // Forzar 60 min
+                    radio.disabled = false;
+                    if(label) {
+                        label.style.opacity = '1';
+                        label.style.pointerEvents = 'auto';
+                        label.style.filter = 'none';
+                    }
+                } else {
+                    radio.disabled = true;
+                    if(label) {
+                        label.style.opacity = '0.4';
+                        label.style.pointerEvents = 'none';
+                        label.style.filter = 'grayscale(100%)';
+                    }
+                }
+            }
+        });
 
-    const elResults = document.getElementById('searchResultsAdmin');
-    if (elResults) elResults.style.display = 'none';
-
-    const elNuevoSocio = document.getElementById('nuevoSocioFields');
-    if (elNuevoSocio) elNuevoSocio.style.display = 'none';
-
-    const elUser = document.getElementById('admin_usuario_creacion');
-    if (elUser) elUser.value = USUARIO_ACTIVO;
-
-    // 5. Mostrar modal
-    const modal = document.getElementById('modalReservaAdmin');
-    if (modal) {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        setTimeout(() => { if (elSearch) elSearch.focus(); }, 100);
-    }
+        // Calcular total inicial (siempre 60 min al abrir, o el seleccionado si es pádel)
+        const duracionInicial = document.querySelector('input[name="duracion"]:checked')?.value || 60;
+        actualizarCalculoMonto(base, parseInt(duracionInicial), null); // null = sin convenio
+    } 
 }
 
 // === ACTUALIZAR HORA FIN (BLINDADA) ===
@@ -3248,17 +3251,6 @@ function actualizarHoraFin(horaInicio, duracionMin) {
         elMonto.value = total;
         elDisplayMonto.textContent = `$${total.toLocaleString('es-CL')}`;
     }
-}
-
-// === CAMBIO DE DURACIÓN (60/90/120 min) ===
-function actualizarDuracionReserva(duracion) {
-    const elHoraInicio = document.getElementById('admin_hora_inicio');
-    if (!elHoraInicio || !elHoraInicio.value) return;
-    
-    actualizarHoraFin(elHoraInicio.value, parseInt(duracion));
-    
-    const elDuracion = document.getElementById('admin_duracion_bloque');
-    if (elDuracion) elDuracion.value = duracion;
 }
 
 // === ACTUALIZAR MONTO SEGÚN DURACIÓN (Lógica Proporcional) ===
@@ -3303,6 +3295,48 @@ function actualizarMontoDisplay(montoBase, duracionMin) {
     // Actualizar también el input hidden para que se envíe el valor correcto
     const inputMonto = document.getElementById('admin_monto_total');
     if (inputMonto) inputMonto.value = total;
+}
+
+// Variable global para rastrear si hay convenio activo
+let convenioActivo = null; 
+
+function actualizarCalculoMonto(montoBase, duracion, convenio) {
+    const elMonto = document.getElementById('admin_monto_total');
+    const elDMonto = document.getElementById('modalMontoDisplay');
+    const labelDinamico = document.getElementById('labelMontoDinamico');
+    const subtextoMonto = document.getElementById('subtextoMonto');
+
+    if (!montoBase) return;
+
+    // 1. Calcular Factor
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2;
+
+    const montoBruto = Math.round(montoBase * factor);
+    let montoFinal = montoBruto;
+    let textoLabel = "💰 Total a pagar:";
+    let textoSub = `Base (${duracion} min)`;
+
+    // 2. Aplicar Convenio si existe
+    if (convenio && convenio.porc_dscto > 0) {
+        const descuento = Math.round(montoBruto * (convenio.porc_dscto / 100));
+        montoFinal = montoBruto - descuento;
+        
+        textoLabel = `🤝 Convenio: ${convenio.nombre_empresa} (${convenio.porc_dscto}% OFF)`;
+        textoSub = `Bruto: $${montoBruto.toLocaleString('es-CL')} - Desc: $${descuento.toLocaleString('es-CL')}`;
+        
+        convenioActivo = convenio;
+    } else {
+        convenioActivo = null;
+    }
+
+    // 3. Actualizar DOM
+    if (elMonto) elMonto.value = montoFinal;
+    if (elDMonto) elDMonto.textContent = `$${montoFinal.toLocaleString('es-CL')}`;
+    if (labelDinamico) labelDinamico.textContent = textoLabel;
+    if (subtextoMonto) subtextoMonto.textContent = textoSub;
 }
 
 // === TOGGLE SECCIÓN RECURRENTE (FIX: usar onchange en HTML + función global) ===
@@ -3384,18 +3418,24 @@ async function buscarSocioAdmin(query) {
     }
 }
 
-// === FUNCIÓN PARA SELECCIONAR SOCIO ===
 function seleccionarSocioAdmin(id, nombre, email, celular) {
     document.getElementById('admin_socio_id').value = id;
     document.getElementById('searchResultsAdmin').style.display = 'none';
     document.getElementById('searchAdmin').value = nombre;
     
-    // Asegurar ocultar panel nuevo socio
+    // Ocultar panel nuevo socio
     const elNuevo = document.getElementById('nuevoSocioFields');
     if (elNuevo) elNuevo.style.display = 'none';
+
+    // ✅ LIMPIAR CONVENIO VISUAL AL SELECCIONAR SOCIO MANUALMENTE
+    // Recalculamos el monto basado en la duración actual, pero SIN convenio
+    const elBase = document.getElementById('admin_monto_base');
+    const elDuracion = document.querySelector('input[name="duracion"]:checked');
+    
+    if (elBase && elDuracion) {
+        actualizarCalculoMonto(parseFloat(elBase.value), parseInt(elDuracion.value), null);
+    }
 }
-
-
 
 // === VISTA PREVIA DE FECHAS RECURRENTES ===
 function updatePreviewDates() {
@@ -5750,23 +5790,16 @@ function recalcularMontoConDescuento(porcDscto) {
 function actualizarDuracionReserva(duracion) {
     const elHoraInicio = document.getElementById('admin_hora_inicio');
     if (!elHoraInicio || !elHoraInicio.value) return;
+    
     actualizarHoraFin(elHoraInicio.value, parseInt(duracion));
     
     const elDuracion = document.getElementById('admin_duracion_bloque');
     if (elDuracion) elDuracion.value = duracion;
 
-    // Si hay convenio seleccionado, recalcular con ese descuento
-    const convenioId = document.getElementById('admin_convenio_id').value;
-    if (convenioId) {
-        // Necesitamos recuperar el % del convenio. Podríamos guardarlo en una variable global al seleccionarlo.
-        // O simplemente leerlo del label display si lo parseamos.
-        // Para simplificar, guardemos el % en una variable global al seleccionar:
-        if (window.convenioDsctoActual) {
-            recalcularMontoConDescuento(window.convenioDsctoActual);
-        }
-    } else {
-        // Si no hay convenio, calcular normal
-        actualizarPrecioDisplayNormal();
+    // Recalcular monto manteniendo el convenio activo si existe
+    const elBase = document.getElementById('admin_monto_base');
+    if (elBase) {
+        actualizarCalculoMonto(parseFloat(elBase.value), parseInt(duracion), convenioActivo);
     }
 }
 
@@ -5908,17 +5941,18 @@ window.cerrarSubmodal = cerrarSubmodal;
                     <input type="hidden" id="admin_convenio_id" name="id_convenio" value="">
                 </div>
 
-                <!-- Resumen de monto ACTUALIZADO -->
-                <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; flex-direction:column; gap:0.5rem; border-left:4px solid #4CAF50;">
+                <!-- Resumen de monto UNIFICADO -->
+                <div style="background:#E8F5E9; padding:0.75rem 1rem; border-radius:10px; margin-bottom:1.25rem; display:flex; flex-direction:column; gap:0.3rem; border-left:4px solid #4CAF50;">
                     
-                    <!-- Label de Descuento (Oculto por defecto) -->
-                    <div id="labelDescuentoConvenio" style="display:none; font-size:0.9rem; color:#2E7D32; font-weight:600; text-align:right;">
-                        🤝 Convenio: <span id="nombreConvenioDisplay">Empresa X</span> (<span id="porcDsctoDisplay">10</span>% OFF)
+                    <!-- Label Dinámico: Muestra "Total a pagar" O "Convenio + Descuento" -->
+                    <div id="labelMontoDinamico" style="font-size:0.85rem; color:#2E7D32; font-weight:600; text-align:right; min-height:1.2em;">
+                        💰 Total a pagar:
                     </div>
 
+                    <!-- Monto Final Grande -->
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-weight:600; color:#2E7D32;">💰 Total a pagar:</span>
-                        <span style="font-size:1.2rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
+                        <span style="font-size:0.9rem; color:#555;" id="subtextoMonto">Base</span>
+                        <span style="font-size:1.4rem; font-weight:700; color:#2E7D32;" id="modalMontoDisplay">$0</span>
                     </div>
                 </div>
 
