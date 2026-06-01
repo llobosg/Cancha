@@ -226,8 +226,13 @@ try {
         $fecha_formateada = $fecha_evento->format('d M');
         $hora_formateada = $fecha_evento->format('H:i');
         
-        $inscritos_actuales = (int)($proximo_evento['inscritos_actuales'] ?? 0);
-        $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 0);
+        // ✅ CORRECCIÓN: Calcular inscritos REALES desde la tabla 'inscritos'
+        $stmt_count_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
+        $stmt_count_inscritos->execute([$id_reserva]);
+        $inscritos_actuales = (int)$stmt_count_inscritos->fetchColumn();
+        
+        $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 20); // Asegurar que viene de la BD
+        
         $cupos_llenos = ($jugadores_esperados > 0 && $inscritos_actuales >= $jugadores_esperados);
         
         // Mapeo de deportes
@@ -1007,12 +1012,13 @@ if (isset($_SESSION['id_socio'])) {
     error_log("[DEBUG SOCIO] Reservas encontradas en BD: " . count($reservas));
 
     foreach ($reservas as $r) {
-        // Calcular cupos ocupados
+        // Calcular cupos ocupados SOLO desde la tabla inscritos
         $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
         $stmt_inscritos->execute([$r['id_reserva']]);
-        $inscritos_count = $stmt_inscritos->fetchColumn();
-        $cupos_ocupados = $inscritos_count > 0 ? $inscritos_count : 1;
-        $cupos_total = intval($r['jugadores_esperados'] ?? 4);
+        $inscritos_count = (int)$stmt_inscritos->fetchColumn();
+        
+        // El total de cupos viene de la reserva (jugadores_esperados)
+        $cupos_total = intval($r['jugadores_esperados'] ?? 20); // Default 20 si es null
 
         if (empty($todos_eventos)) {
             $deporte_lower = strtolower($r['id_deporte']);
@@ -1031,7 +1037,7 @@ if (isset($_SESSION['id_socio'])) {
             'monto' => $r['monto_total'],
             'estado_pago' => $r['estado_pago'],
             'cupos_total' => $cupos_total,
-            'cupos_ocupados' => $cupos_ocupados,
+            'cupos_ocupados' => $inscritos_count, // Valor real de la BD
             'titulo' => htmlspecialchars($r['nombre_cancha'] ?? 'Cancha'),
             'deporte' => strtoupper($r['id_deporte'] ?? 'DEPORTE'),
             'icono' => '🏟️'
@@ -1191,7 +1197,10 @@ if (isset($_SESSION['id_socio'])) {
                                 <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:0.75rem; border-radius:10px; margin-bottom:1rem;">
                                     <div style="text-align:left;">
                                         <div style="font-size:0.8rem; color:#888;">Cupos</div>
-                                        <div style="font-weight:bold; color:#333;"><?= $evento['cupos_ocupados'] ?>/<?= $evento['cupos_total'] ?></div>
+                                        <!-- ✅ AGREGADO ID ÚNICO PARA ACTUALIZACIÓN JS -->
+                                        <div id="badge-cupos-<?= $evento['id'] ?>" style="font-weight:bold; color:#333;">
+                                            <?= $evento['cupos_ocupados'] ?>/<?= $evento['cupos_total'] ?>
+                                        </div>
                                     </div>
                                     <div style="text-align:right;">
                                         <div style="font-size:0.8rem; color:#888;">Estado</div>
@@ -1724,6 +1733,9 @@ async function bajarInscrito(idInscrito, idReserva, nombre, esMiInscripcion) {
         if (data.success) {
             showToast('✅ Baja registrada', 'success');
             verInscritos(idReserva); // Recargar lista inmediatamente
+
+            // ✅ ACTUALIZAR CONTADOR PRINCIPAL
+            actualizarContadorCupos(idReserva);
         } else {
             showToast('❌ ' + (data.message || 'Error al bajar'), 'error');
         }
@@ -1832,6 +1844,8 @@ function anotarseEvento(idActividad, tipoActividad, deporte, playersMax, montoTo
         } else {
             showToast('❌ ' + (data.message || 'Error al inscribir'), 'error');
         }
+        // ✅ ACTUALIZAR CONTADOR PRINCIPAL
+        actualizarContadorCupos(idActividad);
     })
     .catch(error => {
         console.error('❌ Fetch error:', error);
@@ -2018,6 +2032,51 @@ function esSlotPasadoSocio(slotHora, fechaSeleccionada) {
     ahoraRedondeado.setSeconds(0);
 
     return slotDate < ahoraRedondeado;
+}
+// === FUNCIÓN AUXILIAR PARA ACTUALIZAR EL CONTADOR EN LA FICHA (DEFINITIVA) ===
+// === FUNCIÓN PARA ACTUALIZAR CONTADOR DE CUPOS EN TIEMPO REAL ===
+async function actualizarContadorCupos(idReserva) {
+    try {
+        // Consultamos la API que devuelve la lista de inscritos para contarlos
+        const res = await fetch(`../api/get_inscritos_reserva.php?id_reserva=${idReserva}`);
+        const data = await res.json();
+        
+        if (Array.isArray(data)) {
+            const nuevosInscritos = data.length;
+            
+            // Buscamos el elemento HTML que muestra los cupos. 
+            // Como puede haber varias reservas, lo ideal es buscar por un ID único o reconstruir el string.
+            // Para simplificar, buscaremos el div que contiene el texto "Cupos" dentro de la ficha de esa reserva.
+            // Nota: Esto asume que cada ficha tiene una estructura única. 
+            
+            // Opción más robusta: Asignar un ID al div de cupos en el PHP.
+            // Pero si no quieres tocar mucho el PHP, podemos intentar actualizarlo así:
+            
+            // Recorremos las fichas visibles para encontrar la que coincide con el ID de reserva
+            // (Esto requiere que el ID de reserva esté en el DOM, ej: en un data-id)
+            
+            // MEJOR OPCIÓN: Actualizar el badge específico si le pusimos ID en el paso 3.
+            const badgeCupos = document.getElementById(`badge-cupos-${idReserva}`);
+            if (badgeCupos) {
+                // Necesitamos también el total de cupos. Lo podemos leer del texto actual o pasarlo.
+                // Leamos el total del texto actual "X/Y"
+                const textoActual = badgeCupos.innerText;
+                const partes = textoActual.split('/');
+                const totalCupos = partes[1] ? partes[1].trim() : '?';
+                
+                badgeCupos.innerText = `${nuevosInscritos}/${totalCupos}`;
+                
+                // Actualizar color si está lleno
+                if (nuevosInscritos >= parseInt(totalCupos)) {
+                    badgeCupos.style.color = '#C62828'; // Rojo si está lleno
+                } else {
+                    badgeCupos.style.color = '#333';
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error actualizando contador:", e);
+    }
 }
 </script>
 <!-- === MODAL COMPARTIR INVITACIÓN === -->
