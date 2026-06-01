@@ -3640,21 +3640,6 @@ function generateRecurringDates(startDate, endDate, dayOfWeek) {
     return dates;
 }
 
-// === CERRAR MODAL ===
-function cerrarModalReservaAdmin(e) {
-    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
-        const modal = document.getElementById('modalReservaAdmin');
-        if (modal) {
-            modal.classList.remove('active');
-            setTimeout(() => {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }, 250);
-        }
-    }
-    e.stopPropagation();
-}
-
 // === EVENTOS GLOBALES (DOMContentLoaded) ===
 document.addEventListener('DOMContentLoaded', function() {
     // Prevenir cerrar modal al hacer click dentro del contenido
