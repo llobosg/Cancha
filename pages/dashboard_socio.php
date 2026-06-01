@@ -938,7 +938,7 @@ $js_vars = [
     </div>
 
 <?php
-// === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS Y DEUDAS (CON LOGS DETALLADOS) ===
+// === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (USANDO TABLA socio_club) ===
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     error_log("[DEBUG SOCIO] Iniciando carga para ID: $id_socio");
@@ -946,47 +946,51 @@ if (isset($_SESSION['id_socio'])) {
     $todos_eventos = [];
     $primer_evento_es_futbol = false; 
 
-    // 1. Obtener ID del Club del Socio
-    $id_club_socio = null;
+    // 1. Obtener IDs de Clubes del Socio desde tabla intermedia socio_club
+    $ids_clubs_socio = [];
     try {
-        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
-        $stmt_club->execute([$id_socio]);
-        $id_club_socio = $stmt_club->fetchColumn();
-        error_log("[DEBUG SOCIO] ID Club del Socio: " . ($id_club_socio ?: 'NULL'));
+        $stmt_clubs = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo'");
+        $stmt_clubs->execute([$id_socio]);
+        $ids_clubs_socio = $stmt_clubs->fetchAll(PDO::FETCH_COLUMN);
+        error_log("[DEBUG SOCIO] Clubs asociados: " . implode(',', $ids_clubs_socio));
     } catch (Exception $e) {
-        error_log("[DEBUG SOCIO] Error obteniendo club: " . $e->getMessage());
+        error_log("[DEBUG SOCIO] Error obteniendo clubs: " . $e->getMessage());
     }
 
-    // 2. Consulta de Reservas (Mías O De Mi Club)
-    // Usamos una consulta directa para evitar problemas de binding
+    // 2. Consulta de Reservas (Mías O De Mis Clubs)
+    // Construimos la condición OR dinámicamente
+    $where_reservas = "r.estado != 'cancelada' AND r.fecha >= CURDATE() AND (r.id_socio = :id_socio";
+    
+    if (!empty($ids_clubs_socio)) {
+        // Crear placeholders para IN (?, ?, ...)
+        $club_placeholders = implode(',', array_fill(0, count($ids_clubs_socio), '?'));
+        $where_reservas .= " OR r.id_club IN ($club_placeholders)";
+    }
+    $where_reservas .= ")";
+
     $sql_reservas = "
-        SELECT r.id_reserva, r.id_socio, r.id_club, r.fecha, r.hora_inicio, r.hora_fin, 
-               r.monto_total, r.estado_pago, r.jugadores_esperados, r.nombre_cliente,
-               c.nombre_cancha, c.id_deporte, 'reserva' as tipo
+        SELECT r.*, c.nombre_cancha, c.id_deporte, 'reserva' as tipo
         FROM reservas r
         JOIN canchas c ON r.id_cancha = c.id_cancha
-        WHERE r.estado != 'cancelada'
-        AND r.fecha >= CURDATE()
-        AND (
-            r.id_socio = :id_socio 
-            OR (r.id_club IS NOT NULL AND r.id_club = :id_club)
-        )
+        WHERE $where_reservas
         ORDER BY r.fecha ASC, r.hora_inicio ASC
     ";
 
-    error_log("[DEBUG SOCIO] Ejecutando SQL con id_socio=$id_socio, id_club=" . ($id_club_socio ?: 0));
-
     $stmt_reservas = $pdo->prepare($sql_reservas);
-    $stmt_reservas->execute([
-        ':id_socio' => $id_socio,
-        ':id_club' => $id_club_socio ?: 0
-    ]);
     
+    // Preparar parámetros: primero id_socio, luego los ids de clubs
+    $params_reservas = [$id_socio];
+    if (!empty($ids_clubs_socio)) {
+        $params_reservas = array_merge($params_reservas, $ids_clubs_socio);
+    }
+    
+    $stmt_reservas->execute($params_reservas);
     $reservas = $stmt_reservas->fetchAll(PDO::FETCH_ASSOC);
+    
     error_log("[DEBUG SOCIO] Reservas encontradas en BD: " . count($reservas));
 
     foreach ($reservas as $r) {
-        // Calcular cupos
+        // Calcular cupos ocupados
         $stmt_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
         $stmt_inscritos->execute([$r['id_reserva']]);
         $inscritos_count = $stmt_inscritos->fetchColumn();
@@ -1030,7 +1034,6 @@ if (isset($_SESSION['id_socio'])) {
     $stmt_torneos = $pdo->prepare($sql_torneos);
     $stmt_torneos->execute([$id_socio, $id_socio]);
     $torneos = $stmt_torneos->fetchAll(PDO::FETCH_ASSOC);
-    error_log("[DEBUG SOCIO] Torneos encontrados: " . count($torneos));
 
     foreach ($torneos as $t) {
         $todos_eventos[] = [
@@ -1051,7 +1054,7 @@ if (isset($_SESSION['id_socio'])) {
         return strtotime($a['fecha'] . ' ' . ($a['hora'] ?? '00:00')) <=> strtotime($b['fecha'] . ' ' . ($b['hora'] ?? '00:00'));
     });
 
-    error_log("[DEBUG SOCIO] Total eventos finales (Reservas + Torneos): " . count($todos_eventos));
+    error_log("[DEBUG SOCIO] Total eventos finales: " . count($todos_eventos));
 
     // 4. Cargar Deudas Pendientes
     $deuda_mas_vigente = null;
@@ -1070,7 +1073,6 @@ if (isset($_SESSION['id_socio'])) {
         error_log("Error cargando deudas: " . $e->getMessage());
     }
 } else {
-    error_log("[DEBUG SOCIO] No hay sesión de socio activa");
     $todos_eventos = [];
     $deuda_mas_vigente = null;
     $cuotas_pendientes = 0;
