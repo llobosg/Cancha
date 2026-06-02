@@ -5963,13 +5963,23 @@ function limpiarSeleccionConvenio() {
 
 // === LIMPIAR TODO AL CERRAR MODAL ===
 function cerrarModalReservaAdmin(e) {
+    // Verificar si el click fue en el fondo (overlay) o en un botón de cierre
     if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
-        // Limpiar datos antes de cerrar
+        
+        // 1. Limpiar selecciones
         limpiarSeleccionSocio();
         limpiarSeleccionConvenio();
-        document.getElementById('isRecurrent')?.checked = false;
+        
+        // 2. ✅ CORRECCIÓN: Asignación segura sin optional chaining en el lado izquierdo
+        const checkRecurrent = document.getElementById('isRecurrent');
+        if (checkRecurrent) {
+            checkRecurrent.checked = false;
+        }
+        
+        // 3. Ocultar campos recurrentes
         toggleRecurrentFields(false);
         
+        // 4. Cerrar modal visualmente
         const modal = document.getElementById('modalReservaAdmin');
         if (modal) {
             modal.classList.remove('active');
