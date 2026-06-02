@@ -1941,16 +1941,17 @@ function cambiarDiaPlanilla(dias) {
     cargarPlanillaReservas();
 }
 
-f// === IR A HOY EN LA PLANILLA ===
+// ✅ 2. CORREGIR irAHoyPlanilla (quitada la 'f' inicial)
 function irAHoyPlanilla() {
     const hoy = new Date().toISOString().split('T')[0];
-    const inputFecha = document.getElementById('filtroFechaPlanilla'); // Asegúrate que este ID sea correcto
-    
+    // Asegúrate que el ID del input sea correcto. En tu HTML es 'fechaPlanillaInput'
+    const inputFecha = document.getElementById('fechaPlanillaInput'); 
     if (inputFecha) {
         inputFecha.value = hoy;
-        aplicarFiltrosPlanilla(); // Llama a tu función principal de carga de planilla
+        fechaPlanillaActual = hoy; // Actualizar variable global
+        cargarPlanillaReservas(); // Llamar a la función correcta de carga
     } else {
-        console.error("❌ No se encontró el input de fecha #filtroFechaPlanilla");
+        console.error("❌ No se encontró el input de fecha #fechaPlanillaInput");
     }
 }
 
@@ -2813,6 +2814,123 @@ async function verDetalleDesdeLista(idReserva) {
     await abrirDetalleDesdePlanilla(idReserva);
 }
 
+// ✅ 3. REEMPLAZAR abrirReservaAdmin COMPLETA
+function abrirReservaAdmin(canchaId, fecha, hora) {
+    console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
+
+    // Helper seguro para asignar valores
+    const setC = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+        else console.warn(`⚠️ Elemento #${id} no encontrado`);
+    };
+
+    // 1. Asignar ocultos inmediatamente
+    setC('admin_cancha_id', canchaId);
+    setC('admin_fecha', fecha);
+    setC('admin_hora_inicio', hora);
+    setC('admin_socio_id', '');
+    setC('admin_monto_total', '0');
+    setC('admin_monto_base', '0');
+    
+    // Limpiar búsqueda de socio anterior
+    const elSearch = document.getElementById('searchAdmin');
+    if (elSearch) elSearch.value = '';
+    const elResults = document.getElementById('searchResultsAdmin');
+    if (elResults) elResults.style.display = 'none';
+
+    // 2. Calcular hora fin (60 min base por defecto)
+    const [h, m] = hora.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) {
+        const fin = new Date();
+        fin.setHours(h, m + 60, 0, 0);
+        const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+        setC('admin_hora_fin', horaFin);
+        setC('admin_duracion_bloque', '60');
+
+        // Actualizar displays visuales del header del modal
+        const fParts = fecha.split('-');
+        const elFD = document.getElementById('modalFechaDisplay');
+        if (elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
+        
+        const elHD = document.getElementById('modalHoraDisplay');
+        if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
+    }
+
+    // 3. Buscar cancha en canchasData
+    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
+        ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
+        : null;
+
+    const elNombre = document.getElementById('modalCanchaDisplay');
+    const elMonto = document.getElementById('admin_monto_total');
+    const elBase = document.getElementById('admin_monto_base');
+    const elDMonto = document.getElementById('modalMontoDisplay');
+
+    // Referencias a los contenedores de duración
+    const divPadel = document.getElementById('opcionesPadel');
+    const divOtros = document.getElementById('opcionesOtros');
+    const radiosDuracion = document.querySelectorAll('input[name="duracion"]');
+
+    if (cancha) {
+        const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
+        const idDeporte = cancha.id_deporte; 
+        
+        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
+        
+        const base = parseFloat(cancha.valor_arriendo) || 0;
+        if (elBase) elBase.value = base;
+
+        // ✅ ACTUALIZAR ESTADO GLOBAL
+        ventanaActual.precioBase = base;
+        ventanaActual.esPadel = (idDeporte === 'padel' || idDeporte == 2); // Ajusta según tu BD
+
+        // ✅ MOSTRAR/OCULTAR OPCIONES SEGÚN DEPORTE
+        if (ventanaActual.esPadel) {
+            if (divPadel) divPadel.style.display = 'flex';
+            if (divOtros) divOtros.style.display = 'none';
+            // Habilitar todos los radios en Pádel
+            radiosDuracion.forEach(r => r.disabled = false);
+        } else {
+            if (divPadel) divPadel.style.display = 'none';
+            if (divOtros) divOtros.style.display = 'flex';
+            // Forzar 60 min y deshabilitar otros
+            ventanaActual.duracion = 60;
+            radiosDuracion.forEach(r => {
+                if (r.value == 60) {
+                    r.checked = true;
+                    r.disabled = false;
+                } else {
+                    r.disabled = true;
+                    r.checked = false;
+                }
+            });
+        }
+
+        // Calcular total inicial
+        recalcularPrecioTotal();
+        
+        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Es Pádel: ${ventanaActual.esPadel}`);
+    } else {
+        console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
+        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
+    }
+
+    // 4. MOSTRAR EL MODAL
+    const modal = document.getElementById('modalReservaAdmin');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+            const searchInput = document.getElementById('searchAdmin');
+            if (searchInput) searchInput.focus();
+        }, 100);
+    } else {
+        console.error("❌ No se encontró el modal #modalReservaAdmin en el DOM");
+    }
+}
+
 // === TOAST NOTIFICATIONS ===
 function showToast(message, type = 'success') {
     // Remover toast anterior si existe
@@ -3122,171 +3240,7 @@ async function handleRecurrentReservation() {
     }
 }
 
-function abrirReservaAdmin(canchaId, fecha, hora) {
-    console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
-    // Helper seguro para asignar valores
-    const setC = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val;
-        else console.warn(`⚠️ Elemento #${id} no encontrado`);
-    };
-
-    // 1. Asignar ocultos inmediatamente
-    setC('admin_cancha_id', canchaId);
-    setC('admin_fecha', fecha);
-    setC('admin_hora_inicio', hora);
-    setC('admin_socio_id', '');
-    setC('admin_monto_total', '0');
-    setC('admin_monto_base', '0');
-    
-    // Limpiar búsqueda de socio anterior
-    const elSearch = document.getElementById('searchAdmin');
-    if (elSearch) elSearch.value = '';
-    const elResults = document.getElementById('searchResultsAdmin');
-    if (elResults) elResults.style.display = 'none';
-
-    // 2. Calcular hora fin (60 min base por defecto)
-    const [h, m] = hora.split(':').map(Number);
-    if (!isNaN(h) && !isNaN(m)) {
-        const fin = new Date();
-        fin.setHours(h, m + 60, 0, 0);
-        const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
-        setC('admin_hora_fin', horaFin);
-        setC('admin_duracion_bloque', '60');
-
-        // Actualizar displays visuales del header del modal
-        const fParts = fecha.split('-');
-        const elFD = document.getElementById('modalFechaDisplay');
-        if (elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
-        
-        const elHD = document.getElementById('modalHoraDisplay');
-        if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
-    }
-
-    // 3. Buscar cancha en canchasData
-    const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
-        ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
-        : null;
-
-    const elNombre = document.getElementById('modalCanchaDisplay');
-    const elMonto = document.getElementById('admin_monto_total');
-    const elBase = document.getElementById('admin_monto_base');
-    const elDMonto = document.getElementById('modalMontoDisplay');
-
-    // Referencias a los radios de duración
-    const radiosDuracion = document.querySelectorAll('input[name="duracion"]');
-    const labelsDuracion = document.querySelectorAll('.duration-label');
-
-    if (cancha) {
-        const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        const idDeporte = cancha.id_deporte; 
-        
-        if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
-        
-        const base = parseFloat(cancha.valor_arriendo) || 0;
-        if (elBase) elBase.value = base;
-
-        // ✅ REGLA DE NEGOCIO: Solo Pádel muestra todas las duraciones
-        // Ajusta 'padel' o el ID numérico según tu BD. Ej: si padel es ID 2 o string 'padel'
-        const esPadel = (idDeporte === 'padel' || idDeporte == 2); 
-
-        radiosDuracion.forEach((radio, index) => {
-            const val = parseInt(radio.value);
-            const label = labelsDuracion[index];
-            const idDeporte = cancha.id_deporte;
-            const divPadel = document.getElementById('opcionesPadel');
-            const divOtros = document.getElementById('opcionesOtros');
-
-            ventanaActual.esPadel = (idDeporte === 'padel' || idDeporte == 2); 
-
-            if (ventanaActual.esPadel) {
-                divPadel.style.display = 'flex';
-                divOtros.style.display = 'none';
-                // Habilitar radios
-                divPadel.querySelectorAll('input').forEach(r => r.disabled = false);
-            } else {
-                divPadel.style.display = 'none';
-                divOtros.style.display = 'flex';
-                // Forzar 60 min
-                ventanaActual.duracion = 60;
-                document.querySelector('input[name="duracion"][value="60"]').checked = true;
-            }
-
-            ventanaActual.precioBase = parseFloat(cancha.valor_arriendo) || 0;
-            
-            // Inicializar cálculo
-            recalcularPrecioTotal();
-            
-            if (esPadel) {
-                // Si es Pádel, habilitar todos
-                radio.disabled = false;
-                if(label) {
-                    label.style.opacity = '1';
-                    label.style.pointerEvents = 'auto';
-                    label.style.filter = 'none';
-                    label.style.cursor = 'pointer';
-                }
-            } else {
-                // Si NO es Pádel, solo permitir 60 min
-                if (val === 60) {
-                    radio.checked = true; // Forzar selección en 60 min
-                    radio.disabled = false;
-                    if(label) {
-                        label.style.opacity = '1';
-                        label.style.pointerEvents = 'auto';
-                        label.style.filter = 'none';
-                        label.style.cursor = 'pointer';
-                    }
-                } else {
-                    radio.disabled = true;
-                    radio.checked = false;
-                    if(label) {
-                        label.style.opacity = '0.4';
-                        label.style.pointerEvents = 'none';
-                        label.style.filter = 'grayscale(100%)';
-                        label.style.cursor = 'not-allowed';
-                    }
-                }
-            }
-        });
-
-        // Calcular total inicial basado en la duración seleccionada (por defecto 60 si no es padel)
-        const duracionSeleccionada = document.querySelector('input[name="duracion"]:checked')?.value || 60;
-        
-        // Factor de precio
-        let factor = 1;
-        if (duracionSeleccionada == 30) factor = 0.5;
-        else if (duracionSeleccionada == 90) factor = 1.5;
-        else if (duracionSeleccionada == 120) factor = 2;
-
-        const total = Math.round(base * factor);
-        
-        if (elMonto) elMonto.value = total;
-        if (elDMonto) elDMonto.textContent = `$${total.toLocaleString('es-CL')}`;
-        
-        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Duración: ${duracionSeleccionada}min | Total: $${total}`);
-    } else {
-        console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
-        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
-    }
-
-    // 4. MOSTRAR EL MODAL (Esto faltaba en tu código)
-    const modal = document.getElementById('modalReservaAdmin');
-    if (modal) {
-        modal.style.display = 'flex';
-        // Opcional: Bloquear scroll del body
-        document.body.style.overflow = 'hidden';
-        
-        // Focar el buscador de socios para mejor UX
-        setTimeout(() => {
-            const searchInput = document.getElementById('searchAdmin');
-            if (searchInput) searchInput.focus();
-        }, 100);
-    } else {
-        console.error("❌ No se encontró el modal #modalReservaAdmin en el DOM");
-    }
-}
 
 // === ACTUALIZAR HORA FIN (BLINDADA) ===
 function actualizarHoraFin(horaInicio, duracionMin) {
