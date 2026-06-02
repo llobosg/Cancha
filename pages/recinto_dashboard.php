@@ -1941,11 +1941,17 @@ function cambiarDiaPlanilla(dias) {
     cargarPlanillaReservas();
 }
 
+f// === IR A HOY EN LA PLANILLA ===
 function irAHoyPlanilla() {
-    fechaPlanillaActual = new Date().toISOString().split('T')[0];
-    const inputFecha = document.getElementById('fechaPlanillaInput');
-    if (inputFecha) inputFecha.value = fechaPlanillaActual;
-    cargarPlanillaReservas();
+    const hoy = new Date().toISOString().split('T')[0];
+    const inputFecha = document.getElementById('filtroFechaPlanilla'); // Asegúrate que este ID sea correcto
+    
+    if (inputFecha) {
+        inputFecha.value = hoy;
+        aplicarFiltrosPlanilla(); // Llama a tu función principal de carga de planilla
+    } else {
+        console.error("❌ No se encontró el input de fecha #filtroFechaPlanilla");
+    }
 }
 
 // === CARGA DE PLANILLA (con validación de respuesta) ===
