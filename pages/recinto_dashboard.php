@@ -3126,10 +3126,6 @@ document.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-torneo-"]').forEach(m => m.style.display = 'none');
 });
 
-function editarTorneo(id) {
-    window.location.href = `crear_torneo.php?editar=${id}`;
-}
-
 function eliminarTorneo(id) {
     if(confirm('¿Estás seguro de eliminar este torneo? Esta acción no se puede deshacer.')) {
         fetch('../api/eliminar_torneo.php', {
@@ -3143,6 +3139,9 @@ function eliminarTorneo(id) {
             else alert('Error: ' + data.message);
         });
     }
+}
+function editarTorneo(id) {
+    window.location.href = `crear_torneo.php?editar=${id}`;
 }
 
 // === TOGGLE MODAL CON ANIMACIÓN ===
