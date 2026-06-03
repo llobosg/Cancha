@@ -1545,6 +1545,19 @@ td.bloqueado {
 .slot-pasado:hover {
     opacity: 0.8;
 }
+/* Opcional: Estilo para items de convenio */
+#searchResultsConvenio div {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s;
+}
+#searchResultsConvenio div:last-child {
+    border-bottom: none;
+}
+#searchResultsConvenio div:hover {
+    background-color: #F7FAFC;
+}
 </style>
 </head>
 <body>
@@ -6098,19 +6111,27 @@ window.cerrarSubmodal = cerrarSubmodal;
                 <!-- === BUSCADOR CONVENIO CON BOTÓN LIMPIAR === -->
                 <div style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">🤝 Aplicar Convenio (Opcional)</label>
-                    <div style="display:flex; gap:0.5rem;">
+                    
+                    <!-- Contenedor Flex para Input + Botón X -->
+                    <div style="display:flex; gap:0.5rem; position:relative;"> <!-- position:relative solo para referencia si needed, pero no para absolute children -->
                         <input type="text" id="searchConvenio" placeholder="Buscar empresa..."
                             oninput="debounceBuscarConvenio(this.value)"
                             style="flex:1; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
                         
                         <!-- Botón X para limpiar Convenio -->
                         <button type="button" onclick="limpiarSeleccionConvenio()" 
-                            style="background:#EF5350; color:white; border:none; border-radius:10px; width:40px; cursor:pointer; font-size:1.2rem;"
+                            style="background:#EF5350; color:white; border:none; border-radius:10px; width:40px; cursor:pointer; font-size:1.2rem; display:flex; align-items:center; justify-content:center;"
                             title="Quitar convenio">
                             &times;
                         </button>
                     </div>
-                    <div id="searchResultsConvenio" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+
+                    <!-- ✅ CORRECCIÓN: Resultados justo debajo, sin absolute, con scroll interno -->
+                    <div id="searchResultsConvenio" 
+                        style="display:none; margin-top:0.5rem; background:white; border:1px solid #E2E8F0; border-radius:10px; max-height:150px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                        <!-- Los resultados se inyectan aquí via JS -->
+                    </div>
+                    
                     <input type="hidden" id="admin_convenio_id" value="">
                 </div>
 
