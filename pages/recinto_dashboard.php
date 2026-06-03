@@ -1891,15 +1891,22 @@ td.bloqueado {
 <script>
 // === VARIABLES GLOBALES ===
 const USUARIO_ACTIVO = <?= json_encode($_SESSION['recinto_usuario'] ?? $_SESSION['nombre_completo'] ?? 'Admin', JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const ROL_USUARIO = "<?= $_SESSION['recinto_rol'] ?? '' ?>"; 
-const iconosDeporte = { 1: '🎾', 2: '🎾', 3: '🏐', 10: '⚽', 11: '⚽', 'default': '🏟️' };
+const ROL_USUARIO = "<?= $_SESSION['recinto_rol'] ?? '' ?>";
+const iconosDeporte = { 1: '⚽', 2: '⚽', 3: '🏀', 10: '🎾', 11: '🎾', 'default': '🏟️' };
 let fechaPlanillaActual = new Date().toISOString().split('T')[0];
 let estadoSeleccionadoPlanilla = "";
 let reservaActualSeleccionada = null;
 let tipoListaActual = '';
-
-// ✅ Inyección segura de canchasData (la variable $canchas_js ya fue procesada en PHP)
 const canchasData = <?= json_encode($canchas_js ?? [], JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+// ✅ 1. DEFINIR ventanaActual AQUÍ para evitar errores de asignación
+let ventanaActual = {
+    esPadel: false,
+    duracion: 60,
+    precioBase: 0,
+    cantidadReservas: 1,
+    descuentoPorcentaje: 0
+};
 
 // 🔍 Logs de debug (solo JS)
 console.log('🔍 canchasData cargadas:', canchasData?.length || 0, 'canchas');
