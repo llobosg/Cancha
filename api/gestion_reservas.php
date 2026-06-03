@@ -42,6 +42,32 @@ try {
             
         case 'crear_manual':
             echo json_encode(crearReservaManualUnificada($pdo, $_POST));
+            $id_socio = isset($_POST['id_socio']) && !empty($_POST['id_socio']) ? (int)$_POST['id_socio'] : null;
+            $id_convenio = isset($_POST['id_convenio']) && !empty($_POST['id_convenio']) ? (int)$_POST['id_convenio'] : null;
+
+            // Si NO hay socio, pero hay datos de cliente (por convenio), úsalos
+            $nombre_cliente = $_POST['nombre_cliente'] ?? null;
+            $email_cliente = $_POST['email_cliente'] ?? null;
+            $telefono_cliente = $_POST['telefono_cliente'] ?? null;
+
+            if (!$id_socio) {
+                // Si no hay socio, validar que tengamos al menos un nombre o convenio
+                if (!$nombre_cliente && !$id_convenio) {
+                    throw new Exception("Debe seleccionar un socio o aplicar un convenio.");
+                }
+                
+                // Si hay convenio pero no nombre explícito, podrías buscarlo en BD
+                if ($id_convenio && !$nombre_cliente) {
+                    $stmt_conv = $pdo->prepare("SELECT nombre_empresa, contacto_email, contacto_telefono FROM convenios WHERE id_convenio = ?");
+                    $stmt_conv->execute([$id_convenio]);
+                    $conv = $stmt_conv->fetch();
+                    if ($conv) {
+                        $nombre_cliente = $conv['nombre_empresa'];
+                        $email_cliente = $email_cliente ?: $conv['contacto_email'];
+                        $telefono_cliente = $telefono_cliente ?: $conv['contacto_telefono'];
+                    }
+                }
+            }
             break;
             
         default:
@@ -332,8 +358,8 @@ function crearReservaManualUnificada($pdo, $data) {
     $stmt = $pdo->prepare("
         INSERT INTO reservas (
             id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente,
-            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, jugadores_esperados, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', ?, NOW())
+            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, jugadores_esperados, created_at, id_convenio
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', ?, NOW(), ?)
     ");
     
     // Obtener id_club del socio si existe
@@ -356,7 +382,8 @@ function crearReservaManualUnificada($pdo, $data) {
         $hora_inicio, 
         $hora_fin, 
         $monto_total,
-        $jugadores_esperados // <--- AQUÍ SE GUARDA LA CAPACIDAD REAL (20)
+        $jugadores_esperados, // <--- AQUÍ SE GUARDA LA CAPACIDAD REAL (20)
+        $id_convenio
     ]);
     
     $id_reserva = $pdo->lastInsertId();
