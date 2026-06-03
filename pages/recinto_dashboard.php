@@ -5968,6 +5968,240 @@ function cerrarModalReservaAdmin(e) {
     }
     e.stopPropagation();
 }
+// === VARIABLES GLOBALES PARA BÚSQUEDA ===
+let debounceTimerUnified;
+let datosConvenioSeleccionado = null; // Para guardar el % descuento
+
+// === DEBOUNCE ===
+function debounceBuscarUnified(val) {
+    clearTimeout(debounceTimerUnified);
+    debounceTimerUnified = setTimeout(() => buscarUnified(val), 300);
+}
+
+// === BÚSQUEDA UNIFICADA (API + JS) ===
+async function buscarUnified(query) {
+    const container = document.getElementById('searchResultsUnified');
+    const badge = document.getElementById('tipoSeleccionBadge');
+    const panelNuevo = document.getElementById('panelNuevoSocioExpress');
+    
+    if (!container) return;
+    
+    // Limpiar estados si está vacío
+    if (query.length < 2) {
+        container.style.display = 'none';
+        badge.style.display = 'none';
+        panelNuevo.style.display = 'none';
+        return;
+    }
+
+    try {
+        // Llamamos a una API unificada o hacemos dos llamadas paralelas
+        // Opción A: Si tienes una API unificada 'search_unified.php' úsala.
+        // Opción B (Más rápida de implementar): Buscar en Socios y Convenios por separado y mezclar.
+        
+        const [resSocios, resConvenios] = await Promise.all([
+            fetch(`../api/search_socios.php?q=${encodeURIComponent(query)}`),
+            fetch(`../api/search_convenios.php?q=${encodeURIComponent(query)}`)
+        ]);
+        
+        const socios = await resSocios.json();
+        const convenios = await resConvenios.json();
+        
+        container.innerHTML = '';
+        
+        let html = '';
+        let count = 0;
+
+        // 1. Renderizar Convenios (Prioridad alta si coinciden)
+        if (Array.isArray(convenios)) {
+            convenios.forEach(c => {
+                html += `
+                <div onclick="seleccionarUnified('convenio', ${c.id_convenio}, '${c.nombre_empresa.replace(/'/g, "\\'")}', ${c.porc_dscto}, '${c.contacto_email.replace(/'/g, "\\'")}')"
+                    style="padding:10px; cursor:pointer; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:#7C3AED;">🤝 ${c.nombre_empresa}</strong>
+                        <div style="font-size:0.8rem; color:#666;">${c.contacto_nombre || ''} | ${c.contacto_email || ''}</div>
+                    </div>
+                    <span style="background:#F3E8FF; color:#7C3AED; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:bold;">-${c.porc_dscto}%</span>
+                </div>`;
+                count++;
+            });
+        }
+
+        // 2. Renderizar Socios
+        if (Array.isArray(socios)) {
+            socios.forEach(s => {
+                html += `
+                <div onclick="seleccionarUnified('socio', ${s.id_socio}, '${s.nombre.replace(/'/g, "\\'")}', 0, '${s.email.replace(/'/g, "\\'")}')"
+                    style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
+                    <strong style="color:#071289;">👤 ${s.nombre}</strong>
+                    <div style="font-size:0.8rem; color:#666;">${s.email || s.celular || ''}</div>
+                </div>`;
+                count++;
+            });
+        }
+
+        if (count === 0) {
+            // No hay coincidencias: Ofrecer crear nuevo socio
+            container.innerHTML = `
+                <div style="padding:15px; text-align:center; color:#666;">
+                    <p style="margin-bottom:0.5rem;">Sin coincidencias para "<strong>${query}</strong>"</p>
+                    <button type="button" onclick="mostrarPanelNuevoSocio('${query}')" 
+                        style="background:#22C55E; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.9rem;">
+                        ✨ Crear Nuevo Socio
+                    </button>
+                </div>`;
+        } else {
+            container.innerHTML = html;
+        }
+        
+        container.style.display = 'block';
+        badge.style.display = 'none'; // Ocultar badge mientras se busca
+        panelNuevo.style.display = 'none';
+
+    } catch (err) {
+        console.error('Error búsqueda unificada:', err);
+    }
+}
+
+// === SELECCIÓN UNIFICADA ===
+function seleccionarUnified(tipo, id, nombre, dscto, email) {
+    const inputSearch = document.getElementById('searchUnified');
+    const badge = document.getElementById('tipoSeleccionBadge');
+    const container = document.getElementById('searchResultsUnified');
+    const panelNuevo = document.getElementById('panelNuevoSocioExpress');
+    
+    // Guardar en inputs ocultos
+    document.getElementById('admin_socio_id').value = (tipo === 'socio') ? id : '';
+    document.getElementById('admin_convenio_id').value = (tipo === 'convenio') ? id : '';
+    document.getElementById('admin_tipo_reserva').value = tipo;
+    
+    // Actualizar UI
+    inputSearch.value = nombre;
+    container.style.display = 'none';
+    panelNuevo.style.display = 'none';
+    
+    // Mostrar Badge
+    badge.style.display = 'block';
+    if (tipo === 'convenio') {
+        badge.style.background = '#F3E8FF';
+        badge.style.color = '#7C3AED';
+        badge.textContent = `🤝 Reserva por Convenio (${dscto}% OFF)`;
+        
+        // Guardar datos del convenio para cálculo de precio
+        datosConvenioSeleccionado = { id: id, nombre: nombre, dscto: dscto, email: email };
+        
+        // Recalcular precio con descuento
+        recalcularPrecioTotal(); 
+    } else {
+        badge.style.background = '#E0F2FE';
+        badge.style.color = '#0369A1';
+        badge.textContent = `👤 Socio Registrado`;
+        
+        // Limpiar convenio
+        datosConvenioSeleccionado = null;
+        recalcularPrecioTotal();
+    }
+}
+
+// === MOSTRAR PANEL NUEVO SOCIO ===
+function mostrarPanelNuevoSocio(queryPrellenada) {
+    document.getElementById('searchResultsUnified').style.display = 'none';
+    const panel = document.getElementById('panelNuevoSocioExpress');
+    panel.style.display = 'block';
+    
+    // Prellenar nombre si viene de la búsqueda
+    document.getElementById('nuevoNombre').value = queryPrellenada || '';
+    document.getElementById('nuevoEmail').focus();
+}
+
+function cancelarNuevoSocio() {
+    document.getElementById('panelNuevoSocioExpress').style.display = 'none';
+    document.getElementById('searchUnified').value = '';
+    document.getElementById('searchUnified').focus();
+}
+
+// === CONFIRMAR NUEVO SOCIO EXPRESS ===
+async function confirmarNuevoSocio() {
+    const nombre = document.getElementById('nuevoNombre').value.trim();
+    const email = document.getElementById('nuevoEmail').value.trim();
+    const tel = document.getElementById('nuevoTel').value.trim();
+    
+    if (!nombre || !email) {
+        alert('Nombre y Email son obligatorios');
+        return;
+    }
+    
+    try {
+        // Crear socio vía API
+        const formData = new FormData();
+        formData.append('action', 'crear_socio_express');
+        formData.append('nombre', nombre);
+        formData.append('email', email);
+        formData.append('celular', tel);
+        
+        const res = await fetch('../api/gestion_socios.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('✅ Socio creado correctamente', 'success');
+            // Seleccionar automáticamente el nuevo socio
+            seleccionarUnified('socio', data.id_socio, nombre, 0, email);
+            cancelarNuevoSocio();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error de conexión al crear socio');
+    }
+}
+
+// === RECALCULAR PRECIO TOTAL (Actualizada para usar datosConvenioSeleccionado) ===
+function recalcularPrecioTotal() {
+    const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
+    ventanaActual.duracion = duracion;
+    
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2;
+    
+    const precioBase = ventanaActual.precioBase || 0;
+    const precioUnitarioBruto = Math.round(precioBase * factor);
+    
+    // Aplicar descuento si hay convenio seleccionado
+    let descuentoPorcentaje = 0;
+    if (datosConvenioSeleccionado && datosConvenioSeleccionado.dscto > 0) {
+        descuentoPorcentaje = datosConvenioSeleccionado.dscto;
+    }
+    
+    const montoDescuento = Math.round(precioUnitarioBruto * (descuentoPorcentaje / 100));
+    const totalFinal = precioUnitarioBruto - montoDescuento;
+    
+    // Actualizar Inputs
+    const inputMonto = document.getElementById('admin_monto_total_input');
+    const hiddenMonto = document.getElementById('admin_monto_total');
+    
+    if (inputMonto) inputMonto.value = totalFinal;
+    if (hiddenMonto) hiddenMonto.value = totalFinal;
+    
+    // Actualizar Label Dinámico
+    const labelDinamico = document.getElementById('labelMontoDinamico');
+    const subtexto = document.getElementById('subtextoMonto');
+    
+    if (labelDinamico) {
+        if (descuentoPorcentaje > 0) {
+            labelDinamico.innerHTML = `🤝 Convenio (${descuentoPorcentaje}% OFF)<br><small style="color:#666">Base: $${precioUnitarioBruto.toLocaleString('es-CL')} - Ahorro: $${montoDescuento.toLocaleString('es-CL')}</small>`;
+        } else {
+            labelDinamico.textContent = '💰 Total a pagar:';
+        }
+    }
+    
+    if (subtexto) {
+        subtexto.textContent = `1 reserva x ${duracion} min`;
+    }
+}
 
 // Modificar seleccionarConvenioAdmin para guardar el % en variable global
 // Agrega esta línea dentro de seleccionarConvenioAdmin:
@@ -6045,51 +6279,40 @@ window.cerrarSubmodal = cerrarSubmodal;
                     </div>
                 </div>
 
-                <!-- === BUSCADOR SOCIO CON BOTÓN LIMPIAR === -->
+                <!-- === BUSCADOR UNIFICADO INTELIGENTE (SOCIO O CONVENIO) === -->
                 <div style="position:relative; margin-bottom:1rem;">
-                    <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio *</label>
-                    <div style="display:flex; gap:0.5rem;">
-                        <input type="text" id="searchAdmin" placeholder="Buscar socio..."
-                            oninput="debounceBuscar(this.value)"
-                            style="flex:1; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
-                        
-                        <!-- Botón X para limpiar Socio -->
-                        <button type="button" onclick="limpiarSeleccionSocio()" 
-                            style="background:#EF5350; color:white; border:none; border-radius:10px; width:40px; cursor:pointer; font-size:1.2rem;"
-                            title="Limpiar selección de socio">
-                            &times;
-                        </button>
-                    </div>
-                    <div id="searchResultsAdmin" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:8px; max-height:180px; overflow-y:auto; z-index:10; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1);"></div>
+                    <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">👤 Socio / 🤝 Convenio *</label>
+                    
+                    <!-- Input de Búsqueda -->
+                    <input type="text" id="searchUnified" placeholder="Buscar socio, empresa o contacto..."
+                        oninput="debounceBuscarUnified(this.value)"
+                        autocomplete="off"
+                        style="width:100%; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
+                    
+                    <!-- Indicador de Tipo Seleccionado (Oculto por defecto) -->
+                    <div id="tipoSeleccionBadge" style="display:none; margin-top:0.5rem; font-size:0.8rem; font-weight:bold; padding:0.3rem 0.6rem; border-radius:6px; text-align:center;"></div>
+
+                    <!-- Resultados Desplegables -->
+                    <div id="searchResultsUnified" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; z-index:50; display:none; box-shadow:0 5px 15px rgba(0,0,0,0.1); margin-top:4px;"></div>
+                    
+                    <!-- Inputs Ocultos para guardar la selección -->
+                    <input type="hidden" id="admin_socio_id" name="id_socio" value="">
+                    <input type="hidden" id="admin_convenio_id" name="id_convenio" value="">
+                    <input type="hidden" id="admin_tipo_reserva" value=""> <!-- 'socio' o 'convenio' -->
                 </div>
 
-                <!-- ... (Checkbox Nuevo Socio y Panel colapsable se mantienen igual) ... -->
-
-                <!-- === BUSCADOR CONVENIO CON BOTÓN LIMPIAR === -->
-                <div style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
-                    <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">🤝 Aplicar Convenio (Opcional)</label>
-                    
-                    <!-- Contenedor Flex para Input + Botón X -->
-                    <div style="display:flex; gap:0.5rem; position:relative;"> <!-- position:relative solo para referencia si needed, pero no para absolute children -->
-                        <input type="text" id="searchConvenio" placeholder="Buscar empresa..."
-                            oninput="debounceBuscarConvenio(this.value)"
-                            style="flex:1; padding:0.75rem; border:2px solid #E2E8F0; border-radius:10px; font-size:1rem;">
-                        
-                        <!-- Botón X para limpiar Convenio -->
-                        <button type="button" onclick="limpiarSeleccionConvenio()" 
-                            style="background:#EF5350; color:white; border:none; border-radius:10px; width:40px; cursor:pointer; font-size:1.2rem; display:flex; align-items:center; justify-content:center;"
-                            title="Quitar convenio">
-                            &times;
-                        </button>
+                <!-- Panel Nuevo Socio Express (Oculto por defecto) -->
+                <div id="panelNuevoSocioExpress" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; padding:1rem; border-radius:10px; margin-bottom:1rem; animation:fadeIn 0.3s;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                        <strong style="color:#166534; font-size:0.9rem;">✨ Registrar Nuevo Socio</strong>
+                        <button type="button" onclick="cancelarNuevoSocio()" style="background:none; border:none; color:#999; cursor:pointer; font-size:1.2rem;">&times;</button>
                     </div>
-
-                    <!-- ✅ CORRECCIÓN: Resultados justo debajo, sin absolute, con scroll interno -->
-                    <div id="searchResultsConvenio" 
-                        style="display:none; margin-top:0.5rem; background:white; border:1px solid #E2E8F0; border-radius:10px; max-height:150px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                        <!-- Los resultados se inyectan aquí via JS -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                        <input type="text" id="nuevoNombre" placeholder="Nombre completo" style="padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
+                        <input type="email" id="nuevoEmail" placeholder="Email" style="padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
+                        <input type="tel" id="nuevoTel" placeholder="Teléfono" style="grid-column: span 2; padding:0.5rem; border:1px solid #ccc; border-radius:6px;">
                     </div>
-                    
-                    <input type="hidden" id="admin_convenio_id" value="">
+                    <button type="button" onclick="confirmarNuevoSocio()" style="width:100%; margin-top:0.5rem; padding:0.5rem; background:#22C55E; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">✅ Crear y Seleccionar</button>
                 </div>
 
                 <!-- === RESUMEN DE MONTO (EDITABLE Y DINÁMICO) === -->

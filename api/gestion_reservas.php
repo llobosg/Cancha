@@ -68,6 +68,60 @@ try {
                     }
                 }
             }
+
+            // === ENVIAR EMAIL DE ACTIVACIÓN SI ES NUEVO SOCIO ===
+            if (!empty($_POST['nombreNuevoSocio'])) {
+                try {
+                    require_once __DIR__ . '/../includes/brevo_mailer.php';
+                    
+                    // Generar token único para el link de activación (válido por 24h)
+                    $token_activacion = bin2hex(random_bytes(32));
+                    $fecha_expiracion = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                    
+                    // Guardar token en BD (asegúrate de tener columna 'activation_token' en tabla socios)
+                    // Si no tienes la columna, ejecuta: ALTER TABLE socios ADD COLUMN activation_token VARCHAR(255) NULL, ADD COLUMN token_expires_at DATETIME NULL;
+                    $stmt_token = $pdo->prepare("UPDATE socios SET activation_token = ?, token_expires_at = ? WHERE id_socio = ?");
+                    $stmt_token->execute([$token_activacion, $fecha_expiracion, $id_socio]);
+                    
+                    // Construir Link
+                    $link_activacion = "https://tudominio.com/pages/activar_cuenta.php?token=" . $token_activacion;
+                    
+                    // Enviar Email con Brevo
+                    $mail = new BrevoMailer();
+                    $mail->setTo($email_cliente, $nombre_cliente);
+                    $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Activa tu cuenta");
+                    
+                    $htmlBody = "
+                        <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto;'>
+                            <h2 style='color: #071289;'>¡Hola {$nombre_cliente}!</h2>
+                            <p>Te hemos registrado como socio en <strong>CanchaSport</strong> para tu próxima reserva.</p>
+                            <p>Para acceder a la app, ver tus reservas futuras y gestionar tu perfil, necesitas crear una contraseña.</p>
+                            
+                            <div style='text-align: center; margin: 30px 0;'>
+                                <a href='{$link_activacion}' 
+                                style='background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>
+                                    🔐 Activar mi Cuenta
+                                </a>
+                            </div>
+                            
+                            <p style='font-size: 0.9rem; color: #666;'>
+                                Este enlace expirará en 24 horas. Si no solicitaste este registro, ignora este correo.
+                            </p>
+                        </div>
+                    ";
+                    
+                    $mail->setHtmlBody($htmlBody);
+                    $mail->send();
+                    
+                    error_log("✅ Email de activación enviado a: $email_cliente");
+                    
+                } catch (Exception $e) {
+                    error_log("❌ Error enviando email de activación: " . $e->getMessage());
+                    // No lanzamos excepción para no fallar la reserva, solo logueamos
+                }
+            }
+
+            echo json_encode(['success' => true, 'id_reserva' => $id_reserva]);
             break;
             
         default:
