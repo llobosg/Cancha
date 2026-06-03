@@ -6128,10 +6128,15 @@ async function confirmarNuevoSocio() {
     const tel = document.getElementById('nuevoTel').value.trim();
     
     if (!nombre || !email) {
-        alert('Nombre y Email son obligatorios');
+        showToast('❌ Nombre y Email son obligatorios', 'error');
         return;
     }
     
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Creando...';
+
     try {
         // Crear socio vía API
         const formData = new FormData();
@@ -6145,15 +6150,22 @@ async function confirmarNuevoSocio() {
         
         if (data.success) {
             showToast('✅ Socio creado correctamente', 'success');
-            // Seleccionar automáticamente el nuevo socio
+            
+            // ✅ AUTOMATIZACIÓN: Seleccionar automáticamente el nuevo socio
+            // Usamos la función unificada para que actualice inputs ocultos, badge y UI
             seleccionarUnified('socio', data.id_socio, nombre, 0, email);
+            
+            // Ocultar panel de nuevo socio
             cancelarNuevoSocio();
         } else {
-            alert('Error: ' + data.message);
+            showToast('❌ Error: ' + (data.message || 'No se pudo crear'), 'error');
         }
     } catch (err) {
         console.error(err);
-        alert('Error de conexión al crear socio');
+        showToast('❌ Error de conexión al crear socio', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 

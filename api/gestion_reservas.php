@@ -41,87 +41,179 @@ try {
             break;
             
         case 'crear_manual':
-            echo json_encode(crearReservaManualUnificada($pdo, $_POST));
-            $id_socio = isset($_POST['id_socio']) && !empty($_POST['id_socio']) ? (int)$_POST['id_socio'] : null;
-            $id_convenio = isset($_POST['id_convenio']) && !empty($_POST['id_convenio']) ? (int)$_POST['id_convenio'] : null;
-
-            // Si NO hay socio, pero hay datos de cliente (por convenio), úsalos
-            $nombre_cliente = $_POST['nombre_cliente'] ?? null;
-            $email_cliente = $_POST['email_cliente'] ?? null;
-            $telefono_cliente = $_POST['telefono_cliente'] ?? null;
-
-            if (!$id_socio) {
-                // Si no hay socio, validar que tengamos al menos un nombre o convenio
-                if (!$nombre_cliente && !$id_convenio) {
-                    throw new Exception("Debe seleccionar un socio o aplicar un convenio.");
+            try {
+                // 1. Extraer datos básicos
+                $id_cancha = (int)($_POST['id_cancha'] ?? 0);
+                $fecha = $_POST['fecha'] ?? '';
+                $hora_inicio = $_POST['hora_inicio'] ?? '';
+                $hora_fin = $_POST['hora_fin'] ?? '';
+                $monto_total = floatval($_POST['monto_total'] ?? 0);
+                
+                // 2. Lógica de Socio / Convenio / Nuevo Socio
+                $id_socio = isset($_POST['id_socio']) && !empty($_POST['id_socio']) ? (int)$_POST['id_socio'] : null;
+                $id_convenio = isset($_POST['id_convenio']) && !empty($_POST['id_convenio']) ? (int)$_POST['id_convenio'] : null;
+                
+                $nombre_cliente = $_POST['nombre_cliente'] ?? null;
+                $email_cliente = $_POST['email_cliente'] ?? null;
+                $telefono_cliente = $_POST['telefono_cliente'] ?? null;
+                
+                // === A. CREAR SOCIO EXPRESS SI VIENE DATO ===
+                if (!$id_socio && !empty($_POST['nombreNuevoSocio'])) {
+                    $nNom = trim($_POST['nombreNuevoSocio']);
+                    $nMail = trim($_POST['emailNuevoSocio']);
+                    $nTel = trim($_POST['telNuevoSocio'] ?? '');
+                    
+                    if (empty($nMail) || empty($nNom)) {
+                        throw new Exception("Nombre y Email son obligatorios para nuevo socio.");
+                    }
+                    
+                    // Verificar si ya existe
+                    $stmt_check = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+                    $stmt_check->execute([$nMail]);
+                    $existente = $stmt_check->fetch();
+                    
+                    if ($existente) {
+                        $id_socio = $existente['id_socio'];
+                    } else {
+                        $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $nMail)[0]));
+                        // Asegurar unicidad alias
+                        $base_alias = $alias;
+                        $counter = 1;
+                        while(true) {
+                            $stmt_a = $pdo->prepare("SELECT COUNT(*) FROM socios WHERE alias = ?");
+                            $stmt_a->execute([$alias]);
+                            if($stmt_a->fetchColumn() == 0) break;
+                            $alias = $base_alias . $counter++;
+                        }
+                        
+                        $stmt_new = $pdo->prepare("INSERT INTO socios (nombre, email, alias, celular, created_at, email_verified) VALUES (?, ?, ?, ?, NOW(), 1)");
+                        $stmt_new->execute([$nNom, $nMail, $alias, $nTel]);
+                        $id_socio = $pdo->lastInsertId();
+                        
+                        // Guardar datos para email de activación
+                        $nombre_cliente = $nNom;
+                        $email_cliente = $nMail;
+                        $telefono_cliente = $nTel;
+                    }
                 }
                 
-                // Si hay convenio pero no nombre explícito, podrías buscarlo en BD
-                if ($id_convenio && !$nombre_cliente) {
-                    $stmt_conv = $pdo->prepare("SELECT nombre_empresa, contacto_email, contacto_telefono FROM convenios WHERE id_convenio = ?");
-                    $stmt_conv->execute([$id_convenio]);
+                // === B. VALIDAR SOCIO O CONVENIO ===
+                if (!$id_socio) {
+                    // Si no hay socio, validar que tengamos al menos un convenio
+                    if (!$id_convenio) {
+                         throw new Exception("Debe seleccionar un socio, registrar uno nuevo o aplicar un Convenio.");
+                    }
+                    
+                    // Si hay convenio, obtener datos de contacto
+                    $stmt_conv = $pdo->prepare("SELECT nombre_empresa, contacto_email, contacto_telefono FROM convenios WHERE id_convenio = ? AND id_recinto = ?");
+                    $stmt_conv->execute([$id_convenio, $_SESSION['id_recinto']]);
                     $conv = $stmt_conv->fetch();
+                    
                     if ($conv) {
                         $nombre_cliente = $conv['nombre_empresa'];
                         $email_cliente = $email_cliente ?: $conv['contacto_email'];
                         $telefono_cliente = $telefono_cliente ?: $conv['contacto_telefono'];
+                    } else {
+                        throw new Exception("Convenio no válido o no pertenece a este recinto.");
+                    }
+                } else {
+                    // Si hay socio, obtener sus datos para llenar cliente si viene vacío
+                    if (!$nombre_cliente) {
+                        $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
+                        $stmt_s->execute([$id_socio]);
+                        $s = $stmt_s->fetch();
+                        if ($s) {
+                            $nombre_cliente = $s['nombre'];
+                            $email_cliente = $email_cliente ?: $s['email'];
+                            $telefono_cliente = $telefono_cliente ?: $s['celular'];
+                        }
                     }
                 }
-            }
-
-            // === ENVIAR EMAIL DE ACTIVACIÓN SI ES NUEVO SOCIO ===
-            if (!empty($_POST['nombreNuevoSocio'])) {
-                try {
-                    require_once __DIR__ . '/../includes/brevo_mailer.php';
-                    
-                    // Generar token único para el link de activación (válido por 24h)
-                    $token_activacion = bin2hex(random_bytes(32));
-                    $fecha_expiracion = date('Y-m-d H:i:s', strtotime('+24 hours'));
-                    
-                    // Guardar token en BD (asegúrate de tener columna 'activation_token' en tabla socios)
-                    // Si no tienes la columna, ejecuta: ALTER TABLE socios ADD COLUMN activation_token VARCHAR(255) NULL, ADD COLUMN token_expires_at DATETIME NULL;
-                    $stmt_token = $pdo->prepare("UPDATE socios SET activation_token = ?, token_expires_at = ? WHERE id_socio = ?");
-                    $stmt_token->execute([$token_activacion, $fecha_expiracion, $id_socio]);
-                    
-                    // Construir Link
-                    $link_activacion = "https://tudominio.com/pages/activar_cuenta.php?token=" . $token_activacion;
-                    
-                    // Enviar Email con Brevo
-                    $mail = new BrevoMailer();
-                    $mail->setTo($email_cliente, $nombre_cliente);
-                    $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Activa tu cuenta");
-                    
-                    $htmlBody = "
-                        <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto;'>
-                            <h2 style='color: #071289;'>¡Hola {$nombre_cliente}!</h2>
-                            <p>Te hemos registrado como socio en <strong>CanchaSport</strong> para tu próxima reserva.</p>
-                            <p>Para acceder a la app, ver tus reservas futuras y gestionar tu perfil, necesitas crear una contraseña.</p>
-                            
-                            <div style='text-align: center; margin: 30px 0;'>
-                                <a href='{$link_activacion}' 
-                                style='background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>
-                                    🔐 Activar mi Cuenta
-                                </a>
-                            </div>
-                            
-                            <p style='font-size: 0.9rem; color: #666;'>
-                                Este enlace expirará en 24 horas. Si no solicitaste este registro, ignora este correo.
-                            </p>
-                        </div>
-                    ";
-                    
-                    $mail->setHtmlBody($htmlBody);
-                    $mail->send();
-                    
-                    error_log("✅ Email de activación enviado a: $email_cliente");
-                    
-                } catch (Exception $e) {
-                    error_log("❌ Error enviando email de activación: " . $e->getMessage());
-                    // No lanzamos excepción para no fallar la reserva, solo logueamos
+                
+                // 3. Obtener ID Club del Socio (si existe)
+                $id_club_reserva = null;
+                if ($id_socio) {
+                    $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+                    $stmt_club->execute([$id_socio]);
+                    $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+                    if ($socio_club) $id_club_reserva = $socio_club['id_club'];
                 }
+                
+                // 4. Insertar Reserva
+                $stmt = $pdo->prepare("
+                    INSERT INTO reservas (
+                        id_cancha, id_club, id_socio, id_convenio, 
+                        nombre_cliente, email_cliente, telefono_cliente,
+                        fecha, hora_inicio, hora_fin, monto_total, 
+                        estado_pago, estado, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+                ");
+                
+                $stmt->execute([
+                    $id_cancha, 
+                    $id_club_reserva, 
+                    $id_socio, 
+                    $id_convenio,
+                    $nombre_cliente, 
+                    $email_cliente, 
+                    $telefono_cliente,
+                    $fecha, 
+                    $hora_inicio, 
+                    $hora_fin, 
+                    $monto_total
+                ]);
+                
+                $id_reserva = $pdo->lastInsertId();
+                
+                // 5. Enviar Email de Activación SOLO si fue un NUEVO SOCIO creado aquí
+                if (!empty($_POST['nombreNuevoSocio']) && $email_cliente) {
+                    try {
+                        require_once __DIR__ . '/../includes/brevo_mailer.php';
+                        
+                        $token_activacion = bin2hex(random_bytes(32));
+                        $fecha_expiracion = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                        
+                        // Asegúrate de tener estas columnas en BD: activation_token, token_expires_at
+                        $stmt_token = $pdo->prepare("UPDATE socios SET activation_token = ?, token_expires_at = ? WHERE id_socio = ?");
+                        $stmt_token->execute([$token_activacion, $fecha_expiracion, $id_socio]);
+                        
+                        $link_activacion = "https://tudominio.com/pages/activar_cuenta.php?token=" . $token_activacion;
+                        
+                        $mail = new BrevoMailer();
+                        $mail->setTo($email_cliente, $nombre_cliente);
+                        $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Activa tu cuenta");
+                        
+                        $htmlBody = "
+                            <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto;'>
+                                <h2 style='color: #071289;'>¡Hola {$nombre_cliente}!</h2>
+                                <p>Te hemos registrado como socio en <strong>CanchaSport</strong>.</p>
+                                <p>Para acceder a la app y gestionar tus reservas, crea una contraseña:</p>
+                                
+                                <div style='text-align: center; margin: 30px 0;'>
+                                    <a href='{$link_activacion}' 
+                                    style='background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>
+                                        🔐 Activar mi Cuenta
+                                    </a>
+                                </div>
+                            </div>
+                        ";
+                        
+                        $mail->setHtmlBody($htmlBody);
+                        $mail->send();
+                        error_log("✅ Email activación enviado a: $email_cliente");
+                        
+                    } catch (Exception $e) {
+                        error_log("❌ Error email activación: " . $e->getMessage());
+                    }
+                }
+                
+                // 6. Respuesta Éxito
+                echo json_encode(['success' => true, 'id_reserva' => $id_reserva]);
+                
+            } catch (Exception $e) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
             }
-
-            echo json_encode(['success' => true, 'id_reserva' => $id_reserva]);
             break;
             
         default:
