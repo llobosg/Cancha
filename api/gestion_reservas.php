@@ -1,7 +1,7 @@
 <?php
 // api/gestion_reservas.php
 header('Content-Type: application/json; charset=utf-8');
-// Limpieza extrema de buffer para evitar JSON roto
+// Limpieza extrema de buffer para evitar JSON roto por warnings/espacios
 while (ob_get_level()) { ob_end_clean(); }
 
 require_once __DIR__ . '/../includes/config.php';
