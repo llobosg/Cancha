@@ -140,44 +140,45 @@ try {
                     );
                 }
 
-                // 6. Enviar Email de Activación (SOLO si es socio nuevo sin password)
+                // 6. Enviar Email de Bienvenida/Activación (SIMPLIFICADO - SIN TOKEN EN BD)
                 if ($es_socio_nuevo && $email_cliente) {
                     try {
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
                         
-                        $token_activacion = bin2hex(random_bytes(32));
-                        $fecha_expiracion = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                        // Como no tenemos columna activation_token, enviamos un link genérico
+                        // o simplemente avisamos que su cuenta ha sido creada.
+                        // El usuario podrá usar "Olvidé mi contraseña" o crearemos un flujo simple después.
                         
-                        $stmt_token = $pdo->prepare("UPDATE socios SET activation_token = ?, token_expires_at = ? WHERE id_socio = ?");
-                        $stmt_token->execute([$token_activacion, $fecha_expiracion, $id_socio]);
-                        
-                        $link_activacion = "https://canchasport.com/pages/activar_cuenta.php?token=" . $token_activacion;
+                        $link_login = "https://canchasport.com/index.php";
                        
                         $mail = new BrevoMailer();
                         $mail->setTo($email_cliente, $nombre_cliente);
-                        $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Activa tu cuenta");
+                        $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Tu cuenta ha sido creada");
                         
                         $htmlBody = "
                             <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto;'>
                                 <h2 style='color: #071289;'>¡Hola {$nombre_cliente}!</h2>
                                 <p>Te hemos registrado como socio en <strong>CanchaSport</strong>.</p>
-                                <p>Para acceder a la app y gestionar tus reservas, crea una contraseña:</p>
+                                <p>Tu reserva ha sido confirmada exitosamente.</p>
+                                <p>Para acceder a la app y gestionar tus futuras reservas, puedes iniciar sesión con tu email.</p>
                                 
                                 <div style='text-align: center; margin: 30px 0;'>
-                                    <a href='{$link_activacion}' 
+                                    <a href='{$link_login}' 
                                     style='background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>
-                                        🔐 Activar mi Cuenta
+                                        🚀 Ir a CanchaSport
                                     </a>
                                 </div>
+                                <p style='font-size: 0.9rem; color: #666;'>Si es tu primera vez, usa la opción '¿Olvidaste tu contraseña?' para establecer una clave segura.</p>
                             </div>
                         ";
                         
                         $mail->setHtmlBody($htmlBody);
                         $mail->send();
-                        error_log("✅ Email activación enviado a: $email_cliente");
+                        error_log("✅ Email bienvenida enviado a: $email_cliente");
                         
                     } catch (Exception $e) {
-                        error_log("❌ Error email activación: " . $e->getMessage());
+                        error_log("❌ Error email bienvenida: " . $e->getMessage());
+                        // No lanzamos excepción para no romper la reserva
                     }
                 }
 
