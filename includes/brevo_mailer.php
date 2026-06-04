@@ -34,7 +34,6 @@ class BrevoMailer {
             return false;
         }
         
-        // ✅ Remitente verificado
         $sender = [
             'email' => 'contacto@canchasport.com',
             'name' => 'CanchaSport'
@@ -66,22 +65,32 @@ class BrevoMailer {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_TIMEOUT => 30,
-            CURLOPT_VERBOSE => true
+            CURLOPT_VERBOSE => false
         ]);
         
-        if ($response === false) {
-            throw new Exception("cURL error: " . curl_error($ch));
-        }
+        // ✅ FIX CRÍTICO
+        $response = curl_exec($ch);
+
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
+
+        if ($response === false) {
+            error_log("[Brevo] ❌ cURL Error: $curlError");
+            curl_close($ch);
+            return false;
+        }
+
         curl_close($ch);
-        
+
+        $responseData = json_decode($response, true);
+
         $log = "[Brevo] To:{$this->to['email']} | Subject:{$this->subject} | HTTP:$httpCode";
+
         if ($httpCode >= 200 && $httpCode < 300) {
-            error_log("$log | ✅ Enviado");
+            error_log("$log | ✅ Enviado | MessageID: " . ($responseData['messageId'] ?? 'N/A'));
             return true;
         } else {
-            error_log("$log | ❌ Falló | Response: $response | cURL Error: $curlError");
+            error_log("$log | ❌ Falló | Response: $response");
             return false;
         }
     }
