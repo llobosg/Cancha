@@ -1,4 +1,25 @@
 <?php
+// === BLOQUE 1: HARDEN JSON ===
+if (ob_get_level()) ob_clean();
+
+header('Content-Type: application/json; charset=utf-8');
+
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
+
+// === CAPTURA FATAL ===
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error) {
+        echo json_encode([
+            'success' => false,
+            'fatal' => $error
+        ]);
+    }
+});
+
 require_once __DIR__ . '/../includes/config.php';
 
 header('Content-Type: application/json');
@@ -42,11 +63,11 @@ try {
             ");
 
             $stmt->execute([
-                $_SESSION['id_recinto'],
-                $usuario,
-                $password,
-                $email,
-                $nombre
+                $id_recinto,
+                $_POST['usuario'],
+                password_hash($_POST['password'], PASSWORD_DEFAULT),
+                $_POST['email'],
+                $_POST['nombre']
             ]);
 
             echo json_encode(['success' => true]);
@@ -103,6 +124,7 @@ try {
     }
 
 } catch (Exception $e) {
+    http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
