@@ -2005,7 +2005,7 @@ async function cargarPlanillaReservas() {
         }
         
         const data = await response.json();
-        if (!data.success) {
+        if (data.success === false) {
             console.error("Error Backend:", data);
             alert(data.error || "Error inesperado");
             return;
@@ -2529,7 +2529,7 @@ function abrirLogReserva(idReserva) {
             }
         })
         .then(data => {
-            if (!data.success) {
+            if (data.success === false) {
                 throw new Error(data.error || 'Error al cargar bitácora');
             }
 
@@ -2674,7 +2674,7 @@ Esta acción enviará un correo de notificación al cliente.`;
             body: JSON.stringify({ id_reserva: res.id_reserva })
         });
         const data = await response.json();
-        if (!data.success) {
+        if (data.success === false) {
             console.error("Error Backend:", data);
             alert(data.error || "Error inesperado");
             return;
@@ -3830,7 +3830,7 @@ async function confirmarMovimiento() {
             })
         });
         const data = await response.json();
-        if (!data.success) {
+        if (data.success === false) {
             console.error("Error Backend:", data);
             alert(data.error || "Error inesperado");
             return;
@@ -5017,7 +5017,7 @@ function finalizarTorneoYCalcularRanking(idTorneo) {
     credentials: 'include'
     .then(r => r.json())
     .then(data => {
-        if (!data.success) {
+        if (data.success === false) {
             alert('❌ No se puede finalizar: ' + (data.message || 'Faltan resultados por ingresar'));
             return;
         }
