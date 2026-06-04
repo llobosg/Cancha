@@ -1,20 +1,25 @@
 <?php
 // api/gestion_reservas.php
 header('Content-Type: application/json; charset=utf-8');
-
-// Limpieza de buffer segura para evitar JSON roto por warnings/espacios
+// Limpieza extrema de buffer para evitar JSON roto por warnings/espacios
 while (ob_get_level()) { ob_end_clean(); }
+
+error_log("🚀 [API] Inicio gestion_reservas.php");
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Cargar bitácora si existe
+// Cargar bitácora SOLO si existe el archivo
 if (file_exists(__DIR__ . '/../includes/bitacora.php')) {
     require_once __DIR__ . '/../includes/bitacora.php';
+    error_log("✅ [API] Bitácora cargada");
+} else {
+    error_log("⚠️ [API] Archivo bitacora.php NO encontrado");
 }
 
 try {
     // 1. Verificar autenticación básica
     if (!isset($_SESSION['id_recinto'])) {
+        error_log("❌ [API] Sesión no iniciada");
         throw new Exception('Sesión no iniciada', 401);
     }
 
@@ -22,14 +27,13 @@ try {
     $rol_actual = $_SESSION['recinto_rol'] ?? '';
     $roles_permitidos = ['admin', 'asistente'];
     
-    // Permitir también a admins globales si tu sistema lo usa
     if (!in_array($rol_actual, $roles_permitidos)) {
-        error_log("[API GESTIÓN RESERVAS] Acceso denegado. Rol: '$rol_actual'");
+        error_log("❌ [API] Acceso denegado. Rol: '$rol_actual'");
         throw new Exception('Acceso no autorizado: Rol inválido', 401);
     }
 
     $action = $_POST['action'] ?? $_GET['action'] ?? '';
-    error_log("📝 [API] Acción recibida: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
+    error_log("📥 [API] Acción recibida: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
 
     switch ($action) {
         case 'procesar_pago':
@@ -42,12 +46,16 @@ try {
             
         case 'crear_manual':
             try {
+                error_log("🔍 [API] Iniciando crear_manual");
+                
                 // 1. Extraer datos básicos
                 $id_cancha = (int)($_POST['id_cancha'] ?? 0);
                 $fecha = $_POST['fecha'] ?? '';
                 $hora_inicio = $_POST['hora_inicio'] ?? '';
                 $hora_fin = $_POST['hora_fin'] ?? '';
                 $monto_total = floatval($_POST['monto_total'] ?? 0);
+                
+                error_log("📝 [API] Datos extraídos: Cancha=$id_cancha, Fecha=$fecha, Monto=$monto_total");
                 
                 // 2. Lógica de Socio / Convenio
                 $id_socio = isset($_POST['id_socio']) && !empty($_POST['id_socio']) ? (int)$_POST['id_socio'] : null;
@@ -62,7 +70,7 @@ try {
                 // === A. VALIDAR SOCIO O CONVENIO ===
                 if (!$id_socio) {
                     if (!$id_convenio) {
-                         throw new Exception("Debe seleccionar un socio o aplicar un Convenio.");
+                        throw new Exception("Debe seleccionar un socio o aplicar un Convenio.");
                     }
                     // Si hay convenio, obtener datos
                     $stmt_conv = $pdo->prepare("SELECT nombre_empresa, contacto_email, contacto_telefono FROM convenios WHERE id_convenio = ? AND id_recinto = ?");
@@ -77,6 +85,7 @@ try {
                     }
                 } else {
                     // Si hay socio, obtener sus datos completos
+                    // ✅ CORRECCIÓN: Usar password_hash en lugar de password
                     $stmt_s = $pdo->prepare("SELECT nombre, email, celular, password_hash FROM socios WHERE id_socio = ?");
                     $stmt_s->execute([$id_socio]);
                     $s = $stmt_s->fetch();
@@ -88,20 +97,29 @@ try {
                         // ✅ DETECTAR SI ES NUEVO: Si no tiene password_hash, es recién creado
                         if (empty($s['password_hash'])) {
                             $es_socio_nuevo = true;
+                            error_log("🆕 [API] Socio nuevo detectado (sin password_hash): ID $id_socio");
                         }
                     }
                 }
 
                 // 3. Obtener ID Club del Socio
+                // ✅ CORRECCIÓN: Usar tabla intermedia socio_club
                 $id_club_reserva = null;
                 if ($id_socio) {
-                    $stmt_club = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo' LIMIT 1");
-                    $stmt_club->execute([$id_socio]);
-                    $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
-                    if ($socio_club) $id_club_reserva = $socio_club['id_club'];
+                    try {
+                        $stmt_club = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo' LIMIT 1");
+                        $stmt_club->execute([$id_socio]);
+                        $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+                        if ($socio_club) {
+                            $id_club_reserva = $socio_club['id_club'];
+                        }
+                    } catch (Exception $e) {
+                        error_log("⚠️ [API] Error obteniendo club del socio: " . $e->getMessage());
+                    }
                 }
 
                 // 4. Insertar Reserva
+                error_log("💾 [API] Intentando insertar reserva...");
                 $stmt = $pdo->prepare("
                     INSERT INTO reservas (
                         id_cancha, id_club, id_socio, id_convenio, 
@@ -126,28 +144,33 @@ try {
                 ]);
                 
                 $id_reserva = $pdo->lastInsertId();
+                error_log("✅ [API] Reserva creada con ID: $id_reserva");
 
-                // 5. Registrar Bitácora (SIEMPRE)
+                // 5. Registrar Bitácora (SOLO si la función existe)
                 if (function_exists('registrarLogReserva')) {
-                    registrarLogReserva(
-                        $pdo,
-                        $id_reserva,
-                        'creada',
-                        "Reserva manual creada por Admin",
-                        $_SESSION['recinto_usuario'] ?? 'Admin',
-                        null,
-                        $monto_total
-                    );
+                    try {
+                        registrarLogReserva(
+                            $pdo,
+                            $id_reserva,
+                            'creada',
+                            "Reserva manual creada por Admin",
+                            $_SESSION['recinto_usuario'] ?? 'Admin',
+                            null,
+                            $monto_total
+                        );
+                        error_log("📝 [API] Bitácora registrada");
+                    } catch (Exception $logErr) {
+                        error_log("⚠️ [API] Error en bitácora (no crítico): " . $logErr->getMessage());
+                    }
+                } else {
+                    error_log("⚠️ [API] Función registrarLogReserva NO existe");
                 }
 
                 // 6. Enviar Email de Bienvenida/Activación (SIMPLIFICADO - SIN TOKEN EN BD)
                 if ($es_socio_nuevo && $email_cliente) {
                     try {
+                        error_log("📧 [API] Enviando email de bienvenida a: $email_cliente");
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
-                        
-                        // Como no tenemos columna activation_token, enviamos un link genérico
-                        // o simplemente avisamos que su cuenta ha sido creada.
-                        // El usuario podrá usar "Olvidé mi contraseña" o crearemos un flujo simple después.
                         
                         $link_login = "https://canchasport.com/index.php";
                        
@@ -174,10 +197,10 @@ try {
                         
                         $mail->setHtmlBody($htmlBody);
                         $mail->send();
-                        error_log("✅ Email bienvenida enviado a: $email_cliente");
+                        error_log("✅ [API] Email bienvenida enviado");
                         
                     } catch (Exception $e) {
-                        error_log("❌ Error email bienvenida: " . $e->getMessage());
+                        error_log("❌ [API] Error email bienvenida: " . $e->getMessage());
                         // No lanzamos excepción para no romper la reserva
                     }
                 }
@@ -185,28 +208,41 @@ try {
                 // 7. Enviar Email de Confirmación de Reserva (A TODOS los socios)
                 if ($id_socio && $email_cliente) {
                     try {
+                        error_log("📧 [API] Enviando email de confirmación de reserva");
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
-                        // Asumiendo que tienes esta función en tu clase o archivo
-                        BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
-                        error_log("✅ Email confirmación reserva enviado a: $email_cliente");
+                        // Asumiendo que tienes esta función en tu clase BrevoMailer
+                        if (method_exists('BrevoMailer', 'enviarConfirmacion')) {
+                            BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
+                            error_log("✅ [API] Email confirmación reserva enviado");
+                        } else {
+                            error_log("⚠️ [API] Método enviarConfirmacion NO existe en BrevoMailer");
+                        }
                     } catch (Exception $e) {
-                        error_log("❌ Error email confirmación: " . $e->getMessage());
+                        error_log("❌ [API] Error email confirmación: " . $e->getMessage());
                     }
                 }
                 
+                // ✅ LIMPIAR BUFFER ANTES DE RESPONDER
+                ob_clean();
+                error_log("🏁 [API] Respondiendo éxito JSON");
                 echo json_encode(['success' => true, 'id_reserva' => $id_reserva]);
+                exit; // Importante salir aquí
                 
             } catch (Exception $e) {
+                ob_clean();
+                error_log("❌ [API] Excepción en crear_manual: " . $e->getMessage());
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                exit;
             }
             break;
             
         default:
             throw new Exception('Acción no válida: ' . $action);
     }
-
 } catch (Exception $e) {
+    ob_clean();
+    error_log("❌ [API] Excepción Global: " . $e->getMessage());
     http_response_code($e->getCode() ?: 400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     exit;
