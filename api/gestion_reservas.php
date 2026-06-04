@@ -1,10 +1,38 @@
 <?php
-// api/gestion_reservas.php
-header('Content-Type: application/json; charset=utf-8');
-// Limpieza extrema de buffer para evitar JSON roto por warnings/espacios
-while (ob_get_level()) { ob_end_clean(); }
+ob_start();
 
-error_log("🚀 [API] Inicio gestion_reservas.php");
+header('Content-Type: application/json; charset=utf-8');
+
+// 🔴 1. HANDLER DE ERRORES (ANTES DE TODO)
+set_error_handler(function ($severity, $message, $file, $line) {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+// 🔴 2. HANDLER DE EXCEPCIONES
+set_exception_handler(function ($e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+    exit;
+});
+
+// 🔴 3. SHUTDOWN FUNCTION (AQUÍ VA)
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error) {
+        // Limpiar cualquier basura previa
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
+        echo json_encode([
+            'success' => false,
+            'fatal' => $error
+        ]);
+    }
+});
 
 require_once __DIR__ . '/../includes/config.php';
 
@@ -37,10 +65,16 @@ try {
 
     switch ($action) {
         case 'procesar_pago':
+            if (ob_get_length()) {
+                ob_clean();
+            }
             echo json_encode(procesarPagoReserva($pdo, $_POST));
             break;
             
         case 'procesar_pago_parcial':
+            if (ob_get_length()) {
+                ob_clean();
+            }
             echo json_encode(procesarPagoParcial($pdo, $_POST));
             break;
             
@@ -208,30 +242,36 @@ try {
                 // 7. Enviar Email de Confirmación de Reserva (A TODOS los socios)
                 if ($id_socio && $email_cliente) {
                     try {
-                        error_log("📧 [API] Enviando email de confirmación de reserva");
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
-                        // Asumiendo que tienes esta función en tu clase BrevoMailer
+
                         if (method_exists('BrevoMailer', 'enviarConfirmacion')) {
                             BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
-                            error_log("✅ [API] Email confirmación reserva enviado");
-                        } else {
-                            error_log("⚠️ [API] Método enviarConfirmacion NO existe en BrevoMailer");
                         }
-                    } catch (Exception $e) {
-                        error_log("❌ [API] Error email confirmación: " . $e->getMessage());
+
+                    } catch (Throwable $e) {
+                        error_log("Email error: " . $e->getMessage());
                     }
                 }
                 
                 // ✅ LIMPIAR BUFFER ANTES DE RESPONDER
                 ob_clean();
                 error_log("🏁 [API] Respondiendo éxito JSON");
-                echo json_encode(['success' => true, 'id_reserva' => $id_reserva]);
-                exit; // Importante salir aquí
+                if (ob_get_length()) {
+                    ob_clean();
+                }
+                echo json_encode([
+                    'success' => true,
+                    'id_reserva' => $id_reserva
+                ]);
+                exit;
                 
             } catch (Exception $e) {
                 ob_clean();
                 error_log("❌ [API] Excepción en crear_manual: " . $e->getMessage());
                 http_response_code(400);
+                if (ob_get_length()) {
+                    ob_clean();
+                }
                 echo json_encode(['success' => false, 'message' => $e->getMessage()]);
                 exit;
             }
@@ -244,6 +284,9 @@ try {
     ob_clean();
     error_log("❌ [API] Excepción Global: " . $e->getMessage());
     http_response_code($e->getCode() ?: 400);
+    if (ob_get_length()) {
+        ob_clean();
+    }
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     exit;
 }

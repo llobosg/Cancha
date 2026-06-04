@@ -6,13 +6,6 @@ date_default_timezone_set('America/Santiago');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-// 🔥 FORZAR MYSQL TAMBIÉN
-try {
-    $pdo->exec("SET time_zone = '-03:00'");
-} catch (Exception $e) {
-    error_log("Error seteando timezone MySQL: " . $e->getMessage());
-}
-
 // 1. Manejo de sesión CENTRALIZADO (UNA SOLA VEZ)
 if (session_status() === PHP_SESSION_NONE) {
     session_name('CANCHASPORT_SESSION');
