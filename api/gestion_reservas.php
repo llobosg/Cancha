@@ -1,25 +1,20 @@
 <?php
 // api/gestion_reservas.php
 header('Content-Type: application/json; charset=utf-8');
-// Limpieza extrema de buffer para evitar JSON roto por warnings/espacios
-while (ob_get_level()) { ob_end_clean(); }
 
-error_log("🚀 [API] Inicio gestion_reservas.php");
+// Limpieza de buffer segura para evitar JSON roto por warnings/espacios
+while (ob_get_level()) { ob_end_clean(); }
 
 require_once __DIR__ . '/../includes/config.php';
 
-// Cargar bitácora SOLO si existe el archivo
+// Cargar bitácora si existe
 if (file_exists(__DIR__ . '/../includes/bitacora.php')) {
     require_once __DIR__ . '/../includes/bitacora.php';
-    error_log("✅ [API] Bitácora cargada");
-} else {
-    error_log("⚠️ [API] Archivo bitacora.php NO encontrado");
 }
 
 try {
     // 1. Verificar autenticación básica
     if (!isset($_SESSION['id_recinto'])) {
-        error_log("❌ [API] Sesión no iniciada");
         throw new Exception('Sesión no iniciada', 401);
     }
 
@@ -27,17 +22,22 @@ try {
     $rol_actual = $_SESSION['recinto_rol'] ?? '';
     $roles_permitidos = ['admin', 'asistente'];
     
+    // Permitir también a admins globales si tu sistema lo usa
     if (!in_array($rol_actual, $roles_permitidos)) {
-        error_log("❌ [API] Acceso denegado. Rol: '$rol_actual'");
+        error_log("[API GESTIÓN RESERVAS] Acceso denegado. Rol: '$rol_actual'");
         throw new Exception('Acceso no autorizado: Rol inválido', 401);
     }
 
     $action = $_POST['action'] ?? $_GET['action'] ?? '';
-    error_log("📥 [API] Acción recibida: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
+    error_log("📝 [API] Acción recibida: $action | Usuario: " . ($_SESSION['recinto_usuario'] ?? 'Desconocido'));
 
     switch ($action) {
         case 'procesar_pago':
             echo json_encode(procesarPagoReserva($pdo, $_POST));
+            break;
+            
+        case 'procesar_pago_parcial':
+            echo json_encode(procesarPagoParcial($pdo, $_POST));
             break;
             
         case 'crear_manual':
@@ -57,13 +57,14 @@ try {
                 $email_cliente = $_POST['email_cliente'] ?? null;
                 $telefono_cliente = $_POST['telefono_cliente'] ?? null;
                 
-                $es_socio_nuevo = false;
+                $es_socio_nuevo = false; // Flag para controlar emails
 
                 // === A. VALIDAR SOCIO O CONVENIO ===
                 if (!$id_socio) {
                     if (!$id_convenio) {
-                        throw new Exception("Debe seleccionar un socio o aplicar un Convenio.");
+                         throw new Exception("Debe seleccionar un socio o aplicar un Convenio.");
                     }
+                    // Si hay convenio, obtener datos
                     $stmt_conv = $pdo->prepare("SELECT nombre_empresa, contacto_email, contacto_telefono FROM convenios WHERE id_convenio = ? AND id_recinto = ?");
                     $stmt_conv->execute([$id_convenio, $_SESSION['id_recinto']]);
                     $conv = $stmt_conv->fetch();
@@ -75,6 +76,7 @@ try {
                         throw new Exception("Convenio no válido.");
                     }
                 } else {
+                    // Si hay socio, obtener sus datos completos
                     $stmt_s = $pdo->prepare("SELECT nombre, email, celular, password_hash FROM socios WHERE id_socio = ?");
                     $stmt_s->execute([$id_socio]);
                     $s = $stmt_s->fetch();
@@ -83,6 +85,7 @@ try {
                         $email_cliente = $email_cliente ?: $s['email'];
                         $telefono_cliente = $telefono_cliente ?: $s['celular'];
                         
+                        // ✅ DETECTAR SI ES NUEVO: Si no tiene password_hash, es recién creado
                         if (empty($s['password_hash'])) {
                             $es_socio_nuevo = true;
                         }
@@ -92,14 +95,10 @@ try {
                 // 3. Obtener ID Club del Socio
                 $id_club_reserva = null;
                 if ($id_socio) {
-                    try {
-                        $stmt_club = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo' LIMIT 1");
-                        $stmt_club->execute([$id_socio]);
-                        $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
-                        if ($socio_club) $id_club_reserva = $socio_club['id_club'];
-                    } catch (Exception $e) {
-                        error_log("⚠️ Error obteniendo club: " . $e->getMessage());
-                    }
+                    $stmt_club = $pdo->prepare("SELECT id_club FROM socio_club WHERE id_socio = ? AND estado = 'activo' LIMIT 1");
+                    $stmt_club->execute([$id_socio]);
+                    $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+                    if ($socio_club) $id_club_reserva = $socio_club['id_club'];
                 }
 
                 // 4. Insertar Reserva
@@ -113,86 +112,111 @@ try {
                 ");
                 
                 $stmt->execute([
-                    $id_cancha, $id_club_reserva, $id_socio, $id_convenio,
-                    $nombre_cliente, $email_cliente, $telefono_cliente,
-                    $fecha, $hora_inicio, $hora_fin, $monto_total
+                    $id_cancha, 
+                    $id_club_reserva, 
+                    $id_socio, 
+                    $id_convenio,
+                    $nombre_cliente, 
+                    $email_cliente, 
+                    $telefono_cliente,
+                    $fecha, 
+                    $hora_inicio, 
+                    $hora_fin, 
+                    $monto_total
                 ]);
                 
                 $id_reserva = $pdo->lastInsertId();
-                error_log("✅ [API] Reserva creada ID: $id_reserva");
 
-                // 5. Bitácora
+                // 5. Registrar Bitácora (SIEMPRE)
                 if (function_exists('registrarLogReserva')) {
-                    try {
-                        registrarLogReserva($pdo, $id_reserva, 'creada', "Reserva manual", $_SESSION['recinto_usuario'] ?? 'Admin', null, $monto_total);
-                    } catch (Exception $e) {
-                        error_log("⚠️ Error bitácora: " . $e->getMessage());
-                    }
+                    registrarLogReserva(
+                        $pdo,
+                        $id_reserva,
+                        'creada',
+                        "Reserva manual creada por Admin",
+                        $_SESSION['recinto_usuario'] ?? 'Admin',
+                        null,
+                        $monto_total
+                    );
                 }
 
-                // 6. Email Bienvenida (Socio Nuevo)
+                // 6. Enviar Email de Bienvenida/Activación (SIMPLIFICADO - SIN TOKEN EN BD)
                 if ($es_socio_nuevo && $email_cliente) {
                     try {
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
+                        
+                        // Como no tenemos columna activation_token, enviamos un link genérico
+                        // o simplemente avisamos que su cuenta ha sido creada.
+                        // El usuario podrá usar "Olvidé mi contraseña" o crearemos un flujo simple después.
+                        
+                        $link_login = "https://canchasport.com/index.php";
+                       
                         $mail = new BrevoMailer();
                         $mail->setTo($email_cliente, $nombre_cliente);
-                        $mail->setSubject("🎉 ¡Bienvenido a CanchaSport!");
-                        $mail->setHtmlBody("<h2>¡Hola {$nombre_cliente}!</h2><p>Tu cuenta ha sido creada. Usa 'Recuperar Contraseña' para acceder.</p>");
+                        $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Tu cuenta ha sido creada");
+                        
+                        $htmlBody = "
+                            <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto;'>
+                                <h2 style='color: #071289;'>¡Hola {$nombre_cliente}!</h2>
+                                <p>Te hemos registrado como socio en <strong>CanchaSport</strong>.</p>
+                                <p>Tu reserva ha sido confirmada exitosamente.</p>
+                                <p>Para acceder a la app y gestionar tus futuras reservas, puedes iniciar sesión con tu email.</p>
+                                
+                                <div style='text-align: center; margin: 30px 0;'>
+                                    <a href='{$link_login}' 
+                                    style='background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>
+                                        🚀 Ir a CanchaSport
+                                    </a>
+                                </div>
+                                <p style='font-size: 0.9rem; color: #666;'>Si es tu primera vez, usa la opción '¿Olvidaste tu contraseña?' para establecer una clave segura.</p>
+                            </div>
+                        ";
+                        
+                        $mail->setHtmlBody($htmlBody);
                         $mail->send();
-                        error_log("✅ Email bienvenida enviado");
+                        error_log("✅ Email bienvenida enviado a: $email_cliente");
+                        
                     } catch (Exception $e) {
                         error_log("❌ Error email bienvenida: " . $e->getMessage());
+                        // No lanzamos excepción para no romper la reserva
                     }
                 }
 
-                // 7. Email Confirmación Reserva (BLINDADO)
+                // 7. Enviar Email de Confirmación de Reserva (A TODOS los socios)
                 if ($id_socio && $email_cliente) {
                     try {
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
-                        if (method_exists('BrevoMailer', 'enviarConfirmacion')) {
-                            BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
-                            error_log("✅ Email confirmación enviado");
-                        } else {
-                            error_log("⚠️ Método enviarConfirmacion no existe");
-                        }
+                        // Asumiendo que tienes esta función en tu clase o archivo
+                        BrevoMailer::enviarConfirmacion($pdo, $id_reserva);
+                        error_log("✅ Email confirmación reserva enviado a: $email_cliente");
                     } catch (Exception $e) {
-                        // ⚠️ IMPORTANTE: Capturar cualquier error aquí para que NO rompa el JSON
-                        error_log("❌ Error crítico email confirmación: " . $e->getMessage());
-                        // No lanzamos excepción, solo logueamos
+                        error_log("❌ Error email confirmación: " . $e->getMessage());
                     }
                 }
                 
-                // ✅ LIMPIEZA FINAL Y RESPUESTA JSON
-                while (ob_get_level()) { ob_end_clean(); }
                 echo json_encode(['success' => true, 'id_reserva' => $id_reserva]);
-                exit;
                 
             } catch (Exception $e) {
-                while (ob_get_level()) { ob_end_clean(); }
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-                exit;
             }
             break;
             
         default:
             throw new Exception('Acción no válida: ' . $action);
     }
+
 } catch (Exception $e) {
-    ob_clean();
-    error_log("❌ [API] Excepción Global: " . $e->getMessage());
     http_response_code($e->getCode() ?: 400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     exit;
 }
 
 // ============================================================================
-// FUNCIONES AUXILIARES (procesarPagoReserva, procesarPagoParcial, etc.)
+// FUNCIONES AUXILIARES
 // ============================================================================
 
 function procesarPagoReserva($pdo, $data) {
-    // ... (Tu código existente de procesarPagoReserva) ...
-    // Asegúrate de que esta función esté completa y correcta
     $id_reserva = (int)($data['id_reserva'] ?? 0);
     $metodo_pago = trim($data['metodo_pago'] ?? '');
     $transaccion_id = trim($data['transaccion_id'] ?? '');
@@ -216,12 +240,11 @@ function procesarPagoReserva($pdo, $data) {
     if (!$reserva) {
         throw new Exception('Reserva no encontrada o no pertenece a este recinto');
     }
-
     if ($reserva['estado_pago'] === 'pagado') {
         throw new Exception('Esta reserva ya está pagada');
     }
 
-    // Manejo de Extras en Notas
+    // Manejo de Extras en Notas (formato estructurado)
     $notas_finales = $reserva['notas'] ?? '';
     if ($extras > 0) {
         if (!preg_match('/\[EXTRAS:\d+(\.\d+)?\]/', $notas_finales)) {
@@ -237,11 +260,11 @@ function procesarPagoReserva($pdo, $data) {
     $stmt_update = $pdo->prepare("
         UPDATE reservas
         SET estado_pago = ?,
-        metodo_pago = ?,
-        transaccion_id = ?,
-        monto_recaudacion = ?,
-        notas = ?,
-        updated_at = NOW()
+            metodo_pago = ?,
+            transaccion_id = ?,
+            monto_recaudacion = ?,
+            notas = ?,
+            updated_at = NOW()
         WHERE id_reserva = ?
     ");
     $stmt_update->execute([
@@ -255,19 +278,15 @@ function procesarPagoReserva($pdo, $data) {
 
     // Registrar Log
     if (function_exists('registrarLogReserva')) {
-        try {
-            registrarLogReserva(
-                $pdo,
-                $id_reserva,
-                ($nuevo_estado_pago === 'pagado') ? 'cobro_total' : 'cobro_parcial',
-                "Pago registrado vía $metodo_pago. Monto: $" . number_format($monto_total, 0, ',', '.'),
-                $_SESSION['recinto_usuario'] ?? 'Admin',
-                $reserva['monto_recaudacion'],
-                $nuevo_monto_recaudado
-            );
-        } catch (Exception $e) {
-            error_log("Error en log de pago: " . $e->getMessage());
-        }
+        registrarLogReserva(
+            $pdo,
+            $id_reserva,
+            ($nuevo_estado_pago === 'pagado') ? 'cobro_total' : 'cobro_parcial',
+            "Pago registrado vía $metodo_pago. Monto: $" . number_format($monto_total, 0, ',', '.'),
+            $_SESSION['recinto_usuario'] ?? 'Admin',
+            $reserva['monto_recaudacion'],
+            $nuevo_monto_recaudado
+        );
     }
 
     return [
@@ -278,7 +297,6 @@ function procesarPagoReserva($pdo, $data) {
 }
 
 function procesarPagoParcial($pdo, $data) {
-    // ... (Tu código existente de procesarPagoParcial) ...
     $id_reserva = (int)($data['id_reserva'] ?? 0);
     $monto_pagado = (float)($data['monto_pagado'] ?? 0);
     $monto_total_original = (float)($data['monto_total_original'] ?? 0);
@@ -298,7 +316,6 @@ function procesarPagoParcial($pdo, $data) {
     if (!$reserva) {
         throw new Exception('Reserva no encontrada');
     }
-
     if ($reserva['estado_pago'] === 'pagado') {
         throw new Exception('Esta reserva ya está marcada como PAGADA.');
     }
@@ -326,11 +343,11 @@ function procesarPagoParcial($pdo, $data) {
     $stmt_update = $pdo->prepare("
         UPDATE reservas
         SET estado_pago = ?,
-        metodo_pago = ?,
-        transaccion_id = ?,
-        monto_recaudacion = ?,
-        notas = ?,
-        updated_at = NOW()
+            metodo_pago = ?,
+            transaccion_id = ?,
+            monto_recaudacion = ?,
+            notas = ?,
+            updated_at = NOW()
         WHERE id_reserva = ?
     ");
     $stmt_update->execute([
@@ -344,19 +361,15 @@ function procesarPagoParcial($pdo, $data) {
 
     // Registrar Log
     if (function_exists('registrarLogReserva')) {
-        try {
-            registrarLogReserva(
-                $pdo,
-                $id_reserva,
-                'cobro_parcial',
-                "Abono parcial: $" . number_format($monto_pagado, 0, ',', '.'),
-                $_SESSION['recinto_usuario'] ?? 'Admin',
-                $monto_recaudado_actual,
-                $nuevo_monto_recaudado
-            );
-        } catch (Exception $e) {
-            error_log("Error en log de pago parcial: " . $e->getMessage());
-        }
+        registrarLogReserva(
+            $pdo,
+            $id_reserva,
+            'cobro_parcial',
+            "Abono parcial: $" . number_format($monto_pagado, 0, ',', '.'),
+            $_SESSION['recinto_usuario'] ?? 'Admin',
+            $monto_recaudado_actual,
+            $nuevo_monto_recaudado
+        );
     }
 
     return [
@@ -365,5 +378,230 @@ function procesarPagoParcial($pdo, $data) {
         'estado_nuevo' => $nuevo_estado_pago,
         'monto_recaudado' => $nuevo_monto_recaudado
     ];
+}
+
+function crearReservaManualUnificada($pdo, $data) {
+    $id_cancha = isset($data['id_cancha']) ? (int)$data['id_cancha'] : 0;
+    $fecha = isset($data['fecha']) ? $data['fecha'] : '';
+    $hora_inicio = isset($data['hora_inicio']) ? $data['hora_inicio'] : '';
+    $hora_fin = isset($data['hora_fin']) ? $data['hora_fin'] : '';
+    
+    // ✅ CORRECCIÓN: Asegurar que monto_total sea float, si viene 0 o vacío, usar 0.0
+    $monto_total = isset($data['monto_total']) ? (float)$data['monto_total'] : 0.0;
+    
+    $id_socio_input = !empty($data['id_socio']) ? (int)$data['id_socio'] : null;
+
+    // Datos nuevo socio
+    $nombre_nuevo = trim($data['nombreNuevoSocio'] ?? '');
+    $email_nuevo = trim($data['emailNuevoSocio'] ?? '');
+    $tel_nuevo = trim($data['telNuevoSocio'] ?? '');
+
+    if (!$id_cancha || !$fecha || !$hora_inicio) {
+        throw new Exception('Datos incompletos para crear reserva');
+    }
+
+    // Verificar cancha pertenece al recinto
+    $stmt = $pdo->prepare("SELECT id_recinto FROM canchas WHERE id_cancha = ?");
+    $stmt->execute([$id_cancha]);
+    if ($stmt->fetchColumn() != $_SESSION['id_recinto']) {
+        throw new Exception('Cancha no válida para este recinto');
+    }
+
+    // Verificar disponibilidad
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
+    $stmt->execute([$id_cancha, $fecha, $hora_inicio]);
+    if ($stmt->fetchColumn() > 0) {
+        throw new Exception('Horario ocupado');
+    }
+
+    // === OBTENER DATOS DE LA CANCHA (Incluyendo Capacidad) ===
+    $stmt_cancha = $pdo->prepare("SELECT id_recinto, capacidad_jugadores FROM canchas WHERE id_cancha = ?");
+    $stmt_cancha->execute([$id_cancha]);
+    $cancha_data = $stmt_cancha->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$cancha_data || $cancha_data['id_recinto'] != $_SESSION['id_recinto']) {
+        throw new Exception('Cancha no válida para este recinto');
+    }
+    
+    // Usar capacidad de la BD, o default 4 si es null
+    $jugadores_esperados = intval($cancha_data['capacidad_jugadores'] ?? 4);
+
+    // === DETERMINAR ID_SOCIO Y DATOS DEL CLIENTE ===
+    $id_socio_final = null;
+    $nombre_cliente = '';
+    $email_cliente = '';
+    $telefono_cliente = '';
+
+    if ($id_socio_input) {
+        // SOCIO EXISTENTE
+        $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
+        $stmt_s->execute([$id_socio_input]);
+        $socio_data = $stmt_s->fetch(PDO::FETCH_ASSOC);
+        if ($socio_data) {
+            $id_socio_final = $id_socio_input;
+            $nombre_cliente = $socio_data['nombre'] ?? '';
+            $email_cliente = $socio_data['email'] ?? '';
+            $telefono_cliente = $socio_data['celular'] ?? '';
+        }
+    } elseif (!empty($email_nuevo) && !empty($nombre_nuevo)) {
+        // NUEVO SOCIO O BÚSQUEDA POR EMAIL
+        $stmt = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
+        $stmt->execute([$email_nuevo]);
+        $existente = $stmt->fetch();
+        
+        if ($existente) {
+            $id_socio_final = $existente['id_socio'];
+            $nombre_cliente = $nombre_nuevo;
+            $email_cliente = $email_nuevo;
+            $telefono_cliente = $tel_nuevo;
+        } else {
+            // Crear nuevo socio
+            $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
+            $stmt = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
+            $stmt->execute([$email_nuevo, $nombre_nuevo, $alias, $tel_nuevo]);
+            $id_socio_final = $pdo->lastInsertId();
+            $nombre_cliente = $nombre_nuevo;
+            $email_cliente = $email_nuevo;
+            $telefono_cliente = $tel_nuevo;
+        }
+    } else {
+        throw new Exception('Debe seleccionar un socio existente o ingresar datos para uno nuevo');
+    }
+
+    $id_convenio = isset($data['id_convenio']) ? (int)$data['id_convenio'] : null;
+    $descuento_aplicado = isset($data['monto_total']) && isset($data['admin_monto_base']) ? 0 : 0; 
+    // Nota: Es más seguro recalculcar el descuento en el backend si recibes el ID del convenio.
+
+    $monto_final = isset($data['monto_total']) ? (float)$data['monto_total'] : 0;
+
+    // === INSERTAR RESERVA ===
+    // === OBTENER ID_CLUB DEL SOCIO (Si existe) ===
+    $id_club_reserva = null;
+    if ($id_socio_final) {
+        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+        $stmt_club->execute([$id_socio_final]);
+        $socio_club_data = $stmt_club->fetch(PDO::FETCH_ASSOC);
+        if ($socio_club_data && !empty($socio_club_data['id_club'])) {
+            $id_club_reserva = $socio_club_data['id_club'];
+        }
+    }
+
+    // === INSERTAR RESERVA CON JUGADORES_ESPERADOS CORRECTO ===
+    $stmt = $pdo->prepare("
+        INSERT INTO reservas (
+            id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente,
+            fecha, hora_inicio, hora_fin, monto_total, estado_pago, estado, jugadores_esperados, created_at, id_convenio
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', ?, NOW(), ?)
+    ");
+    
+    // Obtener id_club del socio si existe
+    $id_club_reserva = null;
+    if ($id_socio_final) {
+        $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
+        $stmt_club->execute([$id_socio_final]);
+        $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+        if ($socio_club) $id_club_reserva = $socio_club['id_club'];
+    }
+
+    $stmt->execute([
+        $id_cancha, 
+        $id_club_reserva, 
+        $id_socio_final, 
+        $nombre_cliente, 
+        $email_cliente, 
+        $telefono_cliente,
+        $fecha, 
+        $hora_inicio, 
+        $hora_fin, 
+        $monto_total,
+        $jugadores_esperados, // <--- AQUÍ SE GUARDA LA CAPACIDAD REAL (20)
+        $id_convenio
+    ]);
+    
+    $id_reserva = $pdo->lastInsertId();
+
+    // === REGISTRAR LOG DE BITÁCORA CON DETALLE DE CONVENIO ===
+    if (function_exists('registrarLogReserva')) {
+        $descripcion = "Reserva manual creada por Admin/Asistente";
+        
+        if ($id_convenio) {
+            // Obtener nombre del convenio para el log
+            $stmt_conv = $pdo->prepare("SELECT nombre_empresa, porc_dscto FROM convenios WHERE id_convenio = ?");
+            $stmt_conv->execute([$id_convenio]);
+            $conv_data = $stmt_conv->fetch();
+            
+            if ($conv_data) {
+                $descripcion .= " | 🤝 CONVENIO: {$conv_data['nombre_empresa']} ({$conv_data['porc_dscto']}% OFF)";
+                
+                // Opcional: Si no hay socio asociado, usar el email del contacto del convenio para enviar correo
+                if (empty($email_cliente) && !empty($conv_data['contacto_email'])) {
+                    // Aquí podrías actualizar el email de la reserva o enviar el correo al contacto
+                    // Por ahora, asumimos que el email ya está en $email_cliente si se seleccionó un socio
+                }
+            }
+        }
+
+        registrarLogReserva(
+            $pdo,
+            $id_reserva,
+            'creada',
+            $descripcion,
+            $_SESSION['recinto_usuario'] ?? 'Admin',
+            null,
+            $monto_final
+        );
+    }
+
+    // === REGISTRAR LOG DE BITÁCORA ===
+    if (function_exists('registrarLogReserva')) {
+        registrarLogReserva(
+            $pdo,
+            $id_reserva,
+            'creada',
+            "Reserva manual creada por Admin/Asistente",
+            $_SESSION['recinto_usuario'] ?? 'Admin',
+            null,
+            $monto_total
+        );
+    }
+
+    // === ENVIAR CORREO DE CONFIRMACIÓN ===
+    if (!empty($email_cliente)) {
+        try {
+            require_once __DIR__ . '/../includes/reserva_mailer.php';
+            if (class_exists('BrevoMailer')) {
+                $mail = new BrevoMailer();
+                $fecha_fmt = date('d/m/Y', strtotime($fecha));
+                $hora_fmt = substr($hora_inicio, 0, 5) . ' - ' . substr($hora_fin, 0, 5);
+                
+                // Obtener nombre cancha
+                $stmt_c = $pdo->prepare("SELECT nombre_cancha FROM canchas WHERE id_cancha = ?");
+                $stmt_c->execute([$id_cancha]);
+                $nombre_cancha = $stmt_c->fetchColumn() ?: 'Cancha';
+
+                $html_body = "
+                    <h2>Hola {$nombre_cliente}</h2>
+                    <p>Tu reserva ha sido creada exitosamente.</p>
+                    <ul>
+                        <li><strong>Cancha:</strong> {$nombre_cancha}</li>
+                        <li><strong>Fecha:</strong> {$fecha_fmt}</li>
+                        <li><strong>Hora:</strong> {$hora_fmt}</li>
+                        <li><strong>Monto Total:</strong> $" . number_format($monto_total, 0, ',', '.') . "</li>
+                    </ul>
+                    <p>Te esperamos en el recinto.</p>
+                ";
+
+                $mail->setTo($email_cliente, $nombre_cliente)
+                    ->setSubject("✅ Confirmación de Reserva - CanchaSport")
+                    ->setHtmlBody($html_body)
+                    ->send();
+            }
+        } catch (Exception $e) {
+            error_log("Error enviando correo confirmación: " . $e->getMessage());
+            // No interrumpimos el flujo si falla el correo
+        }
+    }
+
+    return ['success' => true, 'id_reserva' => $id_reserva, 'id_socio' => $id_socio_final];
 }
 ?>
