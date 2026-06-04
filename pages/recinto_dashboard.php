@@ -2004,6 +2004,7 @@ async function cargarPlanillaReservas() {
             throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs.');
         }
         
+        const data = await response.json();
         if (!data.success) {
             console.error("Error Backend:", data);
             alert(data.error || "Error inesperado");
