@@ -139,13 +139,24 @@ try {
                 }
                 
                 // 3. Obtener ID Club del Socio (si existe)
+                // ✅ CORRECCIÓN: Usar tabla intermedia socio_club en lugar de buscar en socios
                 $id_club_reserva = null;
                 if ($id_socio) {
-                    // Nota: Si usas tabla intermedia socio_club, ajusta esta consulta
-                    $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
-                    $stmt_club->execute([$id_socio]);
-                    $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
-                    if ($socio_club) $id_club_reserva = $socio_club['id_club'];
+                    try {
+                        $stmt_club = $pdo->prepare("
+                            SELECT id_club 
+                            FROM socio_club 
+                            WHERE id_socio = ? AND estado = 'activo' 
+                            LIMIT 1
+                        ");
+                        $stmt_club->execute([$id_socio]);
+                        $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
+                        if ($socio_club) {
+                            $id_club_reserva = $socio_club['id_club'];
+                        }
+                    } catch (Exception $e) {
+                        error_log("Error obteniendo club del socio: " . $e->getMessage());
+                    }
                 }
                 
                 // 4. Insertar Reserva
