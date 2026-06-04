@@ -4,8 +4,8 @@ require_once __DIR__ . '/../includes/config.php';
 
 $token = $_GET['token'] ?? '';
 $error = null;
-$success = false;
 $socio_nombre = '';
+$socio_id = null; // Guardamos el ID para usarlo después
 
 if (empty($token)) {
     $error = "Token inválido.";
@@ -21,6 +21,7 @@ if (empty($token)) {
         $error = "El enlace ha expirado. Solicita uno nuevo.";
     } else {
         $socio_nombre = $socio['nombre'];
+        $socio_id = $socio['id_socio'];
         
         // Procesar formulario
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,7 +47,16 @@ if (empty($token)) {
                     ");
                     $stmt_update->execute([$hash, $socio['id_socio']]);
                     
-                    $success = true;
+                    // === REDIRECCIÓN AUTOMÁTICA AL DASHBOARD ===
+                    // Iniciamos sesión manualmente para que entre directo
+                    session_start();
+                    $_SESSION['id_socio'] = $socio['id_socio'];
+                    $_SESSION['nombre_completo'] = $socio['nombre'];
+                    // Si tienes otras variables de sesión necesarias, agrégolas aquí
+                    
+                    header('Location: dashboard_socio.php');
+                    exit; // Importante detener la ejecución
+                    
                 } catch (Exception $e) {
                     $error = "Error al guardar: " . $e->getMessage();
                 }
@@ -61,6 +71,7 @@ if (empty($token)) {
     <meta charset="UTF-8">
     <title>Activar Cuenta - CanchaSport</title>
     <style>
+        /* ... tus estilos existentes ... */
         body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
         h2 { color: #071289; margin-bottom: 1rem; }
@@ -68,19 +79,12 @@ if (empty($token)) {
         button { width: 100%; padding: 0.8rem; background: #071289; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 1rem; }
         button:hover { background: #050d66; }
         .error { color: red; font-size: 0.9rem; margin-top: 0.5rem; }
-        .success { color: green; font-weight: bold; }
         a { color: #071289; text-decoration: none; font-size: 0.9rem; display: block; margin-top: 1rem; }
     </style>
 </head>
 <body>
     <div class="card">
-        <?php if ($success): ?>
-            <div style="font-size: 3rem;">🎉</div>
-            <h2>¡Cuenta Activada!</h2>
-            <p class="success">Tu contraseña ha sido creada correctamente.</p>
-            <p>Ahora puedes iniciar sesión en la app.</p>
-            <a href="../index.php">Ir al Login</a>
-        <?php elseif ($error): ?>
+        <?php if ($error): ?>
             <div style="font-size: 3rem;">⚠️</div>
             <h2>Error</h2>
             <p class="error"><?= htmlspecialchars($error) ?></p>

@@ -176,9 +176,9 @@ try {
                         // Asegúrate de tener estas columnas en BD: activation_token, token_expires_at
                         $stmt_token = $pdo->prepare("UPDATE socios SET activation_token = ?, token_expires_at = ? WHERE id_socio = ?");
                         $stmt_token->execute([$token_activacion, $fecha_expiracion, $id_socio]);
-                        
-                        $link_activacion = "https://tudominio.com/pages/activar_cuenta.php?token=" . $token_activacion;
-                        
+                         // Construir Link (Asegúrate que apunte a la carpeta pages/)
+                        $link_activacion = "https://canchasport.com/pages/activar_cuenta.php?token=" . $token_activacion;
+                       
                         $mail = new BrevoMailer();
                         $mail->setTo($email_cliente, $nombre_cliente);
                         $mail->setSubject("🎉 ¡Bienvenido a CanchaSport! Activa tu cuenta");
