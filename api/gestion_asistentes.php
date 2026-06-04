@@ -1,80 +1,110 @@
 <?php
-// api/gestion_asistentes.php
-header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/permisos.php';
 
+header('Content-Type: application/json');
 
-// Seguridad: Solo Admins
-if (!esAdmin() || !isset($_SESSION['id_recinto'])) {
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
+session_start();
+
+if (!isset($_SESSION['id_recinto']) || $_SESSION['recinto_rol'] !== 'admin') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'No autorizado']);
     exit;
 }
 
-$id_recinto = $_SESSION['id_recinto'];
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
 $action = $_POST['action'] ?? '';
 
 try {
-    if ($action === 'crear_asistente') {
-        $nombre = trim($_POST['nombre_completo']);
-        $usuario = trim($_POST['usuario']);
-        $email = trim($_POST['email']);
-        $telefono = trim($_POST['telefono'] ?? '');
-        $password = $_POST['contraseña'];
+    switch ($action) {
 
-        // Validaciones básicas
-        if (strlen($password) < 6) {
-            throw new Exception('La contraseña debe tener al menos 6 caracteres.');
-        }
+        // ============================
+        // [1] CREAR ASISTENTE
+        // ============================
+        case 'crear':
 
-        // Verificar si el usuario ya existe en ESTE recinto
-        $stmtCheck = $pdo->prepare("SELECT id_admin FROM admin_recintos WHERE usuario = ? AND id_recinto = ?");
-        $stmtCheck->execute([$usuario, $id_recinto]);
-        if ($stmtCheck->fetch()) {
-            throw new Exception('El nombre de usuario ya está en uso en este recinto.');
-        }
+            $usuario = trim($_POST['usuario']);
+            $email = trim($_POST['email']);
+            $nombre = trim($_POST['nombre_completo']);
+            $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-        // Hash contraseña
-        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+            // Validar duplicado
+            $stmt = $pdo->prepare("SELECT id_admin FROM admin_recintos WHERE usuario = ?");
+            $stmt->execute([$usuario]);
+            if ($stmt->fetch()) {
+                throw new Exception("Usuario ya existe");
+            }
 
-        // Insertar
-        $stmt = $pdo->prepare("
-            INSERT INTO admin_recintos (id_recinto, usuario, contraseña, email, nombre_completo, telefono, rol) 
-            VALUES (?, ?, ?, ?, ?, ?, 'asistente')
-        ");
-        
-        $stmt->execute([$id_recinto, $usuario, $passwordHash, $email, $nombre, $telefono]);
+            $stmt = $pdo->prepare("
+                INSERT INTO admin_recintos 
+                (id_recinto, usuario, contraseña, email, rol, nombre_completo)
+                VALUES (?, ?, ?, ?, 'asistente', ?)
+            ");
 
-        echo json_encode(['success' => true, 'message' => 'Asistente creado correctamente']);
+            $stmt->execute([
+                $_SESSION['id_recinto'],
+                $usuario,
+                $password,
+                $email,
+                $nombre
+            ]);
 
-    } elseif ($action === 'eliminar_asistente') {
-        $id_admin = (int)$_POST['id_admin'];
+            echo json_encode(['success' => true]);
+            break;
 
-        // No permitir eliminarse a sí mismo (aunque sea admin, por seguridad)
-        if ($id_admin == $_SESSION['id_admin']) {
-            throw new Exception('No puedes darte de baja a ti mismo desde aquí.');
-        }
 
-        // Opcional: Verificar que pertenezca al recinto
-        $stmtCheck = $pdo->prepare("SELECT id_recinto FROM admin_recintos WHERE id_admin = ?");
-        $stmtCheck->execute([$id_admin]);
-        $row = $stmtCheck->fetch();
-        
-        if (!$row || $row['id_recinto'] != $id_recinto) {
-            throw new Exception('Asistente no encontrado o no pertenece a este recinto.');
-        }
+        // ============================
+        // [2] ELIMINAR
+        // ============================
+        case 'eliminar':
 
-        // Eliminar (Soft delete sería mejor cambiando estado, pero hacemos hard delete por simplicidad ahora)
-        $stmtDel = $pdo->prepare("DELETE FROM admin_recintos WHERE id_admin = ? AND id_recinto = ?");
-        $stmtDel->execute([$id_admin, $id_recinto]);
+            $id = (int)$_POST['id'];
 
-        echo json_encode(['success' => true, 'message' => 'Asistente eliminado correctamente']);
+            $stmt = $pdo->prepare("
+                DELETE FROM admin_recintos 
+                WHERE id_admin = ? 
+                AND id_recinto = ?
+                AND rol = 'asistente'
+            ");
 
-    } else {
-        throw new Exception('Acción no válida');
+            $stmt->execute([$id, $_SESSION['id_recinto']]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+
+        // ============================
+        // [3] EDITAR
+        // ============================
+        case 'editar':
+
+            $id = (int)$_POST['id'];
+            $email = trim($_POST['email']);
+            $nombre = trim($_POST['nombre_completo']);
+
+            $stmt = $pdo->prepare("
+                UPDATE admin_recintos 
+                SET email = ?, nombre_completo = ?
+                WHERE id_admin = ? AND id_recinto = ?
+            ");
+
+            $stmt->execute([
+                $email,
+                $nombre,
+                $id,
+                $_SESSION['id_recinto']
+            ]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        default:
+            throw new Exception("Acción inválida");
     }
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
 }
-?>

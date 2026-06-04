@@ -39,41 +39,118 @@ try {
         .btn-delete { background: #f44336; margin-left: 5px; }
         .btn-back { display: inline-block; margin-bottom: 1rem; color: #071289; text-decoration: none; font-weight: bold; }
         .empty-msg { text-align: center; color: #666; padding: 2rem; }
+        .header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:1rem;
+        }
+
+        .btn-primary {
+            background:#071289;
+            color:white;
+            padding:10px 16px;
+            border:none;
+            border-radius:6px;
+        }
+
+        .tabla {
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        .tabla th {
+            background:#071289;
+            color:white;
+        }
+
+        .tabla td {
+            padding:10px;
+        }
+
+        .btn-edit {
+            background:#2196F3;
+            color:white;
+            border:none;
+            padding:6px 10px;
+        }
+
+        .btn-delete {
+            background:#f44336;
+            color:white;
+            border:none;
+            padding:6px 10px;
+        }
+
+        .modal {
+            display:none;
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.5);
+            justify-content:center;
+            align-items:center;
+        }
+
+        .modal-content {
+            background:white;
+            padding:20px;
+            border-radius:8px;
+            width:300px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <a href="recinto_dashboard.php" class="btn-back">← Volver al Dashboard</a>
-        <h2>👥 Gestionar Asistentes</h2>
+        <div class="header">
+            <h2>👥 Asistentes</h2>
+            <button class="btn-primary" onclick="openModal()">+ Nuevo Asistente</button>
+        </div>
         
         <?php if (empty($asistentes)): ?>
             <p class="empty-msg">No hay asistentes registrados para este recinto.</p>
         <?php else: ?>
-            <table>
+            <table class="tabla">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Email / Usuario</th>
-                        <th>Rol</th>
+                        <th>Usuario</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($asistentes as $a): ?>
                     <tr>
-                        <td><?= htmlspecialchars($a['id_admin']) ?></td>
-                        <!-- Mostramos email si existe, sino id_admin -->
-                        <td><?= htmlspecialchars($a['email'] ?? $a['usuario'] ?? 'N/A') ?></td>
-                        <td><?= htmlspecialchars($a['rol']) ?></td>
+                        <td><?= htmlspecialchars($a['usuario']) ?></td>
+                        <td><?= htmlspecialchars($a['nombre_completo']) ?></td>
+                        <td><?= htmlspecialchars($a['email']) ?></td>
                         <td>
-                            <!-- Aquí podrías agregar un botón para eliminar o editar -->
-                            <a href="#" class="btn btn-delete" onclick="alert('Función eliminar en desarrollo')">Eliminar</a>
+                            <button class="btn-edit" onclick="editar(<?= $a['id_admin'] ?>, '<?= $a['email'] ?>', '<?= htmlspecialchars($a['nombre_completo']) ?>')">Editar</button>
+                            <button class="btn-delete" onclick="eliminar(<?= $a['id_admin'] ?>)">Eliminar</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         <?php endif; ?>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Nuevo Asistente</h3>
+
+            <input id="usuario" placeholder="Usuario">
+            <input id="nombre" placeholder="Nombre completo">
+            <input id="email" placeholder="Email">
+            <input id="password" type="password" placeholder="Contraseña">
+
+            <button onclick="guardar()">Guardar</button>
+            <button onclick="closeModal()">Cancelar</button>
+        </div>
     </div>
 </body>
 </html>
