@@ -1,0 +1,297 @@
+import base64
+from weasyprint import HTML
+
+# Create clean styling with dynamic sport tech vibe (teal and navy accents, clean fonts, professional legal design but "cheerful" not gray/boring)
+html_content = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acuerdo de Confidencialidad y No Competencia Desleal</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        @page {
+            size: A4;
+            margin: 20mm 15mm;
+            background-color: #ffffff;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #888888;
+            }
+            @bottom-left {
+                content: "CanchaSport × Club Pasco — Confidencial";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #888888;
+                font-weight: bold;
+            }
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            color: #2c3e50;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Vibrant Brand Header Styling */
+        .brand-header {
+            margin: -20mm -15mm 25px -15mm;
+            padding: 25px 15mm;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            border-bottom: 5px solid #00b4d8;
+            color: #ffffff;
+        }
+        
+        .logo-container {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .logo-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        
+        .logo-left {
+            text-align: left;
+        }
+        
+        .logo-right {
+            text-align: right;
+        }
+        
+        .brand-logo-cs {
+            font-size: 18pt;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+        .brand-logo-cs span {
+            color: #00b4d8;
+        }
+        
+        .brand-logo-cp {
+            font-size: 14pt;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #90e0ef;
+            border-left: 2px solid #00b4d8;
+            padding-left: 10px;
+        }
+        
+        .document-title {
+            font-size: 15pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+            color: #ffffff;
+            text-align: center;
+            line-height: 1.3;
+        }
+        
+        /* Document Layout Elements */
+        h2 {
+            font-size: 11.5pt;
+            font-weight: 700;
+            color: #0f2027;
+            text-transform: uppercase;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-left: 4px solid #00b4d8;
+            padding-left: 10px;
+            page-break-after: avoid;
+        }
+        
+        p {
+            margin-top: 0;
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+        
+        .parties-box {
+            background-color: #f4f9f9;
+            border: 1px solid #e1eded;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .party-row {
+            margin-bottom: 10px;
+        }
+        .party-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .party-label {
+            font-weight: bold;
+            color: #203a43;
+        }
+        
+        /* Bullet points and inner restrictions */
+        ul {
+            margin-top: 5px;
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+            text-align: justify;
+        }
+        
+        .highlight-text {
+            font-weight: bold;
+            color: #0077b6;
+        }
+        
+        /* Signature Blocks */
+        .signatures-section {
+            margin-top: 50px;
+            page-break-inside: avoid;
+        }
+        
+        .signatures-table {
+            display: table;
+            width: 100%;
+            margin-top: 40px;
+        }
+        
+        .signature-column {
+            display: table-cell;
+            width: 50%;
+            text-align: center;
+            padding: 0 20px;
+            vertical-align: top;
+        }
+        
+        .signature-line {
+            width: 80%;
+            margin: 0 auto 15px auto;
+            border-top: 1px solid #2c3e50;
+        }
+        
+        .signature-name {
+            font-weight: bold;
+            font-size: 10pt;
+            color: #0f2027;
+        }
+        
+        .signature-title {
+            font-size: 9pt;
+            color: #555555;
+            line-height: 1.4;
+        }
+        
+        .date-line {
+            margin-top: 30px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="brand-header">
+        <div class="logo-container">
+            <div class="logo-cell logo-left">
+                <div class="brand-logo-cs">Cancha<span>Sport</span></div>
+            </div>
+            <div class="logo-cell logo-right">
+                <div class="brand-logo-cp">CLUB PASCO</div>
+            </div>
+        </div>
+        <div class="document-title">
+            Acuerdo de Confidencialidad y No Competencia Desleal<br>sobre Datos de Usuarios
+        </div>
+    </div>
+
+    <div class="parties-box">
+        <div class="party-row">
+            <span class="party-label">POR UNA PARTE:</span> <strong>GLT GROUP SpA</strong>, sociedad comercial constituida bajo las leyes de la República de Chile, Rut Nº 78.426.013-5, representada legalmente por don LUIS LOBOS G., cédula nacional de identidad Nº 10.954.344-6, ambos domiciliados en Villaseca Nº 75, comuna de Ñuñoa, Santiago, en adelante denominada e indistintamente como <span class="highlight-text">“EL PROVEEDOR”</span> o <span class="highlight-text">“CANCHASPORT”</span>; y
+        </div>
+        <div class="party-row" style="margin-top: 12px;">
+            <span class="party-label">POR OTRA PARTE:</span> <strong>don IGNACIO CABRERA</strong>, de nacionalidad chilena, cédula nacional de identidad Nº 77.650.770-9, domiciliado en Cerro de Pasco Nº 1372, comuna de Providencia, Santiago, actuando en su calidad de propietario y administrador del recinto deportivo denominado <span class="highlight-text">“CLUB PASCO”</span>, en adelante denominado <span class="highlight-text">“EL CLIENTE”</span>.
+        </div>
+    </div>
+
+    <p>Ambas partes, en conjunto denominadas como <strong>“LAS PARTES”</strong>, han convenido de manera libre y voluntaria el siguiente acuerdo de confidencialidad y protección de datos, el cual se regirá por las cláusulas que a continuación se detallan:</p>
+
+    <h2>Primero: Antecedentes y Naturaleza de la Plataforma</h2>
+    <p>EL PROVEEDOR es la empresa desarrolladora y propietaria exclusiva de la plataforma tecnológica multirecinto denominada <strong>“CanchaSport”</strong>, la cual faculta a los usuarios para gestionar reservas, interacciones y servicios en diversos recintos deportivos afiliados. Por su parte, EL CLIENTE utiliza dicha plataforma como herramienta central para la gestión activa de sus reservas, canchas y cartera de clientes.</p>
+    <p>Las Partes reconocen expresamente que, dada la naturaleza multirecinto y centralizada de la aplicación, los datos personales de los usuarios (socios) son recopilados y almacenados en los servidores de EL PROVEEDOR. Si bien los usuarios finales poseen la libertad de reservar en múltiples recintos deportivos, EL CLIENTE tiene un interés comercial legítimo y protegido en que la información específica de su cartera de clientes, recurrencia y hábitos de consumo no sea divulgada a competidores directos o a nuevos recintos que puedan instalarse en su zona de influencia o vecindad inmediata.</p>
+
+    <h2>Segundo: Propiedad de los Datos</h2>
+    <p>Las Partes acuerdan expresamente que la base de datos completa, incluyendo su estructura de diseño, algoritmos, arquitectura de software y la totalidad de los registros de usuarios de la plataforma CanchaSport, es de propiedad exclusiva e intelectual de EL PROVEEDOR (GLT GROUP SpA). EL CLIENTE reconoce que no adquiere derecho de propiedad alguno sobre la base de datos global de la aplicación, sino únicamente un derecho de uso limitado y operativo sobre la información estrictamente necesaria para la correcta administración de su propio recinto dentro de las funcionalidades habilitadas por la plataforma.</p>
+
+    <h2>Tercero: Compromiso Unilateral de Confidencialidad de CanchaSport</h2>
+    <p>En consideración a la confianza comercial depositada por EL CLIENTE al integrar sus operaciones en la plataforma, EL PROVEEDOR se compromete de forma unilateral, irrevocable y estricta a cumplir con las siguientes obligaciones de no hacer:</p>
+    <ul>
+        <li><strong>No ceder ni vender bases de datos:</strong> Queda terminantemente prohibido para EL PROVEEDOR vender, arrendar, ceder, intercambiar o facilitar bajo cualquier título el acceso a la base de datos completa o parcial de los socios y usuarios que frecuentan el recinto de EL CLIENTE a terceras personas, especialmente a otros clubes deportivos, organizaciones competidoras o personas naturales con fines comerciales.</li>
+        <li><strong>Protección frente a nuevos recintos (Anti-Poaching):</strong> EL PROVEEDOR se obliga formalmente a no entregar a nuevos recintos deportivos que se instalen en la cercanía geográfica de EL CLIENTE (dentro de su radio de influencia competitiva), listados de contactos, correos electrónicos, identificaciones o teléfonos de los socios que han reservado históricamente en el complejo de EL CLIENTE, con el fin de evitar de forma activa prácticas de competencia desleal o captación masiva de clientes de forma dirigida.</li>
+        <li><strong>Uso interno limitado:</strong> EL PROVEEDOR podrá utilizar los datos agregados y debidamente anonimizados exclusivamente para fines estadísticos, métricas de rendimiento, optimización técnica de la plataforma y marketing general de la marca CanchaSport, siempre y cuando dicha utilización no permita en caso alguno la identificación individual de los socios ni revele secretos comerciales específicos de la operación de EL CLIENTE.</li>
+    </ul>
+
+    <h2>Cuarto: Obligaciones de Seguridad</h2>
+    <p>EL PROVEEDOR declara explícitamente haber implementado medidas de seguridad técnicas, lógicas y organizativas estándar de la industria tecnológica para salvaguardar la Información Confidencial contra accesos no autorizados, fugas de información, pérdida o destrucción accidental. Con esto, asegura el cumplimiento irrestricto de la normativa legal vigente en la República de Chile sobre protección de la vida privada y datos de carácter personal.</p>
+
+    <h2>Quinto: Excepciones</h2>
+    <p>No se considerará bajo supuesto alguno como infracción a este acuerdo la divulgación de información cuando:</p>
+    <p style="margin-left: 15px; text-align: justify;">
+        a) Sea expresamente requerida por un mandato legal, orden judicial emanada de tribunal competente o requerimiento de autoridad administrativa en ejercicio de sus facultades.<br>
+        b) Sea estrictamente necesaria para el funcionamiento técnico básico y la experiencia de usuario de la aplicación (por ejemplo, que un socio pueda visualizar directamente su propio historial personal de reservas).<br>
+        c) Haya sido efectuada mediando el consentimiento explícito, previo, libre e informado del usuario titular específico de los datos en cuestión.
+    </p>
+
+    <h2>Sexto: Indemnización y Penalidades</h2>
+    <p>En el evento de que EL PROVEEDOR incumpla gravemente su obligación de no ceder, no transferir o vender la base de datos de los socios de EL CLIENTE a terceros competidores, nacerá para este la obligación de indemnizar a EL CLIENTE por todos los daños y perjuicios directos, indirectos, previstos o imprevistos que dicha acción logre ocasionar.</p>
+    <p>Adicionalmente, las Partes de común acuerdo fijan una cláusula penal convencional equivalente a <strong>50 UTM (cincuenta unidades tributarias mensuales)</strong> por cada evento debidamente comprobado de violación a esta prohibición de competencia desleal sobre datos. El cobro de esta pena no obsta ni renuncia al derecho de EL CLIENTE para exigir judicialmente la reparación integral de un daño mayor, si se acreditase que los perjuicios efectivamente causados superaran dicho monto estipulado.</p>
+
+    <h2>Séptimo: Vigencia</h2>
+    <p>El presente acuerdo entrará en plena vigencia y producirá todos sus efectos jurídicos a contar de la fecha de su firma por ambas partes. Mantendrá su validez de forma ininterrumpida mientras se prolongue la relación comercial entre ellas, y el deber de confidencialidad y no competencia sobre los datos se extenderá de forma ultraactiva por un plazo definitivo de <strong>5 (cinco) años</strong> contados desde el término formal de dicha relación comercial.</p>
+
+    <h2>Octavo: Jurisdicción y Prórroga de Competencia</h2>
+    <p>Para todos los efectos legales, contractuales y derivados de la interpretación o ejecución del presente instrumento, las Partes fijan su domicilio en la ciudad de Santiago de Chile y se someten a la jurisdicción exclusiva de sus Tribunales Ordinarios de Justicia, renunciando de forma expresa a cualquier otro fuero, competencia o jurisdicción que pudiese corresponderles.</p>
+
+    <p class="date-line">En fe de lo anterior, y en señal de total conformidad, las Partes firman el presente acuerdo en dos ejemplares del mismo tenor y fecha, en la ciudad de Santiago, a ___ días del mes de __________ de 202__.</p>
+
+    <div class="signatures-section">
+        <div class="signatures-table">
+            <div class="signature-column">
+                <div style="height: 70px;"></div> <div class="signature-line"></div>
+                <div class="signature-name">LUIS LOBOS G.</div>
+                <div class="signature-title">
+                    Cédula de Identidad Nº 10.954.344-6<br>
+                    Representante Legal GLT GROUP SpA<br>
+                    <strong>(CanchaSport)</strong>
+                </div>
+            </div>
+            <div class="signature-column">
+                <div style="height: 70px;"></div> <div class="signature-line"></div>
+                <div class="signature-name">IGNACIO CABRERA</div>
+                <div class="signature-title">
+                    Cédula de Identidad Nº 77.650.770-9<br>
+                    Propietario y Administrador<br>
+                    <strong>CLUB PASCO</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+"""
+
+# Output PDF path
+output_pdf = "Acuerdo_Confidencialidad_CanchaSport_PascoClub.pdf"
+
+# Compile HTML into a beautifully styled PDF
+HTML(string=html_content).write_pdf(output_pdf)
+print(f"PDF generated successfully as {output_pdf}")

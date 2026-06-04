@@ -2844,6 +2844,7 @@ async function verDetalleDesdeLista(idReserva) {
 }
 
 // ✅ 3. REEMPLAZAR abrirReservaAdmin COMPLETA
+// === 15. ABRIR MODAL RESERVA ADMIN (CORREGIDO PÁDEL) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
@@ -2851,7 +2852,6 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const setC = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
-        else console.warn(`⚠️ Elemento #${id} no encontrado`);
     };
 
     // 1. Asignar ocultos inmediatamente
@@ -2892,14 +2892,11 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         : null;
 
     const elNombre = document.getElementById('modalCanchaDisplay');
-    const elMonto = document.getElementById('admin_monto_total');
     const elBase = document.getElementById('admin_monto_base');
-    const elDMonto = document.getElementById('modalMontoDisplay');
-
+    
     // Referencias a los contenedores de duración
     const divPadel = document.getElementById('opcionesPadel');
     const divOtros = document.getElementById('opcionesOtros');
-    const radiosDuracion = document.querySelectorAll('input[name="duracion"]');
 
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
@@ -2910,36 +2907,34 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         const base = parseFloat(cancha.valor_arriendo) || 0;
         if (elBase) elBase.value = base;
 
-        // ✅ ACTUALIZAR ESTADO GLOBAL
-        ventanaActual.precioBase = base;
-        ventanaActual.esPadel = (idDeporte === 'padel' || idDeporte == 2); // Ajusta según tu BD
+        // ✅ LÓGICA CORREGIDA PARA PÁDEL vs OTROS
+        // Ajusta 'padel' o el ID numérico según tu BD (ej: id_deporte == 2 o 'padel')
+        const esPadel = (idDeporte === 'padel' || idDeporte == 2 || idDeporte == '2');
 
-        // ✅ MOSTRAR/OCULTAR OPCIONES SEGÚN DEPORTE
-        if (ventanaActual.esPadel) {
+        if (esPadel) {
             if (divPadel) divPadel.style.display = 'flex';
             if (divOtros) divOtros.style.display = 'none';
             // Habilitar todos los radios en Pádel
-            radiosDuracion.forEach(r => r.disabled = false);
+            const radios = divPadel.querySelectorAll('input[type="radio"]');
+            radios.forEach(r => r.disabled = false);
+            // Seleccionar 60 min por defecto
+            const radio60 = divPadel.querySelector('input[value="60"]');
+            if (radio60) radio60.checked = true;
         } else {
             if (divPadel) divPadel.style.display = 'none';
             if (divOtros) divOtros.style.display = 'flex';
-            // Forzar 60 min y deshabilitar otros
-            ventanaActual.duracion = 60;
-            radiosDuracion.forEach(r => {
-                if (r.value == 60) {
-                    r.checked = true;
-                    r.disabled = false;
-                } else {
-                    r.disabled = true;
-                    r.checked = false;
-                }
-            });
+            // Forzar 60 min y deshabilitar otros (aunque en 'Otros' solo hay uno)
+            const radio60 = divOtros.querySelector('input[value="60"]');
+            if (radio60) {
+                radio60.checked = true;
+                radio60.disabled = true; // Opcional: bloquearlo si no quieres que lo cambien
+            }
         }
 
-        // Calcular total inicial
+        // Inicializar cálculo de precio
         recalcularPrecioTotal();
         
-        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Es Pádel: ${ventanaActual.esPadel}`);
+        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Es Pádel: ${esPadel}`);
     } else {
         console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
@@ -3224,51 +3219,114 @@ async function handleSingleReservation() {
     // (mantener el código actual)
 }
 
+// === GENERAR FECHAS DE RECURRENCIA ===
+function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
+    const dates = [];
+    let current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    
+    // Ajustar dayOfWeek (0=Domingo, 1=Lunes, etc.)
+    while (current <= end) {
+        if (current.getDay() === parseInt(dayOfWeek)) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+// === MANEJAR RESERVA RECURRENTE (CORREGIDO) ===
 async function handleRecurrentReservation() {
     const btn = document.querySelector('#formReservaManual button[type="submit"]');
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '🔄 Generando reservas...';
-    
+    btn.textContent = '⏳ Generando reservas...';
+
     try {
+        // 1. Obtener datos del formulario
+        const cancha = document.getElementById('admin_cancha_id').value;
+        const horaInicio = document.getElementById('admin_hora_inicio').value;
+        const horaFin = document.getElementById('admin_hora_fin').value;
+        const idSocio = document.getElementById('admin_socio_id').value || null;
+        const montoTotal = parseFloat(document.getElementById('admin_monto_total').value) || 0;
+        
+        const day = parseInt(document.getElementById('repeatDay')?.value);
+        const sDate = document.getElementById('startDate')?.value;
+        const eDate = document.getElementById('endDate')?.value;
+
+        // Validaciones básicas
+        if (!day || !sDate || !eDate) {
+            showToast('❌ Complete día de repetición y fechas', 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+
+        if (new Date(sDate) > new Date(eDate)) {
+            showToast('❌ Fecha inicio debe ser anterior a fecha fin', 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+
+        // 2. Generar fechas en JS para mostrar preview (opcional) o validar
+        const fechas = generarFechasRecurrencia(sDate, eDate, day);
+        
+        if (fechas.length === 0) {
+            showToast('❌ No hay fechas válidas en este rango para ese día', 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+
+        if (!confirm(`Se crearán ${fechas.length} reservas desde ${sDate} hasta ${eDate}. ¿Continuar?`)) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+
+        // 3. Preparar Payload para API
         const payload = {
             action: 'create_recurrent',
-            id_cancha: document.getElementById('modalCanchaId')?.value,
-            hora_inicio: document.getElementById('modalHoraInicio')?.value,
-            hora_fin: document.getElementById('modalHoraFin')?.value,
-            id_socio: document.getElementById('modalSocioId')?.value,
-            repeat_day: parseInt(document.getElementById('repeatDay')?.value),
-            start_date: document.getElementById('startDate')?.value,
-            end_date: document.getElementById('endDate')?.value,
-            monto_total: document.getElementById('modalMonto')?.value,
-            jugadores_esperados: document.getElementById('modalJugadores')?.value
+            id_cancha: cancha,
+            hora_inicio: horaInicio,
+            hora_fin: horaFin,
+            id_socio: idSocio,
+            repeat_day: day,
+            start_date: sDate,
+            end_date: eDate,
+            monto_total: montoTotal,
+            // Si tienes lógica de nuevo socio, agrégala aquí también
+            nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
+            emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
+            telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
         };
-        
-        const response = await fetch('../api/reserva_recurrente.php', {
+
+        // 4. Enviar a API
+        const res = await fetch('../api/reserva_recurrente.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast(`✅ ${result.created} reservas creadas` + 
-                     (result.skipped > 0 ? ` | ⚠️ ${result.skipped} saltadas por conflicto` : ''));
+
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(`✅ ${data.created} reservas creadas correctamente`, 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
-            showToast(`❌ ${result.message}`, 'error');
+            showToast(`❌ ${data.message || 'Error al crear reservas'}`, 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
         }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('❌ Error de conexión', 'error');
-    } finally {
+
+    } catch (err) {
+        console.error('❌ Error en handleRecurrentReservation:', err);
+        showToast('❌ Error de conexión al generar reservas', 'error');
         btn.disabled = false;
         btn.textContent = originalText;
     }
 }
-
-
 
 // === ACTUALIZAR HORA FIN (BLINDADA) ===
 function actualizarHoraFin(horaInicio, duracionMin) {
