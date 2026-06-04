@@ -86,11 +86,11 @@ if (empty($token)) {
                 <!-- Campo Nueva Contraseña -->
                 <div class="form-group" style="position: relative; margin-bottom: 1rem;">
                     <input type="password" name="password" id="pass1" placeholder="Nueva Contraseña" required 
-                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box;">
+                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; height: 48px;">
                     
-                    <!-- Ojito -->
+                    <!-- Ojito: Centrado absoluto -->
                     <button type="button" onclick="togglePassword('pass1', this)" 
-                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0;">
+                        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0; display: flex; align-items: center; justify-content: center; height: 100%;">
                         👁️
                     </button>
                 </div>
@@ -98,16 +98,16 @@ if (empty($token)) {
                 <!-- Campo Confirmar Contraseña -->
                 <div class="form-group" style="position: relative; margin-bottom: 1rem;">
                     <input type="password" name="password_confirm" id="pass2" placeholder="Confirmar Contraseña" required 
-                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box;">
+                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; height: 48px;">
                     
-                    <!-- Ojito -->
+                    <!-- Ojito: Centrado absoluto -->
                     <button type="button" onclick="togglePassword('pass2', this)" 
-                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0;">
+                        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0; display: flex; align-items: center; justify-content: center; height: 100%;">
                         👁️
                     </button>
                 </div>
 
-                <button type="submit">Guardar Cambios</button>
+                <button type="submit" style="width: 100%; padding: 0.8rem; background: #071289; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 1rem;">Guardar Cambios</button>
             </form>
 
             <script>
