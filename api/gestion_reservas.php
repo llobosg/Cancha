@@ -40,10 +40,6 @@ try {
             echo json_encode(procesarPagoReserva($pdo, $_POST));
             break;
             
-        case 'procesar_pago_parcial':
-            echo json_encode(procesarPagoParcial($pdo, $_POST));
-            break;
-            
         case 'crear_manual':
             try {
                 // 1. Extraer datos básicos
