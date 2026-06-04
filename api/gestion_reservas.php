@@ -57,7 +57,9 @@ try {
                 $email_cliente = $_POST['email_cliente'] ?? null;
                 $telefono_cliente = $_POST['telefono_cliente'] ?? null;
                 
-                // === A. CREAR SOCIO EXPRESS SI VIENE DATO ===
+                $es_socio_nuevo = false; // Flag para controlar envío de email
+
+                // === A. CREAR SOCIO EXPRESS SI VIENE DATO DIRECTO (Fallback) ===
                 if (!$id_socio && !empty($_POST['nombreNuevoSocio'])) {
                     $nNom = trim($_POST['nombreNuevoSocio']);
                     $nMail = trim($_POST['emailNuevoSocio']);
@@ -89,8 +91,9 @@ try {
                         $stmt_new = $pdo->prepare("INSERT INTO socios (nombre, email, alias, celular, created_at, email_verified) VALUES (?, ?, ?, ?, NOW(), 1)");
                         $stmt_new->execute([$nNom, $nMail, $alias, $nTel]);
                         $id_socio = $pdo->lastInsertId();
+                        $es_socio_nuevo = true; // Marcamos como nuevo
                         
-                        // Guardar datos para email de activación
+                        // Guardar datos para cliente
                         $nombre_cliente = $nNom;
                         $email_cliente = $nMail;
                         $telefono_cliente = $nTel;
@@ -119,13 +122,19 @@ try {
                 } else {
                     // Si hay socio, obtener sus datos para llenar cliente si viene vacío
                     if (!$nombre_cliente) {
-                        $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
+                        $stmt_s = $pdo->prepare("SELECT nombre, email, celular, password FROM socios WHERE id_socio = ?");
                         $stmt_s->execute([$id_socio]);
                         $s = $stmt_s->fetch();
                         if ($s) {
                             $nombre_cliente = $s['nombre'];
                             $email_cliente = $email_cliente ?: $s['email'];
                             $telefono_cliente = $telefono_cliente ?: $s['celular'];
+                            
+                            // ✅ DETECTAR SI ES NUEVO POR AUSENCIA DE PASSWORD
+                            // Si el socio fue creado por el buscador unificado, no tendrá password aún.
+                            if (empty($s['password'])) {
+                                $es_socio_nuevo = true;
+                            }
                         }
                     }
                 }
@@ -133,6 +142,7 @@ try {
                 // 3. Obtener ID Club del Socio (si existe)
                 $id_club_reserva = null;
                 if ($id_socio) {
+                    // Nota: Si usas tabla intermedia socio_club, ajusta esta consulta
                     $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
                     $stmt_club->execute([$id_socio]);
                     $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
@@ -165,18 +175,19 @@ try {
                 
                 $id_reserva = $pdo->lastInsertId();
                 
-                // 5. Enviar Email de Activación SOLO si fue un NUEVO SOCIO creado aquí
-                if (!empty($_POST['nombreNuevoSocio']) && $email_cliente) {
+                // 5. Enviar Email de Activación SI EL SOCIO ES NUEVO (Sin Password)
+                if ($es_socio_nuevo && $email_cliente) {
                     try {
                         require_once __DIR__ . '/../includes/brevo_mailer.php';
                         
                         $token_activacion = bin2hex(random_bytes(32));
                         $fecha_expiracion = date('Y-m-d H:i:s', strtotime('+24 hours'));
                         
-                        // Asegúrate de tener estas columnas en BD: activation_token, token_expires_at
+                        // Actualizar token en BD
                         $stmt_token = $pdo->prepare("UPDATE socios SET activation_token = ?, token_expires_at = ? WHERE id_socio = ?");
                         $stmt_token->execute([$token_activacion, $fecha_expiracion, $id_socio]);
-                         // Construir Link (Asegúrate que apunte a la carpeta pages/)
+                        
+                        // Construir Link
                         $link_activacion = "https://canchasport.com/pages/activar_cuenta.php?token=" . $token_activacion;
                        
                         $mail = new BrevoMailer();

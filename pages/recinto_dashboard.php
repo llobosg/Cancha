@@ -3649,141 +3649,98 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// === SUBMIT DEL FORMULARIO (VALIDACIÓN BLINDADA + NUEVO SOCIO) ===
-// === SUBMIT DEL FORMULARIO (VALIDACIÓN UNIFICADA SOCIO + TIPO RESERVA) ===
+// === SUBMIT DEL FORMULARIO (ADAPTADO AL BUSCADOR UNIFICADO) ===
 async function guardarReservaAdmin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '💾 Guardando...';
+    btn.textContent = '⏳ Guardando...';
 
-    // 🔹 Helper seguro para leer inputs
-    const getVal = (id) => {
-        const el = document.getElementById(id);
-        return el?.value?.trim() || '';
-    };
+    // 1. Leer valores básicos
+    const cancha = document.getElementById('admin_cancha_id')?.value;
+    const fecha  = document.getElementById('admin_fecha')?.value;
+    const hora   = document.getElementById('admin_hora_inicio')?.value;
+    const horaF  = document.getElementById('admin_hora_fin')?.value;
+    const monto  = document.getElementById('admin_monto_total')?.value || 0;
     
-    // 1. Leer valores básicos (comunes a ambos flujos)
-    const cancha = getVal('admin_cancha_id');
-    const fecha  = getVal('admin_fecha');
-    const hora   = getVal('admin_hora_inicio');
-    const horaF  = getVal('admin_hora_fin');
-    const monto  = parseFloat(getVal('admin_monto_total')) || 0;
-    const dur    = getVal('admin_duracion_bloque') || '60';
-    const user   = getVal('admin_usuario_creacion') || USUARIO_ACTIVO;
-
-    console.log('🔍 DEBUG SOCIO:', {
-        admin_socio_id_raw: document.getElementById('admin_socio_id')?.value,
-        admin_socio_id_trim: getVal('admin_socio_id'),
-        checkNuevoSocio: document.getElementById('checkNuevoSocio')?.checked,
-        searchAdmin_value: document.getElementById('searchAdmin')?.value
-    });
-
-    // 2. === VALIDACIÓN DE SOCIO O CONVENIO ===
-    let id_socio = getVal('admin_socio_id');
-    let datosNuevoSocio = null;
-    let datosConvenio = null; // Nuevo: Datos del convenio si no hay socio
+    // 2. Obtener ID Socio y ID Convenio de los inputs ocultos
+    let id_socio = document.getElementById('admin_socio_id')?.value;
+    let id_convenio = document.getElementById('admin_convenio_id')?.value;
     
-    const checkNuevoSocio = document.getElementById('checkNuevoSocio')?.checked;
-    const id_convenio = document.getElementById('admin_convenio_id')?.value;
+    // Debug
+    console.log('🔍 DEBUG RESERVA:', { id_socio, id_convenio, cancha, fecha });
 
-    if (id_socio) {
-        // ? Caso A: Socio existente seleccionado
-        console.log('?? Socio existente:', id_socio);
-    }
-    else if (checkNuevoSocio) {
-        // ? Caso B: Registrar nuevo socio
-        const nNom = document.getElementById('nombreNuevoSocio')?.value?.trim();
-        const nMail = document.getElementById('emailNuevoSocio')?.value?.trim();
-        const nTel = document.getElementById('telNuevoSocio')?.value?.trim();
-        
-        if (!nMail || !nNom) {
-            showToast('?? Complete Nombre y Email para registrar nuevo socio', 'error');
-            btn.disabled = false;
-            btn.textContent = originalText;
-            return;
-        }
-        datosNuevoSocio = { nombre: nNom, email: nMail, tel: nTel };
-        console.log('?? Nuevo socio:', datosNuevoSocio);
-    }
-    else if (id_convenio) {
-        // ? Caso C: Solo Convenio seleccionado (Sin socio específico)
-        // Usamos los datos del convenio como "Cliente"
-        const nombreConv = document.getElementById('searchConvenio')?.value || 'Cliente Convenio';
-        const emailConv = window.convenioEmailContacto || ''; // Guardado al seleccionar convenio
-        
-        // Opcional: Podrías buscar los datos completos del convenio vía AJAX aquí si necesitas teléfono, 
-        // pero por ahora usamos lo que tenemos en el frontend.
-        datosConvenio = { 
-            nombre: nombreConv, 
-            email: emailConv, 
-            tel: '', 
-            id_convenio: id_convenio 
-        };
-        console.log('?? Reserva por Convenio:', datosConvenio);
-    }
-    else {
-        // ? Caso D: Error (Ni socio, ni nuevo, ni convenio)
-        showToast('?? Seleccione un socio, registre uno nuevo o aplique un Convenio', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-        return;
-    }
-
-    // 3. Validaciones mínimas obligatorias
+    // 3. Validación Básica
     if (!cancha || !fecha || !hora) {
-        showToast('?? Faltan datos básicos de la reserva', 'error');
+        showToast('❌ Faltan datos de la reserva', 'error');
         btn.disabled = false;
         btn.textContent = originalText;
         return;
     }
 
-    const isRecurrent = document.getElementById('isRecurrent')?.checked;
+    // Si no hay socio ni convenio, error
+    if (!id_socio && !id_convenio) {
+        showToast('❌ Debes seleccionar un Socio o un Convenio', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+    }
 
     try {
-        if (isRecurrent) {
-            // === FLUJO RECURRENTE ===
-            // ... (tu código existente de recurrente) ...
-            // Asegúrate de pasar datosConvenio en el payload si es necesario
-             const payload = {
-                // ... otros campos ...
-                id_socio: id_socio || null,
-                id_convenio: datosConvenio?.id_convenio || null, // Pasar ID convenio
-                nombreCliente: datosConvenio?.nombre || null,    // Pasar nombre cliente
-                emailCliente: datosConvenio?.email || null       // Pasar email cliente
-             };
-             // ... fetch ...
-
-        } else {
-            // === FLUJO RESERVA ÚNICA ===
-            const formData = new FormData(e.target);
-            formData.set('action', 'crear_manual');
-            
-            // Si hay convenio y NO hay socio, agregamos los datos del cliente al FormData
-            if (datosConvenio && !id_socio) {
-                formData.set('nombre_cliente', datosConvenio.nombre);
-                formData.set('email_cliente', datosConvenio.email);
-                formData.set('telefono_cliente', datosConvenio.tel);
-                formData.set('id_convenio', datosConvenio.id_convenio);
-                // Importante: Limpiar id_socio para que el backend sepa que es "sin socio"
-                formData.set('id_socio', ''); 
-            } else if (datosNuevoSocio) {
-                // Si es nuevo socio, enviamos sus datos
-                formData.set('nombreNuevoSocio', datosNuevoSocio.nombre);
-                formData.set('emailNuevoSocio', datosNuevoSocio.email);
-                formData.set('telNuevoSocio', datosNuevoSocio.tel);
-            }
-
-            const res = await fetch('../api/gestion_reservas.php', {
-                method: 'POST',
-                body: formData
-            });
-            
-            // ... resto del manejo de respuesta ...
+        const formData = new FormData();
+        formData.append('action', 'crear_manual');
+        formData.append('id_cancha', cancha);
+        formData.append('fecha', fecha);
+        formData.append('hora_inicio', hora);
+        formData.append('hora_fin', horaF);
+        formData.append('monto_total', monto);
+        
+        // Enviar ID Socio (si existe)
+        if (id_socio) {
+            formData.append('id_socio', id_socio);
         }
+        
+        // Enviar ID Convenio (si existe)
+        if (id_convenio) {
+            formData.append('id_convenio', id_convenio);
+            // Si hay convenio, podemos enviar datos de contacto por si acaso
+            formData.append('nombre_cliente', document.getElementById('searchUnified')?.value || '');
+            formData.append('email_cliente', window.convenioEmailContacto || '');
+        }
+
+        // ✅ CORRECCIÓN: Si acabamos de crear un socio express, 
+        // el ID ya está en admin_socio_id, pero el backend necesita saber 
+        // que es "nuevo" para enviar el email de activación.
+        // Como no tenemos el flag checkNuevoSocio, podemos verificar si el socio 
+        // fue creado en los últimos segundos o simplemente confiar en que el backend 
+        // maneje la reserva normal.
+        
+        // NOTA: Para el email de activación, lo ideal es que el backend verifique 
+        // si el socio tiene password NULL o activation_token.
+        
+        const res = await fetch('../api/gestion_reservas.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            showToast('✅ Reserva creada correctamente', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + (data.message || 'Error al guardar'), 'error');
+            console.error('Error Backend:', data);
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+
     } catch (err) {
-        // ... manejo de errores ...
+        console.error('❌ Error Fetch:', err);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
