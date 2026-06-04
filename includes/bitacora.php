@@ -64,5 +64,6 @@ function registrarLogReserva(
 
     } catch (Exception $e) {
         error_log("❌ Bitácora ERROR: " . $e->getMessage());
+        return false;
     }
 }

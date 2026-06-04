@@ -2004,7 +2004,11 @@ async function cargarPlanillaReservas() {
             throw new Error('El servidor devolvió HTML en lugar de JSON. Revisa logs.');
         }
         
-        const data = await response.json();
+        if (!data.success) {
+            console.error("Error Backend:", data);
+            alert(data.error || "Error inesperado");
+            return;
+        }
         
         if (data.error) throw new Error(data.error);
         
@@ -2668,8 +2672,12 @@ Esta acción enviará un correo de notificación al cliente.`;
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id_reserva: res.id_reserva })
         });
-
         const data = await response.json();
+        if (!data.success) {
+            console.error("Error Backend:", data);
+            alert(data.error || "Error inesperado");
+            return;
+        }
 
         if (data.success) {
             showToast("✅ Reserva anulada correctamente", "success");
@@ -3821,7 +3829,11 @@ async function confirmarMovimiento() {
             })
         });
         const data = await response.json();
-        
+        if (!data.success) {
+            console.error("Error Backend:", data);
+            alert(data.error || "Error inesperado");
+            return;
+        }
         if (data.success) {
             showToast('✅ Reserva reubicada y correo enviado', 'success');
             cerrarModalMover();

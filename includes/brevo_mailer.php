@@ -69,7 +69,9 @@ class BrevoMailer {
             CURLOPT_VERBOSE => true
         ]);
         
-        $response = curl_exec($ch);
+        if ($response === false) {
+            throw new Exception("cURL error: " . curl_error($ch));
+        }
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
@@ -114,6 +116,7 @@ class BrevoMailer {
             $hora_fin = substr($reserva['hora_fin'], 0, 5);
             $monto = number_format($reserva['monto_total'], 0, ',', '.');
             $monto_fmt = htmlspecialchars($monto, ENT_QUOTES, 'UTF-8');
+            $nombre_cancha = htmlspecialchars($reserva['nombre_cancha'] ?? '', ENT_QUOTES, 'UTF-8');
 
             // 2. Construir HTML
             $html = "
@@ -126,7 +129,7 @@ class BrevoMailer {
                     <p>Tu reserva ha sido registrada exitosamente. Aquí tienes los detalles:</p>
                     
                     <div style='background: white; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin: 20px 0;'>
-                        <div style='margin-bottom: 10px;'><strong>🏟️ Cancha:</strong> {$reserva['nombre_cancha']}</div>
+                        <div style='margin-bottom: 10px;'><strong>🏟️ Cancha:</strong> {$nombre_cancha}</div>
                         <div style='margin-bottom: 10px;'><strong>📅 Fecha:</strong> {$fecha_fmt}</div>
                         <div style='margin-bottom: 10px;'><strong>⏰ Hora:</strong> {$hora_ini} - {$hora_fin} hrs</div>
                         <div style='margin-bottom: 10px;'><strong>💰 Monto Total:</strong> $ " . $monto_fmt . "</div>
