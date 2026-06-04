@@ -39,7 +39,7 @@ try {
     $mail->setSubject('🔐 Recuperar Contraseña - CanchaSport Recintos');
     
     // IMPORTANTE: Ajusta esta URL a tu dominio real
-    $link_recuperacion = "https://canchasport.com/pages/recuperar_password_recinto.php?token=" . $token;
+    $link_recuperacion = "https://canchasport.com/pages/reset_password_admin.php?token=" . $token;
     
     $mail->setHtmlBody("
         <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto;'>
