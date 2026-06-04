@@ -6055,31 +6055,29 @@ function seleccionarUnified(tipo, id, nombre, dscto, email) {
     document.getElementById('admin_convenio_id').value = (tipo === 'convenio') ? id : '';
     document.getElementById('admin_tipo_reserva').value = tipo;
     
-    // Actualizar UI
-    inputSearch.value = nombre;
-    container.style.display = 'none';
-    panelNuevo.style.display = 'none';
+    // Actualizar UI Input
+    if (inputSearch) inputSearch.value = nombre;
+    
+    // Ocultar resultados y panel nuevo
+    if (container) container.style.display = 'none';
+    if (panelNuevo) panelNuevo.style.display = 'none';
     
     // Mostrar Badge
-    badge.style.display = 'block';
-    if (tipo === 'convenio') {
-        badge.style.background = '#F3E8FF';
-        badge.style.color = '#7C3AED';
-        badge.textContent = `🤝 Reserva por Convenio (${dscto}% OFF)`;
-        
-        // Guardar datos del convenio para cálculo de precio
-        datosConvenioSeleccionado = { id: id, nombre: nombre, dscto: dscto, email: email };
-        
-        // Recalcular precio con descuento
-        recalcularPrecioTotal(); 
-    } else {
-        badge.style.background = '#E0F2FE';
-        badge.style.color = '#0369A1';
-        badge.textContent = `👤 Socio Registrado`;
-        
-        // Limpiar convenio
-        datosConvenioSeleccionado = null;
-        recalcularPrecioTotal();
+    if (badge) {
+        badge.style.display = 'block';
+        if (tipo === 'convenio') {
+            badge.style.background = '#F3E8FF';
+            badge.style.color = '#7C3AED';
+            badge.textContent = `🤝 Reserva por Convenio (${dscto}% OFF)`;
+            datosConvenioSeleccionado = { id: id, nombre: nombre, dscto: dscto, email: email };
+            recalcularPrecioTotal(); 
+        } else {
+            badge.style.background = '#E0F2FE';
+            badge.style.color = '#0369A1';
+            badge.textContent = `👤 Socio Registrado`;
+            datosConvenioSeleccionado = null;
+            recalcularPrecioTotal();
+        }
     }
 }
 
@@ -6131,10 +6129,10 @@ async function confirmarNuevoSocio() {
             showToast('✅ Socio creado correctamente', 'success');
             
             // ✅ AUTOMATIZACIÓN: Seleccionar automáticamente el nuevo socio
-            // Usamos la función unificada para que actualice inputs ocultos, badge y UI
+            // Esto actualiza inputs ocultos, badge y UI del buscador
             seleccionarUnified('socio', data.id_socio, nombre, 0, email);
             
-            // Ocultar panel de nuevo socio
+            // Ocultar panel de nuevo socio y limpiar campos
             cancelarNuevoSocio();
         } else {
             showToast('❌ Error: ' + (data.message || 'No se pudo crear'), 'error');

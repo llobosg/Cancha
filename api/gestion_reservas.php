@@ -122,7 +122,7 @@ try {
                 } else {
                     // Si hay socio, obtener sus datos para llenar cliente si viene vacío
                     if (!$nombre_cliente) {
-                        $stmt_s = $pdo->prepare("SELECT nombre, email, celular, password FROM socios WHERE id_socio = ?");
+                        $stmt_s = $pdo->prepare("SELECT nombre, email, celular, password_hash FROM socios WHERE id_socio = ?");
                         $stmt_s->execute([$id_socio]);
                         $s = $stmt_s->fetch();
                         if ($s) {
@@ -130,9 +130,8 @@ try {
                             $email_cliente = $email_cliente ?: $s['email'];
                             $telefono_cliente = $telefono_cliente ?: $s['celular'];
                             
-                            // ✅ DETECTAR SI ES NUEVO POR AUSENCIA DE PASSWORD
-                            // Si el socio fue creado por el buscador unificado, no tendrá password aún.
-                            if (empty($s['password'])) {
+                            // ✅ VERIFICAR SI ES SOCIO NUEVO (Sin password_hash)
+                            if (empty($s['password_hash'])) {
                                 $es_socio_nuevo = true;
                             }
                         }
