@@ -261,9 +261,16 @@ try {
                     <label>Email *</label>
                     <input type="email" id="email" required placeholder="juan@correo.com">
                 </div>
-                <div class="form-group" id="passGroup">
+                <div class="form-group" id="passGroup" style="position: relative;">
                     <label>Contraseña *</label>
-                    <input type="password" id="password" placeholder="Mínimo 6 caracteres">
+                    <input type="password" id="password" placeholder="Mínimo 6 caracteres" 
+                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box;">
+                    
+                    <!-- Ojito -->
+                    <button type="button" onclick="togglePassword('password', this)" 
+                        style="position: absolute; right: 10px; top: 38px; /* Ajustado por el label */ transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0;">
+                        👁️
+                    </button>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>

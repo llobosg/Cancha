@@ -71,22 +71,57 @@ if (empty($token)) {
             <div style="font-size: 3rem;">🎉</div>
             <h2>¡Contraseña Actualizada!</h2>
             <p class="success">Ya puedes iniciar sesión con tu nueva clave.</p>
-            <a href="../login_recintos.php">Ir al Login</a>
+            <a href="../index.php">Ir al Login</a>
         <?php elseif ($error): ?>
             <div style="font-size: 3rem;">⚠️</div>
             <h2>Error</h2>
             <p class="error"><?= htmlspecialchars($error) ?></p>
-            <a href="../login_recintos.php">Volver al Login</a>
+            <a href="../index.php">Volver al Login</a>
         <?php else: ?>
             <div style="font-size: 3rem;">🔐</div>
             <h2>Nueva Contraseña</h2>
             <p style="color: #666; font-size: 0.9rem;">Define tu nueva clave de acceso.</p>
             
             <form method="POST">
-                <input type="password" name="password" placeholder="Nueva Contraseña" required>
-                <input type="password" name="password_confirm" placeholder="Confirmar Contraseña" required>
+                <!-- Campo Nueva Contraseña -->
+                <div class="form-group" style="position: relative; margin-bottom: 1rem;">
+                    <input type="password" name="password" id="pass1" placeholder="Nueva Contraseña" required 
+                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box;">
+                    
+                    <!-- Ojito -->
+                    <button type="button" onclick="togglePassword('pass1', this)" 
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0;">
+                        👁️
+                    </button>
+                </div>
+
+                <!-- Campo Confirmar Contraseña -->
+                <div class="form-group" style="position: relative; margin-bottom: 1rem;">
+                    <input type="password" name="password_confirm" id="pass2" placeholder="Confirmar Contraseña" required 
+                        style="width: 100%; padding: 0.8rem; padding-right: 40px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box;">
+                    
+                    <!-- Ojito -->
+                    <button type="button" onclick="togglePassword('pass2', this)" 
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; font-size: 1.2rem; padding: 0;">
+                        👁️
+                    </button>
+                </div>
+
                 <button type="submit">Guardar Cambios</button>
             </form>
+
+            <script>
+            function togglePassword(inputId, btn) {
+                const input = document.getElementById(inputId);
+                if (input.type === "password") {
+                    input.type = "text";
+                    btn.textContent = "🙈"; // Icono de "ocultar"
+                } else {
+                    input.type = "password";
+                    btn.textContent = "👁️"; // Icono de "ver"
+                }
+            }
+            </script>
         <?php endif; ?>
     </div>
 </body>
