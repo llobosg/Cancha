@@ -152,5 +152,6 @@ try {
             <button onclick="closeModal()">Cancelar</button>
         </div>
     </div>
+<script src="../assets/js/asistentes.js"></script>
 </body>
 </html>
