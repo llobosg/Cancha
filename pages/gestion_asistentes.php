@@ -162,12 +162,41 @@ try {
             transition: border-color 0.2s;
         }
         .form-group input:focus { border-color: var(--secondary); outline: none; }
+        .form-group input:disabled { background: #f5f5f5; color: #999; cursor: not-allowed; }
 
         .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
         .btn-save { flex: 1; background: var(--success); color: white; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-cancel { flex: 1; background: #eee; color: #555; border: none; padding: 0.8rem; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
         .empty-msg { text-align: center; padding: 3rem; color: #888; background: #f9f9f9; border-radius: 12px; }
+        
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 0.9rem;
+            animation: slideInRight 0.3s ease;
+            min-width: 200px;
+            text-align: center;
+        }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #F44336; }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -221,7 +250,8 @@ try {
             <form id="formAsistente" onsubmit="event.preventDefault(); guardar();">
                 <div class="form-group">
                     <label>Usuario *</label>
-                    <input type="text" id="usuario" required placeholder="ej. juan.perez">
+                    <!-- Quitamos required del HTML para controlarlo con JS -->
+                    <input type="text" id="usuario" placeholder="ej. juan.perez">
                 </div>
                 <div class="form-group">
                     <label>Nombre Completo *</label>
@@ -242,6 +272,8 @@ try {
             </form>
         </div>
     </div>
+
+    <div id="toast-container"></div>
 
     <script src="../assets/js/asistentes.js"></script>
 </body>

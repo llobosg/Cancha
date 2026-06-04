@@ -4,6 +4,24 @@ const passGroup = document.getElementById('passGroup');
 const passInput = document.getElementById('password');
 const userInput = document.getElementById('usuario');
 
+// === FUNCIÓN TOAST ===
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+    
+    // Eliminar después de 3 segundos
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 function openModal() {
     editId = null;
     document.getElementById('modalTitle').textContent = 'Nuevo Asistente';
@@ -11,6 +29,8 @@ function openModal() {
     
     // En creación, usuario y password son obligatorios
     userInput.required = true;
+    userInput.disabled = false;
+    userInput.style.background = '#fff';
     passInput.required = true;
     passGroup.style.display = 'block';
     
@@ -30,9 +50,9 @@ function editar(id, email, nombre, usuario) {
     document.getElementById('usuario').value = usuario;
     document.getElementById('password').value = ''; // Limpiar password
     
-    // En edición, usuario NO se cambia (o se deshabilita), password es opcional
+    // En edición, usuario NO se cambia (se deshabilita), password es opcional
     userInput.disabled = true;
-    userInput.style.background = '#eee';
+    userInput.required = false; // No requerir usuario al editar
     passInput.required = false;
     passGroup.style.display = 'block'; // Mostrar por si quiere cambiarla
     
@@ -42,12 +62,41 @@ function editar(id, email, nombre, usuario) {
 async function guardar() {
     const fd = new FormData(document.getElementById('formAsistente'));
     
-    if (editId) {
+    // Validación manual antes de enviar
+    const usuarioVal = userInput.value.trim();
+    const nombreVal = document.getElementById('nombre').value.trim();
+    const emailVal = document.getElementById('email').value.trim();
+    const passVal = passInput.value.trim();
+
+    if (!editId) {
+        // Modo CREAR: Usuario y Password son obligatorios
+        if (!usuarioVal) {
+            showToast('❌ El campo Usuario es obligatorio', 'error');
+            return;
+        }
+        if (!passVal) {
+            showToast('❌ La contraseña es obligatoria para nuevos usuarios', 'error');
+            return;
+        }
+        fd.append('action', 'crear');
+        fd.append('usuario', usuarioVal);
+        fd.append('password', passVal);
+    } else {
+        // Modo EDITAR: Solo Email y Nombre son críticos
         fd.append('action', 'editar');
         fd.append('id', editId);
-    } else {
-        fd.append('action', 'crear');
+        if (passVal) {
+            fd.append('password', passVal); // Solo enviar si se escribió algo
+        }
     }
+
+    if (!nombreVal || !emailVal) {
+        showToast('❌ Nombre y Email son obligatorios', 'error');
+        return;
+    }
+
+    fd.append('email', emailVal);
+    fd.append('nombre_completo', nombreVal);
 
     try {
         const res = await fetch('../api/gestion_asistentes.php', {
@@ -58,21 +107,14 @@ async function guardar() {
         const data = await res.json();
 
         if (data.success) {
-            if (typeof showToast === 'function') {
-                showToast('✅ Guardado correctamente', 'success');
-            } else {
-                alert('Guardado correctamente');
-            }
+            showToast('✅ Guardado correctamente', 'success');
             setTimeout(() => location.reload(), 1000);
         } else {
-            throw new Error(data.error || 'Error desconocido');
+            showToast('❌ ' + (data.error || 'Error desconocido'), 'error');
         }
     } catch (err) {
-        if (typeof showToast === 'function') {
-            showToast('❌ ' + err.message, 'error');
-        } else {
-            alert('Error: ' + err.message);
-        }
+        showToast('❌ Error de conexión', 'error');
+        console.error(err);
     }
 }
 
@@ -92,21 +134,14 @@ async function eliminar(id) {
         const data = await res.json();
 
         if (data.success) {
-            if (typeof showToast === 'function') {
-                showToast('🗑️ Eliminado', 'success');
-            } else {
-                alert('Eliminado');
-            }
+            showToast('🗑️ Eliminado correctamente', 'success');
             setTimeout(() => location.reload(), 1000);
         } else {
-            throw new Error(data.error || 'Error al eliminar');
+            showToast('❌ ' + (data.error || 'Error al eliminar'), 'error');
         }
     } catch (err) {
-        if (typeof showToast === 'function') {
-            showToast('❌ ' + err.message, 'error');
-        } else {
-            alert('Error: ' + err.message);
-        }
+        showToast('❌ Error de conexión', 'error');
+        console.error(err);
     }
 }
 
