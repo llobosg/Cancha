@@ -5872,46 +5872,66 @@ function actualizarPrecioDisplayNormal() {
     elDisplay.textContent = `$${total.toLocaleString('es-CL')}`;
 }
 
-// === LIMPIAR SELECCIÓN SOCIO ===
+// === LIMPIAR SELECCIÓN SOCIO (BLINDADA) ===
 function limpiarSeleccionSocio() {
-    document.getElementById('searchAdmin').value = '';
-    document.getElementById('admin_socio_id').value = '';
-    document.getElementById('searchResultsAdmin').style.display = 'none';
-    // Al limpiar socio, recalculamos precio (quita descuento si había lógica de socio, aunque aquí es por convenio)
-    recalcularPrecioTotal();
+    const searchInput = document.getElementById('searchAdmin');
+    const hiddenInput = document.getElementById('admin_socio_id');
+    const resultsDiv = document.getElementById('searchResultsAdmin');
+    
+    if (searchInput) searchInput.value = '';
+    if (hiddenInput) hiddenInput.value = '';
+    if (resultsDiv) resultsDiv.style.display = 'none';
+    
+    // Recalcular precio si es necesario
+    if (typeof recalcularPrecioTotal === 'function') {
+        recalcularPrecioTotal();
+    }
 }
 
-// === LIMPIAR SELECCIÓN CONVENIO ===
+// === LIMPIAR SELECCIÓN CONVENIO (BLINDADA) ===
 function limpiarSeleccionConvenio() {
-    document.getElementById('searchConvenio').value = '';
-    document.getElementById('admin_convenio_id').value = '';
-    document.getElementById('searchResultsConvenio').style.display = 'none';
-    window.convenioActivo = null; // Reset variable global
+    const searchInput = document.getElementById('searchConvenio');
+    const hiddenInput = document.getElementById('admin_convenio_id');
+    const resultsDiv = document.getElementById('searchResultsConvenio');
+    const labelDinamico = document.getElementById('labelMontoDinamico');
     
-    // Ocultar label de descuento
-    const labelDesc = document.getElementById('labelMontoDinamico');
-    if(labelDesc) labelDesc.textContent = '💰 Total a pagar:';
+    if (searchInput) searchInput.value = '';
+    if (hiddenInput) hiddenInput.value = '';
+    if (resultsDiv) resultsDiv.style.display = 'none';
     
-    recalcularPrecioTotal();
+    // Resetear variable global
+    window.convenioActivo = null;
+    window.convenioPorcentaje = 0;
+    
+    // Restaurar label
+    if (labelDinamico) labelDinamico.textContent = '💰 Total a pagar:';
+    
+    // Recalcular precio
+    if (typeof recalcularPrecioTotal === 'function') {
+        recalcularPrecioTotal();
+    }
 }
 
-// === LIMPIAR TODO AL CERRAR MODAL ===
+// === CERRAR MODAL RESERVA ADMIN (CORREGIDO) ===
 function cerrarModalReservaAdmin(e) {
-    // Verificar si el click fue en el fondo (overlay) o en un botón de cierre
-    if (e.target.id === 'modalReservaAdmin' || e.target.closest('.modal-content button')) {
+    // Verificar si el click fue en el fondo (overlay) o en el botón X
+    // Nota: El botón X tiene onclick="cerrarModalReservaAdmin(event)"
+    if (e.target.id === 'modalReservaAdmin' || e.target.closest('button[onclick*="cerrarModalReservaAdmin"]')) {
         
-        // 1. Limpiar selecciones
+        // 1. Limpiar datos de forma segura
         limpiarSeleccionSocio();
         limpiarSeleccionConvenio();
         
-        // 2. ✅ CORRECCIÓN: Asignación segura sin optional chaining en el lado izquierdo
+        // 2. Resetear checkbox recurrente
         const checkRecurrent = document.getElementById('isRecurrent');
         if (checkRecurrent) {
             checkRecurrent.checked = false;
         }
         
         // 3. Ocultar campos recurrentes
-        toggleRecurrentFields(false);
+        if (typeof toggleRecurrentFields === 'function') {
+            toggleRecurrentFields(false);
+        }
         
         // 4. Cerrar modal visualmente
         const modal = document.getElementById('modalReservaAdmin');
@@ -5919,12 +5939,14 @@ function cerrarModalReservaAdmin(e) {
             modal.classList.remove('active');
             setTimeout(() => {
                 modal.style.display = 'none';
-                document.body.style.overflow = '';
+                document.body.style.overflow = ''; // Restaurar scroll
             }, 250);
         }
     }
-    e.stopPropagation();
+    // Evitar propagación si es necesario
+    if (e.stopPropagation) e.stopPropagation();
 }
+
 // === VARIABLES GLOBALES PARA BÚSQUEDA ===
 let debounceTimerUnified;
 let datosConvenioSeleccionado = null; // Para guardar el % descuento
