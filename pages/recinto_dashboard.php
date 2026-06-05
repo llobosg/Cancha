@@ -2844,17 +2844,16 @@ async function verDetalleDesdeLista(idReserva) {
 }
 
 // ✅ 3. REEMPLAZAR abrirReservaAdmin COMPLETA
-// === 15. ABRIR MODAL RESERVA ADMIN (CORREGIDO PÁDEL) ===
+// === 15. ABRIR MODAL RESERVA ADMIN (CON DEBUG FORZADO) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
-    // Helper seguro para asignar valores
     const setC = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
     };
 
-    // 1. Asignar ocultos inmediatamente
+    // 1. Asignar ocultos
     setC('admin_cancha_id', canchaId);
     setC('admin_fecha', fecha);
     setC('admin_hora_inicio', hora);
@@ -2862,13 +2861,12 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     setC('admin_monto_total', '0');
     setC('admin_monto_base', '0');
     
-    // Limpiar búsqueda de socio anterior
     const elSearch = document.getElementById('searchAdmin');
     if (elSearch) elSearch.value = '';
     const elResults = document.getElementById('searchResultsAdmin');
     if (elResults) elResults.style.display = 'none';
 
-    // 2. Calcular hora fin (60 min base por defecto)
+    // 2. Calcular hora fin
     const [h, m] = hora.split(':').map(Number);
     if (!isNaN(h) && !isNaN(m)) {
         const fin = new Date();
@@ -2877,7 +2875,6 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         setC('admin_hora_fin', horaFin);
         setC('admin_duracion_bloque', '60');
 
-        // Actualizar displays visuales del header del modal
         const fParts = fecha.split('-');
         const elFD = document.getElementById('modalFechaDisplay');
         if (elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
@@ -2886,7 +2883,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
     }
 
-    // 3. Buscar cancha en canchasData
+    // 3. Buscar cancha
     const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
         ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
         : null;
@@ -2894,64 +2891,59 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const elNombre = document.getElementById('modalCanchaDisplay');
     const elBase = document.getElementById('admin_monto_base');
     
-    // Referencias a los contenedores de duración
     const divPadel = document.getElementById('opcionesPadel');
     const divOtros = document.getElementById('opcionesOtros');
 
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        const idDeporte = cancha.id_deporte; 
+        let idDeporte = cancha.id_deporte; 
         
+        // ⚠️ DEBUG: FORZAR PÁDEL PARA CANCHA 1 (BORRAR ESTO LUEGO)
+        if (canchaId == 1) {
+            console.warn("⚠️ DEBUG: Forzando Cancha 1 como Pádel para prueba");
+            idDeporte = 'padel'; 
+        }
+
         if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
         const base = parseFloat(cancha.valor_arriendo) || 0;
         if (elBase) elBase.value = base;
 
-        // ✅ LÓGICA CORREGIDA PARA PÁDEL vs OTROS
-        // Ajusta 'padel' o el ID numérico según tu BD (ej: id_deporte == 2 o 'padel')
+        // Lógica de detección
         const esPadel = (idDeporte === 'padel' || idDeporte == 2 || idDeporte == '2');
+        console.log(`✅ Cancha cargada: ${nombre} | ID Deporte BD: ${cancha.id_deporte} | Es Pádel (Lógica): ${esPadel}`);
 
         if (esPadel) {
             if (divPadel) divPadel.style.display = 'flex';
             if (divOtros) divOtros.style.display = 'none';
-            // Habilitar todos los radios en Pádel
             const radios = divPadel.querySelectorAll('input[type="radio"]');
             radios.forEach(r => r.disabled = false);
-            // Seleccionar 60 min por defecto
             const radio60 = divPadel.querySelector('input[value="60"]');
             if (radio60) radio60.checked = true;
         } else {
             if (divPadel) divPadel.style.display = 'none';
             if (divOtros) divOtros.style.display = 'flex';
-            // Forzar 60 min y deshabilitar otros (aunque en 'Otros' solo hay uno)
             const radio60 = divOtros.querySelector('input[value="60"]');
             if (radio60) {
                 radio60.checked = true;
-                radio60.disabled = true; // Opcional: bloquearlo si no quieres que lo cambien
+                radio60.disabled = true;
             }
         }
 
-        // Inicializar cálculo de precio
         recalcularPrecioTotal();
-        
-        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Es Pádel: ${esPadel}`);
     } else {
         console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
-    // 4. MOSTRAR EL MODAL
     const modal = document.getElementById('modalReservaAdmin');
     if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        
         setTimeout(() => {
             const searchInput = document.getElementById('searchAdmin');
             if (searchInput) searchInput.focus();
         }, 100);
-    } else {
-        console.error("❌ No se encontró el modal #modalReservaAdmin en el DOM");
     }
 }
 
