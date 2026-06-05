@@ -3001,16 +3001,16 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     }
 }
 
-// === 16. RECÁLCULO DE PRECIO SEGÚN DURACIÓN (CORREGIDO PARA INPUT VISIBLE) ===
+// === 16. CÁLCULO DE PRECIO DINÁMICO (DEFINITIVO) ===
 function recalcularPrecioTotal() {
     // 1. Obtener duración seleccionada
     const radioChecked = document.querySelector('input[name="duracion"]:checked');
     const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
     
-    // 2. Obtener precio base desde el input hidden
+    // 2. Obtener precio base desde el input hidden (ADMIN_MONTO_BASE)
     const elBase = document.getElementById('admin_monto_base');
     let precioBase = 0;
-    if (elBase) {
+    if (elBase && elBase.value) {
         precioBase = parseFloat(elBase.value);
     }
     
@@ -3029,21 +3029,23 @@ function recalcularPrecioTotal() {
     // 4. Calcular Total
     const total = Math.round(precioBase * factor);
 
-    // 5. Actualizar Inputs
+    // 5. Actualizar Inputs (CLAVE: Actualizar el INPUT VISIBLE)
     const inputMontoHidden = document.getElementById('admin_monto_total');
     const inputMontoVisible = document.getElementById('admin_monto_total_input');
-    const labelDinamico = document.getElementById('labelMontoDinamico');
     const subtexto = document.getElementById('subtextoMonto');
 
-    // ✅ CRÍTICO: Actualizar AMBOS inputs
+    // Actualizar input oculto (para enviar al backend)
     if (inputMontoHidden) inputMontoHidden.value = total;
-    if (inputMontoVisible) inputMontoVisible.value = total;
     
-    // Actualizar etiqueta visual
-    if (labelDinamico) {
-        labelDinamico.innerHTML = `💰 Total a pagar:`;
+    // ✅ ACTUALIZAR INPUT VISIBLE (El que ve el admin)
+    if (inputMontoVisible) {
+        inputMontoVisible.value = total;
+        // Efecto visual sutil para indicar cambio
+        inputMontoVisible.style.backgroundColor = "#E8F5E9";
+        setTimeout(() => { inputMontoVisible.style.backgroundColor = "white"; }, 300);
     }
     
+    // Actualizar subtexto
     if (subtexto) {
         subtexto.textContent = `1 reserva x ${duracion} min`;
     }
@@ -3051,11 +3053,11 @@ function recalcularPrecioTotal() {
     console.log(`🧮 Cálculo: Base $${precioBase} x ${duracion}min (factor ${factor}) = $${total}`);
 }
 
-// === 17. ACTUALIZAR DURACIÓN Y HORA FIN ===
+// === 17. EVENTO AL CAMBIAR DURACIÓN ===
 function actualizarDuracionReserva(val) {
     const horaInicio = document.getElementById('admin_hora_inicio').value;
     
-    // Actualizar hora fin visualmente y en input oculto
+    // Actualizar hora fin
     if (horaInicio) {
         const [h, m] = horaInicio.split(':').map(Number);
         const duracionMin = parseInt(val);
@@ -3064,20 +3066,18 @@ function actualizarDuracionReserva(val) {
         
         const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
         
-        // Actualizar inputs de hora
         document.getElementById('admin_hora_fin').value = horaFin;
         document.getElementById('admin_duracion_bloque').value = val;
         
-        // Actualizar display del header del modal
         const elHD = document.getElementById('modalHoraDisplay');
         if (elHD) elHD.textContent = `${horaInicio} - ${horaFin}`;
     }
     
-    // Recalcular precio inmediatamente (esto actualiza el input visible)
+    // Recalcular precio inmediatamente
     recalcularPrecioTotal();
 }
 
-// === 18. PERMITIR EDICIÓN MANUAL DEL MONTO ===
+// === 18. PERMITIR EDICIÓN MANUAL ===
 function actualizarMontoManual(valor) {
     const inputHidden = document.getElementById('admin_monto_total');
     if (inputHidden) {
