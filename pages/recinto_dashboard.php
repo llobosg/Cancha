@@ -3736,10 +3736,19 @@ function guardarReservaAdmin(e) {
     formData.append('monto_total', monto);
     formData.append('duracion_bloque', duracion);
 
-    // ✅ 3. ENVIAR A API
-    fetch('../api/gestion_reservas.php', { // Asegúrate que esta ruta sea correcta
+    // ✅ CAMBIAR LA RUTA AQUÍ
+    fetch('../api/reserva_unica.php', { 
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' }, // Enviar como JSON
+        body: JSON.stringify({
+            id_cancha: canchaId,
+            fecha: fecha,
+            hora_inicio: horaInicio,
+            hora_fin: horaFin,
+            id_socio: id_socio,
+            monto_total: monto,
+            duracion_bloque: duracion
+        })
     })
     .then(response => response.json())
     .then(data => {
