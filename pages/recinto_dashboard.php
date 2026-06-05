@@ -3698,9 +3698,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// === SUBMIT DEL FORMULARIO (ADAPTADO AL BUSCADOR UNIFICADO) ===
-async function guardarReservaAdmin(e) {
-    e.preventDefault();
+// === GUARDAR RESERVA ADMIN (CORREGIDO PARA EVITAR ERROR DE EVENTO) ===
+function guardarReservaAdmin(e) {
+    // ✅ BLINDAJE: Si 'e' no es un evento o no existe, no hacemos preventDefault
+    if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+    }
+
+    console.log("💾 Iniciando guarda de reserva única...");
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
     btn.disabled = true;
