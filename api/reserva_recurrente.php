@@ -103,7 +103,7 @@ try {
         $minutos_fin = $minutos_ini + $duracion_minutos;
         $hora_fin_calc = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
 
-                // Insertar Reserva Recurrente
+        // Insertar Reserva Recurrente
         // Aseguramos que id_club sea null si no hay club, para evitar errores de tipo
         $club_id_val = ($id_club_reserva && $id_club_reserva > 0) ? $id_club_reserva : null;
 
