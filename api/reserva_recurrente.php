@@ -31,15 +31,15 @@ try {
     
     // Resolver Socio
     $id_socio_final = $input['id_socio'] ?? $_SESSION['id_socio'] ?? null;
-    $nombre_cliente = ''; $email_cliente = ''; $telefono_cliente = ''; $id_club_reserva = null;
+    $nombre_cliente = ''; $email_cliente = ''; $telefono_cliente = '';
 
     if ($id_socio_final) {
-        $stmt_s = $pdo->prepare("SELECT nombre, email, celular, id_club FROM socios WHERE id_socio = ?");
+        $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
         $stmt_s->execute([$id_socio_final]);
         $s = $stmt_s->fetch(PDO::FETCH_ASSOC);
         if ($s) {
             $nombre_cliente = $s['nombre']; $email_cliente = $s['email']; 
-            $telefono_cliente = $s['celular']; $id_club_reserva = $s['id_club'];
+            $telefono_cliente = $s['celular'];
         }
     } elseif (!empty($input['emailNuevoSocio'])) {
         $email_nuevo = $input['emailNuevoSocio'];
@@ -88,7 +88,6 @@ try {
     // Transacción
     $pdo->beginTransaction();
     $created = 0;
-    $reservas_ids = [];
     $tabla_html = '';
     $hora_fin_calc = '';
 
@@ -103,26 +102,12 @@ try {
         $minutos_fin = $minutos_ini + $duracion_minutos;
         $hora_fin_calc = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
 
-        // Insertar Reserva Recurrente
-        // Aseguramos que id_club sea null si no hay club, para evitar errores de tipo
-        $club_id_val = ($id_club_reserva && $id_club_reserva > 0) ? $id_club_reserva : null;
-
-                // Insertar Reserva Recurrente (SIN id_club para evitar error persistente)
+        // ✅ INSERT LIMPIO SIN id_club
         $stmt_ins = $pdo->prepare("
             INSERT INTO reservas (
-                id_cancha, 
-                id_socio, 
-                nombre_cliente, 
-                email_cliente, 
-                telefono_cliente, 
-                fecha, 
-                hora_inicio, 
-                hora_fin, 
-                monto_total, 
-                jugadores_esperados, 
-                estado_pago, 
-                estado, 
-                created_at
+                id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente, 
+                fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, 
+                estado_pago, estado, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
         ");
         
@@ -136,11 +121,10 @@ try {
             $hora_inicio,
             $hora_fin_calc,
             $monto_unitario,
-            4 // jugadores_esperados default
+            4
         ]);
         
         $id_res = $pdo->lastInsertId();
-        $reservas_ids[] = $id_res;
         $created++;
         
         // Construir fila de tabla para email
@@ -164,7 +148,6 @@ try {
     // === ENVIAR EMAIL RESUMEN ===
     if ($created > 0 && $email_cliente && class_exists('BrevoMailer')) {
         try {
-            // Obtener nombre cancha
             $stmt_c = $pdo->prepare("SELECT nombre_cancha FROM canchas WHERE id_cancha = ?");
             $stmt_c->execute([$id_cancha]);
             $nombre_cancha = $stmt_c->fetchColumn() ?: 'Cancha';
