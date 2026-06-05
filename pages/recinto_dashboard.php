@@ -5940,24 +5940,6 @@ function recalcularMontoConDescuento(porcDscto) {
     elMontoTotal.dataset.descuento_aplicado = porcDscto;
 }
 
-// Modificar la función actualizarHoraFin o actualizarDuracionReserva para que llame a recalcularMontoConDescuento
-// si hay un convenio activo. Ejemplo simplificado:
-function actualizarDuracionReserva(duracion) {
-    const elHoraInicio = document.getElementById('admin_hora_inicio');
-    if (!elHoraInicio || !elHoraInicio.value) return;
-    
-    actualizarHoraFin(elHoraInicio.value, parseInt(duracion));
-    
-    const elDuracion = document.getElementById('admin_duracion_bloque');
-    if (elDuracion) elDuracion.value = duracion;
-
-    // Recalcular monto manteniendo el convenio activo si existe
-    const elBase = document.getElementById('admin_monto_base');
-    if (elBase) {
-        actualizarCalculoMonto(parseFloat(elBase.value), parseInt(duracion), convenioActivo);
-    }
-}
-
 // Helper para calcular precio normal (sin descuento)
 function actualizarPrecioDisplayNormal() {
     const elBase = document.getElementById('admin_monto_base');
