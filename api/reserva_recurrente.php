@@ -182,6 +182,10 @@ try {
             $h_fin = floor($minutos_fin / 60);
             $m_fin = $minutos_fin % 60;
             $hora_fin_calc = sprintf("%02d:%02d", $h_fin, $m_fin);
+            error_log("DEBUG MONTO UNITARIO: " . $monto_unitario);
+            if ($monto_unitario <= 0) {
+                throw new Exception("Monto unitario inválido: $monto_unitario");
+            }
 
             // INSERTAR RESERVA
             $stmt_ins = $pdo->prepare("
@@ -208,6 +212,10 @@ try {
             
             $id_reserva_creada = $pdo->lastInsertId();
             $created++;
+
+            if ($stmt_ins->rowCount() === 0) {
+                throw new Exception("Insert no afectó filas");
+            }
 
             // REGISTRAR BITÁCORA
             if (function_exists('registrarLogReserva')) {

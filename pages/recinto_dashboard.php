@@ -3350,44 +3350,28 @@ async function handleSingleReservation() {
     // (mantener el código actual)
 }
 
-// === GENERAR FECHAS DE RECURRENCIA ===
-function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
-    const dates = [];
-    let current = new Date(startDate + 'T00:00:00');
-    const end = new Date(endDate + 'T00:00:00');
-    
-    // Ajustar dayOfWeek (0=Domingo, 1=Lunes, etc.)
-    while (current <= end) {
-        if (current.getDay() === parseInt(dayOfWeek)) {
-            dates.push(current.toISOString().split('T')[0]);
-        }
-        current.setDate(current.getDate() + 1);
-    }
-    return dates;
-}
-
-// === 16.2 MANEJAR RESERVA RECURRENTE (CON CÁLCULO DE MONTO TOTAL) ===
+// === 16.2 MANEJAR RESERVA RECURRENTE (FRONTEND) ===
 async function handleRecurrentReservation() {
-    const btn = document.querySelector('#formReservaManual button[type="submit"]'); // Ajusta el selector si es necesario
-    const originalText = btn.textContent;
+    const btn = document.getElementById('btnRecurrent'); // Asegúrate que tu botón tenga este ID
+    if (!btn) { console.error("Botón no encontrado"); return; }
+    
+    const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.textContent = '⏳ Calculando...';
+    btn.innerHTML = '⏳ Calculando...';
 
     try {
-        // 1. Obtener datos del formulario
+        // 1. Obtener datos
         const cancha = document.getElementById('admin_cancha_id').value;
         const horaInicio = document.getElementById('admin_hora_inicio').value;
         const idSocio = document.getElementById('admin_socio_id').value || null;
         
-        // Obtener duración seleccionada actualmente
+        // Duración y Precio Base
         const radioChecked = document.querySelector('input[name="duracion"]:checked');
         const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
         
-        // Obtener precio base de la cancha (del input hidden que llenamos al abrir modal)
         const elBase = document.getElementById('admin_monto_base');
         const precioBase = parseFloat(elBase ? elBase.value : 0);
         
-        // Calcular factor según duración
         let factor = 1;
         if (duracion === 30) factor = 0.5;
         else if (duracion === 90) factor = 1.5;
@@ -3399,77 +3383,64 @@ async function handleRecurrentReservation() {
         const sDate = document.getElementById('startDate')?.value;
         const eDate = document.getElementById('endDate')?.value;
 
-        // Validaciones básicas
         if (!day || !sDate || !eDate) {
-            showToast('❌ Complete día de repetición y fechas', 'error');
-            btn.disabled = false;
-            btn.textContent = originalText;
-            return;
+            showToast('❌ Complete día y fechas', 'error');
+            btn.disabled = false; btn.innerHTML = originalText; return;
         }
 
-        // 2. Generar fechas para contar cuántas serán
+        // 2. Generar fechas para contar
         const fechas = generarFechasRecurrencia(sDate, eDate, day);
         
         if (fechas.length === 0) {
-            showToast('❌ No hay fechas válidas en este rango para ese día', 'error');
-            btn.disabled = false;
-            btn.textContent = originalText;
-            return;
+            showToast('❌ No hay fechas válidas', 'error');
+            btn.disabled = false; btn.innerHTML = originalText; return;
         }
 
-        // 3. CALCULAR Y MOSTRAR MONTO TOTAL ESTIMADO
+        // 3. ACTUALIZAR INPUT VISIBLE CON EL TOTAL
         const montoTotalEstimado = precioPorReserva * fechas.length;
-        
-        // Actualizar Input Visible con el TOTAL
         const inputMontoVisible = document.getElementById('admin_monto_total_input');
         const inputMontoHidden = document.getElementById('admin_monto_total');
         const subtexto = document.getElementById('subtextoMonto');
         
         if (inputMontoVisible) inputMontoVisible.value = montoTotalEstimado;
         if (inputMontoHidden) inputMontoHidden.value = montoTotalEstimado;
-        
-        if (subtexto) {
-            subtexto.textContent = `${fechas.length} reservas x ${duracion} min ($${precioPorReserva.toLocaleString('es-CL')} c/u)`;
+        if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
+
+        // 4. Confirmación
+        if (!confirm(`Se crearán ${fechas.length} reservas.\nTotal: $${montoTotalEstimado}\n¿Confirmar?`)) {
+            btn.disabled = false; btn.innerHTML = originalText; return;
         }
 
-        console.log(`🔄 Recurrente: ${fechas.length} reservas x $${precioPorReserva} = $${montoTotalEstimado}`);
-
-        // Confirmación al usuario
-        if (!confirm(`Se crearán ${fechas.length} reservas.\n\nPrecio por reserva: $${precioPorReserva}\nTotal estimado: $${montoTotalEstimado}\n\n¿Deseas continuar? (Puedes editar el monto total antes de confirmar si deseas aplicar un descuento)`)) {
-            btn.disabled = false;
-            btn.textContent = originalText;
-            return;
-        }
-
-        // 4. Preparar Payload para API (CÁLCULO DE UNITARIO AUTOMÁTICO)
-        // Obtenemos el monto total que está actualmente en el input (puede haber sido editado por el admin)
-        const montoTotalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
-        
-        // Calculamos el monto UNITARIO que debe guardarse en CADA reserva
-        // Ejemplo: Si el admin cambió el total de 270.000 a 240.000, 
-        // el unitario será 240.000 / 3 = 80.000 por reserva.
-        const montoUnitarioParaAPI = Math.round(montoTotalInput / fechas.length);
-
-        console.log(`🔄 Recurrente: Total Input=$${montoTotalInput} | Fechas=${fechas.length} | Unitario a Guardar=$${montoUnitarioParaAPI}`);
+        // 5. Calcular unitario final (por si el admin editó el total)
+        const montoFinalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
+        const montoUnitarioParaAPI = Math.round(montoFinalInput / fechas.length);
 
         const payload = {
             action: 'create_recurrent',
             id_cancha: cancha,
             hora_inicio: horaInicio,
-            duracion_bloque: duracion, // Enviamos duración para que la API calcule hora_fin
+            duracion_bloque: duracion, 
             id_socio: idSocio,
             repeat_day: day,
             start_date: sDate,
             end_date: eDate,
-            monto_total: montoUnitarioParaAPI, // ✅ IMPORTANTE: Enviamos el valor UNITARIO
+            monto_total: montoUnitarioParaAPI, // Enviamos unitario
             nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
             emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
             telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
         };
 
-        btn.textContent = '⏳ Generando reservas...';
+        btn.innerHTML = '⏳ Generando...';
 
-        // 5. Enviar a API
+        if (precioPorReserva <= 0) {
+            showToast('❌ Error en cálculo de precio', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        console.log("DEBUG PAYLOAD:", payload);
+
+        // 6. Enviar a API
         const res = await fetch('../api/reserva_recurrente.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3479,20 +3450,32 @@ async function handleRecurrentReservation() {
         const data = await res.json();
 
         if (data.success) {
-            showToast(`✅ ${data.created} reservas creadas correctamente`, 'success');
+            showToast(`✅ ${data.created} reservas creadas`, 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
-            showToast(`❌ ${data.message || 'Error al crear reservas'}`, 'error');
-            btn.disabled = false;
-            btn.textContent = originalText;
+            showToast(`❌ ${data.message}`, 'error');
+            btn.disabled = false; btn.innerHTML = originalText;
         }
 
     } catch (err) {
-        console.error('❌ Error en handleRecurrentReservation:', err);
-        showToast('❌ Error de conexión al generar reservas', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
+        console.error(err);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false; btn.innerHTML = originalText;
     }
+}
+
+// Helper para generar fechas (debe estar también en tu JS)
+function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
+    const dates = [];
+    let current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    while (current <= end) {
+        if (current.getDay() === parseInt(dayOfWeek)) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
 }
 
 // === ACTUALIZAR HORA FIN (BLINDADA) ===
@@ -3523,7 +3506,7 @@ function actualizarHoraFin(horaInicio, duracionMin) {
         else if (duracionMin == 90) factor = 1.5;
         else if (duracionMin == 120) factor = 2;
         
-        const total = Math.round(base * factor);
+        const total = Math.round(montoBase * factor);
         elMonto.value = total;
         elDisplayMonto.textContent = `$${total.toLocaleString('es-CL')}`;
     }
@@ -5990,7 +5973,7 @@ function actualizarPrecioDisplayNormal() {
     if (labelDesc) labelDesc.style.display = 'none';
     window.convenioDsctoActual = null; // Resetear variable global
 
-    const base = parseFloat(elBase.value) || 0;
+    const montoBase = parseFloat(elBase.value) || 0;
     const duracion = parseInt(elDuracion.value) || 60;
     
     let factor = 1;
@@ -5998,7 +5981,7 @@ function actualizarPrecioDisplayNormal() {
     else if (duracion == 90) factor = 1.5;
     else if (duracion == 120) factor = 2;
 
-    const total = Math.round(base * factor);
+    const total = Math.round(montoBase * factor);
     
     elMontoTotal.value = total;
     elMontoTotal.removeAttribute('data-descuento_aplicado');
