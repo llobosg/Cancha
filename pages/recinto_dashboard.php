@@ -2890,30 +2890,31 @@ async function verDetalleDesdeLista(idReserva) {
 }
 
 // ✅ 3. REEMPLAZAR abrirReservaAdmin COMPLETA
-// === 15. ABRIR MODAL RESERVA ADMIN (CORREGIDO PRECIO Y PÁDEL) ===
+// === 15. ABRIR MODAL RESERVA ADMIN (CORREGIDO PÁDEL Y DURACIÓN) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
-    // Helper seguro
+    // Helper seguro para asignar valores
     const setC = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
     };
 
-    // 1. Asignar ocultos
+    // 1. Asignar ocultos inmediatamente
     setC('admin_cancha_id', canchaId);
     setC('admin_fecha', fecha);
     setC('admin_hora_inicio', hora);
     setC('admin_socio_id', '');
     setC('admin_monto_total', '0');
+    setC('admin_monto_base', '0');
     
-    // Limpiar búsqueda
+    // Limpiar búsqueda de socio anterior
     const elSearch = document.getElementById('searchAdmin');
     if (elSearch) elSearch.value = '';
     const elResults = document.getElementById('searchResultsAdmin');
     if (elResults) elResults.style.display = 'none';
 
-    // 2. Calcular hora fin base (60 min)
+    // 2. Calcular hora fin (60 min base por defecto)
     const [h, m] = hora.split(':').map(Number);
     if (!isNaN(h) && !isNaN(m)) {
         const fin = new Date();
@@ -2922,7 +2923,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         setC('admin_hora_fin', horaFin);
         setC('admin_duracion_bloque', '60');
 
-        // Displays header
+        // Actualizar displays visuales del header del modal
         const fParts = fecha.split('-');
         const elFD = document.getElementById('modalFechaDisplay');
         if (elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
@@ -2931,7 +2932,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
     }
 
-    // 3. Buscar cancha y configurar UI
+    // 3. Buscar cancha en canchasData
     const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
         ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
         : null;
@@ -2939,6 +2940,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     const elNombre = document.getElementById('modalCanchaDisplay');
     const elBase = document.getElementById('admin_monto_base');
     
+    // Referencias a los contenedores de duración
     const divPadel = document.getElementById('opcionesPadel');
     const divOtros = document.getElementById('opcionesOtros');
 
@@ -2948,60 +2950,59 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         
         if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
-        // ✅ CORRECCIÓN CRÍTICA: Obtener valor base y asegurarse que sea número
         const base = parseFloat(cancha.valor_arriendo) || 0;
-        if (elBase) elBase.value = base; // Guardar en hidden input
-        
-        console.log(`💰 Valor Base Cargado: $${base}`);
+        if (elBase) elBase.value = base;
 
-        // Inicializar ventanaActual para que recalcularPrecioTotal funcione
-        window.ventanaActual = {
-            precioBase: base,
-            duracion: 60,
-            esPadel: false
-        };
-
-        // Detectar Pádel
+        // ✅ LÓGICA CORREGIDA PARA PÁDEL vs OTROS
+        // Ajusta 'padel' o el ID numérico según tu BD (ej: id_deporte == 2 o 'padel')
         const esPadel = (idDeporte === 'padel' || idDeporte == 2 || idDeporte == '2');
-        window.ventanaActual.esPadel = esPadel;
 
         if (esPadel) {
+            // Mostrar opciones Pádel
             if (divPadel) divPadel.style.display = 'flex';
             if (divOtros) divOtros.style.display = 'none';
-            // Habilitar radios
+            
+            // Habilitar todos los radios en Pádel y seleccionar 60 por defecto
             const radios = divPadel.querySelectorAll('input[type="radio"]');
             radios.forEach(r => r.disabled = false);
-            // Seleccionar 60 por defecto
+            
             const radio60 = divPadel.querySelector('input[value="60"]');
             if (radio60) radio60.checked = true;
+            
         } else {
+            // Mostrar opciones Otros (Solo 60 min)
             if (divPadel) divPadel.style.display = 'none';
-            if (divOtros) divOtros.style.display = 'flex';
+            if (divOtros) divOtros.style.display = 'block'; // Usar block para que ocupe ancho completo
+            
             // Forzar 60 min
             const radio60 = divOtros.querySelector('input[value="60"]');
             if (radio60) {
                 radio60.checked = true;
-                radio60.disabled = true;
+                radio60.disabled = true; 
             }
         }
 
-        // ✅ LLAMAR A RECALCULAR PARA ACTUALIZAR MONTO INICIAL
+        // Inicializar cálculo de precio
         recalcularPrecioTotal();
         
+        console.log(`✅ Cancha cargada: ${nombre} | Base: $${base} | Es Pádel: ${esPadel}`);
     } else {
-        console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada`);
+        console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
-    // 4. Mostrar Modal
+    // 4. MOSTRAR EL MODAL
     const modal = document.getElementById('modalReservaAdmin');
     if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        
         setTimeout(() => {
             const searchInput = document.getElementById('searchAdmin');
             if (searchInput) searchInput.focus();
         }, 100);
+    } else {
+        console.error("❌ No se encontró el modal #modalReservaAdmin en el DOM");
     }
 }
 
@@ -6310,26 +6311,26 @@ window.cerrarSubmodal = cerrarSubmodal;
                 <div style="margin-bottom:1rem;">
                     <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#333;">⏱️ Duración de reserva</label>
                     
-                    <!-- Contenedor para Opciones Pádel (Oculto por defecto) -->
-                    <div id="opcionesPadel" style="display:none; gap:0.3rem; flex-wrap:wrap;">
-                        <label class="duration-label">
-                            <input type="radio" name="duracion" value="30" onchange="actualizarDuracionReserva(this.value)"> 30m
+                    <!-- Contenedor para Opciones Pádel (Inicialmente oculto por JS) -->
+                    <div id="opcionesPadel" style="display:none; gap:0.5rem; flex-wrap:wrap;">
+                        <label class="duration-label" style="flex:1; min-width:60px; text-align:center; padding:0.6rem; background:#F3E5F5; border:2px solid #E1BEE7; border-radius:8px; cursor:pointer; font-weight:600; color:#4A148C;">
+                            <input type="radio" name="duracion" value="30" onchange="actualizarDuracionReserva(this.value)" style="display:none;"> 30 min
                         </label>
-                        <label class="duration-label">
-                            <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)"> 60m
+                        <label class="duration-label" style="flex:1; min-width:60px; text-align:center; padding:0.6rem; background:#F3E5F5; border:2px solid #E1BEE7; border-radius:8px; cursor:pointer; font-weight:600; color:#4A148C;">
+                            <input type="radio" name="duracion" value="60" checked onchange="actualizarDuracionReserva(this.value)" style="display:none;"> 60 min
                         </label>
-                        <label class="duration-label">
-                            <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)"> 90m
+                        <label class="duration-label" style="flex:1; min-width:60px; text-align:center; padding:0.6rem; background:#F3E5F5; border:2px solid #E1BEE7; border-radius:8px; cursor:pointer; font-weight:600; color:#4A148C;">
+                            <input type="radio" name="duracion" value="90" onchange="actualizarDuracionReserva(this.value)" style="display:none;"> 90 min
                         </label>
-                        <label class="duration-label">
-                            <input type="radio" name="duracion" value="120" onchange="actualizarDuracionReserva(this.value)"> 120m
+                        <label class="duration-label" style="flex:1; min-width:60px; text-align:center; padding:0.6rem; background:#F3E5F5; border:2px solid #E1BEE7; border-radius:8px; cursor:pointer; font-weight:600; color:#4A148C;">
+                            <input type="radio" name="duracion" value="120" onchange="actualizarDuracionReserva(this.value)" style="display:none;"> 120 min
                         </label>
                     </div>
 
-                    <!-- Contenedor para Otros Deportes (Solo 60 min) -->
-                    <div id="opcionesOtros" style="display:flex; gap:0.3rem;">
-                        <label class="duration-label" style="flex:1; background:#E3F2FD; border-color:#2196F3;">
-                            <input type="radio" name="duracion" value="60" checked disabled> 60 min (Estándar)
+                    <!-- Contenedor para Otros Deportes (Inicialmente visible por JS) -->
+                    <div id="opcionesOtros" style="display:none;">
+                        <label class="duration-label" style="display:block; width:100%; text-align:center; padding:0.8rem; background:#E3F2FD; border:2px solid #90CAF9; border-radius:8px; font-weight:600; color:#0D47A1; cursor:not-allowed;">
+                            <input type="radio" name="duracion" value="60" checked disabled style="display:none;"> 60 min (Estándar)
                         </label>
                     </div>
                 </div>
