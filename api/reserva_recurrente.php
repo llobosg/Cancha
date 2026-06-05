@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/config.php';
 if (file_exists(__DIR__ . '/../includes/bitacora.php')) require_once __DIR__ . '/../includes/bitacora.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
-error_log("[Recurrente] Input recibido: " . json_encode($input));
+error_log("[Recurrente] Input RAW: " . json_encode($input));
 
 $id_recinto_admin = $_SESSION['id_recinto'] ?? null;
 if (!$id_recinto_admin && !isset($_SESSION['id_socio'])) {
@@ -15,7 +15,7 @@ if (!$id_recinto_admin && !isset($_SESSION['id_socio'])) {
 }
 
 try {
-    // Validaciones
+    // 1. Validaciones
     if (empty($input['id_cancha']) || empty($input['start_date']) || empty($input['end_date'])) {
         throw new Exception("Datos incompletos");
     }
@@ -28,7 +28,9 @@ try {
     $end_date = $input['end_date'];
     $monto_unitario = floatval($input['monto_total'] ?? 0);
     
-    // Resolver Socio
+    error_log("[Recurrente] Parametros: Cancha=$id_cancha, Dia=$repeat_day, Duracion=$duracion_minutos, Unitario=$monto_unitario");
+
+    // 2. Resolver Socio
     $id_socio_final = $input['id_socio'] ?? $_SESSION['id_socio'] ?? null;
     $nombre_cliente = ''; $email_cliente = ''; $telefono_cliente = ''; $id_club_reserva = null;
 
@@ -58,7 +60,7 @@ try {
         }
     }
 
-    // Generar Fechas
+    // 3. Generar Fechas
     $fechas_disponibles = [];
     $current = new DateTime($start_date);
     $end = new DateTime($end_date);
@@ -73,18 +75,20 @@ try {
             $stmt_chk->execute([$id_cancha, $fecha_str, $hora_inicio]);
             if ($stmt_chk->fetchColumn() == 0) {
                 $fechas_disponibles[] = ['fecha' => $fecha_str, 'dia_nombre' => $day_names[$current->format('w')], 'dia_num' => $current->format('d')];
+            } else {
+                error_log("[Recurrente] Fecha $fecha_str OCUPADA, saltando.");
             }
         }
         $current->modify('+1 day');
     }
 
     if (empty($fechas_disponibles)) {
-        throw new Exception("No hay fechas disponibles");
+        throw new Exception("No hay fechas disponibles en el rango seleccionado");
     }
 
-    error_log("[Recurrente] Fechas a procesar: " . count($fechas_disponibles));
+    error_log("[Recurrente] Fechas VALIDAS a procesar: " . count($fechas_disponibles));
 
-    // Transacción
+    // 4. Transacción
     $pdo->beginTransaction();
     $created = 0;
 
@@ -97,32 +101,39 @@ try {
         $minutos_fin = $minutos_ini + $duracion_minutos;
         $hora_fin_calc = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
 
-        // Insertar
-        $stmt_ins = $pdo->prepare("
-            INSERT INTO reservas (id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', NOW())
-        ");
-        $stmt_ins->execute([
-            $id_cancha, $id_club_reserva, $id_socio_final, $nombre_cliente, $email_cliente, $telefono_cliente,
-            $fecha, $hora_inicio, $hora_fin_calc, $monto_unitario
-        ]);
-        
-        $created++;
-        
-        // Bitácora individual
-        if (function_exists('registrarLogReserva')) {
-            registrarLogReserva($pdo, $pdo->lastInsertId(), 'creada_recurrente', "Reserva recurrente ($fecha)", $_SESSION['recinto_usuario'] ?? 'Admin', null, $monto_unitario);
+        try {
+            // Insertar
+            $stmt_ins = $pdo->prepare("
+                INSERT INTO reservas (id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', NOW())
+            ");
+            $stmt_ins->execute([
+                $id_cancha, $id_club_reserva, $id_socio_final, $nombre_cliente, $email_cliente, $telefono_cliente,
+                $fecha, $hora_inicio, $hora_fin_calc, $monto_unitario
+            ]);
+            
+            $id_res = $pdo->lastInsertId();
+            $created++;
+            error_log("[Recurrente] Reserva creada ID: $id_res para fecha $fecha");
+            
+            // Bitácora individual
+            if (function_exists('registrarLogReserva')) {
+                registrarLogReserva($pdo, $id_res, 'creada_recurrente', "Reserva recurrente ($fecha)", $_SESSION['recinto_usuario'] ?? 'Admin', null, $monto_unitario);
+            }
+        } catch (Exception $e) {
+            error_log("[Recurrente] ERROR al insertar fecha $fecha: " . $e->getMessage());
+            // Continuamos con la siguiente fecha
         }
     }
 
     $pdo->commit();
-    error_log("[Recurrente] Commit exitoso. Creadas: $created");
+    error_log("[Recurrente] Commit exitoso. Total Creadas: $created");
 
     echo json_encode(['success' => true, 'created' => $created]);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    error_log("[Recurrente] ERROR: " . $e->getMessage());
+    error_log("[Recurrente] ERROR CRITICO: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
