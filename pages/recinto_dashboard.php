@@ -1558,6 +1558,52 @@ td.bloqueado {
 #searchResultsConvenio div:hover {
     background-color: #F7FAFC;
 }
+/* === ESTILOS PARA BOTONES DE DURACIÓN === */
+#opcionesPadel, #opcionesOtros {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+#opcionesPadel label, #opcionesOtros label {
+    flex: 1; /* Hace que ocupen todo el espacio disponible */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.8rem 0.5rem;
+    background: #f0f4f8;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #4a5568;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+#opcionesPadel label:hover, #opcionesOtros label:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e0;
+}
+
+/* Estilo para el radio seleccionado */
+#opcionesPadel input[type="radio"]:checked + span,
+#opcionesOtros input[type="radio"]:checked + span,
+#opcionesPadel input[type="radio"]:checked, 
+#opcionesOtros input[type="radio"]:checked {
+    /* Nota: Como usamos label alrededor, estilamos el label cuando el radio está checked */
+}
+
+/* Truco CSS: Cuando el radio dentro del label está checkeado, cambia el estilo del label */
+#opcionesPadel label:has(input:checked), 
+#opcionesOtros label:has(input:checked) {
+    background: #E1BEE7; /* Morado claro CanchaSport */
+    border-color: #AB47BC;
+    color: #4A148C;
+    box-shadow: 0 2px 8px rgba(171, 71, 188, 0.2);
+}
+
+/* Si el navegador no soporta :has, usamos JS para añadir clase 'active' o confiamos en el diseño base */
 </style>
 </head>
 <body>
@@ -2844,10 +2890,11 @@ async function verDetalleDesdeLista(idReserva) {
 }
 
 // ✅ 3. REEMPLAZAR abrirReservaAdmin COMPLETA
-// === 15. ABRIR MODAL RESERVA ADMIN (CON DEBUG FORZADO) ===
+// === 15. ABRIR MODAL RESERVA ADMIN (CORREGIDO PRECIO Y PÁDEL) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
+    // Helper seguro
     const setC = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
@@ -2859,14 +2906,14 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     setC('admin_hora_inicio', hora);
     setC('admin_socio_id', '');
     setC('admin_monto_total', '0');
-    setC('admin_monto_base', '0');
     
+    // Limpiar búsqueda
     const elSearch = document.getElementById('searchAdmin');
     if (elSearch) elSearch.value = '';
     const elResults = document.getElementById('searchResultsAdmin');
     if (elResults) elResults.style.display = 'none';
 
-    // 2. Calcular hora fin
+    // 2. Calcular hora fin base (60 min)
     const [h, m] = hora.split(':').map(Number);
     if (!isNaN(h) && !isNaN(m)) {
         const fin = new Date();
@@ -2875,6 +2922,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         setC('admin_hora_fin', horaFin);
         setC('admin_duracion_bloque', '60');
 
+        // Displays header
         const fParts = fecha.split('-');
         const elFD = document.getElementById('modalFechaDisplay');
         if (elFD) elFD.textContent = `${fParts[2]}/${fParts[1]}`;
@@ -2883,7 +2931,7 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
     }
 
-    // 3. Buscar cancha
+    // 3. Buscar cancha y configurar UI
     const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
         ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
         : null;
@@ -2896,33 +2944,40 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
 
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        let idDeporte = cancha.id_deporte; 
+        const idDeporte = cancha.id_deporte; 
         
-        // ⚠️ DEBUG: FORZAR PÁDEL PARA CANCHA 1 (BORRAR ESTO LUEGO)
-        if (canchaId == 1) {
-            console.warn("⚠️ DEBUG: Forzando Cancha 1 como Pádel para prueba");
-            idDeporte = 'padel'; 
-        }
-
         if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
+        // ✅ CORRECCIÓN CRÍTICA: Obtener valor base y asegurarse que sea número
         const base = parseFloat(cancha.valor_arriendo) || 0;
-        if (elBase) elBase.value = base;
+        if (elBase) elBase.value = base; // Guardar en hidden input
+        
+        console.log(`💰 Valor Base Cargado: $${base}`);
 
-        // Lógica de detección
+        // Inicializar ventanaActual para que recalcularPrecioTotal funcione
+        window.ventanaActual = {
+            precioBase: base,
+            duracion: 60,
+            esPadel: false
+        };
+
+        // Detectar Pádel
         const esPadel = (idDeporte === 'padel' || idDeporte == 2 || idDeporte == '2');
-        console.log(`✅ Cancha cargada: ${nombre} | ID Deporte BD: ${cancha.id_deporte} | Es Pádel (Lógica): ${esPadel}`);
+        window.ventanaActual.esPadel = esPadel;
 
         if (esPadel) {
             if (divPadel) divPadel.style.display = 'flex';
             if (divOtros) divOtros.style.display = 'none';
+            // Habilitar radios
             const radios = divPadel.querySelectorAll('input[type="radio"]');
             radios.forEach(r => r.disabled = false);
+            // Seleccionar 60 por defecto
             const radio60 = divPadel.querySelector('input[value="60"]');
             if (radio60) radio60.checked = true;
         } else {
             if (divPadel) divPadel.style.display = 'none';
             if (divOtros) divOtros.style.display = 'flex';
+            // Forzar 60 min
             const radio60 = divOtros.querySelector('input[value="60"]');
             if (radio60) {
                 radio60.checked = true;
@@ -2930,12 +2985,15 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
             }
         }
 
+        // ✅ LLAMAR A RECALCULAR PARA ACTUALIZAR MONTO INICIAL
         recalcularPrecioTotal();
+        
     } else {
-        console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
+        console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada`);
         if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
+    // 4. Mostrar Modal
     const modal = document.getElementById('modalReservaAdmin');
     if (modal) {
         modal.style.display = 'flex';
@@ -2945,6 +3003,73 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
             if (searchInput) searchInput.focus();
         }, 100);
     }
+}
+
+// === FUNCIÓN CENTRAL DE CÁLCULO DE PRECIO ===
+function recalcularPrecioTotal() {
+    // 1. Obtener duración seleccionada
+    const radioChecked = document.querySelector('input[name="duracion"]:checked');
+    const duracion = parseInt(radioChecked ? radioChecked.value : 60);
+    
+    // 2. Obtener precio base desde el input hidden (que llenamos en abrirReservaAdmin)
+    const elBase = document.getElementById('admin_monto_base');
+    const precioBase = parseFloat(elBase ? elBase.value : 0);
+    
+    if (precioBase === 0) {
+        console.warn("⚠️ Precio Base es 0. Verifica que la cancha tenga valor_arriendo");
+    }
+
+    // 3. Calcular Factor
+    let factor = 1;
+    if (duracion == 30) factor = 0.5;
+    else if (duracion == 90) factor = 1.5;
+    else if (duracion == 120) factor = 2.0;
+
+    // 4. Calcular Total
+    const total = Math.round(precioBase * factor);
+
+    // 5. Actualizar Inputs y Display
+    const inputMonto = document.getElementById('admin_monto_total');
+    const inputMontoVisible = document.getElementById('admin_monto_total_input');
+    const labelDinamico = document.getElementById('labelMontoDinamico');
+    const subtexto = document.getElementById('subtextoMonto');
+
+    if (inputMonto) inputMonto.value = total;
+    if (inputMontoVisible) inputMontoVisible.value = total;
+    
+    if (labelDinamico) {
+        // Si hay convenio, el texto lo maneja otra lógica, si no, default
+        if (!window.convenioActivo) {
+            labelDinamico.textContent = `💰 Total a pagar:`;
+        }
+    }
+    
+    if (subtexto) {
+        subtexto.textContent = `1 reserva x ${duracion} min`;
+    }
+    
+    console.log(`🧮 Cálculo: Base $${precioBase} x ${duracion}min (factor ${factor}) = $${total}`);
+}
+
+// === ACTUALIZAR DURACIÓN AL CAMBIAR RADIO ===
+function actualizarDuracionReserva(val) {
+    const horaInicio = document.getElementById('admin_hora_inicio').value;
+    if (horaInicio) {
+        // Actualizar hora fin visualmente
+        const [h, m] = horaInicio.split(':').map(Number);
+        const fin = new Date();
+        fin.setHours(h, m + parseInt(val), 0, 0);
+        const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
+        
+        document.getElementById('admin_hora_fin').value = horaFin;
+        document.getElementById('admin_duracion_bloque').value = val;
+        
+        const elHD = document.getElementById('modalHoraDisplay');
+        if (elHD) elHD.textContent = `${horaInicio} - ${horaFin}`;
+    }
+    
+    // Recalcular precio
+    recalcularPrecioTotal();
 }
 
 // === TOAST NOTIFICATIONS ===
@@ -3438,82 +3563,6 @@ function actualizarCalculoMonto(montoBase, duracion, convenio) {
     if (elDMonto) elDMonto.textContent = `$${montoFinal.toLocaleString('es-CL')}`;
     if (labelDinamico) labelDinamico.textContent = textoLabel;
     if (subtextoMonto) subtextoMonto.textContent = textoSub;
-}
-
-// === FUNCIÓN CENTRAL DE CÁLCULO ===
-function recalcularPrecioTotal() {
-    // 1. Obtener valores actuales
-    const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
-    ventanaActual.duracion = duracion;
-    
-    // 2. Factor por duración
-    let factor = 1;
-    if (duracion == 30) factor = 0.5;
-    else if (duracion == 90) factor = 1.5;
-    else if (duracion == 120) factor = 2;
-
-    // 3. Cantidad de reservas (1 si es simple, N si es recurrente)
-    let cantidad = 1;
-    if (document.getElementById('isRecurrent')?.checked) {
-        const start = document.getElementById('startDate')?.value;
-        const end = document.getElementById('endDate')?.value;
-        const day = parseInt(document.getElementById('repeatDay')?.value);
-        
-        if (start && end && !isNaN(day)) {
-            const fechas = generarFechasRecurrencia(start, end, day);
-            cantidad = fechas.length;
-        }
-    }
-    ventanaActual.cantidadReservas = cantidad;
-
-    // 4. Descuento por Convenio
-    let descuento = 0;
-    const convenioId = document.getElementById('admin_convenio_id').value;
-    if (convenioId) {
-        // Aquí deberías tener guardado el % del convenio seleccionado. 
-        // Si no lo tienes en una variable global, búscalo en el objeto del convenio seleccionado previamente.
-        // Asumimos que guardaste el % en window.convenioPorcentaje al seleccionar
-        descuento = window.convenioPorcentaje || 0; 
-    }
-    ventanaActual.descuentoPorcentaje = descuento;
-
-    // 5. Cálculo Matemático
-    const precioUnitarioBruto = Math.round(ventanaActual.precioBase * factor);
-    const subtotal = precioUnitarioBruto * cantidad;
-    const montoDescuento = Math.round(subtotal * (descuento / 100));
-    const totalFinal = subtotal - montoDescuento;
-
-    // 6. Actualizar UI
-    const inputMonto = document.getElementById('admin_monto_total_input');
-    const hiddenMonto = document.getElementById('admin_monto_total');
-    const labelDinamico = document.getElementById('labelMontoDinamico');
-    const subtexto = document.getElementById('subtextoMonto');
-
-    if(inputMonto) inputMonto.value = totalFinal;
-    if(hiddenMonto) hiddenMonto.value = totalFinal;
-
-    // Texto descriptivo
-    if (cantidad > 1) {
-        subtexto.textContent = `${cantidad} reservas x ${duracion} min`;
-    } else {
-        subtexto.textContent = `1 reserva x ${duracion} min`;
-    }
-
-    // Label de descuento
-    if (descuento > 0) {
-        labelDinamico.innerHTML = `🤝 Convenio (${descuento}% OFF)<br><small style="color:#666">Subtotal: $${subtotal.toLocaleString('es-CL')} - Ahorro: $${montoDescuento.toLocaleString('es-CL')}</small>`;
-    } else {
-        labelDinamico.textContent = '💰 Total a pagar:';
-    }
-}
-
-// === ACTUALIZAR DURACIÓN ===
-function actualizarDuracionReserva(val) {
-    const horaInicio = document.getElementById('admin_hora_inicio').value;
-    if(horaInicio) {
-        actualizarHoraFin(horaInicio, parseInt(val));
-    }
-    recalcularPrecioTotal();
 }
 
 // === PERMITIR EDICIÓN MANUAL DEL MONTO ===
@@ -6206,52 +6255,6 @@ async function confirmarNuevoSocio() {
     } finally {
         btn.disabled = false;
         btn.textContent = originalText;
-    }
-}
-
-// === RECALCULAR PRECIO TOTAL (Actualizada para usar datosConvenioSeleccionado) ===
-function recalcularPrecioTotal() {
-    const duracion = parseInt(document.querySelector('input[name="duracion"]:checked')?.value || 60);
-    ventanaActual.duracion = duracion;
-    
-    let factor = 1;
-    if (duracion == 30) factor = 0.5;
-    else if (duracion == 90) factor = 1.5;
-    else if (duracion == 120) factor = 2;
-    
-    const precioBase = ventanaActual.precioBase || 0;
-    const precioUnitarioBruto = Math.round(precioBase * factor);
-    
-    // Aplicar descuento si hay convenio seleccionado
-    let descuentoPorcentaje = 0;
-    if (datosConvenioSeleccionado && datosConvenioSeleccionado.dscto > 0) {
-        descuentoPorcentaje = datosConvenioSeleccionado.dscto;
-    }
-    
-    const montoDescuento = Math.round(precioUnitarioBruto * (descuentoPorcentaje / 100));
-    const totalFinal = precioUnitarioBruto - montoDescuento;
-    
-    // Actualizar Inputs
-    const inputMonto = document.getElementById('admin_monto_total_input');
-    const hiddenMonto = document.getElementById('admin_monto_total');
-    
-    if (inputMonto) inputMonto.value = totalFinal;
-    if (hiddenMonto) hiddenMonto.value = totalFinal;
-    
-    // Actualizar Label Dinámico
-    const labelDinamico = document.getElementById('labelMontoDinamico');
-    const subtexto = document.getElementById('subtextoMonto');
-    
-    if (labelDinamico) {
-        if (descuentoPorcentaje > 0) {
-            labelDinamico.innerHTML = `🤝 Convenio (${descuentoPorcentaje}% OFF)<br><small style="color:#666">Base: $${precioUnitarioBruto.toLocaleString('es-CL')} - Ahorro: $${montoDescuento.toLocaleString('es-CL')}</small>`;
-        } else {
-            labelDinamico.textContent = '💰 Total a pagar:';
-        }
-    }
-    
-    if (subtexto) {
-        subtexto.textContent = `1 reserva x ${duracion} min`;
     }
 }
 
