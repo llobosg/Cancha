@@ -107,10 +107,10 @@ try {
         // Aseguramos que id_club sea null si no hay club, para evitar errores de tipo
         $club_id_val = ($id_club_reserva && $id_club_reserva > 0) ? $id_club_reserva : null;
 
+                // Insertar Reserva Recurrente (SIN id_club para evitar error persistente)
         $stmt_ins = $pdo->prepare("
             INSERT INTO reservas (
                 id_cancha, 
-                id_club, 
                 id_socio, 
                 nombre_cliente, 
                 email_cliente, 
@@ -123,12 +123,11 @@ try {
                 estado_pago, 
                 estado, 
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
         ");
         
         $stmt_ins->execute([
             $id_cancha,
-            $club_id_val,
             $id_socio_final,
             $nombre_cliente,
             $email_cliente,
@@ -137,7 +136,7 @@ try {
             $hora_inicio,
             $hora_fin_calc,
             $monto_unitario,
-            4                  // jugadores_esperados default
+            4 // jugadores_esperados default
         ]);
         
         $id_res = $pdo->lastInsertId();
