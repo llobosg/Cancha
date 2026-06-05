@@ -3581,19 +3581,29 @@ function seleccionarSocioAdmin(id, nombre, email, celular) {
     }
 }
 
-// === VISTA PREVIA DE FECHAS RECURRENTES ===
+// === VISTA PREVIA DE FECHAS RECURRENTES Y ACTUALIZACIÓN DE MONTO ===
 function updatePreviewDates() {
     const day = parseInt(document.getElementById('repeatDay')?.value);
     const start = document.getElementById('startDate')?.value;
     const end = document.getElementById('endDate')?.value;
     const preview = document.getElementById('previewDates');
     
+    // Elementos del monto
+    const inputMontoVisible = document.getElementById('admin_monto_total_input');
+    const inputMontoHidden = document.getElementById('admin_monto_total');
+    const subtexto = document.getElementById('subtextoMonto');
+    const elBase = document.getElementById('admin_monto_base');
+    const radioChecked = document.querySelector('input[name="duracion"]:checked');
+    
     if (!day || !start || !end || isNaN(day)) {
-        if (preview) preview.textContent = 'Selecciona fechas para ver las fechas generadas';
+        if (preview) {
+            preview.textContent = 'Selecciona fechas para ver las fechas generadas';
+            preview.style.color = '#666';
+        }
         return;
     }
     
-    const dates = generateRecurringDates(start, end, day);
+    const dates = generateRecurringDates(start, end, day); // Asumiendo que esta función existe o usas generarFechasRecurrencia
     const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
     
     if (!preview) return;
@@ -3601,22 +3611,56 @@ function updatePreviewDates() {
     if (dates.length === 0) {
         preview.textContent = '⚠️ No hay fechas válidas en este rango';
         preview.style.color = '#C62828';
+        
+        // Resetear monto si no hay fechas
+        if (inputMontoVisible && elBase) {
+             const base = parseFloat(elBase.value) || 0;
+             inputMontoVisible.value = base; 
+             if(inputMontoHidden) inputMontoHidden.value = base;
+             if(subtexto) subtexto.textContent = '1 reserva x 60 min';
+        }
     } else {
+        // Mostrar resumen de fechas
         preview.textContent = `📅 ${dates.length} fechas: ` + dates.slice(0, 3).map(d => {
             const dateObj = new Date(d + 'T00:00:00');
             return `${dayNames[dateObj.getDay()]} ${d.split('-')[2]}/${d.split('-')[1]}`;
         }).join(', ') + (dates.length > 3 ? '...' : '');
         preview.style.color = '#2E7D32';
+
+        // ✅ CALCULAR Y ACTUALIZAR MONTO TOTAL AUTOMÁTICAMENTE
+        if (inputMontoVisible && elBase) {
+            const precioBase = parseFloat(elBase.value) || 0;
+            const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
+            
+            let factor = 1;
+            if (duracion === 30) factor = 0.5;
+            else if (duracion === 90) factor = 1.5;
+            else if (duracion === 120) factor = 2.0;
+            
+            const precioUnitario = Math.round(precioBase * factor);
+            const montoTotalGlobal = precioUnitario * dates.length;
+            
+            // Actualizar inputs
+            inputMontoVisible.value = montoTotalGlobal;
+            if (inputMontoHidden) inputMontoHidden.value = montoTotalGlobal;
+            
+            // Actualizar subtexto
+            if (subtexto) {
+                subtexto.textContent = `${dates.length} reservas x $${precioUnitario.toLocaleString('es-CL')} c/u`;
+            }
+            
+            console.log(`🔄 Auto-Update Monto: ${dates.length} reservas x $${precioUnitario} = $${montoTotalGlobal}`);
+        }
     }
 }
 
+// Asegúrate de tener esta función helper si no la tienes con otro nombre
 function generateRecurringDates(startDate, endDate, dayOfWeek) {
     const dates = [];
     let current = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
-    
     while (current <= end) {
-        if (current.getDay() === dayOfWeek) {
+        if (current.getDay() === parseInt(dayOfWeek)) {
             dates.push(current.toISOString().split('T')[0]);
         }
         current.setDate(current.getDate() + 1);
