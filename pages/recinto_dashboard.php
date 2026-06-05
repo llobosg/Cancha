@@ -214,7 +214,8 @@ if ($debug_rows) {
 // === 🔍 CARGA DE CANCHAS PARA JS (CORRECCIÓN DEL ERROR) ===
 $canchas_js = []; // Inicializar por seguridad
 try {
-    $stmt_canchas = $pdo->prepare("SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado FROM canchas WHERE id_recinto = ?");
+    // ✅ AGREGADO: id_deporte al SELECT
+    $stmt_canchas = $pdo->prepare("SELECT id_cancha, nro_cancha, nombre_cancha, valor_arriendo, activa, estado, id_deporte FROM canchas WHERE id_recinto = ?");
     $stmt_canchas->execute([$id_recinto]);
     $raw_canchas = $stmt_canchas->fetchAll(PDO::FETCH_ASSOC);
     
