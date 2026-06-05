@@ -3001,28 +3001,25 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     }
 }
 
-// === 16. RECÁLCULO DE PRECIO SEGÚN DURACIÓN ===
+// === 16. RECÁLCULO DE PRECIO SEGÚN DURACIÓN (CORREGIDO PARA INPUT VISIBLE) ===
 function recalcularPrecioTotal() {
     // 1. Obtener duración seleccionada
     const radioChecked = document.querySelector('input[name="duracion"]:checked');
-    
-    // Si no hay radio seleccionado (raro), asumimos 60
     const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
     
-    // 2. Obtener precio base desde el input hidden (que llenamos en abrirReservaAdmin)
+    // 2. Obtener precio base desde el input hidden
     const elBase = document.getElementById('admin_monto_base');
     let precioBase = 0;
     if (elBase) {
         precioBase = parseFloat(elBase.value);
     }
     
-    // Validación de seguridad
     if (isNaN(precioBase) || precioBase <= 0) {
-        console.warn("⚠️ Precio Base inválido o cero. Revisa la cancha seleccionada.");
-        precioBase = 0;
+        console.warn("⚠️ Precio Base inválido o cero.");
+        return;
     }
 
-    // 3. Calcular Factor según duración
+    // 3. Calcular Factor
     let factor = 1;
     if (duracion === 30) factor = 0.5;
     else if (duracion === 90) factor = 1.5;
@@ -3032,21 +3029,19 @@ function recalcularPrecioTotal() {
     // 4. Calcular Total
     const total = Math.round(precioBase * factor);
 
-    // 5. Actualizar Inputs y Display
+    // 5. Actualizar Inputs
     const inputMontoHidden = document.getElementById('admin_monto_total');
-    const inputMontoVisible = document.getElementById('admin_monto_total_input'); // Si tienes un input visible
+    const inputMontoVisible = document.getElementById('admin_monto_total_input');
     const labelDinamico = document.getElementById('labelMontoDinamico');
     const subtexto = document.getElementById('subtextoMonto');
 
+    // ✅ CRÍTICO: Actualizar AMBOS inputs
     if (inputMontoHidden) inputMontoHidden.value = total;
     if (inputMontoVisible) inputMontoVisible.value = total;
     
-    // Actualizar etiqueta visual si existe
+    // Actualizar etiqueta visual
     if (labelDinamico) {
-        // Si hay convenio activo, el texto lo maneja otra lógica, si no, default
-        if (!window.convenioActivo) {
-            labelDinamico.innerHTML = `💰 Total: <strong>$${total.toLocaleString('es-CL')}</strong>`;
-        }
+        labelDinamico.innerHTML = `💰 Total a pagar:`;
     }
     
     if (subtexto) {
@@ -3056,7 +3051,7 @@ function recalcularPrecioTotal() {
     console.log(`🧮 Cálculo: Base $${precioBase} x ${duracion}min (factor ${factor}) = $${total}`);
 }
 
-// === 17. ACTUALIZAR DURACIÓN AL CAMBIAR RADIO ===
+// === 17. ACTUALIZAR DURACIÓN Y HORA FIN ===
 function actualizarDuracionReserva(val) {
     const horaInicio = document.getElementById('admin_hora_inicio').value;
     
@@ -3064,13 +3059,12 @@ function actualizarDuracionReserva(val) {
     if (horaInicio) {
         const [h, m] = horaInicio.split(':').map(Number);
         const duracionMin = parseInt(val);
-        
         const fin = new Date();
         fin.setHours(h, m + duracionMin, 0, 0);
         
         const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
         
-        // Actualizar inputs
+        // Actualizar inputs de hora
         document.getElementById('admin_hora_fin').value = horaFin;
         document.getElementById('admin_duracion_bloque').value = val;
         
@@ -3079,8 +3073,17 @@ function actualizarDuracionReserva(val) {
         if (elHD) elHD.textContent = `${horaInicio} - ${horaFin}`;
     }
     
-    // Recalcular precio inmediatamente
+    // Recalcular precio inmediatamente (esto actualiza el input visible)
     recalcularPrecioTotal();
+}
+
+// === 18. PERMITIR EDICIÓN MANUAL DEL MONTO ===
+function actualizarMontoManual(valor) {
+    const inputHidden = document.getElementById('admin_monto_total');
+    if (inputHidden) {
+        inputHidden.value = valor;
+        console.log(`✏️ Monto editado manualmente a: $${valor}`);
+    }
 }
 
 // === TOAST NOTIFICATIONS ===
@@ -3574,17 +3577,6 @@ function actualizarCalculoMonto(montoBase, duracion, convenio) {
     if (elDMonto) elDMonto.textContent = `$${montoFinal.toLocaleString('es-CL')}`;
     if (labelDinamico) labelDinamico.textContent = textoLabel;
     if (subtextoMonto) subtextoMonto.textContent = textoSub;
-}
-
-// === PERMITIR EDICIÓN MANUAL DEL MONTO ===
-function actualizarMontoManual(valor) {
-    const val = parseFloat(valor);
-    if (!isNaN(val) && val >= 0) {
-        document.getElementById('admin_monto_total').value = val;
-        // Nota: Esto rompe la sincronización automática. 
-        // Si el usuario cambia duración después, se sobrescribirá.
-        // Es un comportamiento aceptable para "ajuste final".
-    }
 }
 
 // === ESCUCHAR CAMBIOS EN RECURRENTE ===
