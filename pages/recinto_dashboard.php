@@ -3698,98 +3698,62 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// === SUBMIT DEL FORMULARIO (ADAPTADO AL BUSCADOR UNIFICADO) ===
-// === GUARDAR RESERVA ADMIN (ESTRUCTURA SEGURA) ===
+// === GUARDAR RESERVA ADMIN (CORREGIDO) ===
 function guardarReservaAdmin(e) {
-    // 1. Prevenir envío de formulario si existe evento
     if (e && typeof e.preventDefault === 'function') {
         e.preventDefault();
     }
 
     console.log("💾 Iniciando guarda de reserva única...");
 
-    // 2. Obtener datos del formulario
+    // ✅ 1. OBTENER TODOS LOS VALORES DEL FORMULARIO
     const canchaId = document.getElementById('admin_cancha_id').value;
     const fecha = document.getElementById('admin_fecha').value;
     const horaInicio = document.getElementById('admin_hora_inicio').value;
     const horaFin = document.getElementById('admin_hora_fin').value;
-    const idSocio = document.getElementById('admin_socio_id').value;
-    const monto = document.getElementById('admin_monto_total').value;
     
+    // ✅ AQUÍ ESTABA EL ERROR: Debes obtener el valor del input
+    const id_socio = document.getElementById('admin_socio_id').value || null; 
+    
+    const monto = document.getElementById('admin_monto_total').value;
+    const duracion = document.getElementById('admin_duracion_bloque').value || 60;
+
     // Validaciones básicas
     if (!canchaId || !fecha || !horaInicio) {
-        showToast('❌ Faltan datos obligatorios', 'error');
+        showToast('❌ Faltan datos obligatorios (Cancha, Fecha, Hora)', 'error');
         return;
     }
 
-    // 3. Preparar datos
+    // ✅ 2. PREPARAR DATOS PARA ENVÍO
+    // Usa FormData o JSON según cómo espere tu API
     const formData = new FormData();
-    formData.append('action', 'crear_reserva_admin'); // Ajusta según tu API
+    formData.append('action', 'crear_reserva_admin'); // Ajusta si tu action es diferente
     formData.append('id_cancha', canchaId);
     formData.append('fecha', fecha);
     formData.append('hora_inicio', horaInicio);
     formData.append('hora_fin', horaFin);
-    formData.append('id_socio', idSocio);
+    formData.append('id_socio', id_socio); // Ahora sí está definida
     formData.append('monto_total', monto);
+    formData.append('duracion_bloque', duracion);
 
-    // Si no hay socio ni convenio, error
-    if (!id_socio && !id_convenio) {
-        showToast('❌ Debes seleccionar un Socio o un Convenio', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-        return;
-    }
-
-    try {
-        const formData = new FormData();
-        formData.append('action', 'crear_manual');
-        formData.append('id_cancha', cancha);
-        formData.append('fecha', fecha);
-        formData.append('hora_inicio', hora);
-        formData.append('hora_fin', horaF);
-        formData.append('monto_total', monto);
-        
-        // Enviar ID Socio (si existe)
-        if (id_socio) {
-            formData.append('id_socio', id_socio);
+    // ✅ 3. ENVIAR A API
+    fetch('../api/gestion_reservas.php', { // Asegúrate que esta ruta sea correcta
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✅ Reserva guardada correctamente', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + (data.message || 'Error al guardar'), 'error');
         }
-        
-        // Enviar ID Convenio (si existe)
-        if (id_convenio) {
-            formData.append('id_convenio', id_convenio);
-            // Si hay convenio, podemos enviar datos de contacto por si acaso
-            formData.append('nombre_cliente', document.getElementById('searchUnified')?.value || '');
-            formData.append('email_cliente', window.convenioEmailContacto || '');
-        }
-
-        // ✅ CORRECCIÓN: Si acabamos de crear un socio express, 
-        // el ID ya está en admin_socio_id, pero el backend necesita saber 
-        // que es "nuevo" para enviar el email de activación.
-        // Como no tenemos el flag checkNuevoSocio, podemos verificar si el socio 
-        // fue creado en los últimos segundos o simplemente confiar en que el backend 
-        // maneje la reserva normal.
-        
-        // NOTA: Para el email de activación, lo ideal es que el backend verifique 
-        // si el socio tiene password NULL o activation_token.
-        fetch('../api/gestion_reservas.php', { // Ajusta la ruta de tu API
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('✅ Reserva guardada correctamente', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showToast('❌ ' + (data.message || 'Error al guardar'), 'error');
-            }
-        })
-    } catch (err) {
+    })
+    .catch(error => {
         console.error('Error:', error);
-        showToast('❌ Error de conexión', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
+        showToast('❌ Error de conexión al guardar', 'error');
+    });
 }
 
 function abrirModalMover() {
