@@ -3053,124 +3053,6 @@ function actualizarDuracionReserva(val) {
     recalcularPrecioTotal();
 }
 
-// === 18. MANEJAR RESERVA RECURRENTE (CORREGIDO) ===
-async function handleRecurrentReservation() {
-    const btn = document.getElementById('btnRecurrent');
-    if (!btn) { console.error("Botón no encontrado"); return; }
-    
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Calculando...';
-
-    try {
-        const cancha = document.getElementById('admin_cancha_id').value;
-        const horaInicio = document.getElementById('admin_hora_inicio').value;
-        const idSocio = document.getElementById('admin_socio_id').value || null;
-        
-        const radioChecked = document.querySelector('input[name="duracion"]:checked');
-        const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
-        
-        const elBase = document.getElementById('admin_monto_base');
-        const precioBase = parseFloat(elBase ? elBase.value : 0);
-        
-        let factor = 1;
-        if (duracion === 30) factor = 0.5;
-        else if (duracion === 90) factor = 1.5;
-        else if (duracion === 120) factor = 2.0;
-        
-        const precioPorReserva = Math.round(precioBase * factor);
-
-        const day = parseInt(document.getElementById('repeatDay')?.value);
-        const sDate = document.getElementById('startDate')?.value;
-        const eDate = document.getElementById('endDate')?.value;
-
-        if (!day || !sDate || !eDate) {
-            showToast('❌ Complete día y fechas', 'error');
-            btn.disabled = false; btn.innerHTML = originalText; return;
-        }
-
-        // Generar fechas
-        const fechas = generarFechasRecurrencia(sDate, eDate, day);
-        
-        if (fechas.length === 0) {
-            showToast('❌ No hay fechas válidas', 'error');
-            btn.disabled = false; btn.innerHTML = originalText; return;
-        }
-
-        // ✅ ACTUALIZAR INPUT VISIBLE CON EL TOTAL
-        const montoTotalEstimado = precioPorReserva * fechas.length;
-        const inputMontoVisible = document.getElementById('admin_monto_total_input');
-        const inputMontoHidden = document.getElementById('admin_monto_total');
-        const subtexto = document.getElementById('subtextoMonto');
-        
-        if (inputMontoVisible) inputMontoVisible.value = montoTotalEstimado;
-        if (inputMontoHidden) inputMontoHidden.value = montoTotalEstimado;
-        if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
-
-        console.log(`🔄 Recurrente: ${fechas.length} reservas x $${precioPorReserva} = $${montoTotalEstimado}`);
-
-        if (!confirm(`Se crearán ${fechas.length} reservas.\nTotal: $${montoTotalEstimado}\n¿Confirmar?`)) {
-            btn.disabled = false; btn.innerHTML = originalText; return;
-        }
-
-        // Calcular unitario final (por si el admin editó el total)
-        const montoFinalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
-        const montoUnitarioParaAPI = Math.round(montoFinalInput / fechas.length);
-
-        const payload = {
-            action: 'create_recurrent',
-            id_cancha: cancha,
-            hora_inicio: horaInicio,
-            duracion_bloque: duracion, 
-            id_socio: idSocio,
-            repeat_day: day,
-            start_date: sDate,
-            end_date: eDate,
-            monto_total: montoUnitarioParaAPI, // Enviamos unitario
-            nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
-            emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
-            telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
-        };
-
-        btn.innerHTML = '⏳ Generando...';
-
-        const res = await fetch('../api/reserva_recurrente.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            showToast(`✅ ${data.created} reservas creadas`, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showToast(`❌ ${data.message}`, 'error');
-            btn.disabled = false; btn.innerHTML = originalText;
-        }
-
-    } catch (err) {
-        console.error(err);
-        showToast('❌ Error de conexión', 'error');
-        btn.disabled = false; btn.innerHTML = originalText;
-    }
-}
-
-// Helper para generar fechas
-function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
-    const dates = [];
-    let current = new Date(startDate + 'T00:00:00');
-    const end = new Date(endDate + 'T00:00:00');
-    while (current <= end) {
-        if (current.getDay() === parseInt(dayOfWeek)) {
-            dates.push(current.toISOString().split('T')[0]);
-        }
-        current.setDate(current.getDate() + 1);
-    }
-    return dates;
-}
-
 // Duración (radio buttons)
 document.querySelectorAll('input[name="duracion"]').forEach(r => {
     r.addEventListener('change', recalcularPrecioTotal);
@@ -6255,6 +6137,143 @@ async function confirmarNuevoSocio() {
     }
 }
 
+// === FUNCIÓN SEMÁFORO (DECIDE QUÉ GUARDAR) ===
+function procesarReserva() {
+    const isRecurrent = document.getElementById('isRecurrent').checked;
+    
+    if (isRecurrent) {
+        console.log("🔄 Modo Recurrente Activado");
+        handleRecurrentReservation(); // Llama a la función de recurrentes
+    } else {
+        console.log("💾 Modo Reserva Única");
+        guardarReservaAdmin(); // Llama a tu función original de guarda única
+    }
+}
+
+// === TOGGLE CAMPOS RECURRENTES ===
+function toggleRecurrentFields(show) {
+    const fields = document.getElementById('recurrentFields');
+    if (fields) {
+        fields.style.display = show ? 'block' : 'none';
+    }
+}
+
+// === MANEJAR RESERVA RECURRENTE (LA QUE YA TENÍAMOS CORREGIDA) ===
+async function handleRecurrentReservation() {
+    console.log("🚀 [DEBUG] handleRecurrentReservation INICIADO");
+    
+    const btn = document.querySelector('button[onclick="procesarReserva()"]');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Calculando...';
+
+    try {
+        const cancha = document.getElementById('admin_cancha_id').value;
+        const horaInicio = document.getElementById('admin_hora_inicio').value;
+        const idSocio = document.getElementById('admin_socio_id').value || null;
+        
+        const radioChecked = document.querySelector('input[name="duracion"]:checked');
+        const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
+        
+        const elBase = document.getElementById('admin_monto_base');
+        const precioBase = parseFloat(elBase ? elBase.value : 0);
+        
+        let factor = 1;
+        if (duracion === 30) factor = 0.5;
+        else if (duracion === 90) factor = 1.5;
+        else if (duracion === 120) factor = 2.0;
+        
+        const precioPorReserva = Math.round(precioBase * factor);
+
+        const day = parseInt(document.getElementById('repeatDay')?.value);
+        const sDate = document.getElementById('startDate')?.value;
+        const eDate = document.getElementById('endDate')?.value;
+
+        if (!day || !sDate || !eDate) {
+            showToast('❌ Complete día y fechas de recurrencia', 'error');
+            btn.disabled = false; btn.innerHTML = originalText; return;
+        }
+
+        // Generar fechas
+        const fechas = generarFechasRecurrencia(sDate, eDate, day);
+        
+        if (fechas.length === 0) {
+            showToast('❌ No hay fechas válidas en este rango', 'error');
+            btn.disabled = false; btn.innerHTML = originalText; return;
+        }
+
+        // ACTUALIZAR INPUT VISIBLE CON EL TOTAL
+        const montoTotalEstimado = precioPorReserva * fechas.length;
+        const inputMontoVisible = document.getElementById('admin_monto_total_input');
+        const inputMontoHidden = document.getElementById('admin_monto_total');
+        const subtexto = document.getElementById('subtextoMonto');
+        
+        if (inputMontoVisible) inputMontoVisible.value = montoTotalEstimado;
+        if (inputMontoHidden) inputMontoHidden.value = montoTotalEstimado;
+        if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
+
+        if (!confirm(`Se crearán ${fechas.length} reservas.\nTotal: $${montoTotalEstimado}\n¿Confirmar?`)) {
+            btn.disabled = false; btn.innerHTML = originalText; return;
+        }
+
+        // Calcular unitario final
+        const montoFinalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
+        const montoUnitarioParaAPI = Math.round(montoFinalInput / fechas.length);
+
+        const payload = {
+            action: 'create_recurrent',
+            id_cancha: cancha,
+            hora_inicio: horaInicio,
+            duracion_bloque: duracion, 
+            id_socio: idSocio,
+            repeat_day: day,
+            start_date: sDate,
+            end_date: eDate,
+            monto_total: montoUnitarioParaAPI,
+            nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
+            emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
+            telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
+        };
+
+        btn.innerHTML = '⏳ Generando...';
+
+        const res = await fetch('../api/reserva_recurrente.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(`✅ ${data.created} reservas creadas`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(`❌ ${data.message}`, 'error');
+            btn.disabled = false; btn.innerHTML = originalText;
+        }
+
+    } catch (err) {
+        console.error(err);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false; btn.innerHTML = originalText;
+    }
+}
+
+// Helper para generar fechas
+function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
+    const dates = [];
+    let current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    while (current <= end) {
+        if (current.getDay() === parseInt(dayOfWeek)) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
 // Modificar seleccionarConvenioAdmin para guardar el % en variable global
 // Agrega esta línea dentro de seleccionarConvenioAdmin:
 // window.convenioDsctoActual = dscto;
@@ -6388,46 +6407,47 @@ window.cerrarSubmodal = cerrarSubmodal;
                     </div>
                 </div>
 
-                <!-- ✅ Sección Reserva Recurrente (con evento fijo) -->
+                <!-- ✅ Sección Reserva Recurrente -->
                 <div style="margin:1.25rem 0; padding-top:1rem; border-top:1px solid #eee;">
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
-                    <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;" onchange="toggleRecurrentFields(this.checked)">
-                    <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Crear reserva recurrente</label>
+                        <input type="checkbox" id="isRecurrent" style="width:18px; height:18px;" onchange="toggleRecurrentFields(this.checked)">
+                        <label for="isRecurrent" style="font-weight:600; color:#333; cursor:pointer;">🔄 Crear reserva recurrente</label>
                     </div>
                     
                     <div id="recurrentFields" style="display:none; background:#F7FAFC; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
-                    <div class="form-group">
-                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
-                        <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
-                        <option value="1">Lunes</option>
-                        <option value="2">Martes</option>
-                        <option value="3">Miércoles</option>
-                        <option value="4">Jueves</option>
-                        <option value="5">Viernes</option>
-                        <option value="6">Sábado</option>
-                        <option value="0">Domingo</option>
-                        </select>
-                    </div>
-                    
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
                         <div class="form-group">
-                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
-                        <input type="date" id="startDate" name="start_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                            <label style="font-size:0.9rem; font-weight:600; color:#333;">Repetir cada:</label>
+                            <select id="repeatDay" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                                <option value="1">Lunes</option>
+                                <option value="2">Martes</option>
+                                <option value="3">Miércoles</option>
+                                <option value="4">Jueves</option>
+                                <option value="5">Viernes</option>
+                                <option value="6">Sábado</option>
+                                <option value="0">Domingo</option>
+                            </select>
                         </div>
-                        <div class="form-group">
-                        <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
-                        <input type="date" id="endDate" name="end_date" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+                            <div class="form-group">
+                                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha inicio *</label>
+                                <input type="date" id="startDate" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:0.9rem; font-weight:600; color:#333;">Fecha fin *</label>
+                                <input type="date" id="endDate" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ccc; margin-top:0.3rem;">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
-                        <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
-                    </div>
+                        
+                        <div style="margin-top:0.75rem; font-size:0.85rem; color:#666;">
+                            <span id="previewDates">Selecciona fechas para ver las fechas generadas</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Botón submit -->
-                <button type="submit" style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem; transition:transform 0.2s;">
+                <!-- Botón Inteligente (Type Button para controlar con JS) -->
+                <button type="button" onclick="procesarReserva()" 
+                    style="width:100%; padding:0.9rem; background:linear-gradient(135deg,#CE93D8,#AB47BC); color:white; border:none; border-radius:14px; font-weight:600; font-size:1rem; cursor:pointer; margin-top:0.5rem; transition:transform 0.2s;">
                     💾 Crear Reserva
                 </button>
         </form>
