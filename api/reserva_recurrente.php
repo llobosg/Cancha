@@ -103,14 +103,41 @@ try {
         $minutos_fin = $minutos_ini + $duracion_minutos;
         $hora_fin_calc = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
 
-        // Insertar
+                // Insertar Reserva Recurrente
+        // Aseguramos que id_club sea null si no hay club, para evitar errores de tipo
+        $club_id_val = ($id_club_reserva && $id_club_reserva > 0) ? $id_club_reserva : null;
+
         $stmt_ins = $pdo->prepare("
-            INSERT INTO reservas (id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', NOW())
+            INSERT INTO reservas (
+                id_cancha, 
+                id_club, 
+                id_socio, 
+                nombre_cliente, 
+                email_cliente, 
+                telefono_cliente, 
+                fecha, 
+                hora_inicio, 
+                hora_fin, 
+                monto_total, 
+                jugadores_esperados, 
+                estado_pago, 
+                estado, 
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
         ");
+        
         $stmt_ins->execute([
-            $id_cancha, $id_club_reserva, $id_socio_final, $nombre_cliente, $email_cliente, $telefono_cliente,
-            $fecha, $hora_inicio, $hora_fin_calc, $monto_unitario
+            $id_cancha,
+            $club_id_val,
+            $id_socio_final,
+            $nombre_cliente,
+            $email_cliente,
+            $telefono_cliente,
+            $fecha,
+            $hora_inicio,
+            $hora_fin_calc,
+            $monto_unitario,
+            4                  // jugadores_esperados default
         ]);
         
         $id_res = $pdo->lastInsertId();
