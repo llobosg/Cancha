@@ -3003,55 +3003,54 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
 
 // === 16. CÁLCULO DE PRECIO DINÁMICO (DEFINITIVO) ===
 function recalcularPrecioTotal() {
-    // 1. Obtener duración seleccionada
     const radioChecked = document.querySelector('input[name="duracion"]:checked');
     const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
-    
-    // 2. Obtener precio base desde el input hidden (ADMIN_MONTO_BASE)
-    const elBase = document.getElementById('admin_monto_base');
-    let precioBase = 0;
-    if (elBase && elBase.value) {
-        precioBase = parseFloat(elBase.value);
-    }
-    
-    if (isNaN(precioBase) || precioBase <= 0) {
-        console.warn("⚠️ Precio Base inválido o cero.");
-        return;
-    }
 
-    // 3. Calcular Factor
+    const elBase = document.getElementById('admin_monto_base');
+    const montoBase = parseFloat(elBase?.value || 0);
+
+    const day = parseInt(document.getElementById('repeatDay')?.value);
+    const sDate = document.getElementById('startDate')?.value;
+    const eDate = document.getElementById('endDate')?.value;
+
+    if (!montoBase || !day || !sDate || !eDate) return;
+
     let factor = 1;
     if (duracion === 30) factor = 0.5;
     else if (duracion === 90) factor = 1.5;
-    else if (duracion === 120) factor = 2.0;
-    else factor = 1; // 60 min
+    else if (duracion === 120) factor = 2;
 
-    // 4. Calcular Total
-    const total = Math.round(precioBase * factor);
+    const precioPorReserva = Math.round(montoBase * factor);
 
-    // 5. Actualizar Inputs (CLAVE: Actualizar el INPUT VISIBLE)
-    const inputMontoHidden = document.getElementById('admin_monto_total');
-    const inputMontoVisible = document.getElementById('admin_monto_total_input');
+    const fechas = generarFechasRecurrencia(sDate, eDate, day);
+
+    const total = precioPorReserva * fechas.length;
+
+    const inputVisible = document.getElementById('admin_monto_total_input');
+    const inputHidden = document.getElementById('admin_monto_total');
     const subtexto = document.getElementById('subtextoMonto');
 
-    // Actualizar input oculto (para enviar al backend)
-    if (inputMontoHidden) inputMontoHidden.value = total;
-    
-    // ✅ ACTUALIZAR INPUT VISIBLE (El que ve el admin)
-    if (inputMontoVisible) {
-        inputMontoVisible.value = total;
-        // Efecto visual sutil para indicar cambio
-        inputMontoVisible.style.backgroundColor = "#E8F5E9";
-        setTimeout(() => { inputMontoVisible.style.backgroundColor = "white"; }, 300);
-    }
-    
-    // Actualizar subtexto
-    if (subtexto) {
-        subtexto.textContent = `1 reserva x ${duracion} min`;
-    }
-    
-    console.log(`🧮 Cálculo: Base $${precioBase} x ${duracion}min (factor ${factor}) = $${total}`);
+    if (inputVisible) inputVisible.value = total;
+    if (inputHidden) inputHidden.value = total;
+    if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
+
+    console.log("💰 RECALCULO:", {
+        montoBase,
+        duracion,
+        fechas: fechas.length,
+        total
+    });
 }
+
+// Duración (radio buttons)
+document.querySelectorAll('input[name="duracion"]').forEach(r => {
+    r.addEventListener('change', recalcularPrecioTotal);
+});
+
+// Fechas + día
+['startDate', 'endDate', 'repeatDay'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', recalcularPrecioTotal);
+});
 
 // === 17. EVENTO AL CAMBIAR DURACIÓN ===
 function actualizarDuracionReserva(val) {
@@ -3390,9 +3389,12 @@ async function handleRecurrentReservation() {
 
         // 2. Generar fechas para contar
         const fechas = generarFechasRecurrencia(sDate, eDate, day);
+
+        console.log("📅 FECHAS GENERADAS:", fechas);
         
-        if (fechas.length === 0) {
-            showToast('❌ No hay fechas válidas', 'error');
+        if (fechas.length <= 1) {
+            showToast('⚠️  No hay fechas válidas', 'error');
+            console.warn("⚠️ Solo 1 fecha detectada");
             btn.disabled = false; btn.innerHTML = originalText; return;
         }
 
