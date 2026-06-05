@@ -140,7 +140,8 @@ try {
                 continue; 
             }
 
-            // === 1. CALCULAR HORA FIN Y DATOS ADICIONALES ===
+            // Calcular hora fin basada en duración si no viene explícita o para asegurar consistencia
+            // Asumimos que $hora_fin ya viene calculada desde el frontend o la calculamos aquí
             $duracion_minutos = intval($input['duracion_bloque'] ?? 60);
             $h_ini_parts = explode(':', $hora_inicio);
             $minutos_ini = ($h_ini_parts[0] * 60) + $h_ini_parts[1];
@@ -149,32 +150,15 @@ try {
             $m_fin = $minutos_fin % 60;
             $hora_fin_calc = sprintf("%02d:%02d", $h_fin, $m_fin);
 
-            // Obtener id_club del socio si existe (para consistencia con reservas manuales)
-            $id_club_reserva = null;
-            if ($id_socio_final) {
-                $stmt_club = $pdo->prepare("SELECT id_club FROM socios WHERE id_socio = ? LIMIT 1");
-                $stmt_club->execute([$id_socio_final]);
-                $socio_club = $stmt_club->fetch(PDO::FETCH_ASSOC);
-                if ($socio_club) $id_club_reserva = $socio_club['id_club'];
-            }
-
             // === 2. INSERTAR RESERVA INDIVIDUAL ===
-            // Nota: Agregamos id_club a la inserción
-            $stmt = $pdo->prepare("
-                INSERT INTO reservas (
-                    id_cancha, id_club, id_socio, fecha, hora_inicio, hora_fin, 
-                    monto_total, jugadores_esperados, estado_pago, estado, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
-            ");
-            
+            $stmt = $pdo->prepare("INSERT INTO reservas (id_cancha, id_socio, fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())");
             $stmt->execute([
                 $id_cancha,
-                $id_club_reserva, // <--- Agregado
                 $id_socio_final,
                 $fecha,
                 $hora_inicio,
-                $hora_fin_calc,
-                $monto_total, // Este es el unitario que enviamos desde el JS
+                $hora_fin_calc, // Usamos la calculada para precisión
+                $monto_total,
                 $jugadores
             ]);
             
