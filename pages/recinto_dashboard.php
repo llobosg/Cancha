@@ -3366,21 +3366,35 @@ function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
     return dates;
 }
 
-// === MANEJAR RESERVA RECURRENTE (CORREGIDO) ===
+// === 16.2 MANEJAR RESERVA RECURRENTE (CON CÁLCULO DE MONTO TOTAL) ===
 async function handleRecurrentReservation() {
-    const btn = document.querySelector('#formReservaManual button[type="submit"]');
+    const btn = document.querySelector('#formReservaManual button[type="submit"]'); // Ajusta el selector si es necesario
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '⏳ Generando reservas...';
+    btn.textContent = '⏳ Calculando...';
 
     try {
         // 1. Obtener datos del formulario
         const cancha = document.getElementById('admin_cancha_id').value;
         const horaInicio = document.getElementById('admin_hora_inicio').value;
-        const horaFin = document.getElementById('admin_hora_fin').value;
         const idSocio = document.getElementById('admin_socio_id').value || null;
-        const montoTotal = parseFloat(document.getElementById('admin_monto_total').value) || 0;
         
+        // Obtener duración seleccionada actualmente
+        const radioChecked = document.querySelector('input[name="duracion"]:checked');
+        const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
+        
+        // Obtener precio base de la cancha (del input hidden que llenamos al abrir modal)
+        const elBase = document.getElementById('admin_monto_base');
+        const precioBase = parseFloat(elBase ? elBase.value : 0);
+        
+        // Calcular factor según duración
+        let factor = 1;
+        if (duracion === 30) factor = 0.5;
+        else if (duracion === 90) factor = 1.5;
+        else if (duracion === 120) factor = 2.0;
+        
+        const precioPorReserva = Math.round(precioBase * factor);
+
         const day = parseInt(document.getElementById('repeatDay')?.value);
         const sDate = document.getElementById('startDate')?.value;
         const eDate = document.getElementById('endDate')?.value;
@@ -3393,14 +3407,7 @@ async function handleRecurrentReservation() {
             return;
         }
 
-        if (new Date(sDate) > new Date(eDate)) {
-            showToast('❌ Fecha inicio debe ser anterior a fecha fin', 'error');
-            btn.disabled = false;
-            btn.textContent = originalText;
-            return;
-        }
-
-        // 2. Generar fechas en JS para mostrar preview (opcional) o validar
+        // 2. Generar fechas para contar cuántas serán
         const fechas = generarFechasRecurrencia(sDate, eDate, day);
         
         if (fechas.length === 0) {
@@ -3410,30 +3417,59 @@ async function handleRecurrentReservation() {
             return;
         }
 
-        if (!confirm(`Se crearán ${fechas.length} reservas desde ${sDate} hasta ${eDate}. ¿Continuar?`)) {
+        // 3. CALCULAR Y MOSTRAR MONTO TOTAL ESTIMADO
+        const montoTotalEstimado = precioPorReserva * fechas.length;
+        
+        // Actualizar Input Visible con el TOTAL
+        const inputMontoVisible = document.getElementById('admin_monto_total_input');
+        const inputMontoHidden = document.getElementById('admin_monto_total');
+        const subtexto = document.getElementById('subtextoMonto');
+        
+        if (inputMontoVisible) inputMontoVisible.value = montoTotalEstimado;
+        if (inputMontoHidden) inputMontoHidden.value = montoTotalEstimado;
+        
+        if (subtexto) {
+            subtexto.textContent = `${fechas.length} reservas x ${duracion} min ($${precioPorReserva.toLocaleString('es-CL')} c/u)`;
+        }
+
+        console.log(`🔄 Recurrente: ${fechas.length} reservas x $${precioPorReserva} = $${montoTotalEstimado}`);
+
+        // Confirmación al usuario
+        if (!confirm(`Se crearán ${fechas.length} reservas.\n\nPrecio por reserva: $${precioPorReserva}\nTotal estimado: $${montoTotalEstimado}\n\n¿Deseas continuar? (Puedes editar el monto total antes de confirmar si deseas aplicar un descuento)`)) {
             btn.disabled = false;
             btn.textContent = originalText;
             return;
         }
 
-        // 3. Preparar Payload para API
+        // 4. Preparar Payload para API (CÁLCULO DE UNITARIO AUTOMÁTICO)
+        // Obtenemos el monto total que está actualmente en el input (puede haber sido editado por el admin)
+        const montoTotalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
+        
+        // Calculamos el monto UNITARIO que debe guardarse en CADA reserva
+        // Ejemplo: Si el admin cambió el total de 270.000 a 240.000, 
+        // el unitario será 240.000 / 3 = 80.000 por reserva.
+        const montoUnitarioParaAPI = Math.round(montoTotalInput / fechas.length);
+
+        console.log(`🔄 Recurrente: Total Input=$${montoTotalInput} | Fechas=${fechas.length} | Unitario a Guardar=$${montoUnitarioParaAPI}`);
+
         const payload = {
             action: 'create_recurrent',
             id_cancha: cancha,
             hora_inicio: horaInicio,
-            hora_fin: horaFin,
+            duracion_bloque: duracion, // Enviamos duración para que la API calcule hora_fin
             id_socio: idSocio,
             repeat_day: day,
             start_date: sDate,
             end_date: eDate,
-            monto_total: montoTotal,
-            // Si tienes lógica de nuevo socio, agrégala aquí también
+            monto_total: montoUnitarioParaAPI, // ✅ IMPORTANTE: Enviamos el valor UNITARIO
             nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
             emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
             telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
         };
 
-        // 4. Enviar a API
+        btn.textContent = '⏳ Generando reservas...';
+
+        // 5. Enviar a API
         const res = await fetch('../api/reserva_recurrente.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
