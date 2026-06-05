@@ -3001,42 +3001,51 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     }
 }
 
-// === FUNCIÓN CENTRAL DE CÁLCULO DE PRECIO ===
+// === 16. RECÁLCULO DE PRECIO SEGÚN DURACIÓN ===
 function recalcularPrecioTotal() {
     // 1. Obtener duración seleccionada
     const radioChecked = document.querySelector('input[name="duracion"]:checked');
-    const duracion = parseInt(radioChecked ? radioChecked.value : 60);
+    
+    // Si no hay radio seleccionado (raro), asumimos 60
+    const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
     
     // 2. Obtener precio base desde el input hidden (que llenamos en abrirReservaAdmin)
     const elBase = document.getElementById('admin_monto_base');
-    const precioBase = parseFloat(elBase ? elBase.value : 0);
+    let precioBase = 0;
+    if (elBase) {
+        precioBase = parseFloat(elBase.value);
+    }
     
-    if (precioBase === 0) {
-        console.warn("⚠️ Precio Base es 0. Verifica que la cancha tenga valor_arriendo");
+    // Validación de seguridad
+    if (isNaN(precioBase) || precioBase <= 0) {
+        console.warn("⚠️ Precio Base inválido o cero. Revisa la cancha seleccionada.");
+        precioBase = 0;
     }
 
-    // 3. Calcular Factor
+    // 3. Calcular Factor según duración
     let factor = 1;
-    if (duracion == 30) factor = 0.5;
-    else if (duracion == 90) factor = 1.5;
-    else if (duracion == 120) factor = 2.0;
+    if (duracion === 30) factor = 0.5;
+    else if (duracion === 90) factor = 1.5;
+    else if (duracion === 120) factor = 2.0;
+    else factor = 1; // 60 min
 
     // 4. Calcular Total
     const total = Math.round(precioBase * factor);
 
     // 5. Actualizar Inputs y Display
-    const inputMonto = document.getElementById('admin_monto_total');
-    const inputMontoVisible = document.getElementById('admin_monto_total_input');
+    const inputMontoHidden = document.getElementById('admin_monto_total');
+    const inputMontoVisible = document.getElementById('admin_monto_total_input'); // Si tienes un input visible
     const labelDinamico = document.getElementById('labelMontoDinamico');
     const subtexto = document.getElementById('subtextoMonto');
 
-    if (inputMonto) inputMonto.value = total;
+    if (inputMontoHidden) inputMontoHidden.value = total;
     if (inputMontoVisible) inputMontoVisible.value = total;
     
+    // Actualizar etiqueta visual si existe
     if (labelDinamico) {
-        // Si hay convenio, el texto lo maneja otra lógica, si no, default
+        // Si hay convenio activo, el texto lo maneja otra lógica, si no, default
         if (!window.convenioActivo) {
-            labelDinamico.textContent = `💰 Total a pagar:`;
+            labelDinamico.innerHTML = `💰 Total: <strong>$${total.toLocaleString('es-CL')}</strong>`;
         }
     }
     
@@ -3047,24 +3056,30 @@ function recalcularPrecioTotal() {
     console.log(`🧮 Cálculo: Base $${precioBase} x ${duracion}min (factor ${factor}) = $${total}`);
 }
 
-// === ACTUALIZAR DURACIÓN AL CAMBIAR RADIO ===
+// === 17. ACTUALIZAR DURACIÓN AL CAMBIAR RADIO ===
 function actualizarDuracionReserva(val) {
     const horaInicio = document.getElementById('admin_hora_inicio').value;
+    
+    // Actualizar hora fin visualmente y en input oculto
     if (horaInicio) {
-        // Actualizar hora fin visualmente
         const [h, m] = horaInicio.split(':').map(Number);
+        const duracionMin = parseInt(val);
+        
         const fin = new Date();
-        fin.setHours(h, m + parseInt(val), 0, 0);
+        fin.setHours(h, m + duracionMin, 0, 0);
+        
         const horaFin = `${String(fin.getHours()).padStart(2,'0')}:${String(fin.getMinutes()).padStart(2,'0')}`;
         
+        // Actualizar inputs
         document.getElementById('admin_hora_fin').value = horaFin;
         document.getElementById('admin_duracion_bloque').value = val;
         
+        // Actualizar display del header del modal
         const elHD = document.getElementById('modalHoraDisplay');
         if (elHD) elHD.textContent = `${horaInicio} - ${horaFin}`;
     }
     
-    // Recalcular precio
+    // Recalcular precio inmediatamente
     recalcularPrecioTotal();
 }
 
