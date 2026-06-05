@@ -2704,18 +2704,18 @@ async function anularReserva() {
 
     const confirmMsg = `¿Estás seguro de ANULAR la reserva #${res.id_reserva}?
     
-Cliente: ${res.nombre_cliente || 'N/A'}
-Fecha: ${res.fecha} ${res.hora_inicio}
-Monto: $${parseFloat(res.monto_total).toLocaleString()}
+    Cliente: ${res.nombre_cliente || 'N/A'}
+    Fecha: ${res.fecha} ${res.hora_inicio}
+    Monto: $${parseFloat(res.monto_total).toLocaleString()}
 
-Esta acción enviará un correo de notificación al cliente.`;
+    Esta acción enviará un correo de notificación al cliente.`;
 
-    if (!confirm(confirmMsg)) return;
+        if (!confirm(confirmMsg)) return;
 
-    showToast("🔄 Anulando reserva...", "info");
+        showToast("🔄 Anulando reserva...", "info");
 
-    try {
-        const response = await fetch('../api/anular_reserva.php', {
+        try {
+            const response = await fetch('../api/anular_reserva.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id_reserva: res.id_reserva })
@@ -3699,34 +3699,38 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // === SUBMIT DEL FORMULARIO (ADAPTADO AL BUSCADOR UNIFICADO) ===
-async function guardarReservaAdmin(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = '⏳ Guardando...';
+// === GUARDAR RESERVA ADMIN (ESTRUCTURA SEGURA) ===
+function guardarReservaAdmin(e) {
+    // 1. Prevenir envío de formulario si existe evento
+    if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+    }
 
-    // 1. Leer valores básicos
-    const cancha = document.getElementById('admin_cancha_id')?.value;
-    const fecha  = document.getElementById('admin_fecha')?.value;
-    const hora   = document.getElementById('admin_hora_inicio')?.value;
-    const horaF  = document.getElementById('admin_hora_fin')?.value;
-    const monto  = document.getElementById('admin_monto_total')?.value || 0;
-    
-    // 2. Obtener ID Socio y ID Convenio de los inputs ocultos
-    let id_socio = document.getElementById('admin_socio_id')?.value;
-    let id_convenio = document.getElementById('admin_convenio_id')?.value;
-    
-    // Debug
-    console.log('🔍 DEBUG RESERVA:', { id_socio, id_convenio, cancha, fecha });
+    console.log("💾 Iniciando guarda de reserva única...");
 
-    // 3. Validación Básica
-    if (!cancha || !fecha || !hora) {
-        showToast('❌ Faltan datos de la reserva', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
+    // 2. Obtener datos del formulario
+    const canchaId = document.getElementById('admin_cancha_id').value;
+    const fecha = document.getElementById('admin_fecha').value;
+    const horaInicio = document.getElementById('admin_hora_inicio').value;
+    const horaFin = document.getElementById('admin_hora_fin').value;
+    const idSocio = document.getElementById('admin_socio_id').value;
+    const monto = document.getElementById('admin_monto_total').value;
+    
+    // Validaciones básicas
+    if (!canchaId || !fecha || !horaInicio) {
+        showToast('❌ Faltan datos obligatorios', 'error');
         return;
     }
+
+    // 3. Preparar datos
+    const formData = new FormData();
+    formData.append('action', 'crear_reserva_admin'); // Ajusta según tu API
+    formData.append('id_cancha', canchaId);
+    formData.append('fecha', fecha);
+    formData.append('hora_inicio', horaInicio);
+    formData.append('hora_fin', horaFin);
+    formData.append('id_socio', idSocio);
+    formData.append('monto_total', monto);
 
     // Si no hay socio ni convenio, error
     if (!id_socio && !id_convenio) {
@@ -3767,26 +3771,21 @@ async function guardarReservaAdmin(e) {
         
         // NOTA: Para el email de activación, lo ideal es que el backend verifique 
         // si el socio tiene password NULL o activation_token.
-        
-        const res = await fetch('../api/gestion_reservas.php', {
+        fetch('../api/gestion_reservas.php', { // Ajusta la ruta de tu API
             method: 'POST',
             body: formData
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            showToast('✅ Reserva creada correctamente', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast('❌ ' + (data.message || 'Error al guardar'), 'error');
-            console.error('Error Backend:', data);
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
-
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('✅ Reserva guardada correctamente', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('❌ ' + (data.message || 'Error al guardar'), 'error');
+            }
+        })
     } catch (err) {
-        console.error('❌ Error Fetch:', err);
+        console.error('Error:', error);
         showToast('❌ Error de conexión', 'error');
         btn.disabled = false;
         btn.textContent = originalText;
