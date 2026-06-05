@@ -2891,7 +2891,7 @@ async function verDetalleDesdeLista(idReserva) {
 }
 
 // ✅ 3. REEMPLAZAR abrirReservaAdmin COMPLETA
-// === 15. ABRIR MODAL RESERVA ADMIN (BLINDADO PARA PÁDEL) ===
+// === 15. ABRIR MODAL RESERVA ADMIN (BLINDADO) ===
 function abrirReservaAdmin(canchaId, fecha, hora) {
     console.log(`🔍 DEBUG abrirReservaAdmin -> ID: ${canchaId}, Fecha: ${fecha}, Hora: ${hora}`);
 
@@ -2906,14 +2906,14 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     setC('admin_hora_inicio', hora);
     setC('admin_socio_id', '');
     setC('admin_monto_total', '0');
-    setC('admin_monto_base', '0');
     
+    // Limpiar búsqueda
     const elSearch = document.getElementById('searchAdmin');
     if (elSearch) elSearch.value = '';
     const elResults = document.getElementById('searchResultsAdmin');
     if (elResults) elResults.style.display = 'none';
 
-    // 2. Calcular hora fin
+    // 2. Calcular hora fin base (60 min)
     const [h, m] = hora.split(':').map(Number);
     if (!isNaN(h) && !isNaN(m)) {
         const fin = new Date();
@@ -2930,66 +2930,59 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
         if (elHD) elHD.textContent = `${hora} - ${horaFin}`;
     }
 
-    // 3. Buscar cancha
+    // 3. Buscar cancha y configurar UI
     const cancha = (typeof canchasData !== 'undefined' && Array.isArray(canchasData))
         ? canchasData.find(c => String(c.id_cancha) === String(canchaId))
         : null;
 
     const elNombre = document.getElementById('modalCanchaDisplay');
-    const elBase = document.getElementById('admin_monto_base');
-    
+    const elBase = document.getElementById('admin_monto_base'); // Input oculto con el precio base
     const divPadel = document.getElementById('opcionesPadel');
     const divOtros = document.getElementById('opcionesOtros');
 
     if (cancha) {
         const nombre = cancha.nombre_cancha?.trim() || cancha.nro_cancha || `Cancha ${canchaId}`;
-        
-        // ✅ LIMPIEZA EXTREMA DEL ID_DEPORTE
-        let rawDeporte = cancha.id_deporte;
-        let idDeporte = String(rawDeporte).toLowerCase().trim();
+        let idDeporte = String(cancha.id_deporte).toLowerCase().trim();
         
         if (elNombre) elNombre.textContent = `🏟️ ${nombre}`;
         
+        // ✅ CRÍTICO: Obtener y asignar precio base
         const base = parseFloat(cancha.valor_arriendo) || 0;
-        if (elBase) elBase.value = base;
+        if (elBase) {
+            elBase.value = base;
+            console.log(`💰 Precio Base Asignado: $${base}`);
+        } else {
+            console.error("❌ NO SE ENCONTRÓ el input #admin_monto_base");
+        }
 
-        // Lógica de detección robusta
-        // Comparamos contra 'padel' (string) y 2 (número/ID común)
-        const esPadel = (idDeporte === 'padel' || idDeporte === '2' || idDeporte == 2);
-        
-        console.log(`🎾 DEBUG DEPORTE -> Raw: '${rawDeporte}' | Limpio: '${idDeporte}' | Es Pádel: ${esPadel}`);
+        // Detectar Pádel
+        const esPadel = (idDeporte === 'padel' || idDeporte === '2');
 
         if (esPadel) {
-            // Mostrar opciones Pádel
             if (divPadel) divPadel.style.display = 'flex';
             if (divOtros) divOtros.style.display = 'none';
-            
-            // Habilitar radios y seleccionar 60
             const radios = divPadel.querySelectorAll('input[type="radio"]');
             radios.forEach(r => r.disabled = false);
-            
             const radio60 = divPadel.querySelector('input[value="60"]');
             if (radio60) radio60.checked = true;
-            
         } else {
-            // Mostrar opciones Otros
             if (divPadel) divPadel.style.display = 'none';
-            if (divOtros) divOtros.style.display = 'block'; // Block para ancho completo
-            
-            // Forzar 60 min
+            if (divOtros) divOtros.style.display = 'block';
             const radio60 = divOtros.querySelector('input[value="60"]');
             if (radio60) {
                 radio60.checked = true;
-                radio60.disabled = true; 
+                radio60.disabled = true;
             }
         }
 
+        // ✅ LLAMAR A RECALCULAR INMEDIATAMENTE
         recalcularPrecioTotal();
+        
     } else {
         console.warn(`⚠️ Cancha ID ${canchaId} NO encontrada en canchasData`);
-        if (elNombre) elNombre.textContent = `🏟️ Cancha #${canchaId}`;
     }
 
+    // 4. Mostrar Modal
     const modal = document.getElementById('modalReservaAdmin');
     if (modal) {
         modal.style.display = 'flex';
@@ -3001,62 +2994,46 @@ function abrirReservaAdmin(canchaId, fecha, hora) {
     }
 }
 
-// === 16. CÁLCULO DE PRECIO DINÁMICO (DEFINITIVO) ===
+// === 16. RECÁLCULO DE PRECIO (BLINDADO) ===
 function recalcularPrecioTotal() {
     const radioChecked = document.querySelector('input[name="duracion"]:checked');
     const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
-
+    
     const elBase = document.getElementById('admin_monto_base');
-    const montoBase = parseFloat(elBase?.value || 0);
-
-    const day = parseInt(document.getElementById('repeatDay')?.value);
-    const sDate = document.getElementById('startDate')?.value;
-    const eDate = document.getElementById('endDate')?.value;
-
-    if (!montoBase || !day || !sDate || !eDate) return;
+    let precioBase = 0;
+    if (elBase && elBase.value) {
+        precioBase = parseFloat(elBase.value);
+    }
+    
+    if (precioBase <= 0) {
+        console.warn("⚠️ Precio Base es 0 o inválido. Revisa la cancha.");
+        return;
+    }
 
     let factor = 1;
     if (duracion === 30) factor = 0.5;
     else if (duracion === 90) factor = 1.5;
-    else if (duracion === 120) factor = 2;
+    else if (duracion === 120) factor = 2.0;
 
-    const precioPorReserva = Math.round(montoBase * factor);
+    const total = Math.round(precioBase * factor);
 
-    const fechas = generarFechasRecurrencia(sDate, eDate, day);
-
-    const total = precioPorReserva * fechas.length;
-
-    const inputVisible = document.getElementById('admin_monto_total_input');
-    const inputHidden = document.getElementById('admin_monto_total');
+    const inputMontoHidden = document.getElementById('admin_monto_total');
+    const inputMontoVisible = document.getElementById('admin_monto_total_input');
     const subtexto = document.getElementById('subtextoMonto');
 
-    if (inputVisible) inputVisible.value = total;
-    if (inputHidden) inputHidden.value = total;
-    if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
-
-    console.log("💰 RECALCULO:", {
-        montoBase,
-        duracion,
-        fechas: fechas.length,
-        total
-    });
+    if (inputMontoHidden) inputMontoHidden.value = total;
+    if (inputMontoVisible) inputMontoVisible.value = total;
+    
+    if (subtexto) {
+        subtexto.textContent = `1 reserva x ${duracion} min`;
+    }
+    
+    console.log(`🧮 Cálculo: Base $${precioBase} x ${duracion}min (factor ${factor}) = $${total}`);
 }
 
-// Duración (radio buttons)
-document.querySelectorAll('input[name="duracion"]').forEach(r => {
-    r.addEventListener('change', recalcularPrecioTotal);
-});
-
-// Fechas + día
-['startDate', 'endDate', 'repeatDay'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', recalcularPrecioTotal);
-});
-
-// === 17. EVENTO AL CAMBIAR DURACIÓN ===
+// === 17. ACTUALIZAR DURACIÓN AL CAMBIAR RADIO ===
 function actualizarDuracionReserva(val) {
     const horaInicio = document.getElementById('admin_hora_inicio').value;
-    
-    // Actualizar hora fin
     if (horaInicio) {
         const [h, m] = horaInicio.split(':').map(Number);
         const duracionMin = parseInt(val);
@@ -3075,6 +3052,136 @@ function actualizarDuracionReserva(val) {
     // Recalcular precio inmediatamente
     recalcularPrecioTotal();
 }
+
+// === 18. MANEJAR RESERVA RECURRENTE (CORREGIDO) ===
+async function handleRecurrentReservation() {
+    const btn = document.getElementById('btnRecurrent');
+    if (!btn) { console.error("Botón no encontrado"); return; }
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Calculando...';
+
+    try {
+        const cancha = document.getElementById('admin_cancha_id').value;
+        const horaInicio = document.getElementById('admin_hora_inicio').value;
+        const idSocio = document.getElementById('admin_socio_id').value || null;
+        
+        const radioChecked = document.querySelector('input[name="duracion"]:checked');
+        const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
+        
+        const elBase = document.getElementById('admin_monto_base');
+        const precioBase = parseFloat(elBase ? elBase.value : 0);
+        
+        let factor = 1;
+        if (duracion === 30) factor = 0.5;
+        else if (duracion === 90) factor = 1.5;
+        else if (duracion === 120) factor = 2.0;
+        
+        const precioPorReserva = Math.round(precioBase * factor);
+
+        const day = parseInt(document.getElementById('repeatDay')?.value);
+        const sDate = document.getElementById('startDate')?.value;
+        const eDate = document.getElementById('endDate')?.value;
+
+        if (!day || !sDate || !eDate) {
+            showToast('❌ Complete día y fechas', 'error');
+            btn.disabled = false; btn.innerHTML = originalText; return;
+        }
+
+        // Generar fechas
+        const fechas = generarFechasRecurrencia(sDate, eDate, day);
+        
+        if (fechas.length === 0) {
+            showToast('❌ No hay fechas válidas', 'error');
+            btn.disabled = false; btn.innerHTML = originalText; return;
+        }
+
+        // ✅ ACTUALIZAR INPUT VISIBLE CON EL TOTAL
+        const montoTotalEstimado = precioPorReserva * fechas.length;
+        const inputMontoVisible = document.getElementById('admin_monto_total_input');
+        const inputMontoHidden = document.getElementById('admin_monto_total');
+        const subtexto = document.getElementById('subtextoMonto');
+        
+        if (inputMontoVisible) inputMontoVisible.value = montoTotalEstimado;
+        if (inputMontoHidden) inputMontoHidden.value = montoTotalEstimado;
+        if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
+
+        console.log(`🔄 Recurrente: ${fechas.length} reservas x $${precioPorReserva} = $${montoTotalEstimado}`);
+
+        if (!confirm(`Se crearán ${fechas.length} reservas.\nTotal: $${montoTotalEstimado}\n¿Confirmar?`)) {
+            btn.disabled = false; btn.innerHTML = originalText; return;
+        }
+
+        // Calcular unitario final (por si el admin editó el total)
+        const montoFinalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
+        const montoUnitarioParaAPI = Math.round(montoFinalInput / fechas.length);
+
+        const payload = {
+            action: 'create_recurrent',
+            id_cancha: cancha,
+            hora_inicio: horaInicio,
+            duracion_bloque: duracion, 
+            id_socio: idSocio,
+            repeat_day: day,
+            start_date: sDate,
+            end_date: eDate,
+            monto_total: montoUnitarioParaAPI, // Enviamos unitario
+            nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
+            emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
+            telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
+        };
+
+        btn.innerHTML = '⏳ Generando...';
+
+        const res = await fetch('../api/reserva_recurrente.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(`✅ ${data.created} reservas creadas`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(`❌ ${data.message}`, 'error');
+            btn.disabled = false; btn.innerHTML = originalText;
+        }
+
+    } catch (err) {
+        console.error(err);
+        showToast('❌ Error de conexión', 'error');
+        btn.disabled = false; btn.innerHTML = originalText;
+    }
+}
+
+// Helper para generar fechas
+function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
+    const dates = [];
+    let current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    while (current <= end) {
+        if (current.getDay() === parseInt(dayOfWeek)) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+// Duración (radio buttons)
+document.querySelectorAll('input[name="duracion"]').forEach(r => {
+    r.addEventListener('change', recalcularPrecioTotal);
+});
+
+// Fechas + día
+['startDate', 'endDate', 'repeatDay'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', recalcularPrecioTotal);
+});
+
+
 
 // === 18. PERMITIR EDICIÓN MANUAL ===
 function actualizarMontoManual(valor) {
@@ -3349,122 +3456,6 @@ async function handleSingleReservation() {
     // (mantener el código actual)
 }
 
-// === 16.2 MANEJAR RESERVA RECURRENTE (FRONTEND) ===
-async function handleRecurrentReservation() {
-    const btn = document.getElementById('btnRecurrent'); // Asegúrate que tu botón tenga este ID
-    if (!btn) { console.error("Botón no encontrado"); return; }
-    
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Calculando...';
-
-    try {
-        // 1. Obtener datos
-        const cancha = document.getElementById('admin_cancha_id').value;
-        const horaInicio = document.getElementById('admin_hora_inicio').value;
-        const idSocio = document.getElementById('admin_socio_id').value || null;
-        
-        // Duración y Precio Base
-        const radioChecked = document.querySelector('input[name="duracion"]:checked');
-        const duracion = radioChecked ? parseInt(radioChecked.value) : 60;
-        
-        const elBase = document.getElementById('admin_monto_base');
-        const precioBase = parseFloat(elBase ? elBase.value : 0);
-        
-        let factor = 1;
-        if (duracion === 30) factor = 0.5;
-        else if (duracion === 90) factor = 1.5;
-        else if (duracion === 120) factor = 2.0;
-        
-        const precioPorReserva = Math.round(precioBase * factor);
-
-        const day = parseInt(document.getElementById('repeatDay')?.value);
-        const sDate = document.getElementById('startDate')?.value;
-        const eDate = document.getElementById('endDate')?.value;
-
-        if (!day || !sDate || !eDate) {
-            showToast('❌ Complete día y fechas', 'error');
-            btn.disabled = false; btn.innerHTML = originalText; return;
-        }
-
-        // 2. Generar fechas para contar
-        const fechas = generarFechasRecurrencia(sDate, eDate, day);
-
-        console.log("📅 FECHAS GENERADAS:", fechas);
-        
-        if (fechas.length <= 1) {
-            showToast('⚠️  No hay fechas válidas', 'error');
-            console.warn("⚠️ Solo 1 fecha detectada");
-            btn.disabled = false; btn.innerHTML = originalText; return;
-        }
-
-        // 3. ACTUALIZAR INPUT VISIBLE CON EL TOTAL
-        const montoTotalEstimado = precioPorReserva * fechas.length;
-        const inputMontoVisible = document.getElementById('admin_monto_total_input');
-        const inputMontoHidden = document.getElementById('admin_monto_total');
-        const subtexto = document.getElementById('subtextoMonto');
-        
-        if (inputMontoVisible) inputMontoVisible.value = montoTotalEstimado;
-        if (inputMontoHidden) inputMontoHidden.value = montoTotalEstimado;
-        if (subtexto) subtexto.textContent = `${fechas.length} reservas x ${duracion} min`;
-
-        // 4. Confirmación
-        if (!confirm(`Se crearán ${fechas.length} reservas.\nTotal: $${montoTotalEstimado}\n¿Confirmar?`)) {
-            btn.disabled = false; btn.innerHTML = originalText; return;
-        }
-
-        // 5. Calcular unitario final (por si el admin editó el total)
-        const montoFinalInput = parseFloat(inputMontoVisible.value) || montoTotalEstimado;
-        const montoUnitarioParaAPI = Math.round(montoFinalInput / fechas.length);
-
-        const payload = {
-            action: 'create_recurrent',
-            id_cancha: cancha,
-            hora_inicio: horaInicio,
-            duracion_bloque: duracion, 
-            id_socio: idSocio,
-            repeat_day: day,
-            start_date: sDate,
-            end_date: eDate,
-            monto_total: montoUnitarioParaAPI, // Enviamos unitario
-            nombreNuevoSocio: document.getElementById('nombreNuevoSocio')?.value || null,
-            emailNuevoSocio: document.getElementById('emailNuevoSocio')?.value || null,
-            telNuevoSocio: document.getElementById('telNuevoSocio')?.value || null
-        };
-
-        btn.innerHTML = '⏳ Generando...';
-
-        if (precioPorReserva <= 0) {
-            showToast('❌ Error en cálculo de precio', 'error');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-            return;
-        }
-        console.log("DEBUG PAYLOAD:", payload);
-
-        // 6. Enviar a API
-        const res = await fetch('../api/reserva_recurrente.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            showToast(`✅ ${data.created} reservas creadas`, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showToast(`❌ ${data.message}`, 'error');
-            btn.disabled = false; btn.innerHTML = originalText;
-        }
-
-    } catch (err) {
-        console.error(err);
-        showToast('❌ Error de conexión', 'error');
-        btn.disabled = false; btn.innerHTML = originalText;
-    }
-}
 
 // Helper para generar fechas (debe estar también en tu JS)
 function generarFechasRecurrencia(startDate, endDate, dayOfWeek) {
