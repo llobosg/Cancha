@@ -15,6 +15,7 @@ if (!$id_recinto_admin && !isset($_SESSION['id_socio'])) {
 }
 
 try {
+    // Validaciones
     if (empty($input['id_cancha']) || empty($input['start_date']) || empty($input['end_date'])) {
         throw new Exception("Datos incompletos");
     }
