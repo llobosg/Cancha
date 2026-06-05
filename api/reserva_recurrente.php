@@ -4,7 +4,11 @@ header('Content-Type: application/json; charset=utf-8');
 while (ob_get_level()) { ob_end_clean(); }
 
 require_once __DIR__ . '/../includes/config.php';
-if (file_exists(__DIR__ . '/../includes/bitacora.php')) require_once __DIR__ . '/../includes/bitacora.php';
+if (file_exists(__DIR__ . '/../includes/bitacora.php')) {
+    require_once __DIR__ . '/../includes/bitacora.php';
+} else {
+    error_log("❌ ERROR CRÍTICO: No se encuentra includes/bitacora.php");
+}
 if (file_exists(__DIR__ . '/../includes/brevo_mailer.php')) require_once __DIR__ . '/../includes/brevo_mailer.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
@@ -136,9 +140,39 @@ try {
             <td style='padding:10px; text-align:center; background:#F3E5F5; font-weight:600;'>{$hora_inicio}-{$hora_fin_calc}</td>
         </tr>";
 
-        // Bitácora individual
+        // ✅ REGISTRAR EN BITÁCORA INDIVIDUAL
         if (function_exists('registrarLogReserva')) {
-            registrarLogReserva($pdo, $id_res, 'creada_recurrente', "Reserva recurrente ($fecha)", $_SESSION['recinto_usuario'] ?? 'Admin', null, $monto_unitario);
+            $usuario_log = $_SESSION['recinto_usuario'] ?? ($_SESSION['nombre_completo'] ?? 'Admin');
+            
+            $descripcion = "🔄 Reserva Recurrente Creada\n";
+            $descripcion .= "📅 Fecha: $fecha ($dia_nombre $dia_num)\n";
+            $descripcion .= "⏰ Hora: $hora_inicio - $hora_fin_calc\n";
+            $descripcion .= "💰 Monto: $" . number_format($monto_unitario, 0, ',', '.');
+            
+            $metadata = [
+                'tipo' => 'recurrente',
+                'rango_desde' => $start_date,
+                'rango_hasta' => $end_date,
+                'dia_semana' => $repeat_day
+            ];
+
+            // Llamada a la función
+            $log_result = registrarLogReserva(
+                $pdo,
+                $id_res,
+                'creada_recurrente',
+                $descripcion,
+                $usuario_log,
+                null, // monto_anterior
+                $monto_unitario, // monto_nuevo
+                $metadata
+            );
+
+            if ($log_result === false) {
+                error_log("⚠️ Bitácora falló para reserva ID: $id_res");
+            }
+        } else {
+            error_log("❌ ERROR: Función registrarLogReserva NO existe. Revisa include_path.");
         }
     }
 
