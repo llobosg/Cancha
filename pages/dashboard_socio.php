@@ -115,24 +115,36 @@ if (!$modo_individual && $club_id) {
     }
 }
 
-// === OBTENER TODOS LOS CLUBES DEL SOCIO (CONSULTA ORIGINAL FUNCIONAL) ===
+// === OBTENER TODOS LOS CLUBES DEL SOCIO (PARA CAMBIO DE DASHBOARD) ===
 $clubes_del_socio = [];
+$clubes_responsable = []; // ✅ NUEVA LISTA PARA RESERVAS INSTITUCIONALES
+
 if (isset($_SESSION['id_socio'])) {
+    // 1. Todos los clubes activos (para navegación)
     $stmt_clubes = $pdo->prepare("
-        SELECT 
-            c.id_club,
-            c.nombre AS club_nombre,
-            c.email_responsable
+        SELECT c.id_club, c.nombre AS club_nombre, c.email_responsable, sc.es_responsable
         FROM socio_club sc
         JOIN clubs c ON sc.id_club = c.id_club
         WHERE sc.id_socio = ? AND sc.estado = 'activo'
         ORDER BY c.nombre ASC
     ");
     $stmt_clubes->execute([$_SESSION['id_socio']]);
-    $clubes_del_socio = $stmt_clubes->fetchAll();
+    $todos_los_clubes = $stmt_clubes->fetchAll();
+
+    foreach ($todos_los_clubes as $c) {
+        // Generar slug para cada uno
+        $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+        $c['slug'] = $slug;
+        
+        $clubes_del_socio[] = $c;
+
+        // ✅ Si es responsable, lo agregamos a la lista especial
+        if ($c['es_responsable'] == 1) {
+            $clubes_responsable[] = $c;
+        }
+    }
 }
 
-// Detectar multiclub
 $es_multiclub = (count($clubes_del_socio) > 1);
 
 // Redirigir si es individual pero tiene clubs

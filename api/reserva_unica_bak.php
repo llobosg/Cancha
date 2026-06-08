@@ -46,83 +46,32 @@ try {
         throw new Exception("La cancha ya está reservada en ese horario");
     }
 
-        // === 1. OBTENER DATOS DEL SOCIO Y VALIDAR ROL DE RESPONSABLE ===
-    $nombre_cliente = ''; 
-    $email_cliente = ''; 
-    $telefono_cliente = '';
-    $id_club_final = null; // Por defecto es reserva individual
-
+    // Obtener datos del socio si existe
+    $nombre_cliente = ''; $email_cliente = ''; $telefono_cliente = '';
     if ($id_socio) {
         $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
         $stmt_s->execute([$id_socio]);
         $s = $stmt_s->fetch(PDO::FETCH_ASSOC);
-        
         if ($s) {
-            $nombre_cliente = $s['nombre']; 
-            $email_cliente = $s['email']; 
-            $telefono_cliente = $s['celular'];
-        }
-
-        // ✅ VALIDACIÓN DE RESPONSABILIDAD (NUEVA REGLA DE NEGOCIO)
-        // Si el frontend envía un id_club_reserva y el tipo es 'club'
-        if (!empty($input['id_club_reserva']) && ($input['tipo_reserva'] ?? '') === 'club') {
-            $id_club_intentado = (int)$input['id_club_reserva'];
-            
-            // Verificar en socio_club si este socio es responsable de ESTE club específico
-            $stmt_rol = $pdo->prepare("
-                SELECT COUNT(*) 
-                FROM socio_club 
-                WHERE id_socio = ? AND id_club = ? AND es_responsable = 1
-            ");
-            $stmt_rol->execute([$id_socio, $id_club_intentado]);
-            
-            if ($stmt_rol->fetchColumn() > 0) {
-                $id_club_final = $id_club_intentado;
-                error_log("[RESERVA] Socio $id_socio reservando como RESPONSABLE del Club $id_club_final");
-            } else {
-                error_log("[RESERVA] ⚠️ Socio $id_socio intentó reservar para Club $id_club_intentado sin ser responsable. Se guardará como individual.");
-                // No lanzamos error para no bloquear al usuario, simplemente guardamos como individual
-            }
+            $nombre_cliente = $s['nombre']; $email_cliente = $s['email']; $telefono_cliente = $s['celular'];
         }
     }
 
-    // === 2. INSERTAR RESERVA (CON ID_CLUB DINÁMICO) ===
+    // Insertar Reserva
     $stmt_ins = $pdo->prepare("
         INSERT INTO reservas (
-            id_cancha, 
-            id_club,          -- ✅ NUEVO CAMPO
-            id_socio, 
-            nombre_cliente, 
-            email_cliente, 
-            telefono_cliente, 
-            fecha, 
-            hora_inicio, 
-            hora_fin, 
-            monto_total, 
-            jugadores_esperados, 
-            estado_pago, 
-            estado, 
-            created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', NOW())
+            id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente, 
+            fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, 
+            estado_pago, estado, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', NOW())
     ");
     
     $stmt_ins->execute([
-        $id_cancha,
-        $id_club_final,       -- ✅ NULL si es individual, ID si es responsable
-        $id_socio, 
-        $nombre_cliente, 
-        $email_cliente, 
-        $telefono_cliente,
-        $fecha, 
-        $hora_inicio, 
-        $hora_fin, 
-        $monto_total
+        $id_cancha, $id_socio, $nombre_cliente, $email_cliente, $telefono_cliente,
+        $fecha, $hora_inicio, $hora_fin, $monto_total
     ]);
     
     $id_res = $pdo->lastInsertId();
-    
-    // Log de éxito
-    error_log("[RESERVA] Creada ID: $id_res | Club: " . ($id_club_final ?? 'Individual'));
 
     // Bitácora
     if (function_exists('registrarLogReserva')) {
