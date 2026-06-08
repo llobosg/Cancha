@@ -698,9 +698,8 @@ $deportes = [
 
                 const data = await res.json();
                 if (data.success) {
-                    showToast('✅ Reserva creada correctamente', 'success');
-                    cerrarModalReserva();
-                    location.reload();
+                    // ✅ EN LUGAR DE RELOAD, REDIRIGIMOS CON ESTADO
+                    window.location.href = window.location.pathname + '?reserva_ok=1';
                 } else {
                     showToast('❌ ' + (data.message || 'Error al crear reserva'), 'error');
                 }
@@ -726,5 +725,19 @@ $deportes = [
         setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
     }
 </script>
+<?php if (isset($_GET['reserva_ok'])): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                showToast('✅ ¡Reserva creada correctamente!', 'success');
+                
+                // Limpiar la URL para que no se muestre de nuevo al recargar
+                const url = new URL(window.location);
+                url.searchParams.delete('reserva_ok');
+                window.history.replaceState({}, document.title, url);
+            }, 800); // Pequeña pausa para que cargue el UI
+        });
+    </script>
+<?php endif; ?>
 </body>
 </html>

@@ -1364,12 +1364,20 @@ if (isset($_SESSION['id_socio'])) {
 
 <!-- === SECCIÓN: DEUDAS PENDIENTES (BLINDADA) === -->
 <?php if (!empty($deuda_mas_vigente)): ?>
-    <div style="margin-top: 2rem; background: rgba(255, 235, 238, 0.9); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #F44336;">
+    <div style="
+            max-width: 650px; /* Mismo ancho que la tarjeta de evento */
+            margin: 0 auto 2rem auto; /* Centrado y margen inferior */
+            background: #FFEBEE; 
+            border-left: 5px solid #D32F2F; 
+            padding: 1rem; 
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        ">
         <h3 style="color: #C62828; margin: 0 0 1rem 0; font-size: 1.2rem;">💸 Deuda Pendiente</h3>
         
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <div style="font-size: 0.9rem; color: #555;">Próximo Vencimiento:</div>
+                <div style="font-size: 0.9rem; color: #555;">⚠️ Próximo Vencimiento:</div>
                 <!-- ✅ BLINDAJE: Si fecha_vencimiento es null, usa hoy -->
                 <strong style="font-size: 1.1rem; color: #333;">
                     📅 <?= date('d/m', strtotime($deuda_mas_vigente['fecha_vencimiento'] ?? date('Y-m-d'))) ?>
