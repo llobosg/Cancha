@@ -115,24 +115,36 @@ if (!$modo_individual && $club_id) {
     }
 }
 
-// === OBTENER TODOS LOS CLUBES DEL SOCIO (CONSULTA ORIGINAL FUNCIONAL) ===
+// === OBTENER TODOS LOS CLUBES DEL SOCIO (PARA CAMBIO DE DASHBOARD) ===
 $clubes_del_socio = [];
+$clubes_responsable = []; // ✅ NUEVA LISTA PARA RESERVAS INSTITUCIONALES
+
 if (isset($_SESSION['id_socio'])) {
+    // 1. Todos los clubes activos (para navegación)
     $stmt_clubes = $pdo->prepare("
-        SELECT 
-            c.id_club,
-            c.nombre AS club_nombre,
-            c.email_responsable
+        SELECT c.id_club, c.nombre AS club_nombre, c.email_responsable, sc.es_responsable
         FROM socio_club sc
         JOIN clubs c ON sc.id_club = c.id_club
         WHERE sc.id_socio = ? AND sc.estado = 'activo'
         ORDER BY c.nombre ASC
     ");
     $stmt_clubes->execute([$_SESSION['id_socio']]);
-    $clubes_del_socio = $stmt_clubes->fetchAll();
+    $todos_los_clubes = $stmt_clubes->fetchAll();
+
+    foreach ($todos_los_clubes as $c) {
+        // Generar slug para cada uno
+        $slug = substr(md5($c['id_club'] . $c['email_responsable']), 0, 8);
+        $c['slug'] = $slug;
+        
+        $clubes_del_socio[] = $c;
+
+        // ✅ Si es responsable, lo agregamos a la lista especial
+        if ($c['es_responsable'] == 1) {
+            $clubes_responsable[] = $c;
+        }
+    }
 }
 
-// Detectar multiclub
 $es_multiclub = (count($clubes_del_socio) > 1);
 
 // Redirigir si es individual pero tiene clubs
@@ -155,7 +167,8 @@ $url_club_param = $_GET['id_club'] ?? 'N/A';
 
 error_log("[DEBUG] Socio ID: {$id_socio} | Club ID Session: {$club_id_session} | Parametro URL id_club: {$url_club_param} | Modo Individual: " . ($modo_individual ? 'SI' : 'NO'));
 error_log("[DEBUG] Club ID calculado: {$club_id}");
-// === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA PARA CLUBES E INDIVIDUAL ===
+
+// === 7. PRÓXIMO PARTIDO - CON LOGS DE DEBUGGING ===
 $proximo_evento = null;
 $ya_inscrito = false;
 $cupos_llenos = false;
@@ -165,34 +178,36 @@ $hora_formateada = '';
 $nombre_deporte = '';
 $inscritos_actuales = 0;
 $jugadores_esperados = 0;
-$lunes_semana_evento = null;
 
 try {
+    error_log("[DEBUG] === INICIO BÚSQUEDA PRÓXIMO EVENTO ===");
+    error_log("[DEBUG] ID Socio: $id_socio | Modo Individual: " . ($modo_individual ? 'SI' : 'NO') . " | Club ID: " . ($club_id ?? 'NULL'));
+
     $where_parts = [];
     $params = [];
 
-    // Condición base: Reserva activa y futura
+    // 1. Filtros Base
     $where_parts[] = "r.estado IN ('confirmada', 'pendiente')"; 
+    // Usamos fecha >= hoy para asegurar que tomamos eventos de hoy en adelante
     $where_parts[] = "r.fecha >= CURDATE()";
 
-    if (!$modo_individual && $club_id) {
-        // ✅ MODO CLUB: Mostrar próximas reservas DEL CLUB
-        // IMPORTANTE: No filtrar por id_socio aquí, porque la reserva puede ser creada por un Admin/Responsable
-        // Solo filtramos por el ID del Club al que pertenece el socio
+    // 2. Filtros Específicos
+    if (!$modo_individual && !empty($club_id)) {
+        // MODO CLUB
         $where_parts[] = "r.id_club = ?";
         $params[] = $club_id;
-        
+        error_log("[DEBUG] Filtro aplicado: id_club = $club_id");
     } else {
-        // ✅ MODO INDIVIDUAL: Mostrar solo reservas personales del socio (sin club asociado)
-        // Aquí sí filtramos por id_socio porque son reservas privadas
+        // MODO INDIVIDUAL
         $where_parts[] = "(r.id_club IS NULL OR r.id_club = 0) AND r.id_socio = ?";
         $params[] = $id_socio;
+        error_log("[DEBUG] Filtro aplicado: id_socio = $id_socio (Sin club)");
     }
 
     $sql = "
         SELECT 
             r.id_reserva, r.fecha, r.hora_inicio, r.hora_fin, r.monto_total,
-            r.jugadores_esperados, r.estado_pago, r.monto_recaudacion, r.valor_mes,
+            r.jugadores_esperados, r.estado_pago,
             c.nombre_cancha, c.id_deporte,
             (SELECT COUNT(*) FROM inscritos i WHERE i.id_evento = r.id_reserva AND i.tipo_actividad = 'reserva') as inscritos_actuales
         FROM reservas r
@@ -202,61 +217,57 @@ try {
         LIMIT 1
     ";
 
-    // Debug Log para verificar qué params se están usando
-    error_log("[DASHBOARD] Query Próximo Partido Socio {$id_socio} | Club {$club_id}: " . json_encode($params));
+    error_log("[DEBUG] SQL Generada: " . $sql);
+    error_log("[DEBUG] Parámetros: " . json_encode($params));
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $proximo_evento = $stmt->fetch();
 
     if ($proximo_evento) {
+        error_log("[DEBUG] ✅ EVENTO ENCONTRADO: ID " . $proximo_evento['id_reserva'] . " | Fecha: " . $proximo_evento['fecha']);
+        
         $id_reserva = $proximo_evento['id_reserva'];
-        $monto_total = (float)$proximo_evento['monto_total'];
-        $valor_mes = (float)($proximo_evento['valor_mes'] ?? 0);
         $deporte = $proximo_evento['id_deporte'] ?? 'futbolito';
-        $players = (int)($proximo_evento['jugadores_esperados'] ?? 10);
+        $inscritos_actuales = (int)($proximo_evento['inscritos_actuales'] ?? 0);
+        $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 20);
         
-        $fecha_evento = new DateTime($proximo_evento['fecha'] . ' ' . $proximo_evento['hora_inicio']);
+        // Cálculo Lunes 09:00
+        $fecha_evento_obj = new DateTime($proximo_evento['fecha']);
+        $dia_semana_evento = (int)$fecha_evento_obj->format('N'); 
+        $lunes_limite = clone $fecha_evento_obj;
+        $dias_a_restar = $dia_semana_evento - 1; 
+        $lunes_limite->modify("-$dias_a_restar days");
+        $lunes_limite->setTime(9, 0, 0);
+        
         $ahora = new DateTime();
-        $lunes_semana_evento = clone $fecha_evento;
-        $lunes_semana_evento->modify('this week monday');
-        $lunes_semana_evento->setTime(9, 0, 0);
-        $despues_del_lunes_09 = ($ahora >= $lunes_semana_evento);
+        $despues_del_lunes_09 = ($ahora >= $lunes_limite);
         
-        $fecha_formateada = $fecha_evento->format('d M');
-        $hora_formateada = $fecha_evento->format('H:i');
-        
-        // ✅ CORRECCIÓN: Calcular inscritos REALES desde la tabla 'inscritos'
-        $stmt_count_inscritos = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
-        $stmt_count_inscritos->execute([$id_reserva]);
-        $inscritos_actuales = (int)$stmt_count_inscritos->fetchColumn();
-        
-        $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 20); // Asegurar que viene de la BD
+        $fecha_formateada = $fecha_evento_obj->format('d M');
+        $hora_formateada = substr($proximo_evento['hora_inicio'], 0, 5) . ' - ' . substr($proximo_evento['hora_fin'], 0, 5);
         
         $cupos_llenos = ($jugadores_esperados > 0 && $inscritos_actuales >= $jugadores_esperados);
         
-        // Mapeo de deportes
-        $nombres_deportes = [
-            'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
-            'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro'
-        ];
+        $nombres_deportes = ['futbol' => 'Fútbol', 'padel' => 'Pádel', 'tenis' => 'Tenis', 'voleyball' => 'Vóley', '1'=>'Fútbol', '2'=>'Pádel'];
         $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
         
-        // Verificar si el socio actual ya está inscrito en esta reserva
-        $stmt_check = $pdo->prepare("
-            SELECT 1 FROM inscritos 
-            WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'
-        ");
+        // Check inscripción
+        $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva' LIMIT 1");
         $stmt_check->execute([$id_reserva, $id_socio]);
         $ya_inscrito = (bool)$stmt_check->fetch();
         
-        error_log("[DASHBOARD] Evento encontrado: ID {$id_reserva} | Inscritos: {$inscritos_actuales}/{$jugadores_esperados} | Ya inscrito: " . ($ya_inscrito ? 'Sí' : 'No'));
     } else {
-        error_log("[DASHBOARD] No se encontró próximo partido para Socio ID {$id_socio} | Club ID {$club_id}");
+        error_log("[DEBUG] ❌ NO SE ENCONTRARON EVENTOS. Revisa si hay reservas futuras con ese id_socio o id_club.");
+        
+        // Debug extra: Contar reservas futuras totales del socio sin filtros de club
+        $stmt_debug = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_socio = ? AND fecha >= CURDATE()");
+        $stmt_debug->execute([$id_socio]);
+        $total_futuras = $stmt_debug->fetchColumn();
+        error_log("[DEBUG] Total reservas futuras del socio (sin filtro club): $total_futuras");
     }
 
 } catch (Exception $e) {
-    error_log("Error próximo partido: " . $e->getMessage());
+    error_log("[DEBUG] 💥 ERROR CRÍTICO: " . $e->getMessage());
 }
 
 // === 8. DEUDAS PENDIENTES ===
@@ -944,6 +955,32 @@ $js_vars = [
 
 <?php
 // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (FILTRADO POR CLUB ACTIVO) ===
+// === FORZAR CARGA DE CLUBES RESPONSABLES (DEBUG EXTREMO) ===
+$clubes_responsable = [];
+error_log("[MODAL] Iniciando carga de clubes para socio ID: " . ($id_socio ?? 'NO DEFINIDO'));
+
+if (!empty($id_socio)) {
+    try {
+        $stmt_r = $pdo->prepare("
+            SELECT c.id_club, c.nombre as club_nombre 
+            FROM socio_club sc 
+            JOIN clubs c ON sc.id_club = c.id_club 
+            WHERE sc.id_socio = ? AND sc.es_responsable = 1
+        ");
+        $stmt_r->execute([$id_socio]);
+        $clubes_responsable = $stmt_r->fetchAll(PDO::FETCH_ASSOC);
+        
+        error_log("[MODAL] ÉXITO: Se encontraron " . count($clubes_responsable) . " clubes responsables.");
+        if(!empty($clubes_responsable)) {
+            error_log("[MODAL] Datos: " . json_encode($clubes_responsable));
+        }
+    } catch (Exception $e) {
+        error_log("[MODAL] ERROR SQL: " . $e->getMessage());
+    }
+} else {
+    error_log("[MODAL] ERROR: La variable \$id_socio está vacía.");
+}
+
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     error_log("[DEBUG SOCIO] Iniciando carga para ID: $id_socio");
@@ -1079,40 +1116,27 @@ if (isset($_SESSION['id_socio'])) {
 
     error_log("[DEBUG SOCIO] Total eventos finales: " . count($todos_eventos));
 
-    // 5. Cargar Deudas Pendientes (Filtradas por Club Activo si existe)
+    // 5. Cargar Deudas Pendientes (Blindado)
     $deuda_mas_vigente = null;
     $cuotas_pendientes = 0;
-    
+
+    // En dashboard_socio.php, bloque de deudas
     try {
-        if ($club_id_activo) {
-            // Deudas del club activo
+        // Verificar si la columna id_club existe en la tabla cuotas
+        $col_exists = $pdo->query("SHOW COLUMNS FROM cuotas LIKE 'id_club'")->rowCount() > 0;
+
+        if ($club_id_activo && $col_exists) {
             $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
             $stmt_deuda->execute([$id_socio, $club_id_activo]);
         } else {
-            // Deudas individuales (sin club)
-            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
+            // Si no hay club activo o la columna no existe, buscamos deudas individuales
+            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
             $stmt_deuda->execute([$id_socio]);
         }
-        
         $deuda_mas_vigente = $stmt_deuda->fetch(PDO::FETCH_ASSOC);
-        
-        // Contar total de deudas
-        if ($club_id_activo) {
-            $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente'");
-            $stmt_count->execute([$id_socio, $club_id_activo]);
-        } else {
-            $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente'");
-            $stmt_count->execute([$id_socio]);
-        }
-        $cuotas_pendientes = (int)$stmt_count->fetchColumn();
-        
-    } catch (PDOException $e) {
-        error_log("Error cargando deudas: " . $e->getMessage());
+    } catch (Exception $e) {
+        error_log("Error deudas: " . $e->getMessage());
     }
-} else {
-    $todos_eventos = [];
-    $deuda_mas_vigente = null;
-    $cuotas_pendientes = 0;
 }
 ?>
 
@@ -1130,7 +1154,28 @@ if (isset($_SESSION['id_socio'])) {
         <!-- Lista de Fichas Ordenadas -->
         <div style="display:flex; flex-direction:column; gap:1rem;">
             
+            
             <?php 
+                // === EN dashboard_socio.php (ANTES DEL HTML DEL MODAL) ===
+                $clubes_responsable = [];
+
+                if (isset($_SESSION['id_socio'])) {
+                    try {
+                        $stmt_resp = $pdo->prepare("
+                            SELECT c.id_club, c.nombre as club_nombre 
+                            FROM socio_club sc
+                            JOIN clubs c ON sc.id_club = c.id_club
+                            WHERE sc.id_socio = ? AND sc.es_responsable = 1 AND sc.estado = 'activo'
+                        ");
+                        $stmt_resp->execute([$_SESSION['id_socio']]);
+                        $clubes_responsable = $stmt_resp->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        // DEBUG: Verifica en los logs de Railway si esto trae datos
+                        error_log("[MODAL] Clubes responsables encontrados para Socio " . $_SESSION['id_socio'] . ": " . count($clubes_responsable));
+                    } catch (Exception $e) {
+                        error_log("Error cargando clubes responsables: " . $e->getMessage());
+                    }
+                }
                 $index = 0; 
                 foreach ($todos_eventos as $evento): 
                     
@@ -1319,12 +1364,20 @@ if (isset($_SESSION['id_socio'])) {
 
 <!-- === SECCIÓN: DEUDAS PENDIENTES (BLINDADA) === -->
 <?php if (!empty($deuda_mas_vigente)): ?>
-    <div style="margin-top: 2rem; background: rgba(255, 235, 238, 0.9); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #F44336;">
+    <div style="
+            max-width: 650px; /* Mismo ancho que la tarjeta de evento */
+            margin: 0 auto 2rem auto; /* Centrado y margen inferior */
+            background: #FFEBEE; 
+            border-left: 5px solid #D32F2F; 
+            padding: 1rem; 
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        ">
         <h3 style="color: #C62828; margin: 0 0 1rem 0; font-size: 1.2rem;">💸 Deuda Pendiente</h3>
         
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <div style="font-size: 0.9rem; color: #555;">Próximo Vencimiento:</div>
+                <div style="font-size: 0.9rem; color: #555;">⚠️ Próximo Vencimiento:</div>
                 <!-- ✅ BLINDAJE: Si fecha_vencimiento es null, usa hoy -->
                 <strong style="font-size: 1.1rem; color: #333;">
                     📅 <?= date('d/m', strtotime($deuda_mas_vigente['fecha_vencimiento'] ?? date('Y-m-d'))) ?>
