@@ -1140,19 +1140,19 @@ if (isset($_SESSION['id_socio'])) {
 }
 ?>
 
-<!-- === SECCIÓN: MIS PRÓXIMOS EVENTOS (OPTIMIZADO) === -->
+<!-- === SECCIÓN: MIS PRÓXIMOS EVENTOS (CON ESPACIADO Y LÓGICA REFORZADA) === -->
 <div style="padding: 1rem; max-width: 600px; margin: 0 auto;">
-    <h3 style="color:white; margin-bottom:1rem; font-size:1.3rem; text-shadow:0 2px 4px rgba(0,0,0,0.3);">📅 Mis Próximos Eventos</h3>
+    <h3 style="color:white; margin-bottom:1.5rem; font-size:1.3rem; text-shadow:0 2px 4px rgba(0,0,0,0.3);">📅 Mis Próximos Eventos</h3>
 
     <?php if (empty($todos_eventos)): ?>
         <!-- Sin eventos próximos -->
         <div style="background:rgba(255,255,255,0.9); border-radius:16px; padding:2rem; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
             <p style="font-size:1.1rem; color:#555; margin-bottom:1rem;">🎉 ¡No tienes eventos próximos!</p>
-            <a href="reservar_cancha.php" style="display:inline-block; background:linear-gradient(135deg, #667eea, #764ba2); color:white; padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Reservar ahora</a>
+            <a href="reservar_cancha.php" style="display:inline-block; background:linear-gradient(135deg, #667eea, #764ba2); color:white; padding:0.8rem 1.5rem; border-radius:12px; text-decoration:none; font-weight:600;">Reservar ahora</a>
         </div>
     <?php else: ?>
         
-        <!-- CARGA DE CLUBES RESPONSABLES (FUERA DEL BUCLE PARA EFICIENCIA) -->
+        <!-- CARGA DE CLUBES RESPONSABLES (FUERA DEL BUCLE) -->
         <?php 
             $clubes_responsable = [];
             if (isset($_SESSION['id_socio'])) {
@@ -1162,28 +1162,29 @@ if (isset($_SESSION['id_socio'])) {
                     $clubes_responsable = $stmt_resp->fetchAll(PDO::FETCH_ASSOC);
                 } catch (Exception $e) { /* Ignorar */ }
             }
-            
-            // Detectar si el primer evento es fútbol para el menú de 3 puntos
             $primer_evento_es_futbol = (!empty($todos_eventos[0]) && strtolower($todos_eventos[0]['deporte']) == 'fútbol');
         ?>
 
-        <div style="display:flex; flex-direction:column; gap:1rem;">
+        <!-- ✅ GAP AUMENTADO PARA QUE LAS FICHAS "RESPIREN" -->
+        <div style="display:flex; flex-direction:column; gap: 1.5rem;"> 
+            
             <?php 
                 $index = 0; 
                 foreach ($todos_eventos as $evento): 
                     
                     // === LÓGICA DE FECHA LÍMITE (LUNES 09:00) ===
                     $fecha_obj = new DateTime($evento['fecha']);
-                    $dia_semana = (int)$fecha_obj->format('N'); // 1=Lun
+                    $dia_semana = (int)$fecha_obj->format('N'); 
                     $lunes_limite = clone $fecha_obj;
                     $lunes_limite->modify('-' . ($dia_semana - 1) . ' days');
                     $lunes_limite->setTime(9, 0, 0);
                     
                     $ahora = new DateTime();
+                    // Solo abrimos inscripciones si YA PASÓ el lunes 09:00 de esa semana
                     $inscripciones_abiertas = ($ahora >= $lunes_limite);
                     $es_el_primero = ($index === 0);
 
-                    // === LÓGICA DE PERTENENCIA ===
+                    // === VERIFICAR INSCRIPCIÓN ===
                     $esta_inscrito_en_tabla = false;
                     if ($evento['tipo'] === 'reserva') {
                         $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva'");
@@ -1193,35 +1194,26 @@ if (isset($_SESSION['id_socio'])) {
                         $esta_inscrito_en_tabla = true; 
                     }
 
-                    // Menú 3 puntos: Solo si es el primero Y es fútbol (como pediste)
                     $mostrar_menu_3_puntos = ($es_el_primero && $primer_evento_es_futbol);
             ?>    
 
             <?php if ($evento['tipo'] === 'reserva'): ?>
-                <!-- FICHA DE RESERVA -->
-                <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column; <?= !$es_el_primero ? 'opacity:0.9;' : '' ?>">
+                <!-- FICHA DE RESERVA INDIVIDUAL -->
+                <!-- ✅ BORDE Y SOMBRA MÁS NOTORIOS PARA DELIMITAR -->
+                <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,0.08); border:1px solid #e0e0e0; display:flex; flex-direction:column;">
                     
                     <!-- MENÚ 3 PUNTOS -->
                     <?php if ($mostrar_menu_3_puntos): ?>
-                        <button class="hero-menu-dots" onclick="toggleHeroMenu(event, <?= $evento['id'] ?>)" style="position:absolute; top:10px; right:10px; z-index:10; background:none; border:none; font-size:1.2rem; cursor:pointer; color:#555;">⋮</button>
-
-                        <div id="heroMenu_<?= $evento['id'] ?>" class="menu-dropdown hero-menu" 
-                            style="display:none; position:absolute; top:40px; right:10px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); border:1px solid #eee;">
-                            
-                            <div class="menu-item" onclick="pasoEvento(<?= $evento['id'] ?>)">Paso esta semana</div>
-                            
-                            <!-- Usamos $evento['id'] directamente en lugar de $primer_id_reserva -->
+                        <button onclick="toggleHeroMenu(event, <?= $evento['id'] ?>)" style="position:absolute; top:10px; right:10px; z-index:10; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#555;">⋮</button>
+                        <div id="heroMenu_<?= $evento['id'] ?>" class="menu-dropdown" style="display:none; position:absolute; top:45px; right:10px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); border:1px solid #eee;">
+                            <div class="menu-item" onclick="pasoEvento(<?= $evento['id'] ?>)" style="padding:12px; cursor:pointer; border-bottom:1px solid #f0f0f0;">Paso esta semana</div>
                             <?php if (!empty($deuda_mas_vigente)): ?>
-                            <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)">💳 Pagar cuota pendiente</div>
-                            <?php endif; ?>
-                            
-                            <?php if (!empty($clubes_responsable) && $evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
-                            <div class="menu-item" onclick="armarEquiposIA(<?= $evento['id'] ?>)" style="color:#6A1B9A; font-weight:500;">🤖 Armar equipos IA</div>
+                            <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)" style="padding:12px; cursor:pointer;">💳 Pagar cuota pendiente</div>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
-                    <!-- Header -->
+                    <!-- Header Ficha -->
                     <div style="background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <span style="font-size:1.5rem;"><?= $evento['icono'] ?></span>
@@ -1230,18 +1222,18 @@ if (isset($_SESSION['id_socio'])) {
                         <span style="background:#E3F2FD; color:#1565C0; padding:4px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold;"><?= $evento['deporte'] ?></span>
                     </div>
                     
-                    <!-- Cuerpo -->
-                    <div style="padding:1rem;">
-                        <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">
+                    <!-- Cuerpo Ficha -->
+                    <div style="padding:1.2rem;">
+                        <div style="font-size:0.95rem; color:#555; margin-bottom:0.8rem;">
                             📅 <?= date('d/m/Y', strtotime($evento['fecha'])) ?> &nbsp;|&nbsp; 
                             ⏰ <?= substr($evento['hora_inicio'] ?? '00:00', 0, 5) ?> - <?= substr($evento['hora_fin'] ?? '00:00', 0, 5) ?> hrs
                         </div>
                         
                         <!-- Info Cupos -->
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:0.75rem; border-radius:10px; margin-bottom:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:0.8rem; border-radius:10px; margin-bottom:1.2rem; border:1px solid #eee;">
                             <div style="text-align:left;">
-                                <div style="font-size:0.8rem; color:#888;">Cupos</div>
-                                <div id="badge-cupos-<?= $evento['id'] ?>" style="font-weight:bold; color:#333;">
+                                <div style="font-size:0.8rem; color:#888;">Cupos Disponibles</div>
+                                <div style="font-weight:bold; color:#333; font-size:1.1rem;">
                                     <?= $evento['cupos_ocupados'] ?>/<?= $evento['cupos_total'] ?>
                                 </div>
                             </div>
@@ -1253,54 +1245,55 @@ if (isset($_SESSION['id_socio'])) {
                             </div>
                         </div>
 
-                        <!-- BOTONES DE ACCIÓN CON LÓGICA DE FECHA -->
-                        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <!-- ✅ LÓGICA DE BOTONES REFORZADA -->
+                        <div style="display:flex; flex-direction:column; gap:0.6rem;">
                             
                             <?php if ($esta_inscrito_en_tabla): ?>
                                 <!-- CASO: YA INSCRITO -->
-                                <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828;">
+                                <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828;">
                                     ❌ Bajarme del partido
                                 </button>
-                                <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
+                                <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
                                     👁️ Ver Inscritos
                                 </button>
 
                             <?php else: ?>
                                 <!-- CASO: NO INSCRITO -->
                                 <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
-                                    <button disabled style="width:100%; padding:0.6rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">
+                                    <button disabled style="width:100%; padding:0.7rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">
                                         🔒 Cupos Completos
                                     </button>
                                 
                                 <?php elseif ($inscripciones_abiertas): ?>
-                                    <!-- ✅ FECHA HABILITADA: Botones Activos -->
+                                    <!-- ✅ SOLO SI YA PASÓ EL LUNES 09:00 -->
                                     <button onclick="anotarseEvento(<?= $evento['id'] ?>, 'reserva', '<?= addslashes(strtolower(str_replace(' ', '', $evento['deporte']))) ?>', <?= $evento['cupos_total'] ?>, <?= $evento['monto'] ?? 0 ?>)" 
-                                        style="width:100%; padding:0.6rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
+                                        style="width:100%; padding:0.7rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 10px rgba(102, 126, 234, 0.3);">
                                         ✅ Anotarse al Partido
                                     </button>
                                     
-                                    <button onclick="pasoEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#fff; border:1px solid #ddd; color:#E53E3E; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.9rem;">
+                                    <button onclick="pasoEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#fff; border:1px solid #ddd; color:#E53E3E; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.9rem;">
                                         🚶 Paso esta semana
                                     </button>
 
                                 <?php else: ?>
-                                    <!-- ⏳ FECHA NO HABILITADA: Mensaje de Espera -->
-                                    <div style="text-align:center; padding:0.8rem; background:#FFF3E0; border-radius:8px; font-size:0.9rem; color:#E65100; border:1px dashed #FFB74D;">
-                                        ⏳ Inscripciones abren el <strong>Lunes a las 09:00 hrs</strong>
+                                    <!-- ⏳ MENSAJE DE ESPARA (REEMPLAZA A LOS BOTONES) -->
+                                    <div style="text-align:center; padding:1rem; background:#FFF3E0; border-radius:10px; font-size:0.95rem; color:#E65100; border:1px dashed #FFB74D;">
+                                        ⏳ Las inscripciones para este partido se habilitan el <strong>Lunes a las 09:00 hrs</strong>.
                                     </div>
                                 <?php endif; ?>
                                 
                                 <!-- Ver Detalles siempre visible -->
-                                <button onclick="abrirDetalleReservaSocio(<?= $evento['id'] ?>)" style="width:100%; padding:0.5rem; background:#f8f9fa; border:1px solid #eee; border-radius:8px; cursor:pointer; font-weight:500; color:#555; font-size:0.9rem;">
-                                    ℹ️ Ver Detalles
+                                <button onclick="abrirDetalleReservaSocio(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#f8f9fa; border:1px solid #eee; border-radius:8px; cursor:pointer; font-weight:500; color:#555; font-size:0.9rem; margin-top:0.5rem;">
+                                    ℹ️ Ver Detalles del Evento
                                 </button>
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
 
             <?php elseif ($evento['tipo'] === 'torneo'): ?>
-                <!-- FICHA DE TORNEO (Sin cambios mayores, solo limpieza) -->
-                <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column; border-left:5px solid #FFD700;">
+                <!-- FICHA DE TORNEO -->
+                <div style="position:relative; background:white; border-radius:16px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,0.08); border:1px solid #e0e0e0; border-left:5px solid #FFD700; display:flex; flex-direction:column;">
                     <div style="padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <span style="font-size:1.5rem;"><?= $evento['icono'] ?></span>
@@ -1309,10 +1302,10 @@ if (isset($_SESSION['id_socio'])) {
                         <span style="background:#FFFDE7; color:#F57F17; padding:4px 8px; border-radius:8px; font-size:0.75rem; font-weight:bold;"><?= $evento['deporte'] ?></span>
                     </div>
                     
-                    <div style="padding:1rem;">
-                        <div style="font-size:0.95rem; color:#555; margin-bottom:0.5rem;">📅 <?= $evento['subtitulo'] ?></div>
+                    <div style="padding:1.2rem;">
+                        <div style="font-size:0.95rem; color:#555; margin-bottom:0.8rem;">📅 <?= $evento['subtitulo'] ?></div>
                         
-                        <div style="background:#FFFDE7; padding:0.75rem; border-radius:10px; margin-bottom:1rem; text-align:center;">
+                        <div style="background:#FFFDE7; padding:0.8rem; border-radius:10px; margin-bottom:1.2rem; text-align:center; border:1px solid #FFF59D;">
                             <div style="font-size:0.8rem; color:#888; margin-bottom:4px;">Estado de tu Pareja</div>
                             <?php if ($evento['posicion_pareja'] > 0): ?>
                                 <div style="font-family:monospace; font-size:1.1rem; font-weight:bold; color:#5D4037;">Pareja <?= $evento['posicion_pareja'] ?>/<?= $evento['total_parejas'] ?></div>
@@ -1323,11 +1316,11 @@ if (isset($_SESSION['id_socio'])) {
                         </div>
 
                         <?php if (!$evento['es_completa']): ?>
-                            <button onclick="abrirModalInvitacion('<?= $evento['codigo_pareja'] ?>', '<?= addslashes($evento['titulo']) ?>')" style="width:100%; padding:0.7rem; background:linear-gradient(135deg, #AB47BC, #7B1FA2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
+                            <button onclick="abrirModalInvitacion('<?= $evento['codigo_pareja'] ?>', '<?= addslashes($evento['titulo']) ?>')" style="width:100%; padding:0.8rem; background:linear-gradient(135deg, #AB47BC, #7B1FA2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
                                 📩 Invitar a mi Pareja
                             </button>
                         <?php else: ?>
-                            <a href="torneo_detalle.php?id=<?= $evento['id'] ?>" style="display:block; width:100%; padding:0.7rem; background:linear-gradient(135deg, #FFD700, #FFA000); color:white; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold;">
+                            <a href="torneo_detalle.php?id=<?= $evento['id'] ?>" style="display:block; width:100%; padding:0.8rem; background:linear-gradient(135deg, #FFD700, #FFA000); color:white; text-align:center; border-radius:8px; text-decoration:none; font-weight:bold;">
                                 Ver Torneo →
                             </a>
                         <?php endif; ?>
