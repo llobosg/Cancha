@@ -156,7 +156,7 @@ $url_club_param = $_GET['id_club'] ?? 'N/A';
 error_log("[DEBUG] Socio ID: {$id_socio} | Club ID Session: {$club_id_session} | Parametro URL id_club: {$url_club_param} | Modo Individual: " . ($modo_individual ? 'SI' : 'NO'));
 error_log("[DEBUG] Club ID calculado: {$club_id}");
 
-// === 7. PRÓXIMO PARTIDO - LÓGICA CORREGIDA (FECHA LÍMUNE LUNES 09:00) ===
+// === 7. PRÓXIMO PARTIDO - CON LOGS DE DEBUGGING ===
 $proximo_evento = null;
 $ya_inscrito = false;
 $cupos_llenos = false;
@@ -168,22 +168,28 @@ $inscritos_actuales = 0;
 $jugadores_esperados = 0;
 
 try {
+    error_log("[DEBUG] === INICIO BÚSQUEDA PRÓXIMO EVENTO ===");
+    error_log("[DEBUG] ID Socio: $id_socio | Modo Individual: " . ($modo_individual ? 'SI' : 'NO') . " | Club ID: " . ($club_id ?? 'NULL'));
+
     $where_parts = [];
     $params = [];
 
-    // Condición base: Reserva activa y futura (usamos hora_fin para que no desaparezca mientras se juega)
+    // 1. Filtros Base
     $where_parts[] = "r.estado IN ('confirmada', 'pendiente')"; 
-    $where_parts[] = "CONCAT(r.fecha, ' ', r.hora_fin) > NOW()";
+    // Usamos fecha >= hoy para asegurar que tomamos eventos de hoy en adelante
+    $where_parts[] = "r.fecha >= CURDATE()";
 
-    if (!$modo_individual && $club_id) {
-        // ✅ MODO CLUB: Próximas reservas DEL CLUB
+    // 2. Filtros Específicos
+    if (!$modo_individual && !empty($club_id)) {
+        // MODO CLUB
         $where_parts[] = "r.id_club = ?";
         $params[] = $club_id;
-        
+        error_log("[DEBUG] Filtro aplicado: id_club = $club_id");
     } else {
-        // ✅ MODO INDIVIDUAL: Reservas personales
+        // MODO INDIVIDUAL
         $where_parts[] = "(r.id_club IS NULL OR r.id_club = 0) AND r.id_socio = ?";
         $params[] = $id_socio;
+        error_log("[DEBUG] Filtro aplicado: id_socio = $id_socio (Sin club)");
     }
 
     $sql = "
@@ -199,56 +205,57 @@ try {
         LIMIT 1
     ";
 
+    error_log("[DEBUG] SQL Generada: " . $sql);
+    error_log("[DEBUG] Parámetros: " . json_encode($params));
+
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $proximo_evento = $stmt->fetch();
 
     if ($proximo_evento) {
+        error_log("[DEBUG] ✅ EVENTO ENCONTRADO: ID " . $proximo_evento['id_reserva'] . " | Fecha: " . $proximo_evento['fecha']);
+        
         $id_reserva = $proximo_evento['id_reserva'];
         $deporte = $proximo_evento['id_deporte'] ?? 'futbolito';
         $inscritos_actuales = (int)($proximo_evento['inscritos_actuales'] ?? 0);
         $jugadores_esperados = (int)($proximo_evento['jugadores_esperados'] ?? 20);
         
-        // --- CÁLCULO DE FECHA LÍMITE (LUNES 09:00) ---
+        // Cálculo Lunes 09:00
         $fecha_evento_obj = new DateTime($proximo_evento['fecha']);
-        $dia_semana_evento = (int)$fecha_evento_obj->format('N'); // 1=Lun, 3=Mie, 7=Dom
-        
-        // Clonar fecha para calcular el lunes de esa misma semana
+        $dia_semana_evento = (int)$fecha_evento_obj->format('N'); 
         $lunes_limite = clone $fecha_evento_obj;
-        
-        // Restar días para llegar al Lunes (1). Ej: Si es Mie(3), resto 2. Si es Lun(1), resto 0.
         $dias_a_restar = $dia_semana_evento - 1; 
         $lunes_limite->modify("-$dias_a_restar days");
-        $lunes_limite->setTime(9, 0, 0); // Fijar hora a 09:00
+        $lunes_limite->setTime(9, 0, 0);
         
         $ahora = new DateTime();
         $despues_del_lunes_09 = ($ahora >= $lunes_limite);
         
-        // Formatear para visualización
-        $fecha_formateada = $fecha_evento_obj->format('d M'); // ej: 10 Jun
+        $fecha_formateada = $fecha_evento_obj->format('d M');
         $hora_formateada = substr($proximo_evento['hora_inicio'], 0, 5) . ' - ' . substr($proximo_evento['hora_fin'], 0, 5);
         
-        // Cupos
         $cupos_llenos = ($jugadores_esperados > 0 && $inscritos_actuales >= $jugadores_esperados);
         
-        // Nombre Deporte
-        $nombres_deportes = [
-            'futbol' => 'Fútbol', 'futbolito' => 'Futbolito', 'futsal' => 'Futsal',
-            'tenis' => 'Tenis', 'padel' => 'Pádel', 'voleyball' => 'Vóley', 'otro' => 'Otro',
-            '1' => 'Fútbol', '2' => 'Pádel', '3' => 'Tenis' // Soporte por ID numérico
-        ];
+        $nombres_deportes = ['futbol' => 'Fútbol', 'padel' => 'Pádel', 'tenis' => 'Tenis', 'voleyball' => 'Vóley', '1'=>'Fútbol', '2'=>'Pádel'];
         $nombre_deporte = $nombres_deportes[$deporte] ?? ucfirst($deporte);
         
-        // Verificar inscripción
+        // Check inscripción
         $stmt_check = $pdo->prepare("SELECT 1 FROM inscritos WHERE id_evento = ? AND id_socio = ? AND tipo_actividad = 'reserva' LIMIT 1");
         $stmt_check->execute([$id_reserva, $id_socio]);
         $ya_inscrito = (bool)$stmt_check->fetch();
         
-        error_log("[DASHBOARD] Próximo: {$fecha_formateada} | Límite Inscripción: {$lunes_limite->format('Y-m-d H:i')} | Activo: " . ($despues_del_lunes_09 ? 'SI' : 'NO'));
+    } else {
+        error_log("[DEBUG] ❌ NO SE ENCONTRARON EVENTOS. Revisa si hay reservas futuras con ese id_socio o id_club.");
+        
+        // Debug extra: Contar reservas futuras totales del socio sin filtros de club
+        $stmt_debug = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_socio = ? AND fecha >= CURDATE()");
+        $stmt_debug->execute([$id_socio]);
+        $total_futuras = $stmt_debug->fetchColumn();
+        error_log("[DEBUG] Total reservas futuras del socio (sin filtro club): $total_futuras");
     }
 
 } catch (Exception $e) {
-    error_log("Error próximo partido: " . $e->getMessage());
+    error_log("[DEBUG] 💥 ERROR CRÍTICO: " . $e->getMessage());
 }
 
 // === 8. DEUDAS PENDIENTES ===
