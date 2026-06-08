@@ -962,26 +962,6 @@ if (isset($_SESSION['id_socio'])) {
     $todos_eventos = [];
     $primer_evento_es_futbol = false; 
 
-    // === 1. OBTENER CLUBES RESPONSABLES (PONER ESTO AL PRINCIPIO DEL ARCHIVO) ===
-    $clubes_responsable = [];
-    if (isset($_SESSION['id_socio'])) {
-        try {
-            $stmt_r = $pdo->prepare("
-                SELECT c.id_club, c.nombre as club_nombre 
-                FROM socio_club sc 
-                JOIN clubs c ON sc.id_club = c.id_club 
-                WHERE sc.id_socio = ? AND sc.es_responsable = 1
-            ");
-            $stmt_r->execute([$_SESSION['id_socio']]);
-            $clubes_responsable = $stmt_r->fetchAll(PDO::FETCH_ASSOC);
-            
-            // LOG CRÍTICO: Si esto no aparece en Railway, el código no se ejecuta
-            error_log("[MODAL DEBUG] Socio " . $_SESSION['id_socio'] . " tiene " . count($clubes_responsable) . " clubes responsables.");
-        } catch (Exception $e) {
-            error_log("[MODAL ERROR SQL] " . $e->getMessage());
-        }
-    }
-
     // 1. Determinar el Club Activo desde la URL
     $club_slug_from_url = $_GET['id_club'] ?? null;
     $club_id_activo = null;
@@ -1149,6 +1129,7 @@ if (isset($_SESSION['id_socio'])) {
         $deuda_mas_vigente = null;
         $cuotas_pendientes = 0;
     }
+}
 ?>
 
 <!-- === SECCIÓN: MIS PRÓXIMOS EVENTOS (FICHAS INDEPENDIENTES) === -->
