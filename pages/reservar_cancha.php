@@ -606,7 +606,7 @@ $deportes = [
         return dates;
     }
 
-    // === CONFIRMACIÓN ===
+    // === CONFIRMACIÓN MEJORADA ===
     async function confirmarReservaInteligente() {
         if (!reservaActual) {
             showToast('❌ No hay reserva seleccionada', 'error');
@@ -622,11 +622,15 @@ $deportes = [
         finDate.setHours(h, m + duracion, 0, 0);
         const horaFinStr = `${String(finDate.getHours()).padStart(2,'0')}:${String(finDate.getMinutes()).padStart(2,'0')}`;
 
-        // Calcular monto unitario correcto para enviar
+        // Calcular monto unitario
         let factor = 1;
         if (duracion == 90) factor = 1.5;
         else if (duracion == 120) factor = 2;
         const montoUnitario = Math.round(parseFloat(reservaActual.valor_arriendo) * factor);
+
+        // ✅ DEFINIR VARIABLES DE CONTEXTO (ESTO FALTABA)
+        const tipoReserva = document.querySelector('input[name="tipo_reserva"]:checked')?.value || 'individual';
+        const idClubReserva = document.getElementById('id_club_reserva')?.value || null;
 
         try {
             if (isRecurrent) {
@@ -644,13 +648,14 @@ $deportes = [
                     action: 'create_recurrent',
                     id_cancha: reservaActual.id_cancha,
                     hora_inicio: reservaActual.hora_inicio,
-                    hora_fin: horaFinStr,
                     id_socio: <?= $id_socio ?>,
                     repeat_day: day,
                     start_date: sDate,
                     end_date: eDate,
-                    monto_total: montoUnitario, // Enviamos el valor unitario
-                    duracion_bloque: duracion
+                    monto_total: montoUnitario,
+                    duracion_bloque: duracion,
+                    tipo_reserva: tipoReserva,
+                    id_club_reserva: idClubReserva
                 };
 
                 const res = await fetch('../api/reserva_recurrente.php', {
@@ -663,7 +668,7 @@ $deportes = [
                 if (data.success) {
                     showToast(`✅ ${data.created} reservas creadas exitosamente`, 'success');
                     cerrarModalReserva();
-                    aplicarFiltros(true);
+                    location.reload();
                 } else {
                     showToast('❌ ' + (data.message || 'Error al crear reservas'), 'error');
                 }
@@ -685,11 +690,20 @@ $deportes = [
 
                 console.log("🚀 Enviando a reserva_unica.php:", payload);
 
-                const res = await fetch('../api/reserva_unica.php', { // <--- CAMBIO CRÍTICO AQUÍ
+                const res = await fetch('../api/reserva_unica.php', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Reserva creada correctamente', 'success');
+                    cerrarModalReserva();
+                    location.reload();
+                } else {
+                    showToast('❌ ' + (data.message || 'Error al crear reserva'), 'error');
+                }
             }
         } catch (error) {
             console.error(error);
