@@ -28,6 +28,24 @@ $usuario_data = $stmt->fetch();
 
 if (!$usuario_data) { header('Location: ../index.php'); exit; }
 
+// === 1. OBTENER CLUBES DONDE EL SOCIO ES RESPONSABLE (PARA ESTE ARCHIVO) ===
+$clubes_responsable = [];
+try {
+    $stmt_r = $pdo->prepare("
+        SELECT c.id_club, c.nombre as club_nombre 
+        FROM socio_club sc 
+        JOIN clubs c ON sc.id_club = c.id_club 
+        WHERE sc.id_socio = ? AND sc.es_responsable = 1
+    ");
+    $stmt_r->execute([$id_socio]);
+    $clubes_responsable = $stmt_r->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Log para confirmar que llega dato a este archivo
+    error_log("[RESERVAR_CANCHA] Socio $id_socio tiene " . count($clubes_responsable) . " clubes responsables.");
+} catch (Exception $e) {
+    error_log("[RESERVAR_CANCHA] Error cargando clubes: " . $e->getMessage());
+}
+
 // Obtener Recintos y Deportes
 $stmt_recintos = $pdo->prepare("SELECT id_recinto, nombre FROM recintos_deportivos WHERE email_verified = 1 ORDER BY nombre");
 $stmt_recintos->execute(); $recintos = $stmt_recintos->fetchAll();

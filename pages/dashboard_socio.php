@@ -955,6 +955,32 @@ $js_vars = [
 
 <?php
 // === LÓGICA UNIFICADA DE PRÓXIMOS EVENTOS (FILTRADO POR CLUB ACTIVO) ===
+// === FORZAR CARGA DE CLUBES RESPONSABLES (DEBUG EXTREMO) ===
+$clubes_responsable = [];
+error_log("[MODAL] Iniciando carga de clubes para socio ID: " . ($id_socio ?? 'NO DEFINIDO'));
+
+if (!empty($id_socio)) {
+    try {
+        $stmt_r = $pdo->prepare("
+            SELECT c.id_club, c.nombre as club_nombre 
+            FROM socio_club sc 
+            JOIN clubs c ON sc.id_club = c.id_club 
+            WHERE sc.id_socio = ? AND sc.es_responsable = 1
+        ");
+        $stmt_r->execute([$id_socio]);
+        $clubes_responsable = $stmt_r->fetchAll(PDO::FETCH_ASSOC);
+        
+        error_log("[MODAL] ÉXITO: Se encontraron " . count($clubes_responsable) . " clubes responsables.");
+        if(!empty($clubes_responsable)) {
+            error_log("[MODAL] Datos: " . json_encode($clubes_responsable));
+        }
+    } catch (Exception $e) {
+        error_log("[MODAL] ERROR SQL: " . $e->getMessage());
+    }
+} else {
+    error_log("[MODAL] ERROR: La variable \$id_socio está vacía.");
+}
+
 if (isset($_SESSION['id_socio'])) {
     $id_socio = $_SESSION['id_socio'];
     error_log("[DEBUG SOCIO] Iniciando carga para ID: $id_socio");
@@ -1094,40 +1120,22 @@ if (isset($_SESSION['id_socio'])) {
     $deuda_mas_vigente = null;
     $cuotas_pendientes = 0;
 
+    // En dashboard_socio.php, bloque de deudas
     try {
-        // Verificamos primero si la tabla cuotas tiene la columna id_club
-        // Si no la tiene, asumimos que todas las deudas son individuales o usamos otra lógica
-        $has_club_column = false;
-        try {
-            $stmt_check_col = $pdo->query("SHOW COLUMNS FROM cuotas LIKE 'id_club'");
-            $has_club_column = ($stmt_check_col->rowCount() > 0);
-        } catch (Exception $e) { /* Ignorar si falla el check */ }
+        // Verificar si la columna id_club existe en la tabla cuotas
+        $col_exists = $pdo->query("SHOW COLUMNS FROM cuotas LIKE 'id_club'")->rowCount() > 0;
 
-        if ($club_id_activo && $has_club_column) {
-            // Deudas del club activo (SOLO SI LA COLUMNA EXISTE)
+        if ($club_id_activo && $col_exists) {
             $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
             $stmt_deuda->execute([$id_socio, $club_id_activo]);
-            
-            $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente'");
-            $stmt_count->execute([$id_socio, $club_id_activo]);
         } else {
-            // Deudas individuales o si la columna no existe
-            // Usamos IS NULL OR = 0 para ser seguros
-            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
+            // Si no hay club activo o la columna no existe, buscamos deudas individuales
+            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
             $stmt_deuda->execute([$id_socio]);
-            
-            $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente'");
-            $stmt_count->execute([$id_socio]);
         }
-        
         $deuda_mas_vigente = $stmt_deuda->fetch(PDO::FETCH_ASSOC);
-        $cuotas_pendientes = (int)$stmt_count->fetchColumn();
-        
-    } catch (PDOException $e) {
-        // Si falla algo grave, registramos pero no rompemos la página
-        error_log("Error cargando deudas (Silenciado): " . $e->getMessage());
-        $deuda_mas_vigente = null;
-        $cuotas_pendientes = 0;
+    } catch (Exception $e) {
+        error_log("Error deudas: " . $e->getMessage());
     }
 }
 ?>
