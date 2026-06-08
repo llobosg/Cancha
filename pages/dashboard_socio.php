@@ -1170,18 +1170,41 @@ if (isset($_SESSION['id_socio'])) {
             
             <?php 
                 $index = 0; 
+                $primer_evento_de_la_semana_id = null; // Para rastrear cuál es el primero válido
+
                 foreach ($todos_eventos as $evento): 
                     
-                    // === LÓGICA DE FECHA LÍMITE (LUNES 09:00) ===
-                    $fecha_obj = new DateTime($evento['fecha']);
-                    $dia_semana = (int)$fecha_obj->format('N'); 
-                    $lunes_limite = clone $fecha_obj;
-                    $lunes_limite->modify('-' . ($dia_semana - 1) . ' days');
-                    $lunes_limite->setTime(9, 0, 0);
+                    // === 1. DETECTAR SEMANA EN CURSO VS FUTURA ===
+                    $fecha_evento = new DateTime($evento['fecha']);
+                    $hoy = new DateTime();
+                    
+                    $domingo_semana_actual = clone $hoy;
+                    $dias_para_domingo = 7 - $hoy->format('N'); 
+                    if ($dias_para_domingo < 7) $domingo_semana_actual->modify("+{$dias_para_domingo} days");
+                    $domingo_semana_actual->setTime(23, 59, 59);
+
+                    $es_semana_futura = ($fecha_evento > $domingo_semana_actual);
+                    
+                    // === 2. DETECTAR LUNES 09:00 DE LA SEMANA DEL EVENTO ===
+                    $dia_semana_evento = (int)$fecha_evento->format('N');
+                    $lunes_del_evento = clone $fecha_evento;
+                    $lunes_del_evento->modify('-' . ($dia_semana_evento - 1) . ' days');
+                    $lunes_del_evento->setTime(9, 0, 0);
                     
                     $ahora = new DateTime();
-                    // Solo abrimos inscripciones si YA PASÓ el lunes 09:00 de esa semana
-                    $inscripciones_abiertas = ($ahora >= $lunes_limite);
+                    $ya_paso_lunes_evento = ($ahora >= $lunes_del_evento);
+
+                    // === REGLA DE ORO: SOLO EL PRIMERO DE LA SEMANA ACTIVA BOTONES ===
+                    // Si es semana futura, nunca activa botones.
+                    // Si es semana actual, solo activa botones si es el PRIMER evento de la lista ($index === 0)
+                    $botones_habilitados = false;
+                    if (!$es_semana_futura && $ya_paso_lunes_evento) {
+                        if ($index === 0) {
+                            $botones_habilitados = true;
+                            $primer_evento_de_la_semana_id = $evento['id'];
+                        }
+                    }
+                    
                     $es_el_primero = ($index === 0);
 
                     // === VERIFICAR INSCRIPCIÓN ===
@@ -1194,7 +1217,8 @@ if (isset($_SESSION['id_socio'])) {
                         $esta_inscrito_en_tabla = true; 
                     }
 
-                    $mostrar_menu_3_puntos = ($es_el_primero && $primer_evento_es_futbol);
+                    // Menú 3 puntos: Solo si es el primero de la semana y es fútbol
+                    $mostrar_menu_3_puntos = ($botones_habilitados && strtolower($evento['deporte']) == 'fútbol');
             ?>    
 
             <?php if ($evento['tipo'] === 'reserva'): ?>
@@ -1245,11 +1269,11 @@ if (isset($_SESSION['id_socio'])) {
                             </div>
                         </div>
 
-                        <!-- ✅ LÓGICA DE BOTONES REFORZADA -->
+                        <!-- ✅ LÓGICA DE BOTONES REFORZADA (SOLO PRIMERO DE LA SEMANA) -->
                         <div style="display:flex; flex-direction:column; gap:0.6rem;">
                             
                             <?php if ($esta_inscrito_en_tabla): ?>
-                                <!-- CASO: YA INSCRITO -->
+                                <!-- CASO: YA INSCRITO (Siempre visible para gestión) -->
                                 <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828;">
                                     ❌ Bajarme del partido
                                 </button>
@@ -1264,8 +1288,8 @@ if (isset($_SESSION['id_socio'])) {
                                         🔒 Cupos Completos
                                     </button>
                                 
-                                <?php elseif ($inscripciones_abiertas): ?>
-                                    <!-- ✅ SOLO SI YA PASÓ EL LUNES 09:00 -->
+                                <?php elseif ($botones_habilitados): ?>
+                                    <!-- ✅ SOLO SI ES EL PRIMERO DE LA SEMANA Y PASÓ EL LUNES 09:00 -->
                                     <button onclick="anotarseEvento(<?= $evento['id'] ?>, 'reserva', '<?= addslashes(strtolower(str_replace(' ', '', $evento['deporte']))) ?>', <?= $evento['cupos_total'] ?>, <?= $evento['monto'] ?? 0 ?>)" 
                                         style="width:100%; padding:0.7rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 10px rgba(102, 126, 234, 0.3);">
                                         ✅ Anotarse al Partido
@@ -1276,9 +1300,13 @@ if (isset($_SESSION['id_socio'])) {
                                     </button>
 
                                 <?php else: ?>
-                                    <!-- ⏳ MENSAJE DE ESPARA (REEMPLAZA A LOS BOTONES) -->
-                                    <div style="text-align:center; padding:1rem; background:#FFF3E0; border-radius:10px; font-size:0.95rem; color:#E65100; border:1px dashed #FFB74D;">
-                                        ⏳ Las inscripciones para este partido se habilitan el <strong>Lunes a las 09:00 hrs</strong>.
+                                    <!-- ⏳ MENSAJE DE ESPERA (PARA FUTUROS O 2DO/3ER EVENTO DE LA SEMANA) -->
+                                    <div style="text-align:center; padding:1rem; background:#ECEFF1; border-radius:10px; font-size:0.9rem; color:#546E7A; border:1px solid #CFD8DC;">
+                                        <?php if ($es_semana_futura): ?>
+                                            📅 Inscripciones se habilitan la <strong>semana del partido</strong>.
+                                        <?php else: ?>
+                                            ⏳ Próximo evento: revisa la ficha superior para inscribirte.
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                                 
