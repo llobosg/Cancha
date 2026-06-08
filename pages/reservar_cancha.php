@@ -607,7 +607,6 @@ $deportes = [
     }
 
     // === CONFIRMACIÓN ===
-
     async function confirmarReservaInteligente() {
         if (!reservaActual) {
             showToast('❌ No hay reserva seleccionada', 'error');
@@ -671,31 +670,26 @@ $deportes = [
 
             } else {
                 // --- FLUJO SIMPLE ---
-                const datos = {
+                const payload = {
                     id_cancha: reservaActual.id_cancha,
-                    fecha_base: reservaActual.fecha,
+                    fecha: reservaActual.fecha, 
                     hora_inicio: reservaActual.hora_inicio,
                     hora_fin: horaFinStr,
-                    duracion_minutos: duracion,
-                    tipo_patron: 'simple',
-                    club_id: '',
-                    monto_total: montoUnitario
+                    id_socio: <?= $id_socio ?>,
+                    monto_total: montoUnitario,
+                    duracion_bloque: duracion,
+                    // ✅ ENVÍO DE CONTEXTO
+                    tipo_reserva: tipoReserva,
+                    id_club_reserva: idClubReserva
                 };
 
-                const res = await fetch('../api/crear_reserva_recurrente.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams(datos)
-                });
+                console.log("🚀 Enviando a reserva_unica.php:", payload);
 
-                const data = await res.json();
-                if (data.success) {
-                    showToast('✅ Reserva creada correctamente', 'success');
-                    cerrarModalReserva();
-                    aplicarFiltros(true);
-                } else {
-                    showToast('❌ ' + (data.message || 'Error al crear reserva'), 'error');
-                }
+                const res = await fetch('../api/reserva_unica.php', { // <--- CAMBIO CRÍTICO AQUÍ
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
             }
         } catch (error) {
             console.error(error);
