@@ -1141,7 +1141,28 @@ if (isset($_SESSION['id_socio'])) {
         <!-- Lista de Fichas Ordenadas -->
         <div style="display:flex; flex-direction:column; gap:1rem;">
             
+            
             <?php 
+                // === EN dashboard_socio.php (ANTES DEL HTML DEL MODAL) ===
+                $clubes_responsable = [];
+
+                if (isset($_SESSION['id_socio'])) {
+                    try {
+                        $stmt_resp = $pdo->prepare("
+                            SELECT c.id_club, c.nombre as club_nombre 
+                            FROM socio_club sc
+                            JOIN clubs c ON sc.id_club = c.id_club
+                            WHERE sc.id_socio = ? AND sc.es_responsable = 1 AND sc.estado = 'activo'
+                        ");
+                        $stmt_resp->execute([$_SESSION['id_socio']]);
+                        $clubes_responsable = $stmt_resp->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        // DEBUG: Verifica en los logs de Railway si esto trae datos
+                        error_log("[MODAL] Clubes responsables encontrados para Socio " . $_SESSION['id_socio'] . ": " . count($clubes_responsable));
+                    } catch (Exception $e) {
+                        error_log("Error cargando clubes responsables: " . $e->getMessage());
+                    }
+                }
                 $index = 0; 
                 foreach ($todos_eventos as $evento): 
                     

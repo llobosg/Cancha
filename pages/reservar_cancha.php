@@ -209,30 +209,32 @@ $deportes = [
 
 <!-- Modal Reserva Inteligente -->
 <div id="modalReservaInteligente" class="modal-reserva-inteligente">
-    <!-- === SELECTOR DE CONTEXTO (SOLO PARA RESPONSABLES) === -->
+    <!-- === SELECTOR DE CONTEXTO === -->
     <?php if (!empty($clubes_responsable)): ?>
-    <div style="margin:1rem 0; padding:1rem; background:#F3E5F5; border-radius:12px; border:1px solid #CE93D8;">
-        <label style="font-weight:700; color:#4A148C; display:block; margin-bottom:0.5rem;">🏢 ¿A nombre de quién reservas?</label>
-        
-        <div style="display:flex; gap:1rem; margin-bottom:0.5rem;">
-            <label style="cursor:pointer;"><input type="radio" name="tipo_reserva" value="individual" checked onchange="toggleClubReserva(false)"> 👤 Personal</label>
-            <label style="cursor:pointer;"><input type="radio" name="tipo_reserva" value="club" onchange="toggleClubReserva(true)"> 🏟️ Club</label>
-        </div>
+        <div style="margin-bottom:1rem; padding:1rem; background:#F3E5F5; border-radius:10px; border:1px solid #CE93D8;">
+            <label style="font-weight:600; color:#4A148C; display:block; margin-bottom:0.5rem;">🏢 ¿A nombre de quién?</label>
+            
+            <div style="display:flex; gap:1rem;">
+                <label><input type="radio" name="tipo_reserva" value="individual" checked onchange="toggleClubContext(false)"> 👤 Personal</label>
+                <label><input type="radio" name="tipo_reserva" value="club" onchange="toggleClubContext(true)"> 🏟️ Club</label>
+            </div>
 
-        <select id="id_club_reserva" name="id_club_reserva" style="width:100%; padding:0.5rem; display:none; border-radius:6px;">
-            <option value="">Selecciona el club...</option>
-            <?php foreach ($clubes_responsable as $cr): ?>
-                <option value="<?= $cr['id_club'] ?>"><?= htmlspecialchars($cr['club_nombre']) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <script>
-    function toggleClubReserva(show) {
-        document.getElementById('id_club_reserva').style.display = show ? 'block' : 'none';
-    }
-    </script>
+            <select id="id_club_reserva" name="id_club_reserva" style="width:100%; margin-top:0.5rem; display:none; padding:0.5rem;">
+                <option value="">Selecciona club...</option>
+                <?php foreach ($clubes_responsable as $cr): ?>
+                    <option value="<?= $cr['id_club'] ?>"><?= htmlspecialchars($cr['club_nombre']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <script>
+        function toggleClubContext(isClub) {
+            document.getElementById('id_club_reserva').style.display = isClub ? 'block' : 'none';
+        }
+        </script>
+    <?php else: ?>
+        <small style="color:#888;">ℹ️ Reservas disponibles solo a nivel personal.</small>
     <?php endif; ?>
-    
+
     <div class="modal-reserva-inteligente-content">
         <h3 style="margin-top:0; color:#071289; border-bottom: 1px solid #eee; padding-bottom: 10px;">Confirmar Reserva</h3>
         

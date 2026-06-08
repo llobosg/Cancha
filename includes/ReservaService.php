@@ -147,9 +147,10 @@ class ReservaService {
 
             return ['success' => true, 'total' => count($reservas)];
 
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            throw $e;
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
         }
     }
 
