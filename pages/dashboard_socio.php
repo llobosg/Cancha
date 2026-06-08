@@ -962,6 +962,26 @@ if (isset($_SESSION['id_socio'])) {
     $todos_eventos = [];
     $primer_evento_es_futbol = false; 
 
+    // === 1. OBTENER CLUBES RESPONSABLES (PONER ESTO AL PRINCIPIO DEL ARCHIVO) ===
+    $clubes_responsable = [];
+    if (isset($_SESSION['id_socio'])) {
+        try {
+            $stmt_r = $pdo->prepare("
+                SELECT c.id_club, c.nombre as club_nombre 
+                FROM socio_club sc 
+                JOIN clubs c ON sc.id_club = c.id_club 
+                WHERE sc.id_socio = ? AND sc.es_responsable = 1
+            ");
+            $stmt_r->execute([$_SESSION['id_socio']]);
+            $clubes_responsable = $stmt_r->fetchAll(PDO::FETCH_ASSOC);
+            
+            // LOG CRÍTICO: Si esto no aparece en Railway, el código no se ejecuta
+            error_log("[MODAL DEBUG] Socio " . $_SESSION['id_socio'] . " tiene " . count($clubes_responsable) . " clubes responsables.");
+        } catch (Exception $e) {
+            error_log("[MODAL ERROR SQL] " . $e->getMessage());
+        }
+    }
+
     // 1. Determinar el Club Activo desde la URL
     $club_slug_from_url = $_GET['id_club'] ?? null;
     $club_id_activo = null;
@@ -1090,41 +1110,45 @@ if (isset($_SESSION['id_socio'])) {
 
     error_log("[DEBUG SOCIO] Total eventos finales: " . count($todos_eventos));
 
-    // 5. Cargar Deudas Pendientes (Filtradas por Club Activo si existe)
+    // 5. Cargar Deudas Pendientes (Blindado)
     $deuda_mas_vigente = null;
     $cuotas_pendientes = 0;
-    
+
     try {
-        if ($club_id_activo) {
-            // Deudas del club activo
+        // Verificamos primero si la tabla cuotas tiene la columna id_club
+        // Si no la tiene, asumimos que todas las deudas son individuales o usamos otra lógica
+        $has_club_column = false;
+        try {
+            $stmt_check_col = $pdo->query("SHOW COLUMNS FROM cuotas LIKE 'id_club'");
+            $has_club_column = ($stmt_check_col->rowCount() > 0);
+        } catch (Exception $e) { /* Ignorar si falla el check */ }
+
+        if ($club_id_activo && $has_club_column) {
+            // Deudas del club activo (SOLO SI LA COLUMNA EXISTE)
             $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
             $stmt_deuda->execute([$id_socio, $club_id_activo]);
-        } else {
-            // Deudas individuales (sin club)
-            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
-            $stmt_deuda->execute([$id_socio]);
-        }
-        
-        $deuda_mas_vigente = $stmt_deuda->fetch(PDO::FETCH_ASSOC);
-        
-        // Contar total de deudas
-        if ($club_id_activo) {
+            
             $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND id_club = ? AND estado = 'pendiente'");
             $stmt_count->execute([$id_socio, $club_id_activo]);
         } else {
+            // Deudas individuales o si la columna no existe
+            // Usamos IS NULL OR = 0 para ser seguros
+            $stmt_deuda = $pdo->prepare("SELECT id_cuota, monto, fecha_vencimiento FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente' ORDER BY fecha_vencimiento ASC LIMIT 1");
+            $stmt_deuda->execute([$id_socio]);
+            
             $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM cuotas WHERE id_socio = ? AND (id_club IS NULL OR id_club = 0) AND estado = 'pendiente'");
             $stmt_count->execute([$id_socio]);
         }
+        
+        $deuda_mas_vigente = $stmt_deuda->fetch(PDO::FETCH_ASSOC);
         $cuotas_pendientes = (int)$stmt_count->fetchColumn();
         
     } catch (PDOException $e) {
-        error_log("Error cargando deudas: " . $e->getMessage());
+        // Si falla algo grave, registramos pero no rompemos la página
+        error_log("Error cargando deudas (Silenciado): " . $e->getMessage());
+        $deuda_mas_vigente = null;
+        $cuotas_pendientes = 0;
     }
-} else {
-    $todos_eventos = [];
-    $deuda_mas_vigente = null;
-    $cuotas_pendientes = 0;
-}
 ?>
 
 <!-- === SECCIÓN: MIS PRÓXIMOS EVENTOS (FICHAS INDEPENDIENTES) === -->
