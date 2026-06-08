@@ -30,6 +30,18 @@ try {
         $hora_fin = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
     }
 
+    // === OBTENER CAPACIDAD DE LA CANCHA ===
+    $stmt_cap = $pdo->prepare("SELECT capacidad_jugadores FROM canchas WHERE id_cancha = ?");
+    $stmt_cap->execute([$id_cancha]);
+    $cap_data = $stmt_cap->fetch(PDO::FETCH_ASSOC);
+    
+    // Si existe la columna y tiene valor, úsalo. Si no, default a 20 (Fútbol) o 4 (Pádel) según prefieras.
+    // Aquí usamos 20 como default general como pediste.
+    $jugadores_esperados = 20; 
+    if ($cap_data && !empty($cap_data['capacidad_jugadores'])) {
+        $jugadores_esperados = (int)$cap_data['capacidad_jugadores'];
+    }
+
     // Validar disponibilidad
     $stmt_chk = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
     $stmt_chk->execute([$id_cancha, $fecha, $hora_inicio]);
@@ -71,15 +83,15 @@ try {
     }
 
     // === INSERTAR RESERVA ===
-    $sql = "INSERT INTO reservas (
+        $sql = "INSERT INTO reservas (
                 id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente, 
                 fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada')";
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada')";
             
     $stmt_ins = $pdo->prepare($sql);
     $stmt_ins->execute([
         $id_cancha, $id_club_final, $id_socio, $nombre_cliente, $email_cliente, $telefono_cliente,
-        $fecha, $hora_inicio, $hora_fin, $monto_total
+        $fecha, $hora_inicio, $hora_fin, $monto_total, $jugadores_esperados
     ]);
     
     $id_res = $pdo->lastInsertId();

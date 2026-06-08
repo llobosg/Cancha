@@ -1232,7 +1232,9 @@ if (isset($_SESSION['id_socio'])) {
                         <div id="heroMenu_<?= $evento['id'] ?>" class="menu-dropdown" style="display:none; position:absolute; top:45px; right:10px; min-width:200px; z-index:50; background:white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.2); border:1px solid #eee;">
                             <div class="menu-item" onclick="pasoEvento(<?= $evento['id'] ?>)" style="padding:12px; cursor:pointer; border-bottom:1px solid #f0f0f0;">Paso esta semana</div>
                             <?php if (!empty($deuda_mas_vigente)): ?>
-                            <div class="menu-item" onclick="pagarCuota(<?= $deuda_mas_vigente['id_cuota'] ?>)" style="padding:12px; cursor:pointer;">💳 Pagar cuota pendiente</div>
+                            <div class="menu-item" onclick="window.location.href='pagar_cuota.php?id_cuota=<?= $deuda_mas_vigente['id_cuota'] ?>'">
+                                💳 Pagar cuota pendiente
+                            </div>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
@@ -1392,7 +1394,7 @@ if (isset($_SESSION['id_socio'])) {
                 </strong>
             </div>
             
-            <button onclick="pagarCuota(<?= intval($deuda_mas_vigente['id_cuota'] ?? 0) ?>)" 
+            <button onclick="window.location.href='pagar_cuota.php?id_cuota=<?= $deuda_mas_vigente['id_cuota'] ?>'" 
                 style="background: #F44336; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
                 💳 Pagar Ahora
             </button>
