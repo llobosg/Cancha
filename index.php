@@ -98,6 +98,19 @@ $_SESSION['visited_index'] = true;
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Evitar error 404 de favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>" type="image/svg+xml">
+  <!-- === PWA ICONS - BALÓN FIFA 2026 === -->
+  <!-- Android / Chrome PWA -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- iOS / Safari -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon-fifa2026.png">
+  <meta name="apple-mobile-web-app-title" content="CanchaSport">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Fallback favicon (pestaña navegador) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/icon-fifa2026-192.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/icon-fifa2026-192.png">
   <style>
     :root {
       --primary-start: #CE93D8; --primary-end: #AB47BC;

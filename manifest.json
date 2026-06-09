@@ -1,21 +1,23 @@
 {
-  "name": "Cancha",
+  "name": "CanchaSport",
   "short_name": "CanchaSport",
-  "description": "Buscar canchas, torneos, americanos y gestión para dueños de recintos deportivos",
-  "start_url": "/",
+  "description": "Tu comunidad deportiva 360°",
+  "start_url": "/pages/mockups/index_renovado.php",
   "display": "standalone",
-  "background_color": "#003366",
-  "theme_color": "#003366",
+  "background_color": "#AB47BC",
+  "theme_color": "#CE93D8",
   "icons": [
     {
-      "src": "/assets/icons/icon-192x192.png",
+      "src": "/assets/img/icon-fifa2026-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/assets/icons/icon-512x512.png",
+      "src": "/assets/img/icon-fifa2026-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
