@@ -261,3 +261,63 @@ h2 {
     overflow-y: auto;
     max-height: 200px;
 }
+/* === BALÓN FIFA 2026 ANIMADO === */
+.balon-container {
+    display: flex;
+    align-items: center;
+    margin-left: 10px; /* Separación del texto/logo */
+}
+
+.balon-animado-img {
+    width: 45px; /* Tamaño equilibrado para el header de CanchaSport */
+    height: auto;
+    animation: girarBalon 4s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4)); /* Resplandor dorado sutil */
+}
+
+@keyframes girarBalon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Ajuste Responsive */
+@media (max-width: 768px) {
+    .brand-logo {
+        font-size: 1.1rem;
+    }
+    
+    .balon-animado-img {
+        width: 32px; /* Más pequeño en móvil para no saturar */
+        margin-left: 5px;
+    }
+}
+/* === BALÓN FIFA 2026 ANIMADO (HEADER DASHBOARD) === */
+.balon-container {
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+}
+
+.balon-animado-img {
+    width: 40px; /* Tamaño equilibrado para el header del socio */
+    height: auto;
+    animation: girarBalon 4s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.5)); /* Resplandor dorado sutil */
+}
+
+@keyframes girarBalon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Ajuste Responsive para móviles */
+@media (max-width: 768px) {
+    .brand-logo span {
+        font-size: 1rem; /* Texto un poco más pequeño en móvil */
+    }
+    
+    .balon-animado-img {
+        width: 30px; /* Balón más compacto en pantallas pequeñas */
+        margin-left: 5px;
+    }
+}

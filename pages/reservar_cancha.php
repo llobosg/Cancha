@@ -205,8 +205,15 @@ $deportes = [
 </head>
 <body>
 <div class="header">
-    <div class="brand-logo">🎾 Reservar Cancha</div>
-    <a href="dashboard_socio.php" style="color: white; text-decoration: none;">← Dashboard</a>
+    <div class="brand-logo" style="display:flex; align-items:center; gap:0.5rem;">
+        <span>🎾 Reservar Cancha</span>
+        
+        <!-- Balón FIFA 2026 Giratorio -->
+        <div class="balon-container">
+            <img src="../assets/img/balonfifa2026.png" alt="Balón FIFA 2026" class="balon-animado-img">
+        </div>
+    </div>
+    <a href="dashboard_socio.php" style="color: white; text-decoration: none;">⬅ Dashboard</a>
 </div>
 
 <div class="main-container">
