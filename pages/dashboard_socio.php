@@ -898,6 +898,10 @@ $js_vars = [
         #listaInscritos button:hover {
             background: #FFEBEE !important;
         }
+        @keyframes girarBalonFifa {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -907,9 +911,21 @@ $js_vars = [
             <!-- Título Principal -->
             <span style="color:#FFD700; font-weight:900; font-size:1.3rem;">CanchaSport</span> 
             <!-- Balón FIFA 2026 Giratorio -->
-            <div class="balon-container">
-                <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" class="balon-animado-img">
-            </div>       
+            <div style="display:inline-flex; align-items:center; margin-left:8px;">
+                <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" 
+                    style="width:38px; height:38px; object-fit:contain; animation:girarBalonFifa 4s linear infinite; filter:drop-shadow(0 0 5px rgba(255,215,0,0.6));">
+            </div>
+            <!-- Keyframes DEBE estar dentro de un <style> en el <head> de AMBOS archivos -->
+            <style>
+            @keyframes girarBalonFifa {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            @media (max-width: 768px) {
+                /* Ajuste móvil inline no es posible, pero podemos usar una clase auxiliar si fuera necesario */
+                /* Por ahora, 38px es un tamaño seguro para móviles también */
+            }
+            </style>      
         </div>
         <div class="header-actions">
             <!-- MENÚ 3 PUNTOS HEADER -->

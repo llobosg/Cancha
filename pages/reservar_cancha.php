@@ -201,18 +201,23 @@ $deportes = [
         font-size: 1rem;
         opacity: 0.8;
     }
+    @keyframes girarBalonFifa {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 </style>
 </head>
 <body>
 <div class="header">
     <div class="brand-logo">
-        🏟️ Reservar Cancha
+        Reservar Cancha
         <!-- Balón FIFA 2026 -->
-        <div class="balon-container">
-            <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" class="balon-animado-img">
+        <div style="display:inline-flex; align-items:center; margin-left:8px;">
+            <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" 
+                 style="width:38px; height:38px; object-fit:contain; animation:girarBalonFifa 4s linear infinite; filter:drop-shadow(0 0 5px rgba(255,215,0,0.6));">
         </div>
     </div>
-    <a href="dashboard_socio.php" style="color: white; text-decoration: none;">⬅ Dashboard</a>
+    <a href="dashboard_socio.php" style="color:white; text-decoration:none;">⬅ Dashboard</a>
 </div>
 
 <div class="main-container">
