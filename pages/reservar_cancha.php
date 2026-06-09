@@ -421,7 +421,7 @@ $deportes = [
         const tbody = document.getElementById('tablaBody');
         
         if (!data || !data.canchas || data.canchas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem; text-align:center;">No hay canchas disponibles.</td></tr>';
             thead.innerHTML = ''; 
             return;
         }
@@ -433,11 +433,11 @@ $deportes = [
         });
         thead.innerHTML = htmlHead;
 
-        // === VALIDACIÓN DE FECHA PASADA ===
+        // === VALIDACIÓN ROBUSTA DE FECHA PASADA ===
         const ahora = new Date();
         const fechaSeleccionada = document.getElementById('filtroFecha').value;
         
-        // Construir fecha local en formato YYYY-MM-DD para evitar problemas de zona horaria UTC
+        // Construir fecha local en formato YYYY-MM-DD para evitar desfases UTC
         const yyyy = ahora.getFullYear();
         const mm = String(ahora.getMonth() + 1).padStart(2, '0');
         const dd = String(ahora.getDate()).padStart(2, '0');
@@ -447,12 +447,12 @@ $deportes = [
         const esPasado = (fechaSeleccionada < hoyStr);
         const horaActualMinutos = (ahora.getHours() * 60) + ahora.getMinutes();
 
-        // Si la fecha es anterior a hoy, mostramos mensaje de bloqueo total
+        // 🔒 BLOQUEO TOTAL SI LA FECHA ES ANTERIOR A HOY
         if (esPasado) {
-            tbody.innerHTML = `<tr><td colspan="100%" style="padding:3rem; text-align:center; color:#888;">
+            tbody.innerHTML = `<tr><td colspan="100%" style="padding:3rem; text-align:center; color:#888; background:rgba(255,255,255,0.9); border-radius:12px;">
                 <div style="font-size:3rem; margin-bottom:1rem;">🕒</div>
-                <h3>No se pueden realizar reservas en fechas pasadas</h3>
-                <p>Selecciona una fecha futura para ver la disponibilidad.</p>
+                <h3 style="color:#333;">No se pueden realizar reservas en fechas pasadas</h3>
+                <p>Por favor selecciona una fecha futura para ver la disponibilidad.</p>
             </td></tr>`;
             return;
         }
@@ -472,17 +472,16 @@ $deportes = [
             htmlBody += `<tr><td style="${esMedia ? 'opacity:0.5; font-size:0.7rem;' : ''}">${esMedia ? '' : timeLabel}</td>`;
             
             data.canchas.forEach((c, idx) => {
-                // Manejo de rowspan para reservas que ocupan múltiples slots
+                // Manejo de rowspan para reservas existentes
                 if (skipCells[idx] && skipCells[idx] > 0) { 
                     skipCells[idx]--; 
                     return; 
                 }
                 
-                // Buscar reserva existente en este slot
                 const res = data.reservas.find(r => r.id_cancha == c.id_cancha && r.hora_inicio.substring(0,5) === timeLabel);
                 
                 if (res) {
-                    // === CELDA OCUPADA ===
+                    // CELDA OCUPADA
                     const duracion = ((parseInt(res.hora_fin.substring(0,2))*60 + parseInt(res.hora_fin.substring(3,5))) - horaActual) / 30;
                     const rowspan = Math.max(1, Math.round(duracion));
                     if (rowspan > 1) skipCells[idx] = rowspan - 1;
@@ -492,11 +491,11 @@ $deportes = [
                         <div style="font-size:0.65rem; opacity:0.9;">Ocupado</div>
                     </td>`;
                 } else {
-                    // === CELDA DISPONIBLE O PASADA ===
+                    // CELDA DISPONIBLE O PASADA (DENTRO DEL DÍA ACTUAL)
                     let claseExtra = 'estado-disponible';
                     let onclickAction = `seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")`;
                     
-                    // BLOQUEO SI ES HOY Y LA HORA YA PASÓ (o es la hora actual exacta)
+                    // ⏱️ BLOQUEO DE HORAS VENCIDAS EN EL DÍA ACTUAL
                     if (esHoy && horaActual <= horaActualMinutos) {
                         claseExtra = 'slot-pasado';
                         onclickAction = ''; // Bloquear click
@@ -800,6 +799,22 @@ $deportes = [
         container.appendChild(t);
         setTimeout(() => t.classList.add('show'), 100); 
         setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
+    }
+    function cambiarDia(dias) { 
+        const f = new Date(fechaPlanillaActual); 
+        f.setDate(f.getDate() + dias); 
+        
+        // Validar que no sea anterior a hoy
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (f < hoy) {
+            showToast('⚠️ No puedes seleccionar fechas anteriores a hoy', 'error');
+            return; 
+        }
+        
+        fechaPlanillaActual = f.toISOString().split('T')[0]; 
+        document.getElementById('filtroFecha').value = fechaPlanillaActual; 
+        aplicarFiltros(); 
     }
 </script>
 <?php if (isset($_GET['reserva_ok'])): ?>
