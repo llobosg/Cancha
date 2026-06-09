@@ -336,18 +336,31 @@ $_SESSION['visited_index'] = true;
     }
     .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 
-    /* === SPLASH SCREEN === */
+     /* === SPLASH SCREEN CON BALÓN FIFA 2026 === */
     .splash {
-      position: fixed; inset: 0; background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      z-index: 9999; transition: opacity 0.4s ease;
+        position: fixed; inset: 0; 
+        background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        z-index: 9999; transition: opacity 0.4s ease;
     }
-    .splash-ball {
-      font-size: 3.5rem; animation: spin 2s linear infinite, bounce 1.5s ease-in-out infinite;
+      .splash-ball-img {
+      width: 100px; /* Tamaño prominente para el splash */
+      height: 100px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+      animation: splashAnim 2s ease-in-out infinite;
     }
-    .splash-text { color: white; margin-top: 1.5rem; font-weight: 500; opacity: 0.95; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    @keyframes bounce { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(180deg); } }
+
+    @keyframes splashAnim {
+        0%   { transform: translateY(0) rotate(0deg); }
+        50%  { transform: translateY(-20px) rotate(180deg); }
+        100% { transform: translateY(0) rotate(360deg); }
+    }
+
+    .splash-text { 
+        color: white; margin-top: 1.5rem; font-weight: 500; opacity: 0.95; 
+        font-size: 1rem; letter-spacing: 0.5px;
+    }
 
     /* === RESPONSIVE === */
     @media (max-width: 480px) {
