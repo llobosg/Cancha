@@ -14,6 +14,14 @@ try {
         throw new Exception("Datos incompletos");
     }
 
+    // En api/reserva_unica.php
+    $dt_reserva = new DateTime("$fecha $hora_inicio");
+    $dt_ahora = new DateTime();
+
+    if ($dt_reserva <= $dt_ahora) {
+        throw new Exception("❌ No se pueden realizar reservas en horarios vencidos.");
+    }
+
     $id_cancha = (int)$input['id_cancha'];
     $fecha = $input['fecha'];
     $hora_inicio = $input['hora_inicio'];

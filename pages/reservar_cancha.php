@@ -183,6 +183,23 @@ $deportes = [
         font-size: 1.1rem;
         color: #071289;
     }
+    /* === ESTILOS PARA HORARIOS VENCIDOS === */
+    td.slot-pasado { 
+        background: rgba(200, 200, 200, 0.4) !important; 
+        cursor: not-allowed !important; 
+        position: relative;
+        opacity: 0.6;
+    }
+
+    td.slot-pasado::after {
+        content: '🕒';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1rem;
+        opacity: 0.8;
+    }
 </style>
 </head>
 <body>
@@ -410,6 +427,12 @@ $deportes = [
 
         let htmlBody = '';
         let horaActual = 7 * 60, finDia = 23 * 60, skipCells = {};
+        
+        // Obtener fecha y hora actual para comparaciones
+        const ahora = new Date();
+        const fechaSeleccionada = document.getElementById('filtroFecha').value;
+        const esHoy = (fechaSeleccionada === ahora.toISOString().split('T')[0]);
+        const horaActualMinutos = (ahora.getHours() * 60) + ahora.getMinutes();
 
         while (horaActual < finDia) {
             const h = Math.floor(horaActual / 60), m = horaActual % 60;
@@ -417,21 +440,34 @@ $deportes = [
             const esMedia = (m === 30);
             
             htmlBody += `<tr><td style="${esMedia ? 'opacity:0.5; font-size:0.7rem;' : ''}">${esMedia ? '' : timeLabel}</td>`;
-
+            
             data.canchas.forEach((c, idx) => {
                 if (skipCells[idx] && skipCells[idx] > 0) { skipCells[idx]--; return; }
+                
                 const res = data.reservas.find(r => r.id_cancha == c.id_cancha && r.hora_inicio.substring(0,5) === timeLabel);
-
+                
                 if (res) {
                     const duracion = ((parseInt(res.hora_fin.substring(0,2))*60 + parseInt(res.hora_fin.substring(3,5))) - horaActual) / 30;
                     const rowspan = Math.max(1, Math.round(duracion));
                     if (rowspan > 1) skipCells[idx] = rowspan - 1;
+                    
                     htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan*40}px;"><div style="font-weight:bold;">${res.hora_inicio.substring(0,5)} - ${res.hora_fin.substring(0,5)}</div><div style="font-size:0.65rem; opacity:0.9;">Ocupado</div></td>`;
                 } else {
-                    htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")'></td>`;
+                    // === LÓGICA DE SLOT PASADO ===
+                    let claseExtra = 'estado-disponible';
+                    let onclickAction = `seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")`;
+                    
+                    // Si es hoy y la hora ya pasó, aplicamos estilo de bloqueo
+                    if (esHoy && horaActual <= horaActualMinutos) {
+                        claseExtra = 'slot-pasado';
+                        onclickAction = ''; // Bloquear click
+                    }
+
+                    htmlBody += `<td class="${claseExtra}" onclick='${onclickAction}'></td>`;
                 }
             });
-            htmlBody += `</tr>`; horaActual += 30;
+            htmlBody += `</tr>`; 
+            horaActual += 30;
         }
         tbody.innerHTML = htmlBody;
     }
@@ -724,6 +760,8 @@ $deportes = [
         setTimeout(() => t.classList.add('show'), 100); 
         setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
     }
+    // Al final del DOMContentLoaded
+    document.getElementById('filtroFecha').min = new Date().toISOString().split('T')[0];
 </script>
 <?php if (isset($_GET['reserva_ok'])): ?>
     <script>
