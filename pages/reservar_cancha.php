@@ -183,7 +183,8 @@ $deportes = [
         font-size: 1.1rem;
         color: #071289;
     }
-    /* === ESTILOS PARA HORARIOS VENCIDOS === */
+
+    /* === ESTILOS PARA HORARIOS Y FECHAS VENCIDAS === */
     td.slot-pasado { 
         background: rgba(200, 200, 200, 0.4) !important; 
         cursor: not-allowed !important; 
@@ -366,6 +367,11 @@ $deportes = [
         if (userData.club_fav) document.getElementById('filtroRecinto').value = userData.club_fav;
         if (userData.deporte_fav) document.getElementById('filtroDeporte').value = userData.deporte_fav;
         aplicarFiltros();
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        document.getElementById('filtroFecha').min = `${yyyy}-${mm}-${dd}`;
     });
 
     async function aplicarFiltros(esBusquedaManual = false) {
@@ -416,48 +422,81 @@ $deportes = [
         
         if (!data || !data.canchas || data.canchas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
-            thead.innerHTML = ''; return;
+            thead.innerHTML = ''; 
+            return;
         }
 
+        // === HEADER ===
         let htmlHead = '<th>Hora</th>';
         data.canchas.forEach(c => {
             htmlHead += `<th>${iconosDeporte[c.id_deporte] || iconosDeporte['default']}<br><span style="font-weight:normal; font-size:0.7rem;">${c.nombre_cancha}</span></th>`;
         });
         thead.innerHTML = htmlHead;
 
-        let htmlBody = '';
-        let horaActual = 7 * 60, finDia = 23 * 60, skipCells = {};
-        
-        // Obtener fecha y hora actual para comparaciones
+        // === VALIDACIÓN DE FECHA PASADA ===
         const ahora = new Date();
         const fechaSeleccionada = document.getElementById('filtroFecha').value;
-        const esHoy = (fechaSeleccionada === ahora.toISOString().split('T')[0]);
+        
+        // Construir fecha local en formato YYYY-MM-DD para evitar problemas de zona horaria UTC
+        const yyyy = ahora.getFullYear();
+        const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dd = String(ahora.getDate()).padStart(2, '0');
+        const hoyStr = `${yyyy}-${mm}-${dd}`;
+        
+        const esHoy = (fechaSeleccionada === hoyStr);
+        const esPasado = (fechaSeleccionada < hoyStr);
         const horaActualMinutos = (ahora.getHours() * 60) + ahora.getMinutes();
 
+        // Si la fecha es anterior a hoy, mostramos mensaje de bloqueo total
+        if (esPasado) {
+            tbody.innerHTML = `<tr><td colspan="100%" style="padding:3rem; text-align:center; color:#888;">
+                <div style="font-size:3rem; margin-bottom:1rem;">🕒</div>
+                <h3>No se pueden realizar reservas en fechas pasadas</h3>
+                <p>Selecciona una fecha futura para ver la disponibilidad.</p>
+            </td></tr>`;
+            return;
+        }
+
+        // === CUERPO DE LA PLANILLA ===
+        let htmlBody = '';
+        let horaActual = 7 * 60; 
+        const finDia = 23 * 60; 
+        let skipCells = {};
+
         while (horaActual < finDia) {
-            const h = Math.floor(horaActual / 60), m = horaActual % 60;
+            const h = Math.floor(horaActual / 60);
+            const m = horaActual % 60;
             const timeLabel = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
             const esMedia = (m === 30);
             
             htmlBody += `<tr><td style="${esMedia ? 'opacity:0.5; font-size:0.7rem;' : ''}">${esMedia ? '' : timeLabel}</td>`;
             
             data.canchas.forEach((c, idx) => {
-                if (skipCells[idx] && skipCells[idx] > 0) { skipCells[idx]--; return; }
+                // Manejo de rowspan para reservas que ocupan múltiples slots
+                if (skipCells[idx] && skipCells[idx] > 0) { 
+                    skipCells[idx]--; 
+                    return; 
+                }
                 
+                // Buscar reserva existente en este slot
                 const res = data.reservas.find(r => r.id_cancha == c.id_cancha && r.hora_inicio.substring(0,5) === timeLabel);
                 
                 if (res) {
+                    // === CELDA OCUPADA ===
                     const duracion = ((parseInt(res.hora_fin.substring(0,2))*60 + parseInt(res.hora_fin.substring(3,5))) - horaActual) / 30;
                     const rowspan = Math.max(1, Math.round(duracion));
                     if (rowspan > 1) skipCells[idx] = rowspan - 1;
                     
-                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan*40}px;"><div style="font-weight:bold;">${res.hora_inicio.substring(0,5)} - ${res.hora_fin.substring(0,5)}</div><div style="font-size:0.65rem; opacity:0.9;">Ocupado</div></td>`;
+                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan*40}px;">
+                        <div style="font-weight:bold;">${res.hora_inicio.substring(0,5)} - ${res.hora_fin.substring(0,5)}</div>
+                        <div style="font-size:0.65rem; opacity:0.9;">Ocupado</div>
+                    </td>`;
                 } else {
-                    // === LÓGICA DE SLOT PASADO ===
+                    // === CELDA DISPONIBLE O PASADA ===
                     let claseExtra = 'estado-disponible';
                     let onclickAction = `seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")`;
                     
-                    // Si es hoy y la hora ya pasó, aplicamos estilo de bloqueo
+                    // BLOQUEO SI ES HOY Y LA HORA YA PASÓ (o es la hora actual exacta)
                     if (esHoy && horaActual <= horaActualMinutos) {
                         claseExtra = 'slot-pasado';
                         onclickAction = ''; // Bloquear click
@@ -466,9 +505,11 @@ $deportes = [
                     htmlBody += `<td class="${claseExtra}" onclick='${onclickAction}'></td>`;
                 }
             });
+            
             htmlBody += `</tr>`; 
             horaActual += 30;
         }
+        
         tbody.innerHTML = htmlBody;
     }
 
@@ -760,8 +801,6 @@ $deportes = [
         setTimeout(() => t.classList.add('show'), 100); 
         setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
     }
-    // Al final del DOMContentLoaded
-    document.getElementById('filtroFecha').min = new Date().toISOString().split('T')[0];
 </script>
 <?php if (isset($_GET['reserva_ok'])): ?>
     <script>
