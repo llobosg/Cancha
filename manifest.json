@@ -2,7 +2,7 @@
   "name": "CanchaSport",
   "short_name": "CanchaSport",
   "description": "Tu comunidad deportiva 360°",
-  "start_url": "/pages/index.php",
+  "start_url": "index.php",
   "display": "standalone",
   "background_color": "#AB47BC",
   "theme_color": "#CE93D8",
