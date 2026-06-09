@@ -905,12 +905,11 @@ $js_vars = [
     <header class="app-header">
          <div class="brand-logo" style="display:flex; align-items:center; gap:0.5rem;">
             <!-- Título Principal -->
-            <span style="color:#FFD700; font-weight:900; font-size:1.3rem;">CanchaSport</span>
-            
+            <span style="color:#FFD700; font-weight:900; font-size:1.3rem;">CanchaSport</span> 
             <!-- Balón FIFA 2026 Giratorio -->
             <div class="balon-container">
-                <img src="../assets/img/balonfifa2026.png" alt="Balón FIFA 2026" class="balon-animado-img">
-            </div>
+                <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" class="balon-animado-img">
+            </div>       
         </div>
         <div class="header-actions">
             <!-- MENÚ 3 PUNTOS HEADER -->

@@ -291,33 +291,34 @@ h2 {
         margin-left: 5px;
     }
 }
-/* === BALÓN FIFA 2026 ANIMADO (HEADER DASHBOARD) === */
+/* === BALÓN FIFA 2026 (AJUSTADO PARA HEADER RESERVA) === */
 .balon-container {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     margin-left: 8px;
 }
 
 .balon-animado-img {
-    width: 40px; /* Tamaño equilibrado para el header del socio */
-    height: auto;
-    animation: girarBalon 4s linear infinite;
-    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.5)); /* Resplandor dorado sutil */
+    width: 38px; /* Tamaño acorde al font-size de 1.3rem del logo */
+    height: 38px; /* Forzar cuadrado perfecto para giro uniforme */
+    object-fit: contain;
+    animation: girarBalonFifa 4s linear infinite;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.6));
 }
 
-@keyframes girarBalon {
+@keyframes girarBalonFifa {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
 
-/* Ajuste Responsive para móviles */
+/* Responsive: Más pequeño en móviles */
 @media (max-width: 768px) {
-    .brand-logo span {
-        font-size: 1rem; /* Texto un poco más pequeño en móvil */
-    }
-    
     .balon-animado-img {
-        width: 30px; /* Balón más compacto en pantallas pequeñas */
+        width: 28px;
+        height: 28px;
         margin-left: 5px;
+    }
+    .brand-logo {
+        font-size: 1.1rem; /* Reducir texto ligeramente en móvil */
     }
 }
