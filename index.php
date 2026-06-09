@@ -427,6 +427,37 @@ $_SESSION['visited_index'] = true;
         background: transparent !important;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
     }
+    /* === BALÓN FIFA 2026 (AJUSTADO PARA HEADER RESERVA) === */
+    .balon-container {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+    }
+
+    .balon-animado-img {
+        width: 38px; /* Tamaño acorde al font-size de 1.3rem del logo */
+        height: 38px; /* Forzar cuadrado perfecto para giro uniforme */
+        object-fit: contain;
+        animation: girarBalonFifa 4s linear infinite;
+        filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.6));
+    }
+
+    @keyframes girarBalonFifa {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Responsive: Más pequeño en móviles */
+    @media (max-width: 768px) {
+        .balon-animado-img {
+            width: 28px;
+            height: 28px;
+            margin-left: 5px;
+        }
+        .brand-logo {
+            font-size: 1.1rem; /* Reducir texto ligeramente en móvil */
+        }
+    }
   </style>
 </head>
 <body>
@@ -447,7 +478,10 @@ $_SESSION['visited_index'] = true;
 <!-- HEADER SIMPLIFICADO -->
 <header class="app-header">
   <a href="#" class="brand">
-    <div class="brand-logo">🏟️</div>
+    <!-- Balón FIFA 2026 -->
+    <div class="balon-container">
+        <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" class="balon-animado-img">
+    </div>
     <span class="brand-name">CanchaSport</span>
   </a>
   <div class="header-actions">
