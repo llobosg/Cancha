@@ -2188,33 +2188,32 @@ async function actualizarContadorCupos(idReserva) {
     </div>
 </div>
 
-<!-- === MODAL RESERVAS FUTURAS === -->
-<div id="modalFuturas" class="modal-backdrop" onclick="cerrarModalFuturas(event)" style="display:none;">
+<!-- === MODAL RESERVAS FUTURAS (CORREGIDO) === -->
+<div id="modalFuturas" onclick="cerrarModalFuturas(event)" style="
+    display:none; 
+    position:fixed; 
+    inset:0; 
+    z-index:9999; 
+    background:rgba(0,0,0,0.6); 
+    backdrop-filter:blur(4px);
+    justify-content:center; 
+    align-items:center;
+    padding:1rem;
+">
+    <!-- Contenedor interno del modal (SIN display:none) -->
     <div style="
-        display:none; 
-        position:fixed; 
-        inset:0; 
-        z-index:9999; 
-        background:rgba(0,0,0,0.6); 
-        backdrop-filter:blur(4px);
-        justify-content:center; 
-        align-items:center;
-        padding:1rem;
+        background:white; 
+        border-radius:16px; 
+        width:90%; 
+        max-width:500px; 
+        max-height:80vh;
+        overflow:hidden; 
+        box-shadow:0 20px 60px rgba(0,0,0,0.3); 
+        position:relative;
+        display:flex; 
+        flex-direction:column;
+        animation: modalFadeIn 0.3s ease;
     ">
-        <!-- Contenedor interno del modal (NO cambiar estos estilos) -->
-        <div style="
-            background:white; 
-            border-radius:16px; 
-            width:90%; 
-            max-width:500px; 
-            max-height:80vh;
-            overflow:hidden; 
-            box-shadow:0 20px 60px rgba(0,0,0,0.3); 
-            position:relative;
-            display:flex; 
-            flex-direction:column;
-            animation: modalFadeIn 0.3s ease;
-        ">
         <!-- Header -->
         <div style="background:linear-gradient(135deg, #CE93D8, #AB47BC); padding:1.2rem 1.5rem; color:white; display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:1.1rem;">📅 Mis Reservas Futuras</h3>
@@ -2267,30 +2266,37 @@ async function actualizarContadorCupos(idReserva) {
     </div>
 </div>
 
+<!-- === SCRIPTS PARA MODAL DE FUTURAS === -->
 <script>
 function abrirModalFuturas() {
     const modal = document.getElementById('modalFuturas');
     if (modal) {
+        // Forzar display flex para centrado
         modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden'; // Bloquear scroll fondo
+    } else {
+        console.error("❌ Elemento #modalFuturas no encontrado en el DOM");
     }
 }
 
 function cerrarModalFuturas(e) {
+    // Cerrar si se hace click en el fondo oscuro o en el botón X
     if (e.target.id === 'modalFuturas' || e.target.closest('button[onclick*="cerrarModalFuturas"]')) {
         const modal = document.getElementById('modalFuturas');
         if (modal) {
             modal.style.display = 'none';
-            document.body.style.overflow = '';
+            document.body.style.overflow = ''; // Restaurar scroll
         }
     }
 }
 
-// Cerrar con ESC
+// Cerrar con tecla ESC
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const modal = document.getElementById('modalFuturas');
-        if (modal && modal.style.display === 'flex') cerrarModalFuturas({target: modal});
+        if (modal && modal.style.display === 'flex') {
+            cerrarModalFuturas({ target: modal });
+        }
     }
 });
 </script>
