@@ -433,6 +433,37 @@ $clubs = $stmt->fetchAll();
         closeClubModal();
       }
     }
+    async function aplicarFiltros() {
+    const deporte = document.getElementById('filtroDeporte').value;
+    const recinto = document.getElementById('filtroRecinto').value;
+    fechaPlanillaActual = document.getElementById('filtroFecha').value || new Date().toISOString().split('T')[0];
+    
+    // Feedback visual inmediato
+    document.getElementById('tablaBody').innerHTML = '<tr><td colspan="100%" style="padding:2rem; text-align:center; color:#aaa;">🔄 Actualizando disponibilidad...</td></tr>';
+    
+    try {
+        const formData = new FormData();
+        formData.append('deporte', deporte);
+        formData.append('recinto', recinto);
+        formData.append('fecha', fechaPlanillaActual);
+        formData.append('id_socio', <?= $id_socio ?>);
+
+        const res = await fetch('../api/reservas_club.php?action=get_disponibilidad', { 
+            method: 'POST', 
+            body: formData, 
+            credentials: 'include' 
+        });
+        
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
+        
+        renderizarPlanillaSocio(data);
+        
+    } catch (error) {
+        console.error('❌ Error filtros:', error);
+        document.getElementById('tablaBody').innerHTML = `<tr><td colspan="100%" style="padding:2rem; color:red; text-align:center;">Error: ${error.message}</td></tr>`;
+    }
+}
   </script>
 </body>
 </html>

@@ -26,6 +26,23 @@ $stmt = $pdo->prepare("SELECT id_socio, nombre, alias, email, celular, club_favo
 $stmt->execute([$id_socio]);
 $usuario_data = $stmt->fetch();
 
+// === OBTENER DATOS DEL CLUB ACTIVO (SI ES RESPONSABLE) ===
+$club_activo = null;
+if (!empty($clubes_responsable)) {
+    // Si viene un club por GET/POST, usarlo; si no, usar el primero
+    $id_club_actual = $_GET['id_club'] ?? $clubes_responsable[0]['id_club'];
+    
+    foreach ($clubes_responsable as $cr) {
+        if ($cr['id_club'] == $id_club_actual) {
+            // Obtener logo y nombre completo
+            $stmt_club = $pdo->prepare("SELECT nombre, logo_url FROM clubs WHERE id_club = ?");
+            $stmt_club->execute([$id_club_actual]);
+            $club_activo = $stmt_club->fetch(PDO::FETCH_ASSOC);
+            break;
+        }
+    }
+}
+
 if (!$usuario_data) { header('Location: ../index.php'); exit; }
 
 // === 1. OBTENER CLUBES DONDE EL SOCIO ES RESPONSABLE (PARA ESTE ARCHIVO) ===
@@ -222,26 +239,28 @@ $deportes = [
 
 <div class="main-container">
     <div class="controls-section">
+        <!-- Navegación de Fechas -->
         <button class="date-nav-btn" onclick="cambiarDia(-1)">&lt;</button>
-        <input type="date" id="filtroFecha" class="control-select" style="width: 135px;">
+        <input type="date" id="filtroFecha" class="control-select" style="width: 135px;" onchange="aplicarFiltros()">
         <button class="date-nav-btn" onclick="irAHoy()" style="width:auto; padding:0 12px; border-radius:20px; font-size:0.8rem; height:32px;">Hoy</button>
         <button class="date-nav-btn" onclick="cambiarDia(1)">&gt;</button>
-        
-        <select class="control-select" id="filtroDeporte">
+
+        <!-- Filtros Reactivos (con onchange) -->
+        <select class="control-select" id="filtroDeporte" onchange="aplicarFiltros()">
             <option value="">Deporte...</option>
             <?php foreach ($deportes as $key => $value): ?>
                 <option value="<?= $key ?>"><?= $value ?></option>
             <?php endforeach; ?>
         </select>
-        
-        <select class="control-select" id="filtroRecinto">
+
+        <select class="control-select" id="filtroRecinto" onchange="aplicarFiltros()">
             <option value="">Recinto...</option>
             <?php foreach ($recintos as $recinto): ?>
                 <option value="<?= $recinto['id_recinto'] ?>"><?= htmlspecialchars($recinto['nombre']) ?></option>
             <?php endforeach; ?>
         </select>
         
-        <button onclick="aplicarFiltros(true)" style="background:#4ECDC4; border:none; padding:0.5rem 1.2rem; border-radius:20px; cursor:pointer; font-weight:bold; color:#071289; font-size:0.9rem;">🔍 Buscar</button>
+        <!-- ✅ BOTÓN BUSCAR ELIMINADO -->
     </div>
 
     <div class="planilla-wrapper">

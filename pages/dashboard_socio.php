@@ -931,6 +931,18 @@ $js_vars = [
             }
             </style>      
         </div>
+
+        <?php if ($club_activo && !empty($club_activo['logo_url'])): ?>
+            <!-- MODO CLUB: Logo + Nombre -->
+            <img src="<?= htmlspecialchars($club_activo['logo_url']) ?>" alt="Logo" style="width:36px; height:36px; border-radius:8px; object-fit:cover; border:2px solid rgba(255,255,255,0.3);">
+            <span style="font-size:1.1rem; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <?= htmlspecialchars($club_activo['nombre']) ?>
+            </span>
+        <?php else: ?>
+            <!-- MODO PERSONAL: Icono Genérico -->
+            Modo Socio Individual
+        <?php endif; ?>
+
         <div class="header-actions">
             <!-- MENÚ 3 PUNTOS HEADER -->
             <button class="menu-dots" onclick="toggleHeaderMenu(event)">⋮</button>
