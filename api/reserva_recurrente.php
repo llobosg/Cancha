@@ -127,7 +127,7 @@ try {
         $stmt = $pdo->prepare("
             INSERT INTO reservas (
                 id_cancha, 
-                id_club,          -- ✅ ASEGURAR QUE ESTA COLUMNA EXISTE
+                id_club,
                 id_socio, 
                 nombre_cliente, email_cliente, telefono_cliente,
                 fecha, hora_inicio, hora_fin,
@@ -137,7 +137,7 @@ try {
 
         $stmt->execute([
             $data['id_cancha'],
-            $id_club_final,       // ✅ AQUÍ SE GUARDA EL CLUB (NULL si es individual)
+            $id_club_final,
             $id_socio,
             $socio['nombre'],
             $socio['email'],
@@ -147,7 +147,7 @@ try {
             $hora_fin,
             $monto,
             $jugadores_esperados,
-            'semanal'             // o el tipo que corresponda
+            'semanal' 
         ]);
         
         $id_res = $pdo->lastInsertId();
