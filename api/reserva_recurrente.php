@@ -62,6 +62,23 @@ try {
             $email_cliente = $email_nuevo; $nombre_cliente = $nombre_nuevo;
         }
     }
+    // 1. Leer contexto del club desde el payload JSON
+    $tipo_reserva = $data['tipo_reserva'] ?? 'individual';
+    $id_club_reserva = $data['id_club_reserva'] ?? null;
+
+    // 2. Validar si el socio es responsable (Misma lógica que reserva_unica)
+    $id_club_final = null;
+    if ($id_socio && $tipo_reserva === 'club' && !empty($id_club_reserva)) {
+        $stmt_rol = $pdo->prepare("SELECT COUNT(*) FROM socio_club WHERE id_socio = ? AND id_club = ? AND es_responsable = 1");
+        $stmt_rol->execute([$id_socio, (int)$id_club_reserva]);
+        
+        if ($stmt_rol->fetchColumn() > 0) {
+            $id_club_final = (int)$id_club_reserva;
+            error_log("[RECURRENTE] Socio $id_socio reservando como RESPONSABLE del Club $id_club_final");
+        } else {
+            error_log("[RECURRENTE] ⚠️ Socio $id_socio intentó reservar para Club $id_club_reserva sin ser responsable.");
+        }
+    }
 
     // Generar Fechas
     $fechas_disponibles = [];
@@ -107,25 +124,30 @@ try {
         $hora_fin_calc = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
 
         // ✅ INSERT LIMPIO SIN id_club
-        $stmt_ins = $pdo->prepare("
+        $stmt = $pdo->prepare("
             INSERT INTO reservas (
-                id_cancha, id_socio, nombre_cliente, email_cliente, telefono_cliente, 
-                fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, 
-                estado_pago, estado, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', NOW())
+                id_cancha, 
+                id_club,          -- ✅ ASEGURAR QUE ESTA COLUMNA EXISTE
+                id_socio, 
+                nombre_cliente, email_cliente, telefono_cliente,
+                fecha, hora_inicio, hora_fin,
+                monto_total, jugadores_esperados, estado_pago, estado, tipo_reserva
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', ?)
         ");
-        
-        $stmt_ins->execute([
-            $id_cancha,
-            $id_socio_final,
-            $nombre_cliente,
-            $email_cliente,
-            $telefono_cliente,
+
+        $stmt->execute([
+            $data['id_cancha'],
+            $id_club_final,       // ✅ AQUÍ SE GUARDA EL CLUB (NULL si es individual)
+            $id_socio,
+            $socio['nombre'],
+            $socio['email'],
+            $socio['celular'],
             $fecha,
-            $hora_inicio,
-            $hora_fin_calc,
-            $monto_unitario,
-            4
+            $data['hora_inicio'],
+            $hora_fin,
+            $monto,
+            $jugadores_esperados,
+            'semanal'             // o el tipo que corresponda
         ]);
         
         $id_res = $pdo->lastInsertId();
