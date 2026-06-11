@@ -902,6 +902,10 @@ $js_vars = [
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -2187,10 +2191,30 @@ async function actualizarContadorCupos(idReserva) {
 <!-- === MODAL RESERVAS FUTURAS === -->
 <div id="modalFuturas" class="modal-backdrop" onclick="cerrarModalFuturas(event)" style="display:none;">
     <div style="
-        background:white; border-radius:16px; width:90%; max-width:500px; max-height:80vh;
-        overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;
-        display:flex; flex-direction:column;
+        display:none; 
+        position:fixed; 
+        inset:0; 
+        z-index:9999; 
+        background:rgba(0,0,0,0.6); 
+        backdrop-filter:blur(4px);
+        justify-content:center; 
+        align-items:center;
+        padding:1rem;
     ">
+        <!-- Contenedor interno del modal (NO cambiar estos estilos) -->
+        <div style="
+            background:white; 
+            border-radius:16px; 
+            width:90%; 
+            max-width:500px; 
+            max-height:80vh;
+            overflow:hidden; 
+            box-shadow:0 20px 60px rgba(0,0,0,0.3); 
+            position:relative;
+            display:flex; 
+            flex-direction:column;
+            animation: modalFadeIn 0.3s ease;
+        ">
         <!-- Header -->
         <div style="background:linear-gradient(135deg, #CE93D8, #AB47BC); padding:1.2rem 1.5rem; color:white; display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:1.1rem;">📅 Mis Reservas Futuras</h3>
