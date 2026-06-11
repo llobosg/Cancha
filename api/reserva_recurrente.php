@@ -101,8 +101,8 @@ try {
         $dia_num = $item['dia_num'];
         
         // 1. Calcular hora fin (asegurar que exista)
-        $h_ini = explode(':', $data['hora_inicio']);
-        $min_fin = ($h_ini[0] * 60) + $h_ini[1] + ($data['duracion_bloque'] ?? 60);
+        $h_ini_parts = explode(':', $data['hora_inicio']);
+        $min_fin = (intval($h_ini_parts[0]) * 60) + intval($h_ini_parts[1]) + intval($data['duracion_bloque'] ?? 60);
         $hora_fin = sprintf("%02d:%02d", floor($min_fin / 60), $min_fin % 60);
 
         // 2. Obtener capacidad de cancha
@@ -133,6 +133,7 @@ try {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', 'semanal')";
 
         $stmt = $pdo->prepare($sql);
+        $monto_unitario = floatval($data['monto_total'] ?? 0);
 
         // ⚠️ VERIFICA QUE ESTOS 11 VALORES COINCIDAN EXACTAMENTE CON LOS 11 SIGNOS ?
         $stmt->execute([
