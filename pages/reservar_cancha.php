@@ -183,12 +183,41 @@ $deportes = [
         font-size: 1.1rem;
         color: #071289;
     }
+
+    /* === ESTILOS PARA HORARIOS Y FECHAS VENCIDAS === */
+    td.slot-pasado { 
+        background: rgba(200, 200, 200, 0.4) !important; 
+        cursor: not-allowed !important; 
+        position: relative;
+        opacity: 0.6;
+    }
+
+    td.slot-pasado::after {
+        content: '🕒';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+    @keyframes girarBalonFifa {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 </style>
 </head>
 <body>
 <div class="header">
-    <div class="brand-logo">🎾 Reservar Cancha</div>
-    <a href="dashboard_socio.php" style="color: white; text-decoration: none;">← Dashboard</a>
+    <div class="brand-logo">
+        Reservar Cancha
+        <!-- Balón FIFA 2026 -->
+        <div style="display:inline-flex; align-items:center; margin-left:8px;">
+            <img src="../assets/img/balonfifa2026.png" alt="FIFA 2026" 
+                 style="width:38px; height:38px; object-fit:contain; animation:girarBalonFifa 4s linear infinite; filter:drop-shadow(0 0 5px rgba(255,215,0,0.6));">
+        </div>
+    </div>
+    <a href="dashboard_socio.php" style="color:white; text-decoration:none;">⬅ Dashboard</a>
 </div>
 
 <div class="main-container">
@@ -349,6 +378,11 @@ $deportes = [
         if (userData.club_fav) document.getElementById('filtroRecinto').value = userData.club_fav;
         if (userData.deporte_fav) document.getElementById('filtroDeporte').value = userData.deporte_fav;
         aplicarFiltros();
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        document.getElementById('filtroFecha').min = `${yyyy}-${mm}-${dd}`;
     });
 
     async function aplicarFiltros(esBusquedaManual = false) {
@@ -398,41 +432,94 @@ $deportes = [
         const tbody = document.getElementById('tablaBody');
         
         if (!data || !data.canchas || data.canchas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem;">No hay canchas disponibles.</td></tr>';
-            thead.innerHTML = ''; return;
+            tbody.innerHTML = '<tr><td colspan="100%" style="padding:2rem; text-align:center;">No hay canchas disponibles.</td></tr>';
+            thead.innerHTML = ''; 
+            return;
         }
 
+        // === HEADER ===
         let htmlHead = '<th>Hora</th>';
         data.canchas.forEach(c => {
             htmlHead += `<th>${iconosDeporte[c.id_deporte] || iconosDeporte['default']}<br><span style="font-weight:normal; font-size:0.7rem;">${c.nombre_cancha}</span></th>`;
         });
         thead.innerHTML = htmlHead;
 
+        // === VALIDACIÓN ROBUSTA DE FECHA PASADA ===
+        const ahora = new Date();
+        const fechaSeleccionada = document.getElementById('filtroFecha').value;
+        
+        // Construir fecha local en formato YYYY-MM-DD para evitar desfases UTC
+        const yyyy = ahora.getFullYear();
+        const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dd = String(ahora.getDate()).padStart(2, '0');
+        const hoyStr = `${yyyy}-${mm}-${dd}`;
+        
+        const esHoy = (fechaSeleccionada === hoyStr);
+        const esPasado = (fechaSeleccionada < hoyStr);
+        const horaActualMinutos = (ahora.getHours() * 60) + ahora.getMinutes();
+
+        // 🔒 BLOQUEO TOTAL SI LA FECHA ES ANTERIOR A HOY
+        if (esPasado) {
+            tbody.innerHTML = `<tr><td colspan="100%" style="padding:3rem; text-align:center; color:#888; background:rgba(255,255,255,0.9); border-radius:12px;">
+                <div style="font-size:3rem; margin-bottom:1rem;">🕒</div>
+                <h3 style="color:#333;">No se pueden realizar reservas en fechas pasadas</h3>
+                <p>Por favor selecciona una fecha futura para ver la disponibilidad.</p>
+            </td></tr>`;
+            return;
+        }
+
+        // === CUERPO DE LA PLANILLA ===
         let htmlBody = '';
-        let horaActual = 7 * 60, finDia = 23 * 60, skipCells = {};
+        let horaActual = 7 * 60; 
+        const finDia = 23 * 60; 
+        let skipCells = {};
 
         while (horaActual < finDia) {
-            const h = Math.floor(horaActual / 60), m = horaActual % 60;
+            const h = Math.floor(horaActual / 60);
+            const m = horaActual % 60;
             const timeLabel = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
             const esMedia = (m === 30);
             
             htmlBody += `<tr><td style="${esMedia ? 'opacity:0.5; font-size:0.7rem;' : ''}">${esMedia ? '' : timeLabel}</td>`;
-
+            
             data.canchas.forEach((c, idx) => {
-                if (skipCells[idx] && skipCells[idx] > 0) { skipCells[idx]--; return; }
+                // Manejo de rowspan para reservas existentes
+                if (skipCells[idx] && skipCells[idx] > 0) { 
+                    skipCells[idx]--; 
+                    return; 
+                }
+                
                 const res = data.reservas.find(r => r.id_cancha == c.id_cancha && r.hora_inicio.substring(0,5) === timeLabel);
-
+                
                 if (res) {
+                    // CELDA OCUPADA
                     const duracion = ((parseInt(res.hora_fin.substring(0,2))*60 + parseInt(res.hora_fin.substring(3,5))) - horaActual) / 30;
                     const rowspan = Math.max(1, Math.round(duracion));
                     if (rowspan > 1) skipCells[idx] = rowspan - 1;
-                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan*40}px;"><div style="font-weight:bold;">${res.hora_inicio.substring(0,5)} - ${res.hora_fin.substring(0,5)}</div><div style="font-size:0.65rem; opacity:0.9;">Ocupado</div></td>`;
+                    
+                    htmlBody += `<td class="estado-ocupado" rowspan="${rowspan}" style="height:${rowspan*40}px;">
+                        <div style="font-weight:bold;">${res.hora_inicio.substring(0,5)} - ${res.hora_fin.substring(0,5)}</div>
+                        <div style="font-size:0.65rem; opacity:0.9;">Ocupado</div>
+                    </td>`;
                 } else {
-                    htmlBody += `<td class="estado-disponible" onclick='seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")'></td>`;
+                    // CELDA DISPONIBLE O PASADA (DENTRO DEL DÍA ACTUAL)
+                    let claseExtra = 'estado-disponible';
+                    let onclickAction = `seleccionarSlot("${c.id_cancha}", "${timeLabel}", "${c.nro_cancha}", "${c.recinto_nombre}", "${c.id_deporte}", "${c.valor_arriendo}")`;
+                    
+                    // ⏱️ BLOQUEO DE HORAS VENCIDAS EN EL DÍA ACTUAL
+                    if (esHoy && horaActual <= horaActualMinutos) {
+                        claseExtra = 'slot-pasado';
+                        onclickAction = ''; // Bloquear click
+                    }
+
+                    htmlBody += `<td class="${claseExtra}" onclick='${onclickAction}'></td>`;
                 }
             });
-            htmlBody += `</tr>`; horaActual += 30;
+            
+            htmlBody += `</tr>`; 
+            horaActual += 30;
         }
+        
         tbody.innerHTML = htmlBody;
     }
 
@@ -723,6 +810,22 @@ $deportes = [
         container.appendChild(t);
         setTimeout(() => t.classList.add('show'), 100); 
         setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 3000);
+    }
+    function cambiarDia(dias) { 
+        const f = new Date(fechaPlanillaActual); 
+        f.setDate(f.getDate() + dias); 
+        
+        // Validar que no sea anterior a hoy
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (f < hoy) {
+            showToast('⚠️ No puedes seleccionar fechas anteriores a hoy', 'error');
+            return; 
+        }
+        
+        fechaPlanillaActual = f.toISOString().split('T')[0]; 
+        document.getElementById('filtroFecha').value = fechaPlanillaActual; 
+        aplicarFiltros(); 
     }
 </script>
 <?php if (isset($_GET['reserva_ok'])): ?>
