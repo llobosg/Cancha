@@ -20,20 +20,20 @@ if (!$id_recinto_admin && !isset($_SESSION['id_socio'])) {
 }
 
 try {
-    // Validaciones
+    // === VALIDACIONES BÁSICAS ===
     if (empty($input['id_cancha']) || empty($input['start_date']) || empty($input['end_date'])) {
         throw new Exception("Datos incompletos");
     }
 
     $id_cancha = (int)$input['id_cancha'];
-    $hora_inicio = $input['hora_inicio'];
+    $hora_inicio = trim($input['hora_inicio']);
     $duracion_minutos = intval($input['duracion_bloque'] ?? 60);
     $repeat_day = (int)$input['repeat_day']; 
     $start_date = $input['start_date'];
     $end_date = $input['end_date'];
     $monto_unitario = floatval($input['monto_total'] ?? 0);
     
-    // Resolver Socio
+    // === RESOLVER SOCIO (EXISTENTE O NUEVO) ===
     $id_socio_final = $input['id_socio'] ?? $_SESSION['id_socio'] ?? null;
     $nombre_cliente = ''; $email_cliente = ''; $telefono_cliente = '';
 
@@ -42,28 +42,64 @@ try {
         $stmt_s->execute([$id_socio_final]);
         $s = $stmt_s->fetch(PDO::FETCH_ASSOC);
         if ($s) {
-            $nombre_cliente = $s['nombre']; $email_cliente = $s['email']; 
+            $nombre_cliente = $s['nombre']; 
+            $email_cliente = $s['email']; 
             $telefono_cliente = $s['celular'];
         }
     } elseif (!empty($input['emailNuevoSocio'])) {
-        $email_nuevo = $input['emailNuevoSocio'];
-        $nombre_nuevo = $input['nombreNuevoSocio'] ?? 'Nuevo Socio';
+        $email_nuevo = trim($input['emailNuevoSocio']);
+        $nombre_nuevo = trim($input['nombreNuevoSocio'] ?? 'Nuevo Socio');
         $stmt_chk = $pdo->prepare("SELECT id_socio FROM socios WHERE email = ? LIMIT 1");
         $stmt_chk->execute([$email_nuevo]);
         $ex = $stmt_chk->fetch();
         if ($ex) {
             $id_socio_final = $ex['id_socio'];
             $email_cliente = $email_nuevo;
+            // Cargar datos completos del socio existente
+            $stmt_s2 = $pdo->prepare("SELECT nombre, celular FROM socios WHERE id_socio = ?");
+            $stmt_s2->execute([$id_socio_final]);
+            $s2 = $stmt_s2->fetch(PDO::FETCH_ASSOC);
+            if ($s2) {
+                $nombre_cliente = $s2['nombre'];
+                $telefono_cliente = $s2['celular'];
+            }
         } else {
             $alias = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $email_nuevo)[0]));
             $stmt_ins = $pdo->prepare("INSERT INTO socios (email, nombre, alias, celular, created_at) VALUES (?, ?, ?, ?, NOW())");
             $stmt_ins->execute([$email_nuevo, $nombre_nuevo, $alias, $input['telNuevoSocio'] ?? '']);
             $id_socio_final = $pdo->lastInsertId();
-            $email_cliente = $email_nuevo; $nombre_cliente = $nombre_nuevo;
+            $email_cliente = $email_nuevo; 
+            $nombre_cliente = $nombre_nuevo;
+            $telefono_cliente = $input['telNuevoSocio'] ?? '';
         }
     }
 
-    // Generar Fechas
+    // === VALIDACIÓN DE CLUB RESPONSABLE ===
+    $id_club_final = null;
+    $tipo_reserva = $input['tipo_reserva'] ?? 'individual';
+    $id_club_reserva = $input['id_club_reserva'] ?? null;
+
+    if ($id_socio_final && $tipo_reserva === 'club' && !empty($id_club_reserva)) {
+        $stmt_rol = $pdo->prepare("SELECT COUNT(*) FROM socio_club WHERE id_socio = ? AND id_club = ? AND es_responsable = 1");
+        $stmt_rol->execute([$id_socio_final, (int)$id_club_reserva]);
+        if ($stmt_rol->fetchColumn() > 0) {
+            $id_club_final = (int)$id_club_reserva;
+            error_log("[Recurrente] ✅ Socio $id_socio_final es RESPONSABLE del Club $id_club_final");
+        } else {
+            error_log("[Recurrente] ⚠️ Socio $id_socio_final intentó reservar para Club $id_club_reserva sin ser responsable.");
+        }
+    }
+
+    // === OBTENER CAPACIDAD DE CANCHA ===
+    $stmt_cap = $pdo->prepare("SELECT capacidad_jugadores FROM canchas WHERE id_cancha = ?");
+    $stmt_cap->execute([$id_cancha]);
+    $cap_data = $stmt_cap->fetch(PDO::FETCH_ASSOC);
+    $jugadores_esperados = 20; // Default fútbol
+    if ($cap_data && !empty($cap_data['capacidad_jugadores'])) {
+        $jugadores_esperados = (int)$cap_data['capacidad_jugadores'];
+    }
+
+    // === GENERAR FECHAS DISPONIBLES ===
     $fechas_disponibles = [];
     $current = new DateTime($start_date);
     $end = new DateTime($end_date);
@@ -77,80 +113,61 @@ try {
             $stmt_chk = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE id_cancha = ? AND fecha = ? AND hora_inicio = ? AND estado != 'cancelada'");
             $stmt_chk->execute([$id_cancha, $fecha_str, $hora_inicio]);
             if ($stmt_chk->fetchColumn() == 0) {
-                $fechas_disponibles[] = ['fecha' => $fecha_str, 'dia_nombre' => $day_names[$current->format('w')], 'dia_num' => $current->format('d')];
+                $fechas_disponibles[] = [
+                    'fecha' => $fecha_str, 
+                    'dia_nombre' => $day_names[$current->format('w')], 
+                    'dia_num' => $current->format('d')
+                ];
             }
         }
         $current->modify('+1 day');
     }
 
     if (empty($fechas_disponibles)) {
-        throw new Exception("No hay fechas disponibles");
+        throw new Exception("No hay fechas disponibles en el rango seleccionado");
     }
 
     error_log("[Recurrente] Fechas a procesar: " . count($fechas_disponibles));
 
-    // Transacción
+    // === TRANSACCIÓN E INSERCIÓN ===
     $pdo->beginTransaction();
     $created = 0;
     $tabla_html = '';
-    $hora_fin_calc = '';
+    $hora_fin_global = ''; // Para usar en el email
 
     foreach ($fechas_disponibles as $item) {
         $fecha = $item['fecha'];
         $dia_nombre = $item['dia_nombre'];
         $dia_num = $item['dia_num'];
         
-        // 1. Calcular hora fin (asegurar que exista)
-        $h_ini_parts = explode(':', $data['hora_inicio']);
-        $min_fin = (intval($h_ini_parts[0]) * 60) + intval($h_ini_parts[1]) + intval($data['duracion_bloque'] ?? 60);
+        // 1. Calcular hora fin de forma segura
+        $h_ini_parts = explode(':', $hora_inicio);
+        $min_fin = (intval($h_ini_parts[0]) * 60) + intval($h_ini_parts[1]) + $duracion_minutos;
         $hora_fin = sprintf("%02d:%02d", floor($min_fin / 60), $min_fin % 60);
+        $hora_fin_global = $hora_fin; // Guardar para el email
 
-        // 2. Obtener capacidad de cancha
-        $stmt_cap = $pdo->prepare("SELECT capacidad_jugadores FROM canchas WHERE id_cancha = ?");
-        $stmt_cap->execute([$data['id_cancha']]);
-        $cap_data = $stmt_cap->fetch(PDO::FETCH_ASSOC);
-        $jugadores_esperados = 20; // Default fútbol
-        if ($cap_data && !empty($cap_data['capacidad_jugadores'])) {
-            $jugadores_esperados = (int)$cap_data['capacidad_jugadores'];
-        }
-
-        // 3. INSERT CON PARÁMETROS ALINEADOS ✅
+        // 2. INSERT CON PARÁMETROS ALINEADOS
         $sql = "INSERT INTO reservas (
-                    id_cancha, 
-                    id_club, 
-                    id_socio, 
-                    nombre_cliente, 
-                    email_cliente, 
-                    telefono_cliente,
-                    fecha, 
-                    hora_inicio, 
-                    hora_fin,
-                    monto_total, 
-                    jugadores_esperados, 
-                    estado_pago, 
-                    estado, 
-                    tipo_reserva
+                    id_cancha, id_club, id_socio, 
+                    nombre_cliente, email_cliente, telefono_cliente,
+                    fecha, hora_inicio, hora_fin,
+                    monto_total, jugadores_esperados, 
+                    estado_pago, estado, tipo_reserva
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', 'semanal')";
 
         $stmt = $pdo->prepare($sql);
-        $monto_unitario = floatval($data['monto_total'] ?? 0);
-
-        // ⚠️ VERIFICA QUE ESTOS 11 VALORES COINCIDAN EXACTAMENTE CON LOS 11 SIGNOS ?
         $stmt->execute([
-            $data['id_cancha'],       // 1. id_cancha
-            $id_club_final,           // 2. id_club (NULL si individual)
-            $data['id_socio'],        // 3. id_socio
-            $socio['nombre'],         // 4. nombre_cliente
-            $socio['email'],          // 5. email_cliente
-            $socio['celular'],        // 6. telefono_cliente
-            $fecha,                   // 7. fecha
-            $data['hora_inicio'],     // 8. hora_inicio
-            $hora_fin,                // 9. hora_fin
-            $data['monto_total'],     // 10. monto_total
-            $jugadores_esperados      // 11. jugadores_esperados
-            // 'pendiente'             → hardcoded en SQL
-            // 'confirmada'            → hardcoded en SQL
-            // 'semanal'               → hardcoded en SQL
+            $id_cancha,           // 1
+            $id_club_final,       // 2 (NULL si individual)
+            $id_socio_final,      // 3
+            $nombre_cliente,      // 4
+            $email_cliente,       // 5
+            $telefono_cliente,    // 6
+            $fecha,               // 7
+            $hora_inicio,         // 8
+            $hora_fin,            // 9
+            $monto_unitario,      // 10
+            $jugadores_esperados  // 11
         ]);
         
         $id_res = $pdo->lastInsertId();
@@ -162,7 +179,7 @@ try {
         <tr style='border-bottom:1px solid #eee;'>
             <td style='padding:10px; text-align:center; font-weight:600; color:#AB47BC;'>{$dia_nombre}</td>
             <td style='padding:10px; text-align:center;'>{$dia_num}/{$mes_fecha}</td>
-            <td style='padding:10px; text-align:center; background:#F3E5F5; font-weight:600;'>{$hora_inicio}-{$hora_fin_calc}</td>
+            <td style='padding:10px; text-align:center; background:#F3E5F5; font-weight:600;'>{$hora_inicio}-{$hora_fin}</td>
         </tr>";
 
         // ✅ REGISTRAR EN BITÁCORA INDIVIDUAL
@@ -171,8 +188,9 @@ try {
             
             $descripcion = "🔄 Reserva Recurrente Creada\n";
             $descripcion .= "📅 Fecha: $fecha ($dia_nombre $dia_num)\n";
-            $descripcion .= "⏰ Hora: $hora_inicio - $hora_fin_calc\n";
+            $descripcion .= "⏰ Hora: $hora_inicio - $hora_fin\n";
             $descripcion .= "💰 Monto: $" . number_format($monto_unitario, 0, ',', '.');
+            if ($id_club_final) $descripcion .= "\n🏢 Club ID: $id_club_final";
             
             $metadata = [
                 'tipo' => 'recurrente',
@@ -181,28 +199,15 @@ try {
                 'dia_semana' => $repeat_day
             ];
 
-            // Llamada a la función
-            $log_result = registrarLogReserva(
-                $pdo,
-                $id_res,
-                'creada_recurrente',
-                $descripcion,
-                $usuario_log,
-                null, // monto_anterior
-                $monto_unitario, // monto_nuevo
-                $metadata
+            registrarLogReserva(
+                $pdo, $id_res, 'creada_recurrente', $descripcion,
+                $usuario_log, null, $monto_unitario, $metadata
             );
-
-            if ($log_result === false) {
-                error_log("⚠️ Bitácora falló para reserva ID: $id_res");
-            }
-        } else {
-            error_log("❌ ERROR: Función registrarLogReserva NO existe. Revisa include_path.");
         }
     }
 
     $pdo->commit();
-    error_log("[Recurrente] Commit exitoso. Creadas: $created");
+    error_log("[Recurrente] ✅ Commit exitoso. Creadas: $created");
 
     // === ENVIAR EMAIL RESUMEN ===
     if ($created > 0 && $email_cliente && class_exists('BrevoMailer')) {
@@ -225,7 +230,7 @@ try {
                     
                     <div style='background:#F7FAFC;padding:15px;border-radius:10px;margin:20px 0;border-left:4px solid #AB47BC;'>
                         <p style='margin:5px 0'><strong>🏟️ Cancha:</strong> " . htmlspecialchars($nombre_cancha) . "</p>
-                        <p style='margin:5px 0'><strong>🔄 Patrón:</strong> Todos los {$dia_semana_texto}, {$hora_inicio}-{$hora_fin_calc} hs</p>
+                        <p style='margin:5px 0'><strong>🔄 Patrón:</strong> Todos los {$dia_semana_texto}, {$hora_inicio}-{$hora_fin_global} hs</p>
                         <p style='margin:5px 0'><strong>📅 Período:</strong> " . date('d/m/Y', strtotime($start_date)) . " al " . date('d/m/Y', strtotime($end_date)) . "</p>
                     </div>
 
@@ -271,7 +276,7 @@ try {
     echo json_encode(['success' => true, 'created' => $created]);
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     error_log("[Recurrente] ERROR: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
