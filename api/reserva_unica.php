@@ -14,14 +14,7 @@ try {
         throw new Exception("Datos incompletos");
     }
 
-    // En api/reserva_unica.php
-    $dt_reserva = new DateTime("$fecha $hora_inicio");
-    $dt_ahora = new DateTime();
-
-    if ($dt_reserva <= $dt_ahora) {
-        throw new Exception("❌ No se pueden realizar reservas en horarios vencidos.");
-    }
-
+    // === 1. EXTRAER DATOS PRIMERO ===
     $id_cancha = (int)$input['id_cancha'];
     $fecha = $input['fecha'];
     $hora_inicio = $input['hora_inicio'];
@@ -38,13 +31,19 @@ try {
         $hora_fin = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
     }
 
-    // === OBTENER CAPACIDAD DE LA CANCHA ===
+    // === 2. VALIDAR FECHA/HORA VENCIDA (AHORA SÍ FUNCIONA) ===
+    $dt_reserva = new DateTime("$fecha $hora_inicio");
+    $dt_ahora = new DateTime();
+
+    if ($dt_reserva <= $dt_ahora) {
+        throw new Exception("❌ No se pueden realizar reservas en horarios vencidos.");
+    }
+
+    // === 3. OBTENER CAPACIDAD DE LA CANCHA ===
     $stmt_cap = $pdo->prepare("SELECT capacidad_jugadores FROM canchas WHERE id_cancha = ?");
     $stmt_cap->execute([$id_cancha]);
     $cap_data = $stmt_cap->fetch(PDO::FETCH_ASSOC);
     
-    // Si existe la columna y tiene valor, úsalo. Si no, default a 20 (Fútbol) o 4 (Pádel) según prefieras.
-    // Aquí usamos 20 como default general como pediste.
     $jugadores_esperados = 20; 
     if ($cap_data && !empty($cap_data['capacidad_jugadores'])) {
         $jugadores_esperados = (int)$cap_data['capacidad_jugadores'];
@@ -60,7 +59,7 @@ try {
     // === LÓGICA DE RESPONSABLE Y DATOS SOCIO ===
     $id_club_final = null;
     $nombre_cliente = ''; $email_cliente = ''; $telefono_cliente = '';
-    $tipo_reserva_texto = "Personal"; // Por defecto
+    $tipo_reserva_texto = "Personal"; 
 
     if ($id_socio) {
         $stmt_s = $pdo->prepare("SELECT nombre, email, celular FROM socios WHERE id_socio = ?");
@@ -72,7 +71,6 @@ try {
             $telefono_cliente = $s['celular'];
         }
 
-        // Validar si es responsable
         if (!empty($input['id_club_reserva']) && ($input['tipo_reserva'] ?? '') === 'club') {
             $id_club_intentado = (int)$input['id_club_reserva'];
             $stmt_rol = $pdo->prepare("SELECT COUNT(*) FROM socio_club WHERE id_socio = ? AND id_club = ? AND es_responsable = 1");
@@ -82,7 +80,6 @@ try {
                 $id_club_final = $id_club_intentado;
                 $tipo_reserva_texto = "Institucional (Club)";
                 
-                // Obtener nombre del club para el correo
                 $stmt_c = $pdo->prepare("SELECT nombre FROM clubs WHERE id_club = ?");
                 $stmt_c->execute([$id_club_final]);
                 $nombre_club = $stmt_c->fetchColumn();
@@ -91,7 +88,7 @@ try {
     }
 
     // === INSERTAR RESERVA ===
-        $sql = "INSERT INTO reservas (
+    $sql = "INSERT INTO reservas (
                 id_cancha, id_club, id_socio, nombre_cliente, email_cliente, telefono_cliente, 
                 fecha, hora_inicio, hora_fin, monto_total, jugadores_esperados, estado_pago, estado
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada')";
@@ -104,7 +101,7 @@ try {
     
     $id_res = $pdo->lastInsertId();
     
-    // === 1. REGISTRAR EN BITÁCORA ===
+    // === BITÁCORA ===
     if (function_exists('registrarLogReserva')) {
         $descripcion = "Reserva manual creada desde Dashboard Socio.\n";
         $descripcion .= "📅 Fecha: $fecha | ⏰ Hora: $hora_inicio - $hora_fin\n";
@@ -122,7 +119,7 @@ try {
         );
     }
 
-    // === 2. ENVIAR CORREO DE CONFIRMACIÓN ===
+    // === CORREO ===
     if ($email_cliente && class_exists('BrevoMailer')) {
         try {
             $stmt_cancha = $pdo->prepare("SELECT nombre_cancha FROM canchas WHERE id_cancha = ?");
@@ -136,17 +133,15 @@ try {
                 </div>
                 <div style='background:white;padding:20px;border-radius:0 0 8px 8px;'>
                     <p>Hola <strong>$nombre_cliente</strong>,</p>
-                    <p>Tu reserva ha sido registrada exitosamente con los siguientes detalles:</p>
+                    <p>Tu reserva ha sido registrada exitosamente:</p>
                     
                     <div style='background:#F3E5F5;padding:15px;border-radius:8px;margin:15px 0;'>
-                        <p style='margin:5px 0'><strong>🏟️ Cancha:</strong> $nombre_cancha</p>
-                        <p style='margin:5px 0'><strong>📅 Fecha:</strong> $fecha</p>
-                        <p style='margin:5px 0'><strong>⏰ Hora:</strong> $hora_inicio - $hora_fin</p>
-                        <p style='margin:5px 0'><strong>💰 Monto:</strong> $" . number_format($monto_total, 0, ',', '.') . "</p>
-                        <p style='margin:5px 0'><strong>🏢 Tipo:</strong> $tipo_reserva_texto " . ($id_club_final ? "($nombre_club)" : "") . "</p>
+                        <p><strong>🏟️ Cancha:</strong> $nombre_cancha</p>
+                        <p><strong>📅 Fecha:</strong> $fecha</p>
+                        <p><strong>⏰ Hora:</strong> $hora_inicio - $hora_fin</p>
+                        <p><strong>💰 Monto:</strong> $" . number_format($monto_total, 0, ',', '.') . "</p>
+                        <p><strong>🏢 Tipo:</strong> $tipo_reserva_texto " . ($id_club_final ? "($nombre_club)" : "") . "</p>
                     </div>
-                    
-                    <p style='font-size:0.9rem;color:#666;'>Gracias por preferir CanchaSport.</p>
                 </div>
             </div>";
 
@@ -155,8 +150,6 @@ try {
                 ->setSubject("Confirmación de Reserva - CanchaSport")
                 ->setHtmlBody($html_body)
                 ->send();
-                
-            error_log("[MAIL] Correo enviado a $email_cliente para reserva $id_res");
         } catch (Exception $e) {
             error_log("[MAIL ERROR] " . $e->getMessage());
         }
