@@ -932,6 +932,25 @@ $js_vars = [
             </style>      
         </div>
 
+        <?php
+            // === OBTENER DATOS DEL CLUB ACTIVO (SI ES RESPONSABLE) ===
+            $club_activo = null;
+            if (!empty($clubes_responsable)) {
+                // Si viene un club por GET/POST, usarlo; si no, usar el primero
+                $id_club_actual = $_GET['id_club'] ?? $clubes_responsable[0]['id_club'];
+                
+                foreach ($clubes_responsable as $cr) {
+                    if ($cr['id_club'] == $id_club_actual) {
+                        // Obtener logo y nombre completo
+                        $stmt_club = $pdo->prepare("SELECT nombre, logo_url FROM clubs WHERE id_club = ?");
+                        $stmt_club->execute([$id_club_actual]);
+                        $club_activo = $stmt_club->fetch(PDO::FETCH_ASSOC);
+                        break;
+                    }
+                }
+            }
+        ?>
+
         <?php if ($club_activo && !empty($club_activo['logo_url'])): ?>
             <!-- MODO CLUB: Logo + Nombre -->
             <img src="<?= htmlspecialchars($club_activo['logo_url']) ?>" alt="Logo" style="width:36px; height:36px; border-radius:8px; object-fit:cover; border:2px solid rgba(255,255,255,0.3);">
