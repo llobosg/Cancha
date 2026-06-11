@@ -1112,7 +1112,7 @@ if (isset($_SESSION['id_socio'])) {
                 $fecha_ev = new DateTime($evento['fecha']);
                 
                 // Solo considerar reservas confirmadas/no canceladas
-                if ($evento['estado'] === 'cancelada') continue;
+                if (($evento['estado'] ?? '') === 'cancelada') continue;
                 
                 if (!$proximo_evento && $fecha_ev >= $hoy) {
                     $proximo_evento = $evento;
@@ -1196,7 +1196,7 @@ if (isset($_SESSION['id_socio'])) {
         $hoy->setTime(0,0,0);
         
         foreach ($todos_eventos as $ev) {
-            if ($ev['estado'] === 'cancelada') continue;
+            if (($ev['estado'] ?? '') === 'cancelada') continue;
             
             $fecha_ev = new DateTime($ev['fecha']);
             if (!$proximo_evento && $fecha_ev >= $hoy) {
@@ -2213,7 +2213,13 @@ async function actualizarContadorCupos(idReserva) {
                         <tr style="border-bottom:1px solid #f0f0f0;">
                             <td style="padding:0.7rem 0.5rem; font-weight:500; color:#333;">
                                 <?= date('d/m/Y', strtotime($fut['fecha'])) ?>
-                                <div style="font-size:0.75rem; color:#888; font-weight:400;"><?= ucfirst(strftime('%A', strtotime($fut['fecha']))) ?></div>
+                                <div style="font-size:0.75rem; color:#888; font-weight:400;">
+                                    <?php
+                                        $dias_semana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+                                        $dia_num = date('w', strtotime($fut['fecha']));
+                                        echo $dias_semana[$dia_num];
+                                    ?>       
+                                </div>
                             </td>
                             <td style="padding:0.7rem 0.5rem; text-align:center; color:#555;">
                                 <?= substr($fut['hora_inicio'], 0, 5) ?>
