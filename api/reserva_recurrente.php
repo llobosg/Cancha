@@ -95,59 +95,61 @@ try {
     $tabla_html = '';
     $hora_fin_calc = '';
 
-    // 1. Leer contexto del club desde el payload JSON
-    $tipo_reserva = $data['tipo_reserva'] ?? 'individual';
-    $id_club_reserva = $data['id_club_reserva'] ?? null;
-
-    // 2. Validar si el socio es responsable (Misma lógica que reserva_unica)
-    $id_club_final = null;
-    if ($id_socio && $tipo_reserva === 'club' && !empty($id_club_reserva)) {
-        $stmt_rol = $pdo->prepare("SELECT COUNT(*) FROM socio_club WHERE id_socio = ? AND id_club = ? AND es_responsable = 1");
-        $stmt_rol->execute([$id_socio, (int)$id_club_reserva]);
-        
-        if ($stmt_rol->fetchColumn() > 0) {
-            $id_club_final = (int)$id_club_reserva;
-            error_log("[RECURRENTE] Socio $id_socio reservando como RESPONSABLE del Club $id_club_final");
-        } else {
-            error_log("[RECURRENTE] ⚠️ Socio $id_socio intentó reservar para Club $id_club_reserva sin ser responsable.");
-        }
-    }
-
     foreach ($fechas_disponibles as $item) {
         $fecha = $item['fecha'];
         $dia_nombre = $item['dia_nombre'];
         $dia_num = $item['dia_num'];
         
-        // Calcular Hora Fin
-        $h_ini_parts = explode(':', $hora_inicio);
-        $minutos_ini = ($h_ini_parts[0] * 60) + $h_ini_parts[1];
-        $minutos_fin = $minutos_ini + $duracion_minutos;
-        $hora_fin_calc = sprintf("%02d:%02d", floor($minutos_fin / 60), $minutos_fin % 60);
+        // 1. Calcular hora fin (asegurar que exista)
+        $h_ini = explode(':', $data['hora_inicio']);
+        $min_fin = ($h_ini[0] * 60) + $h_ini[1] + ($data['duracion_bloque'] ?? 60);
+        $hora_fin = sprintf("%02d:%02d", floor($min_fin / 60), $min_fin % 60);
 
-        $stmt = $pdo->prepare("
-            INSERT INTO reservas (
-                id_cancha, 
-                id_club,
-                id_socio, 
-                nombre_cliente, email_cliente, telefono_cliente,
-                fecha, hora_inicio, hora_fin,
-                monto_total, jugadores_esperados, estado_pago, estado, tipo_reserva
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, 'pendiente', 'confirmada', ?)
-        ");
+        // 2. Obtener capacidad de cancha
+        $stmt_cap = $pdo->prepare("SELECT capacidad_jugadores FROM canchas WHERE id_cancha = ?");
+        $stmt_cap->execute([$data['id_cancha']]);
+        $cap_data = $stmt_cap->fetch(PDO::FETCH_ASSOC);
+        $jugadores_esperados = 20; // Default fútbol
+        if ($cap_data && !empty($cap_data['capacidad_jugadores'])) {
+            $jugadores_esperados = (int)$cap_data['capacidad_jugadores'];
+        }
 
+        // 3. INSERT CON PARÁMETROS ALINEADOS ✅
+        $sql = "INSERT INTO reservas (
+                    id_cancha, 
+                    id_club, 
+                    id_socio, 
+                    nombre_cliente, 
+                    email_cliente, 
+                    telefono_cliente,
+                    fecha, 
+                    hora_inicio, 
+                    hora_fin,
+                    monto_total, 
+                    jugadores_esperados, 
+                    estado_pago, 
+                    estado, 
+                    tipo_reserva
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'confirmada', 'semanal')";
+
+        $stmt = $pdo->prepare($sql);
+
+        // ⚠️ VERIFICA QUE ESTOS 11 VALORES COINCIDAN EXACTAMENTE CON LOS 11 SIGNOS ?
         $stmt->execute([
-            $data['id_cancha'],
-            $id_club_final,
-            $id_socio,
-            $socio['nombre'],
-            $socio['email'],
-            $socio['celular'],
-            $fecha,
-            $data['hora_inicio'],
-            $hora_fin,
-            $monto,
-            $jugadores_esperados,
-            'semanal'
+            $data['id_cancha'],       // 1. id_cancha
+            $id_club_final,           // 2. id_club (NULL si individual)
+            $data['id_socio'],        // 3. id_socio
+            $socio['nombre'],         // 4. nombre_cliente
+            $socio['email'],          // 5. email_cliente
+            $socio['celular'],        // 6. telefono_cliente
+            $fecha,                   // 7. fecha
+            $data['hora_inicio'],     // 8. hora_inicio
+            $hora_fin,                // 9. hora_fin
+            $data['monto_total'],     // 10. monto_total
+            $jugadores_esperados      // 11. jugadores_esperados
+            // 'pendiente'             → hardcoded en SQL
+            // 'confirmada'            → hardcoded en SQL
+            // 'semanal'               → hardcoded en SQL
         ]);
         
         $id_res = $pdo->lastInsertId();
