@@ -1367,16 +1367,6 @@ if (isset($_SESSION['id_socio'])) {
                     <div style="display:flex; flex-direction:column; gap:0.6rem;">
                         <?php if ($esta_inscrito_en_tabla): ?>
                             <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">👁️ Ver Inscritos</button>
-                            <!-- AHORA SÍ PUEDES USAR $ia_habilitada Y $total_inscritos SIN WARNINGS -->
-                            <?php if ($ia_habilitada): ?>
-                                <button onclick="generarEquiposIA(<?= $evento['id'] ?>)" style="...">
-                                    🤖 Generar Equipos con IA
-                                </button>
-                            <?php elseif (($evento['tipo'] ?? '') === 'reserva'): ?>
-                                <div style="...">
-                                    🤖 IA disponible con <?= max(0, 12 - $total_inscritos) ?> jugadores más
-                                </div>
-                            <?php endif; ?>
                         <?php else: ?>
                             <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
                                 <button disabled style="width:100%; padding:0.7rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">🔒 Cupos Completos</button>
@@ -1408,7 +1398,7 @@ if (isset($_SESSION['id_socio'])) {
                             display:flex; align-items:center; justify-content:center; gap:0.5rem;
                             box-shadow:0 4px 10px rgba(102, 126, 234, 0.3);
                         ">
-                            🤖 Generar Equipos con IA
+                            🤖 Generar Equipos con IA.
                         </button>
                     <?php elseif ($evento['tipo'] === 'reserva'): ?>
                         <!-- Feedback visual cuando aún no llegan a 12 -->
