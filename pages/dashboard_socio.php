@@ -1339,6 +1339,7 @@ if (isset($_SESSION['id_socio'])) {
                                 <?= $evento['cupos_ocupados'] ?>/<?= $evento['cupos_total'] ?>
                             </div>
                         </div>
+                        
                         <div style="text-align:right;">
                             <div style="font-size:0.8rem; color:#888;">Estado Pago</div>
                             <div style="font-weight:bold; color:<?= $evento['estado_pago'] == 'pagado' ? '#2E7D32' : '#F57F17' ?>;">
@@ -1350,8 +1351,19 @@ if (isset($_SESSION['id_socio'])) {
                     <!-- BOTONES CON LÓGICA REFORZADA -->
                     <div style="display:flex; flex-direction:column; gap:0.6rem;">
                         <?php if ($esta_inscrito_en_tabla): ?>
-                            <button onclick="bajarseEvento(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#FFF; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-weight:600; color:#C62828;">❌ Bajarme del partido</button>
                             <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">👁️ Ver Inscritos</button>
+                            <?php 
+                                // === CONTAR INSCRITOS PARA HABILITAR IA ===
+                                $total_inscritos = 0;
+                                if ($evento['tipo'] === 'reserva') {
+                                    $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
+                                    $stmt_count->execute([$evento['id']]);
+                                    $total_inscritos = (int)$stmt_count->fetchColumn();
+                                }
+
+                                // Regla de negocio: Solo habilitar IA con 12+ jugadores
+                                $ia_habilitada = ($total_inscritos >= 12);
+                            ?>
                         <?php else: ?>
                             <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
                                 <button disabled style="width:100%; padding:0.7rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">🔒 Cupos Completos</button>
@@ -1373,6 +1385,24 @@ if (isset($_SESSION['id_socio'])) {
                             <button onclick="abrirDetalleReservaSocio(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#f8f9fa; border:1px solid #eee; border-radius:8px; cursor:pointer; font-weight:500; color:#555; font-size:0.9rem; margin-top:0.5rem;">ℹ️ Ver Detalles del Evento</button>
                         <?php endif; ?>
                     </div>
+                    <!-- BOTÓN GENERAR EQUIPOS IA (Solo si hay 12+ inscritos) -->
+                    <?php if ($ia_habilitada): ?>
+                        <button onclick="generarEquiposIA(<?= $evento['id'] ?>)" style="
+                            width:100%; padding:0.7rem; margin-top:0.5rem;
+                            background:linear-gradient(135deg, #667eea, #764ba2); 
+                            color:white; border:none; border-radius:8px; 
+                            cursor:pointer; font-weight:bold; font-size:0.9rem;
+                            display:flex; align-items:center; justify-content:center; gap:0.5rem;
+                            box-shadow:0 4px 10px rgba(102, 126, 234, 0.3);
+                        ">
+                            🤖 Generar Equipos con IA
+                        </button>
+                    <?php elseif ($evento['tipo'] === 'reserva'): ?>
+                        <!-- Feedback visual cuando aún no llegan a 12 -->
+                        <div style="text-align:center; padding:0.6rem; margin-top:0.5rem; background:#FFF3E0; border-radius:8px; font-size:0.8rem; color:#E65100; border:1px solid #FFE0B2;">
+                            🤖 IA disponible con <?= (12 - $total_inscritos) ?> jugadores más
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -2289,6 +2319,110 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+let eventoIAActual = null;
+
+async function generarEquiposIA(idEvento) {
+    eventoIAActual = idEvento;
+    const modal = document.getElementById('modalEquiposIA');
+    const contenido = document.getElementById('contenidoEquiposIA');
+    
+    // Mostrar modal con loading
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    contenido.innerHTML = `
+        <div style="text-align:center; padding:2rem; color:#667eea;">
+            <div style="font-size:2.5rem; margin-bottom:1rem; animation:spin 2s linear infinite;">⚙️</div>
+            <p style="font-weight:600;">La IA está analizando los <?= $total_inscritos ?> jugadores...</p>
+            <p style="font-size:0.85rem; color:#888; margin-top:0.5rem;">Equilibrando equipos por nivel y posición</p>
+        </div>
+    `;
+    
+    try {
+        const res = await fetch('../api/generar_equipos_ia.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_evento: idEvento })
+        });
+        
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Error generando equipos');
+        
+        // Renderizar resultados
+        let html = '';
+        data.equipos.forEach((equipo, idx) => {
+            html += `
+                <div style="margin-bottom:1.2rem; background:#f8f9fa; border-radius:12px; overflow:hidden; border:1px solid #eee;">
+                    <div style="background:linear-gradient(135deg, ${idx % 2 === 0 ? '#667eea,#764ba2' : '#f093fb,#f5576c'}); padding:0.7rem 1rem; color:white; font-weight:700; font-size:0.95rem;">
+                        ${equipo.nombre} (${equipo.jugadores.length} jugadores)
+                    </div>
+                    <div style="padding:0.8rem;">
+                        ${equipo.jugadores.map(j => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid #f0f0f0;">
+                                <span style="font-weight:500; font-size:0.9rem;">${j.nombre}</span>
+                                <span style="font-size:0.75rem; color:#888; background:#fff; padding:2px 8px; border-radius:10px; border:1px solid #eee;">${j.posicion || 'Jugador'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        contenido.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error IA:', error);
+        contenido.innerHTML = `
+            <div style="text-align:center; padding:2rem; color:#C62828;">
+                <div style="font-size:2rem; margin-bottom:0.5rem;">❌</div>
+                <p style="font-weight:600;">${error.message}</p>
+                <button onclick="generarEquiposIA(${idEvento})" style="margin-top:1rem; padding:0.5rem 1rem; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer;">Reintentar</button>
+            </div>
+        `;
+    }
+}
+
+function regenerarEquiposIA() {
+    if (eventoIAActual) generarEquiposIA(eventoIAActual);
+}
+
+function cerrarModalIA(e) {
+    if (e.target.id === 'modalEquiposIA' || e.target.closest('button[onclick*="cerrarModalIA"]')) {
+        document.getElementById('modalEquiposIA').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
 </script>
+<!-- === MODAL EQUIPOS IA === -->
+<div id="modalEquiposIA" onclick="cerrarModalIA(event)" style="
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(5px);
+    justify-content:center; align-items:center; padding:1rem;
+">
+    <div style="
+        background:white; border-radius:16px; width:95%; max-width:500px;
+        max-height:85vh; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+        display:flex; flex-direction:column; animation:modalFadeIn 0.3s ease;
+    ">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg, #667eea, #764ba2); padding:1.2rem; color:white; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:1.1rem;">🤖 Equipos Generados por IA</h3>
+            <button onclick="cerrarModalIA(event)" style="background:rgba(255,255,255,0.2); border:none; color:white; width:30px; height:30px; border-radius:50%; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        
+        <!-- Contenido Scrollable -->
+        <div id="contenidoEquiposIA" style="overflow-y:auto; padding:1.2rem; flex:1;">
+            <div style="text-align:center; padding:2rem; color:#888;">
+                <div style="font-size:2rem; margin-bottom:0.5rem;">⚙️</div>
+                <p>Analizando nivel de jugadores...</p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="padding:0.8rem 1.2rem; border-top:1px solid #eee; background:#f9f9f9; text-align:center;">
+            <button onclick="regenerarEquiposIA()" style="background:#667eea; color:white; border:none; padding:0.6rem 1.5rem; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.85rem;">🔄 Regenerar</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
