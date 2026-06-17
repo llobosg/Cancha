@@ -1275,7 +1275,7 @@ if (isset($_SESSION['id_socio'])) {
                     $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
                     $stmt_count->execute([$evento['id']]);
                     $total_inscritos = (int)$stmt_count->fetchColumn();
-                    $ia_habilitada = ($total_inscritos >= 12);
+                    $ia_habilitada = ($total_inscritos >= 10);
                 } catch (Exception $e) {
                     error_log("[IA] Error contando inscritos evento {$evento['id']}: " . $e->getMessage());
                 }
