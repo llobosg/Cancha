@@ -1265,8 +1265,23 @@ if (isset($_SESSION['id_socio'])) {
             // === PREPARAR VARIABLES PARA LA FICHA ÚNICA ===
             $evento = $proximo_evento;
             $es_el_primero = true; // Siempre true porque solo mostramos uno
+
+            // === CONTAR INSCRITOS PARA HABILITAR IA (DENTRO DEL CONTEXTO DE CADA EVENTO) ===
+            $total_inscritos = 0;
+            $ia_habilitada = false; // Default seguro
+
+            if (($evento['tipo'] ?? '') === 'reserva' && !empty($evento['id'])) {
+                try {
+                    $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
+                    $stmt_count->execute([$evento['id']]);
+                    $total_inscritos = (int)$stmt_count->fetchColumn();
+                    $ia_habilitada = ($total_inscritos >= 12);
+                } catch (Exception $e) {
+                    error_log("[IA] Error contando inscritos evento {$evento['id']}: " . $e->getMessage());
+                }
+            }
             
-            // Lógica de semana en curso vs futura
+            // Lógica de semana en curso vs futura 
             $fecha_evento = new DateTime($evento['fecha']);
             $ahora = new DateTime();
             $domingo_semana_actual = clone $ahora;
@@ -1352,18 +1367,16 @@ if (isset($_SESSION['id_socio'])) {
                     <div style="display:flex; flex-direction:column; gap:0.6rem;">
                         <?php if ($esta_inscrito_en_tabla): ?>
                             <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">👁️ Ver Inscritos</button>
-                            <?php 
-                                // === CONTAR INSCRITOS PARA HABILITAR IA ===
-                                $total_inscritos = 0;
-                                if ($evento['tipo'] === 'reserva') {
-                                    $stmt_count = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE id_evento = ? AND tipo_actividad = 'reserva'");
-                                    $stmt_count->execute([$evento['id']]);
-                                    $total_inscritos = (int)$stmt_count->fetchColumn();
-                                }
-
-                                // Regla de negocio: Solo habilitar IA con 12+ jugadores
-                                $ia_habilitada = ($total_inscritos >= 12);
-                            ?>
+                            <!-- AHORA SÍ PUEDES USAR $ia_habilitada Y $total_inscritos SIN WARNINGS -->
+                            <?php if ($ia_habilitada): ?>
+                                <button onclick="generarEquiposIA(<?= $evento['id'] ?>)" style="...">
+                                    🤖 Generar Equipos con IA
+                                </button>
+                            <?php elseif (($evento['tipo'] ?? '') === 'reserva'): ?>
+                                <div style="...">
+                                    🤖 IA disponible con <?= max(0, 12 - $total_inscritos) ?> jugadores más
+                                </div>
+                            <?php endif; ?>
                         <?php else: ?>
                             <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
                                 <button disabled style="width:100%; padding:0.7rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">🔒 Cupos Completos</button>
