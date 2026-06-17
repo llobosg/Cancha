@@ -1367,6 +1367,24 @@ if (isset($_SESSION['id_socio'])) {
                     <div style="display:flex; flex-direction:column; gap:0.6rem;">
                         <?php if ($esta_inscrito_en_tabla): ?>
                             <button onclick="verInscritos(<?= $evento['id'] ?>)" style="width:100%; padding:0.7rem; background:#AB47BC; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">👁️ Ver Inscritos</button>
+                            <!-- BOTÓN GENERAR EQUIPOS IA (Solo si hay 12+ inscritos) -->
+                            <?php if ($ia_habilitada): ?>
+                                <button onclick="generarEquiposIA(<?= $evento['id'] ?>)" style="
+                                    width:100%; padding:0.7rem; margin-top:0.5rem;
+                                    background:linear-gradient(135deg, #667eea, #764ba2); 
+                                    color:white; border:none; border-radius:8px; 
+                                    cursor:pointer; font-weight:bold; font-size:0.9rem;
+                                    display:flex; align-items:center; justify-content:center; gap:0.5rem;
+                                    box-shadow:0 4px 10px rgba(102, 126, 234, 0.3);
+                                ">
+                                    🤖 Generar Equipos con IA.
+                                </button>
+                            <?php elseif ($evento['tipo'] === 'reserva'): ?>
+                                <!-- Feedback visual cuando aún no llegan a 12 -->
+                                <div style="text-align:center; padding:0.6rem; margin-top:0.5rem; background:#FFF3E0; border-radius:8px; font-size:0.8rem; color:#E65100; border:1px solid #FFE0B2;">
+                                    🤖 IA disponible con <?= (12 - $total_inscritos) ?> jugadores más
+                                </div>
+                            <?php endif; ?>
                         <?php else: ?>
                             <?php if ($evento['cupos_ocupados'] >= $evento['cupos_total']): ?>
                                 <button disabled style="width:100%; padding:0.7rem; background:#eee; color:#999; border:none; border-radius:8px; cursor:not-allowed; font-weight:600;">🔒 Cupos Completos</button>
@@ -1388,24 +1406,6 @@ if (isset($_SESSION['id_socio'])) {
                             <button onclick="abrirDetalleReservaSocio(<?= $evento['id'] ?>)" style="width:100%; padding:0.6rem; background:#f8f9fa; border:1px solid #eee; border-radius:8px; cursor:pointer; font-weight:500; color:#555; font-size:0.9rem; margin-top:0.5rem;">ℹ️ Ver Detalles del Evento</button>
                         <?php endif; ?>
                     </div>
-                    <!-- BOTÓN GENERAR EQUIPOS IA (Solo si hay 12+ inscritos) -->
-                    <?php if ($ia_habilitada): ?>
-                        <button onclick="generarEquiposIA(<?= $evento['id'] ?>)" style="
-                            width:100%; padding:0.7rem; margin-top:0.5rem;
-                            background:linear-gradient(135deg, #667eea, #764ba2); 
-                            color:white; border:none; border-radius:8px; 
-                            cursor:pointer; font-weight:bold; font-size:0.9rem;
-                            display:flex; align-items:center; justify-content:center; gap:0.5rem;
-                            box-shadow:0 4px 10px rgba(102, 126, 234, 0.3);
-                        ">
-                            🤖 Generar Equipos con IA.
-                        </button>
-                    <?php elseif ($evento['tipo'] === 'reserva'): ?>
-                        <!-- Feedback visual cuando aún no llegan a 12 -->
-                        <div style="text-align:center; padding:0.6rem; margin-top:0.5rem; background:#FFF3E0; border-radius:8px; font-size:0.8rem; color:#E65100; border:1px solid #FFE0B2;">
-                            🤖 IA disponible con <?= (12 - $total_inscritos) ?> jugadores más
-                        </div>
-                    <?php endif; ?>
                 </div>
             </div>
 
