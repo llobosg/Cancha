@@ -1422,48 +1422,7 @@ if (isset($_SESSION['id_socio'])) {
 </div>
 
 <!-- === SECCIÓN: DEUDAS PENDIENTES (BLINDADA) === -->
-<?php if (!empty($deuda_mas_vigente)): ?>
-    <div style="
-            max-width: 650px; /* Mismo ancho que la tarjeta de evento */
-            margin: 0 auto 2rem auto; /* Centrado y margen inferior */
-            background: #FFEBEE; 
-            border-left: 5px solid #D32F2F; 
-            padding: 1rem; 
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        ">
-        <h3 style="color: #C62828; margin: 0 0 1rem 0; font-size: 1.2rem;">💸 Deuda Pendiente</h3>
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div>
-                <div style="font-size: 0.9rem; color: #555;">⚠️ Próximo Vencimiento:</div>
-                <!-- ✅ BLINDAJE: Si fecha_vencimiento es null, usa hoy -->
-                <strong style="font-size: 1.1rem; color: #333;">
-                    📅 <?= date('d/m', strtotime($deuda_mas_vigente['fecha_vencimiento'] ?? date('Y-m-d'))) ?>
-                </strong>
-            </div>
-            
-            <div style="text-align: right;">
-                <div style="font-size: 0.9rem; color: #555;">Monto:</div>
-                <!-- ✅ BLINDAJE: Si monto es null, usa 0 -->
-                <strong style="font-size: 1.4rem; color: #C62828;">
-                    💲 $<?= number_format(floatval($deuda_mas_vigente['monto'] ?? 0), 0, ',', '.') ?>
-                </strong>
-            </div>
-            
-            <button onclick="window.location.href='pagar_cuota.php?id_cuota=<?= $deuda_mas_vigente['id_cuota'] ?>'" 
-                style="background: #F44336; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                💳 Pagar Ahora
-            </button>
-        </div>
-        
-        <?php if ($cuotas_pendientes > 1): ?>
-            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666; text-align: right;">
-                (+<?= $cuotas_pendientes - 1 ?> cuotas adicionales pendientes)
-            </div>
-        <?php endif; ?>
-    </div>
-<?php endif; ?>
+
 
     <!-- FAB -->
     <a href="reservar_cancha.php" class="fab">+</a>
